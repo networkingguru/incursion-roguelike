@@ -1,51 +1,66 @@
 #!/usr/bin/env python3
 # gate: cheap
 # gate-fast: static, reads inc/Defines.h only, well under 1 s
-"""Do two #define names in one family share one integer value?
+"""Do two #define names in one explicitly marked family share one value?
 
 WHY THIS EXISTS. Two worktrees can each add a stati (status effect) define
 with the next free number, and both merge cleanly because the lines differ.
-The game then treats two effects as one. MAGIC_AURA and SOCIAL_MOD are both
-234 today (inc/Defines.h, inc-upw.57). Spec: docs/superpowers/specs/
-2026-10-31-no-shared-tail-design.md section 4.5 (bead inc-mhn1w). Detection
-only: the landing bead renumbers its own entry, master's number stays.
+The game then treats two effects as one. Spec: docs/superpowers/specs/
+2026-10-31-no-shared-tail-design.md section 4.5 (bead inc-mhn1w). The old
+check guessed each define's family from its position or name prefix. This
+one reads the family from comment marks in inc/Defines.h (bead inc-60xq9).
 
-WHAT IT READS. Every integer `#define NAME <expr>` in inc/Defines.h, with
-comments removed (`/* */` across lines, and `//`). It evaluates each value,
-including expressions over earlier defines (FT_TUVWXYZ+48), parentheses,
-+ - * / << >> | & ^ ~, hex/octal/decimal literals and char literals. The
-evaluator walks a whitelisted `ast`; it never calls eval. #if/#ifdef lines are
-not interpreted: every #define in the file counts.
+RULE FOR IMPLEMENTERS. A new #define goes inside its family's marks; a
+deliberate second name for an existing value carries `/* alias of <NAME> */`; a
+value that is not compared with anything goes in a no-family block.
 
-SKIPPED SHAPES (not integer defines): a body holding a string literal, a
-function-like macro `NAME(x)`, an empty define, and a body holding `; { } [ ] . , =` or `this`/`sizeof`
-(a statement or initializer such as `__debugbreak();`), a body of two or more
-bare words with no operator or number (a type such as `unsigned char`). A
-single bare word counts only when it names an earlier integer define; any
-other single bare word is skipped as a type alias. Anything else that looks
-like an integer expression but cannot be evaluated (unknown name, operator
-outside the list) exits 2 naming the line. It is never skipped.
+MARKS (whitespace is free). Own-line block marks use `//` (`/* */` also works).
+A TRAILING mark on a #define line MUST use `/* */`, never `//`: the module
+compiler (src/cpp6.c) can lose the next define after a trailing `//` comment
+(seen: "Undefined Constant: T_TRACE"), and this check refuses the `//` form
+with exit 2.
+  // family: <name>             opens a block; `// end family: <name>` closes it
+  // family: <n1>, <n2>         one block whose defines join several families;
+                                the end line names the same list
+  // no-family                  opens a block never compared with anything;
+                                `// end no-family` closes it
+  alias of <NAME>               on a define line (trailing, /* */) or the line just
+                                above it: skipped. NAME MUST be a define in a
+                                shared family with the same value, else FAIL.
+  known collision: <bead>       same placement: reported KNOWN with the bead.
+                                Mark every member of a colliding group but one.
+Blocks do not nest. A family may have several blocks; they form one family.
+An open with no close, a close with no open, a mismatched name, or nesting
+exits 2 UNMEASURED naming the line. It never passes.
 
-FAMILIES. Lines from `#define SICKNESS` to `#define LAST_STATI`, inclusive,
-form the family `stati`, whatever the names (a sub-define inside the block
-that equals a stati value reads as a duplicate). Outside the block the family
-is the text before the first `_`; a name with no `_` is not checked.
+RULES.
+1. Every integer #define sits inside a family block or a no-family block.
+   A define in neither FAILS, naming the define and its line.
+2. In one family, two names with one value FAIL, unless a name is an alias
+   or a known collision.
+3. The same value in two different families passes.
+4. A no-family block is never compared.
 
-BASELINE. tools/define_dups.baseline holds today's duplicates, one group per
-line: `<family><TAB><value><TAB><NAME1 NAME2 ...>`, sorted; `#` lines are
-comments. A group that is in the baseline passes. A group not in it fails. A
-baseline group that grows a name not listed fails. A baseline group that is no
-longer a duplicate is STALE: reported as a warning, exit 0. Regenerate with
---write-baseline (review the diff: it must only shrink).
+WHAT COUNTS AS A CONSTANT. Every integer `#define NAME <expr>`, comments
+removed (`/* */` across lines, and `//`). Values are evaluated, including
+expressions over earlier defines, parentheses, + - * / << >> | & ^ ~, hex,
+octal, decimal and char literals. The evaluator walks a whitelisted `ast`;
+it never calls eval. #if/#ifdef lines are not interpreted. NOT constants, so
+rule 1 ignores them: an include guard or any define with an empty body, a
+function-like macro `NAME(x)`, a body holding a string literal, a body
+holding `; { } [ ] . , =` or `this`/`sizeof`, a body of two or more bare
+words (a type such as `unsigned char`), and a single bare word that names no
+earlier integer define (a type alias). A single bare word that names an
+earlier integer define is a constant. An integer-looking expression that
+cannot be evaluated exits 2 naming the line.
 
-Usage: tools/check_define_dups.py [--defines FILE] [--baseline FILE]
-                                  [--write-baseline] [--selftest]
-Exit:  0 clean (stale baseline lines warn)   1 new or grown duplicate
-       2 could not measure (unevaluable expression, SICKNESS/LAST_STATI missing)
+Usage: tools/check_define_dups.py [--defines FILE] [--selftest]
+Exit:  0 clean   1 unmarked define, duplicate, or bad alias
+       2 could not measure (bad marks, unevaluable expression)
 
 # fact: the define values -- read from inc/Defines.h text; no game run, no seed
-# fact: which names share a value -- computed from those values; no randomness
-# fact: today's accepted duplicates -- tools/define_dups.baseline, committed
+# fact: each define's family -- read from the marks in that same text; no randomness
+# fact: which names share a value -- computed from those values and marks
 """
 import ast
 import os
@@ -56,13 +71,6 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEF_DEFAULT = os.path.join(ROOT, "inc", "Defines.h")
-BASE_DEFAULT = os.path.join(ROOT, "tools", "define_dups.baseline")
-
-BASE_HEADER = (
-    "# Today's duplicate define values in inc/Defines.h, from inc-mhn1w.\n"
-    "# A landing bead renumbers its own entry; it MUST NOT grow a group here.\n"
-    "# Format: family<TAB>value<TAB>NAME1 NAME2 ... (sorted). See\n"
-    "# tools/check_define_dups.py.\n")
 
 
 class Unmeasurable(Exception):
@@ -177,30 +185,82 @@ def evaluate(src, env, lineno, name):
         raise Unmeasurable("line %d: %s: division by zero" % (lineno, name))
 
 
-def read_defines(path):
-    """Return list of (lineno, name, value, in_stati)."""
-    with open(path, encoding="latin-1") as f:
-        text = strip_comments(f.read())
-    env, rows, in_stati, seen_s, seen_e = {}, [], False, False, False
+MARK = re.compile(r"^\s*(?://|/\*)\s*(end\s+)?(?:(family)\s*:\s*(.*?)|(no-family))"
+                  r"\s*(?:\*/)?\s*$")
+ALIAS = re.compile(r"(?://|/\*).*?\balias\s+of\s+([A-Za-z_]\w*)")
+KNOWN = re.compile(r"(?://|/\*).*?\bknown\s+collision\s*:\s*([A-Za-z0-9_.-]+)")
+TRAIL_SLASH = re.compile(r"//.*\b(?:alias\s+of|known\s+collision)\b")
+COMMENT_ONLY = re.compile(r"^\s*(?://|/\*)")
+
+
+def read_marks(raw_lines):
+    """Return (events, notes). events: sorted (lineno, 'open'|'close', kind,
+    tuple of family names). notes: lineno of a define -> (alias, known)."""
+    events, open_at = [], None
+    for no, line in enumerate(raw_lines, 1):
+        m = MARK.match(line)
+        if not m:
+            continue
+        closing = bool(m.group(1))
+        if m.group(4):
+            kind, fams = "no-family", ()
+        else:
+            kind = "family"
+            fams = tuple(sorted(x.strip() for x in m.group(3).split(",")))
+            if not fams or not all(re.fullmatch(r"[A-Za-z_][\w-]*", x) for x in fams):
+                raise Unmeasurable("line %d: bad family name list: %s" % (no, line.strip()))
+        if not closing:
+            if open_at:
+                raise Unmeasurable("line %d: a block opens inside the block opened at "
+                                   "line %d (blocks do not nest)" % (no, open_at[0]))
+            open_at = (no, kind, fams)
+            events.append((no, "open", kind, fams))
+        else:
+            if not open_at:
+                raise Unmeasurable("line %d: close mark with no open block" % no)
+            if (kind, fams) != open_at[1:]:
+                raise Unmeasurable("line %d: close mark does not match the block opened "
+                                   "at line %d" % (no, open_at[0]))
+            open_at = None
+            events.append((no, "close", kind, fams))
+    if open_at:
+        raise Unmeasurable("line %d: block never closed" % open_at[0])
+    notes = {}
+    for no, line in enumerate(raw_lines, 1):
+        if not re.match(r"\s*#\s*define\b", line):
+            continue
+        if TRAIL_SLASH.search(line):
+            raise Unmeasurable("line %d: a trailing alias or known-collision mark on a "
+                               "#define line MUST use /* */, not //. Write "
+                               "/* alias of <NAME> */ or /* known collision: <bead> */."
+                               % no)
+        texts = [line]
+        if no >= 2 and COMMENT_ONLY.match(raw_lines[no - 2]):
+            texts.append(raw_lines[no - 2])
+        alias = known = None
+        for t in texts:
+            a, k = ALIAS.search(t), KNOWN.search(t)
+            alias = alias or (a.group(1) if a else None)
+            known = known or (k.group(1) if k else None)
+        if alias or known:
+            notes[no] = (alias, known)
+    return events, notes
+
+
+def read_defines(raw_text):
+    """Return list of (lineno, name, value)."""
+    text = strip_comments(raw_text)
+    env, rows = {}, []
     for no, line in logical_lines(text):
         m = re.match(r"\s*#\s*define\s+([A-Za-z_]\w*)(\(?)(.*)$", line)
         if not m:
             continue
         name, paren, body = m.group(1), m.group(2), m.group(3)
-        if name == "SICKNESS":
-            in_stati = seen_s = True
-        block = in_stati
-        if name == "LAST_STATI":
-            seen_e = True
-            if not seen_s:
-                raise Unmeasurable("LAST_STATI comes before SICKNESS")
-            in_stati = False
         if paren or not body.strip() or '"' in body:
             continue
         toks = tokens(body)
         if any(t in STMT_TOKENS or t in ("this", "sizeof") for t in toks):
             continue  # a statement or initializer, not an expression
-        words = [t for t in toks if re.match(r"[A-Za-z_]", t)]
         has_num_or_op = any(t[0].isdigit() or t[0] in "'-+*/&|^~()<>%" for t in toks)
         if not has_num_or_op:
             # bare words only: an alias of an integer define, or a type
@@ -211,158 +271,192 @@ def read_defines(path):
         else:
             value = evaluate(to_python(toks, no), env, no, name)
         env[name] = value
-        rows.append((no, name, value, block))
-    if not seen_s:
-        raise Unmeasurable("no '#define SICKNESS' in %s" % path)
-    if not seen_e:
-        raise Unmeasurable("no '#define LAST_STATI' in %s" % path)
+        rows.append((no, name, value))
     return rows
 
 
-def groups(rows):
-    g = {}
-    for _no, name, value, block in rows:
-        if block:
-            fam = "stati"
-        elif "_" in name:
-            fam = name.split("_", 1)[0]
-        else:
-            continue
-        g.setdefault((fam, value), [])
-        if name not in g[(fam, value)]:
-            g[(fam, value)].append(name)
-    return {k: sorted(v) for k, v in g.items() if len(v) > 1}
-
-
-def read_baseline(path):
-    base = {}
-    if not os.path.exists(path):
-        return base
-    with open(path) as f:
-        for raw in f:
-            raw = raw.rstrip("\n")
-            if not raw.strip() or raw.startswith("#"):
-                continue
-            fam, val, names = raw.split("\t")
-            base[(fam, int(val))] = set(names.split())
-    return base
-
-
-def baseline_text(dups):
-    lines = ["%s\t%d\t%s" % (f, v, " ".join(n))
-             for (f, v), n in sorted(dups.items(), key=lambda kv: (kv[0][0], kv[0][1]))]
-    return BASE_HEADER + "\n".join(lines) + "\n"
-
-
-def check(defines, baseline):
+def check(defines):
     """Return (exit code, list of message lines)."""
     try:
-        dups = groups(read_defines(defines))
+        with open(defines, encoding="latin-1") as f:
+            raw = f.read()
+        events, notes = read_marks(raw.split("\n"))
+        rows = read_defines(raw)
     except Unmeasurable as e:
         return 2, ["check_define_dups: UNMEASURED: %s" % e]
-    base = read_baseline(baseline)
+    except OSError as e:
+        return 2, ["check_define_dups: UNMEASURED: cannot read %s: %s" % (defines, e)]
     msgs, bad = [], False
-    for key, names in sorted(dups.items()):
-        fam, val = key
-        if key not in base:
+    members = {}  # family -> list of (lineno, name, value, alias, known)
+    ev, cur = 0, None
+    for no, name, value in rows:
+        while ev < len(events) and events[ev][0] < no:
+            cur = events[ev][2:] if events[ev][1] == "open" else None
+            ev += 1
+        if cur is None:
             bad = True
-            msgs.append("FAIL: family %s: %s all = %d (new duplicate; renumber "
-                        "your own entry, master's number stays)" % (fam, " ".join(names), val))
-        elif not set(names) <= base[key]:
-            bad = True
-            extra = sorted(set(names) - base[key])
-            msgs.append("FAIL: family %s value %d: baseline group grew by %s "
-                        "(renumber it; do not add to the baseline)" % (fam, val, " ".join(extra)))
-    for key, names in sorted(base.items()):
-        if key not in dups:
-            msgs.append("WARN: stale baseline line: family %s value %d (%s) is no "
-                        "longer a duplicate; delete it" % (key[0], key[1], " ".join(sorted(names))))
+            msgs.append("FAIL: line %d: %s is outside every family block. Fix: put it "
+                        "inside its family's marks ('// family: <name>' ... "
+                        "'// end family: <name>'), or inside a no-family block "
+                        "('// no-family' ... '// end no-family')." % (no, name))
+            continue
+        kind, fams = cur
+        if kind == "no-family":
+            continue
+        alias, known = notes.get(no, (None, None))
+        for fam in fams:
+            members.setdefault(fam, []).append((no, name, value, alias, known))
+    nknown = 0
+    for fam in sorted(members):
+        rows_f = members[fam]
+        by_name = {}
+        for no, name, value, _a, _k in rows_f:
+            by_name.setdefault(name, []).append(value)
+        groups = {}
+        for no, name, value, alias, known in rows_f:
+            if alias:
+                if value not in by_name.get(alias, []) or alias == name:
+                    bad = True
+                    msgs.append("FAIL: family %s line %d: %s says 'alias of %s' but %s"
+                                % (fam, no, name, alias,
+                                   "no such define in the family with value %d" % value
+                                   if alias not in by_name else
+                                   "its value is %s, not %d"
+                                   % (",".join(map(str, by_name[alias])), value)
+                                   if alias != name else "a name cannot alias itself"))
+                continue
+            if known:
+                nknown += 1
+                msgs.append("KNOWN: family %s line %d: %s = %d, collision tracked by %s"
+                            % (fam, no, name, value, known))
+                continue
+            groups.setdefault(value, []).append((no, name))
+        for value, g in sorted(groups.items()):
+            if len(g) > 1:
+                bad = True
+                msgs.append("FAIL: family %s: %s all = %d (lines %s). Renumber your own "
+                            "entry; master's number stays. A deliberate second name "
+                            "carries '/* alias of <NAME> */'."
+                            % (fam, " ".join(n for _l, n in g), value,
+                               ", ".join(str(l) for l, _n in g)))
     if not bad:
-        msgs.append("check_define_dups: PASS (%d accepted duplicate groups)" % len(dups))
+        msgs.append("check_define_dups: PASS (%d families, %d known collisions)"
+                    % (len(members), nknown))
     return (1 if bad else 0), msgs
 
 
 def selftest():
+    os.makedirs(os.path.join(ROOT, "logs"), exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="define_dups.", dir=os.path.join(ROOT, "logs"))
     n = [0]
 
-    def run(text, base=""):
+    def run(text):
         n[0] += 1
-        d = os.path.join(tmp, "d%d.h" % n[0]); b = os.path.join(tmp, "b%d" % n[0])
-        open(d, "w").write(text); open(b, "w").write(base)
-        return check(d, b)
+        d = os.path.join(tmp, "d%d.h" % n[0])
+        with open(d, "w") as f:
+            f.write(text)
+        c, m = check(d)
+        return c, "\n".join(m)
 
-    def mk(body, extra_outside="", stati_head=True):
-        return ("#define FOO 1\n" + extra_outside +
-                ("#define SICKNESS 1\n" if stati_head else "") + body +
-                "#define LAST_STATI 251\n")
+    def fam(name, body):
+        return "// family: %s\n%s// end family: %s\n" % (name, body, name)
     try:
-        assert run(mk("#define A_X 2\n#define B_X 3\n"))[0] == 0
-        c, m = run(mk("#define A_X 234\n#define B_X 234\n"))
-        assert c == 1 and "A_X B_X all = 234" in m[0], (c, m)  # AC4 red
-        assert run(mk("#define A_X 234\n#define B_X 234\n"),
-                   "stati\t234\tA_X B_X\n")[0] == 0           # baseline pair passes
-        c, m = run(mk("#define A_X 234\n#define B_X 234\n#define C_X 234\n"),
-                   "stati\t234\tA_X B_X\n")
-        assert c == 1 and "grew by C_X" in m[0], (c, m)        # grown group fails
-        c, m = run(mk("#define A_X 5\n"), "stati\t234\tA_X B_X\n")
-        assert c == 0 and any("stale" in x for x in m), (c, m)  # stale warns
-        # evaluator: |, <<, nested parens, earlier-define reference, hex, octal, char
-        c, m = run(mk("", "#define Q_A 8\n#define Q_B ((1 << 2) | (Q_A / 2)) + 4\n"
-                      "#define Q_C 0x0C\n#define Q_D (Q_A+4)\n#define Q_E 014\n"
-                      "#define Q_F 'A'\n#define Q_G 65\n"),
-                   "Q\t8\tQ_A Q_B\nQ\t12\tQ_C Q_D Q_E\nQ\t65\tQ_F Q_G\n")
+        # a. two names, one value, one family: fail
+        c, m = run(fam("stati", "#define A_X 234\n#define B_X 234\n"))
+        assert c == 1 and "family stati: A_X B_X all = 234" in m, (c, m)
+        assert run(fam("stati", "#define A_X 234\n#define B_X 235\n"))[0] == 0
+        # b. one value in two families: pass
+        c, m = run(fam("a", "#define A_X 7\n") + fam("b", "#define B_X 7\n"))
+        assert c == 0 and "PASS" in m, (c, m)
+        # a family in two separate blocks is one family
+        c, m = run(fam("a", "#define A_X 7\n") + fam("b", "#define B_X 8\n")
+                   + fam("a", "#define A_Y 7\n"))
+        assert c == 1 and "family a: A_X A_Y all = 7" in m, (c, m)
+        # c. alias with target's value passes (trailing and line-above forms)
+        c, m = run(fam("a", "#define A_X 7\n#define A_Y 7 /* alias of A_X */\n"))
         assert c == 0, (c, m)
-        c, m = run(mk("", "#define Q_A 8\n#define Q_B ((1 << 2) | (Q_A / 2)) + 4\n#define Q_C 8\n"))
-        assert c == 1 and "Q_A Q_B Q_C all = 8" in m[0], (c, m)   # Q_B evaluates to 8
-        c, m = run(mk("#define U_A UNKNOWN_THING + 1\n"))
-        assert c == 2 and "line 3" in m[0], (c, m)             # unevaluable exits 2
-        assert run(mk("#define U_A 1 ? 2 : 3\n"))[0] == 2
-        assert run("#define LAST_STATI 5\n")[0] == 2
-        assert run("#define SICKNESS 1\n")[0] == 2
-        # skipped shapes
-        assert run(mk('#define S_A "hi"\n#define S_B(x) ((x)+1)\n#define S_C\n'
-                      "#define S_D unsigned char\n#define S_E int\n"))[0] == 0
-        # no '_' outside the block is ignored; same prefix outside collides
-        assert run("#define AA 7\n#define BB 7\n" + mk("#define A_X 2\n"))[0] == 0
-        c, m = run("#define P_AA 7\n#define P_BB 7\n" + mk("#define A_X 2\n"))
-        assert c == 1 and "family P" in m[0], (c, m)
-        # same value in different families is fine
-        assert run("#define P_AA 7\n#define R_BB 7\n" + mk(""))[0] == 0
-        # sub-define in the stati block equal to a stati value reads as duplicate
-        c, m = run(mk("#define A_X 3\n#define SUB_Y A_X\n"))
-        assert c == 1 and "A_X SUB_Y" in m[0], (c, m)
-        # comments, multiline block comments, continuation
-        c, m = run(mk("/* a\n #define HID_A 9\n */ #define V_A 4 // x\n#define V_B \\\n 4\n"))
-        assert c == 1 and "V_A V_B all = 4" in m[0], (c, m)
-        # write-baseline round trip
-        d = os.path.join(tmp, "w.h"); b = os.path.join(tmp, "w.base")
-        open(d, "w").write(mk("#define A_X 9\n#define B_X 9\n"))
-        write_baseline(d, b)
-        assert check(d, b)[0] == 0
+        c, m = run(fam("a", "#define A_X 7\n/* alias of A_X */\n#define A_Y 7\n"))
+        assert c == 0, (c, m)
+        c, m = run(fam("a", "#define A_X 7\n#define A_Y 8 /* alias of A_X */\n"))
+        assert c == 1 and "A_Y says 'alias of A_X'" in m and "not 8" in m, (c, m)
+        c, m = run(fam("a", "#define A_Y 7 /* alias of NOPE */\n"))
+        assert c == 1 and "no such define" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 7\n") + fam("b", "#define B_Y 7 /* alias of A_X */\n"))
+        assert c == 1 and "family b" in m, (c, m)  # target must share the family
+        # trailing // mark on a define line: refused with exit 2
+        for tm in ("#define A_Y 7 // alias of A_X\n", "#define A_Y 7 // known collision: inc-x\n"):
+            c, m = run(fam("a", "#define A_X 7\n" + tm))
+            assert c == 2 and "MUST use /* */" in m and "line 3" in m, (tm, c, m)
+        # d. unmarked define: fail, names it
+        c, m = run("#define LOOSE 3\n" + fam("a", "#define A_X 7\n"))
+        assert c == 1 and "line 1: LOOSE is outside every family block" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 7\n") + "#define LATE 9\n")
+        assert c == 1 and "LATE is outside" in m, (c, m)
+        # e. no-family block: equal values pass, and are not compared to a family
+        c, m = run("// no-family\n#define N_A 5\n#define N_B 5\n// end no-family\n"
+                   + fam("a", "#define A_X 5\n"))
+        assert c == 0, (c, m)
+        # f. known collision: pass, reported with the bead id
+        c, m = run(fam("stati", "#define A_X 234\n#define B_X 234 /* known collision: inc-upw.57 */\n"))
+        assert c == 0 and "KNOWN" in m and "B_X" in m and "inc-upw.57" in m, (c, m)
+        # known mark does not excuse a third name
+        c, m = run(fam("stati", "#define A_X 234\n#define B_X 234 /* known collision: inc-x */\n"
+                       "#define C_X 234\n"))
+        assert c == 1 and "A_X C_X all = 234" in m, (c, m)
+        # g. multi-family block: a duplicate against a member of either family fails
+        multi = "// family: a, b\n#define M_X 9\n// end family: a, b\n"
+        c, m = run(multi + fam("a", "#define A_X 9\n"))
+        assert c == 1 and "family a: M_X A_X all = 9" in m, (c, m)
+        c, m = run(multi + fam("b", "#define B_X 9\n"))
+        assert c == 1 and "family b: M_X B_X all = 9" in m, (c, m)
+        assert run(multi + fam("c", "#define C_X 9\n"))[0] == 0
+        # h. unbalanced or nested marks: exit 2
+        for bad in ("// family: a\n#define A_X 1\n",
+                    "#define A_X 1\n// end family: a\n",
+                    "// family: a\n// end family: b\n",
+                    "// family: a\n// family: b\n// end family: b\n// end family: a\n",
+                    "// no-family\n// family: a\n// end family: a\n// end no-family\n",
+                    "// family: a\n// end no-family\n"):
+            c, m = run(bad)
+            assert c == 2 and "UNMEASURED" in m and "line" in m, (bad, c, m)
+        # i. bard-step red/green from the bead
+        stati = "#define SICKNESS 1\n#define POISONED 2\n"
+        c, m = run(fam("stati", stati) + fam("bard-step", "#define BARD_CHORUS 2\n"))
+        assert c == 0, (c, m)
+        c, m = run(fam("stati", stati + "#define NEW_STATUS 2\n"))
+        assert c == 1 and "POISONED NEW_STATUS all = 2" in m, (c, m)
+        # evaluator, comments, continuation, skipped shapes
+        c, m = run(fam("q", "#define Q_A 8\n#define Q_B ((1 << 2) | (Q_A / 2)) + 4\n"))
+        assert c == 1 and "Q_A Q_B all = 8" in m, (c, m)
+        c, m = run(fam("q", "#define Q_C 0x0C\n#define Q_D (Q_C+1)\n#define Q_E 014\n"
+                       "#define Q_F 'A'\n#define Q_G 66\n"))
+        assert c == 1 and "Q_C Q_E all = 12" in m and "Q_F" not in m, (c, m)
+        c, m = run(fam("q", "/* a\n #define HID_A 9\n */ #define V_A 4 // x\n"
+                       "#define V_B \\\n 4\n"))
+        assert c == 1 and "V_A V_B all = 4" in m and "HID_A" not in m, (c, m)
+        c, m = run('#ifndef GUARD_H\n#define GUARD_H\n#define S_A "hi"\n'
+                   "#define S_B(x) ((x)+1)\n#define S_C\n#define S_D unsigned char\n"
+                   "#define S_E int\n#endif\n")
+        assert c == 0, (c, m)  # guards, strings, macros, types are not constants
+        c, m = run(fam("u", "#define U_A UNKNOWN_THING + 1\n"))
+        assert c == 2 and "line 2" in m, (c, m)
+        assert run(fam("u", "#define U_A 1 ? 2 : 3\n"))[0] == 2
+        assert check(os.path.join(tmp, "missing.h"))[0] == 2
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("check_define_dups: selftest PASS")
     return 0
 
 
-def write_baseline(defines, baseline):
-    dups = groups(read_defines(defines))
-    with open(baseline, "w") as f:
-        f.write(baseline_text(dups))
-    return len(dups)
-
-
 def main(argv):
-    defines, baseline, write, st = DEF_DEFAULT, BASE_DEFAULT, False, False
+    defines, st = DEF_DEFAULT, False
     it = iter(argv)
     for a in it:
         if a == "--defines":
-            defines = next(it)
-        elif a == "--baseline":
-            baseline = next(it)
-        elif a == "--write-baseline":
-            write = True
+            defines = next(it, None)
+            if defines is None:
+                print("--defines needs a file", file=sys.stderr)
+                return 2
         elif a == "--selftest":
             st = True
         else:
@@ -370,15 +464,7 @@ def main(argv):
             return 2
     if st:
         return selftest()
-    if write:
-        try:
-            n = write_baseline(defines, baseline)
-        except Unmeasurable as e:
-            print("check_define_dups: UNMEASURED: %s" % e, file=sys.stderr)
-            return 2
-        print("wrote %d groups to %s" % (n, baseline))
-        return 0
-    code, msgs = check(defines, baseline)
+    code, msgs = check(defines)
     print("\n".join(msgs), file=sys.stderr if code else sys.stdout)
     return code
 

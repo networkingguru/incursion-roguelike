@@ -1,5 +1,8 @@
+// no-family
 #ifndef INCURSION_DEFINES_H
 #define INCURSION_DEFINES_H
+// end no-family
+// no-family
 
 /* See the Incursion LICENSE file for copyright information.
 
@@ -61,6 +64,8 @@ typedef signed int        hText;
 typedef signed int        hCode;
 typedef signed int        hData;
 typedef signed int        hObj;
+// end no-family
+// no-family
 
 #define OBJ_TABLE_SIZE   65536
 /* ww: was 4096, but a recent profile revealed Registry::Get() to be 
@@ -88,6 +93,8 @@ typedef signed int        hObj;
 #ifdef ASSERT
   #undef ASSERT
 #endif
+// end no-family
+// no-family
 
 /* upstream: #a was pasted straight INTO the format string, so any '%' in the
    asserted expression became a conversion specifier and Error() then read an
@@ -126,6 +133,8 @@ typedef signed int        hObj;
 #else
   #define BREAKOUT __builtin_trap();
 #endif
+// end no-family
+// no-family
 
 
 #define HOUR_TURNS 18000L
@@ -136,21 +145,27 @@ typedef signed int        hObj;
 
 #define CONSTRAINED_ENC(enc,con) (-2) enc con
 #define CON_ENC_MINMAX(enc,con,low,high) (-3) enc con low high
+// end no-family
+// family: evreturn
 
 #define ERROR    -1
 #define NOTHING   0
 #define DONE      1
 #define ABORT     2
 #define NOMSG     3
+// end family: evreturn
+// family: istarget_ret
 
 // reminder EV_RETURNs for EV_ISTARGET
 #define SHOULD_CAST_IT  0       /* AutoBuff and monster AI will do so */
 #define CAN_CAST_IT     1       /* player can, monsters won't */
 #define CANNOT_CAST_IT  -1      /* No one can: invalid target */
+// end family: istarget_ret
+// family: dir
 
 
 #define FIRST_DIR 0
-#define NORTH     0
+#define NORTH     0  /* alias of FIRST_DIR */
 #define SOUTH     1
 #define EAST      2
 #define WEST      3
@@ -161,7 +176,9 @@ typedef signed int        hObj;
 #define CENTER    8
 #define UP        9
 #define DOWN      10
-#define LAST_DIR 7
+#define LAST_DIR 7  /* alias of SOUTHWEST */
+// end family: dir
+// family: coin
 
 /* Coin Types */
 #define GOLD      1
@@ -169,8 +186,12 @@ typedef signed int        hObj;
 #define SILVER    3
 #define COPPER    4
 #define ELECTRUM  5
+// end family: coin
+// no-family
 
 #define SAL(a) (__SAL[min((a),9)])
+// end no-family
+// family: lroll
 
 /* These constants can appear in dice values rolled with the
    LRoll function. They allow level-based dice rolls. */
@@ -178,7 +199,7 @@ typedef signed int        hObj;
 
 
 #define LEVEL_1PER1  -101
-#define LEVEL        -101
+#define LEVEL        -101  /* alias of LEVEL_1PER1 */
 #define LEVEL_2PER1  -102 /* 1 every two levels */
 #define LEVEL_3PER1  -103 /* 1 every three levels */
 #define LEVEL_4PER1  -104
@@ -275,18 +296,26 @@ typedef signed int        hObj;
 #define PLUS_5PER1_ADD15    -45
 
 #define LEVEL_LAST -44
+// end family: lroll
+// family: mval
                                                   
 #define MVAL_NONE  0
 #define MVAL_ADD   1
 #define MVAL_SET   2
 #define MVAL_PERCENT 3
+// end family: mval
+// family: mbound
 
 #define MBOUND_NONE 0
 #define MBOUND_MIN  1
 #define MBOUND_MAX  2
 #define MBOUND_NEAR 3
+// end family: mbound
+// no-family
 
 #define LUC LUCK
+// end no-family
+// family: f_flag
 
 #define F_SOLID          0x0001 /* Prevents Travel            */
 #define F_XSOLID         0x0002 /* Prevents Ethereal Travel   */
@@ -304,10 +333,12 @@ typedef signed int        hObj;
 #define F_WARN          0x10000
 #define F_BRIDGE        0x20000
 #define F_ALTAR         0x40000
+// end family: f_flag
+// family: kn
 
 #define KN_NATURE    0x01
 #define KN_CURSE     0x02
-#define KN_BLESS     0x02
+#define KN_BLESS     0x02  /* alias of KN_CURSE */
 #define KN_MAGIC     0x04
 #define KN_PLUS      0x08
 #define KN_PLUS2     0x10
@@ -315,12 +346,14 @@ typedef signed int        hObj;
 #define KN_RUSTPROOF 0x40
 #define KN_IDENTIFIED 0x60
 #define KN_HANDLED   0x80
+// end family: kn
+// family: if_flag
 
 #define IF_BLESSED     0x0001
 #define IF_CURSED      0x0002
 #define IF_WORN        0x0004
-#define IF_WIELDED     0x0004
-#define IF_HELD        0x0004
+#define IF_WIELDED     0x0004  /* alias of IF_WORN */
+#define IF_HELD        0x0004  /* alias of IF_WORN */
 #define IF_MASTERWORK  0x0008
 #define IF_BROKEN      0x0010
 #define IF_INTUITED    0x0020
@@ -330,6 +363,8 @@ typedef signed int        hObj;
 #define IF_GHOST_TOUCH 0x0200
 #define IF_REAPPLYING  0x0400
 #define IF_LEGEND_ROLLED 0x0800
+// end family: if_flag
+// family: t_type
 
 /* The core game objects */
 #define T_GAME     1
@@ -351,7 +386,7 @@ typedef signed int        hObj;
 
 /* The Items */
 #define T_FIRSTITEM 20
-#define T_AMULET    20
+#define T_AMULET    20  /* alias of T_FIRSTITEM */
 #define T_ARMOUR     21
 #define T_BOOK      22
 #define T_BOOTS      23
@@ -403,7 +438,7 @@ typedef signed int        hObj;
 #define T_TDUNGEON   68
 #define T_TROUTINE   69
 #define T_TNPC       70
-#define T_TCLASS     70
+#define T_TCLASS     70  /* known collision: inc-ofvav */
 #define T_TRACE      72
 #define T_TDOMAIN    73
 #define T_TGOD       74
@@ -436,6 +471,8 @@ typedef signed int        hObj;
 
 
 #define is_res(ot) (ot >= T_TMONSTER && ot <= T_TFLAVOR)
+// end family: t_type
+// family: sobj
 
 #define SOBJ_E        1
 #define SOBJ_ETERM    2
@@ -447,12 +484,16 @@ typedef signed int        hObj;
 #define SOBJ_EITEM2   8
 #define SOBJ_EMAP     9
 #define SOBJ_GAME     10
+// end family: sobj
+// family: ab
 
 #define AB_ABILITY   1
 #define AB_STATI     2
 #define AB_FEAT      3
 #define AB_INNATE    4
 #define AB_EFFECT    5
+// end family: ab
+// family: an
 
 #define AN_SPELLS     1 /* Spellbook Spells */
 #define AN_INNATE     2 /* Innate Abilities */
@@ -477,12 +518,14 @@ typedef signed int        hObj;
 #define AN_DISEASE    21
 #define AN_POISON     22
 #define AN_TILE       24
+// end family: an
+// family: sl
 
 #define SL_INAIR     0
 #define SL_READY     1
-#define SL_READYHAND 1
+#define SL_READYHAND 1  /* alias of SL_READY */
 #define SL_WEAPON    2
-#define SL_WEPHAND   2
+#define SL_WEPHAND   2  /* alias of SL_WEAPON */
 #define SL_LIGHT     3
 #define SL_LSHOULDER 4
 #define SL_RSHOULDER 5
@@ -505,13 +548,17 @@ typedef signed int        hObj;
 #define SL_BELT5     22
 #define SL_PACK      23
 #define SL_LAST      24
-#define NUM_SLOTS    24
+#define NUM_SLOTS    24  /* alias of SL_LAST */
 
 /* Hack -- see Monster::Inventory() */
 #define SL_ARCHERY   50
+// end family: sl
+// family: sm
 
 #define SM_CAST           0x01
 #define SM_TRICKERY       0x02
+// end family: sm
+// family: mat
 
 
 #define MAT_LIQUID    1 
@@ -549,6 +596,8 @@ typedef signed int        hObj;
 #define MAT_MUD      33
 #define MAT_WROUGHT  34
 #define MAT_IRONWOOD 35
+// end family: mat
+// family: item_flag
 
 #define IT_NOGEN     1
 #define IT_EDIBLE    2
@@ -586,8 +635,12 @@ typedef signed int        hObj;
 #define WT_TWO_HANDED        33
 #define WT_FUMBLE1           34
 #define WT_FUMBLE2           35
+// end family: item_flag
+// no-family
 #define NOT_PROF_HIT_PENALTY 4   /* inc-1xr3: Values.cpp and the Create.cpp weapon prompt */
 #define NOT_PROF_SPD_PENALTY 10
+// end no-family
+// family: item_flag
 #define WT_STR1              36
 #define WT_STR2              37
 #define WT_STR3              38
@@ -606,11 +659,15 @@ typedef signed int        hObj;
 #define WT_MOUNTED_ONLY      48 /* massive lances cannot be used unless
                                  * you are mounted or you are really big */
 #define IT_LAST              49
+// end family: item_flag
+// family: save_type
 
 #define FORT   0
 #define REF    1
 #define WILL   2
 #define NOSAVE 3
+// end family: save_type
+// family: sa
 
 /* Save Sub-types */
 #define SA_MAGIC       0x00000001
@@ -635,6 +692,8 @@ typedef signed int        hObj;
 #define SA_KNOCKDOWN   0x00080000
 #define SA_STUN        0x00100000
 #define SA_REST        0x00200000
+// end family: sa
+// family: sn
 /* etc. */
 
 /* And the Numbers */
@@ -660,6 +719,8 @@ typedef signed int        hObj;
 #define SN_KNOCKDOWN   20 /* ww: dwarven stability */
 #define SN_STUN        21
 #define SN_REST        22
+// end family: sn
+// family: ai
 
 #define AI_POTION     1 
 #define AI_SCROLL     2 
@@ -715,10 +776,14 @@ typedef signed int        hObj;
 #define AI_ANIMAL_NAME    57 
 #define AI_TATTOO     58
 #define AI_LAST       60
+// end family: ai
+// family: damage_kind
 
 #define SLASH  0
 #define PIERCE 1
 #define BLUNT  2
+// end family: damage_kind
+// family: af
 
 #define AF_NOGEN      1
 #define AF_SENTIENT   2
@@ -730,6 +795,8 @@ typedef signed int        hObj;
 #define AF_AGGRESSIVE 8
 
 #define AF_LAST       32
+// end family: af
+// family: tf
 
 #define TF_SOLID      1
 #define TF_OPAQUE     2
@@ -758,6 +825,8 @@ typedef signed int        hObj;
 #define TF_DEPOSIT    26
 #define TF_PIT        27
 #define TF_LAST       28
+// end family: tf
+// family: rf
 
 #define RF_CORRIDOR   1
 #define RF_VAULT      2
@@ -787,6 +856,8 @@ typedef signed int        hObj;
 #define RF_ODD_HEIGHT 26
 #define RF_CENTER_ENC 27
 #define RF_LAST       28
+// end family: rf
+// family: cf
 
 #define CF_RELIGIOUS  1
 #define CF_LAWFUL     2
@@ -805,8 +876,12 @@ typedef signed int        hObj;
 #define CF_NONLAWFUL  15
 #define CF_NONCHAOTIC 16
 #define CF_LAST       17 /* Class/Race Flags */
+// end family: cf
+// no-family
 
 #define DOF_LAST      1 /* Domain Flags */
+// end no-family
+// family: gf_god
 
 #define GF_GOOD        1
 #define GF_LAWFUL      2
@@ -827,8 +902,12 @@ typedef signed int        hObj;
 #define GF_SANITY_BLASTING 19
 #define GF_BLATANT_EVIL 20
 #define GF_LAST       21 /* God Flags */
+// end family: gf_god
+// no-family
 #define FF_LAST       1 /* Feature Flags */
 #define MF_LAST       1 /* Map Flags */
+// end no-family
+// family: bf
 
 #define BF_LMELEE      1  // load mtarg into EVictim
 #define BF_LRANGED     2  // load rtarg into EVictim
@@ -845,6 +924,8 @@ typedef signed int        hObj;
 #define BF_NOT_ENRAGED 13
 #define BF_WHEN_ENRAGED 14
 #define BF_SPECIFIC    15 // Not Applicable unless attached by stati
+// end family: bf
+// family: bc
 
 #define BC_AFRAID      0x00000001
 #define BC_NAFRAID     0x00000002
@@ -861,8 +942,12 @@ typedef signed int        hObj;
 #define BC_MAG_SUPPORT 0x00002000
 #define BC_SPECIFIC    0x00004000
 #define BC_CANT_HIT    0x00008000
+// end family: bc
+// family: bf
 
 #define BF_LAST 32
+// end family: bf
+// family: enc_part
 
 
 #define EP_ELSE         0x00000001
@@ -889,6 +974,8 @@ typedef signed int        hObj;
 #define EP_SKEW_FOR_MID 0x00200000
 #define EP_MAYCLASS     0x00400000
 #define EP_NOALIGN      0x00800000
+// end family: enc_part
+// family: nf
 
 #define NF_NOGEN        1
 #define NF_SINGLE       2
@@ -907,8 +994,12 @@ typedef signed int        hObj;
 #define NF_FORM50       15
 #define NF_CONTEXT_AQUATIC 16
 #define NF_LAST 31
+// end family: nf
+// no-family
 
 #define ANY(X) (-1) (X)
+// end no-family
+// family: l_flag
 
 #define L_HASFIELD    0x00000001
 #define L_OPAQUE      0x00000002
@@ -921,6 +1012,8 @@ typedef signed int        hObj;
 #define L_SPECIAL     0x00000100
 #define L_MDARK       0x00000200
 #define L_SOLID       0x00000400
+// end family: l_flag
+// family: rm
 //#define L_
 
 #define RM_ANY        -1
@@ -950,6 +1043,8 @@ typedef signed int        hObj;
 #define RM_MAZE       23 /* Random Maze fills most of panel */
 #define RM_DIAMONDS   24 /* Grid of Diamond squares */
 #define RM_LAST       32
+// end family: rm
+// family: rc
 
 #define RC_EMPTY      1
 #define RC_SINGLE     2
@@ -963,15 +1058,19 @@ typedef signed int        hObj;
 #define RC_PIT        10 /* 30% chance of monster per 'inner' square */
 #define RC_VAULT      11 /* 60% chance of monster per 'inner' square */
 #define RC_LAST       13
+// end family: rc
+// family: tu
 
 #define TU_FIRST      24
-#define TU_NORMAL     24
+#define TU_NORMAL     24  /* alias of TU_FIRST */
 #define TU_DIAGONAL   25
 #define TU_NATURAL    26
 #define TU_BIG        27
 #define TU_WARREN     28
 #define TU_DRUNKARD   29
 #define TU_REINFORCED 30
+// end family: tu
+// family: df_dmg
 
 /* DF_xxxx == AD_xxxx ^ 2 */
 
@@ -1004,6 +1103,8 @@ typedef signed int        hObj;
 #define DF_DISE   0x04000000
 #define DF_FEAR   0x08000000
 #define DF_SUBD   0x10000000
+// end family: df_dmg
+// family: ad
 
 
 #define AD_NORM    0    /* ordinary physical */
@@ -1022,7 +1123,7 @@ typedef signed int        hObj;
 #define AD_PIERCE  12 
 #define AD_BLUNT   13
 #define AD_STUK    14  /* entangles */
-#define AD_LAST_PHYSICAL 13
+#define AD_LAST_PHYSICAL 13  /* alias of AD_BLUNT */
 
 #define AD_SLEE    16
 #define AD_STUN    17  /* stuns */
@@ -1030,7 +1131,7 @@ typedef signed int        hObj;
 #define AD_STON    19  /* petrifies (Medusa, Cockatrice) */
 #define AD_POLY    20
 #define AD_CHRM    21
-#define AD_MIND    21
+#define AD_MIND    21  /* alias of AD_CHRM */
 #define AD_DISN    22  /* disintegration */
 #define AD_CRIT    23  /* Placeholder for Crit-immunity */
 
@@ -1091,6 +1192,8 @@ typedef signed int        hObj;
 #define AD_FALL    94
 
 #define is_wepdmg(a) (a == AD_SLASH || a == AD_PIERCE || a == AD_BLUNT)
+// end family: ad
+// family: attack
  
 
 /* The monster attack codes: there are five kinds of attack
@@ -1195,7 +1298,7 @@ typedef signed int        hObj;
 #define A_GEST    51  /* Gestures at (spell-like attack) */
 #define A_DETH    52  /* Death Throes (occurs when mon dies) */
 #define A_PROX    53  /* Proximity Effect */
-#define A_LAST_SPECIAL 53
+#define A_LAST_SPECIAL 53  /* alias of A_PROX */
 #define is_special_attk(a) ((a) > A_LAST_POSTGRAB && (a) <= A_LAST_SPECIAL)
 
 #define A_AURA    54  /* damage on contact */
@@ -1207,7 +1310,7 @@ typedef signed int        hObj;
 #define A_DEQU    60  
   /* ww: A_DEQU -- hit Item2 first, if not, then Item, if not, then
    * apply to attacker */
-#define A_LAST_RESPONSE 60
+#define A_LAST_RESPONSE 60  /* alias of A_DEQU */
 #define is_response_attk(a) ((a) > A_LAST_SPECIAL && (a) <= A_LAST_RESPONSE)
 
 #define A_BULL    61
@@ -1231,7 +1334,7 @@ typedef signed int        hObj;
 #define A_DEFN    79  /* Fight Defensively */
 #define A_AEYE    80  /* Avert Eyes */
 #define A_PREC    81  /* Precision Strike */
-#define A_LAST_MANEUVER 81
+#define A_LAST_MANEUVER 81  /* alias of A_PREC */
 #define is_maneuver(a) ((a) > A_LAST_RESPONSE && (a) <= A_LAST_MANEUVER)
 
 #define A_MOVE    90  
@@ -1248,7 +1351,7 @@ typedef signed int        hObj;
 #define A_SUMM   100  /* summon random monsters, MA_TYPE == DType */
 #define A_FORM   101  /* Shapechanger, with AD_EFF1/2 */
 #define A_SEEM   102
-#define A_LAST_MABILITY 102
+#define A_LAST_MABILITY 102  /* alias of A_SEEM */
 
 #define is_ability_attk(a) ((a) > A_LAST_MANEUVER && (a) <= A_LAST_MABILITY)
 
@@ -1257,16 +1360,22 @@ typedef signed int        hObj;
 #define A_SPEL    112  /* Ranged Attack Roll for spells */
 #define A_SPE1    113
 #define A_SPE2    114
+// end family: attack
+// family: attk_iter
 
 #define ATTK_FIRST 1
 #define ATTK_NEXT  2
 #define ATTK_PEEK  3
+// end family: attk_iter
+// family: s_style
 
 #define S_ARCHERY 0
 #define S_BRAWL 1
 #define S_MELEE 2
 #define S_THROWN 3
 #define S_DUAL  4
+// end family: s_style
+// family: queue
 
 
 #define QUEUE_WEAPON_MSG   1
@@ -1276,12 +1385,16 @@ typedef signed int        hObj;
 #define QUEUE_DISPEL_MSG   5
 #define QUEUE_BLAST_MSG    6
 #define QUEUE_DISBELIEF_MSG 7
+// end family: queue
+// family: ts
 
 #define TS_FOUND    0x0001
 #define TS_DISARMED 0x0002
 #define TS_NODISARM 0x0004
 #define TS_SEARCHED 0x0008
 #define TS_NORESET  0x0010
+// end family: ts
+// family: ms
 
 #define MS_PEACEFUL    0x0001 /* No hostility toward anyone who didn't attack first */
 #define MS_GUARDING    0x0002
@@ -1298,6 +1411,8 @@ typedef signed int        hObj;
 #define MS_REACH_ONLY  0x2000
 #define MS_THREAT2     0x4000
 #define MS_STILL_CAST  0x8000 
+// end family: ms
+// family: m_flag
 
 #define M_HUMANOID        1   
 #define M_NOLIMBS         2   
@@ -1413,6 +1528,8 @@ typedef signed int        hObj;
 #define M_RIDER           112
 #define M_NOTTALKABLE     113
 #define M_LAST            114
+// end family: m_flag
+// family: tt
 
 #define TT_SURFACE    0x0001 /* Never in a dungeon */
 #define TT_FOREST     0x0002
@@ -1430,6 +1547,8 @@ typedef signed int        hObj;
 #define TT_URBAN      0x2000
 #define TT_ASTRAL     0x4000
 #define TT_ETHEREAL   0x8000
+// end family: tt
+// family: pa
 
 #define PA_AMBITIOUS_CONQUERER         0
 #define PA_CHARMING_SCOUNDREL          1
@@ -1447,12 +1566,16 @@ typedef signed int        hObj;
 #define PA_RIGHTEOUS_ZEALOT            13
 #define PA_WHITE_KNIGHT                14
 #define PA_WITTY_THRILLSEEKER          15
+// end family: pa
+// family: mr
 
 #define MR_COMMON       1
 #define MR_UNCOMMON     2
 #define MR_RARE         3
 #define MR_VRARE        4
 #define MR_XRARE        5
+// end family: mr
+// family: tmf
 
 #define TMF_BODY_ONLY  -1
 #define TMF_OBVIOUS    -2
@@ -1460,6 +1583,8 @@ typedef signed int        hObj;
 #define TMF_NOGEN      -4
 #define TMF_NAMEONLY   -5
 #define TMF_LAST       -6
+// end family: tmf
+// family: sz
 
 #define SZ_MINISCULE  1
 #define SZ_TINY       2
@@ -1469,6 +1594,8 @@ typedef signed int        hObj;
 #define SZ_HUGE       6
 #define SZ_GARGANTUAN 7
 #define SZ_COLLOSAL   8
+// end family: sz
+// family: per
 
 #define PER_VISUAL  0x0001
 #define PER_INFRA   0x0002
@@ -1481,11 +1608,15 @@ typedef signed int        hObj;
 #define PER_DETECT  0x0100
 #define PER_TRACK   0x0200
 #define PER_SHARED  0x0400
-#define PER_LAST    PER_SHARED
+#define PER_LAST    PER_SHARED  /* alias of PER_SHARED */
+// end family: per
+// no-family
 
 #define EXXX_SKILL   10
 #define EXXX_SAVE    11
 #define EXXX_PSKILL  12  /* Skill-based, no bleedoff */
+// end no-family
+// family: ex_str
 
 #define ESTR_DOOR    1
 #define ESTR_CRIT    2
@@ -1495,6 +1626,8 @@ typedef signed int        hObj;
 #define ESTR_UNSTUCK 6
 #define ESTR_BURDEN  7   /* Encumbrance Pulse */
 #define ESTR_ARMOUR   8
+// end family: ex_str
+// family: ex_dex
 
 #define EDEX_TUMBLE    1
 #define EDEX_CRIT      2
@@ -1502,6 +1635,8 @@ typedef signed int        hObj;
 #define EDEX_DEFENSIVE 4
 #define EDEX_EVASION   5
 #define EDEX_JUMP      6
+// end family: ex_dex
+// family: ex_con
 
 #define ECON_OVERCOME  1
 #define ECON_CRIT      2 /* surviving enemy crit */
@@ -1511,13 +1646,17 @@ typedef signed int        hObj;
 #define ECON_FATIGUE   6 /* spending fatigue up to 0 */
 #define ECON_ESSIAH    7
 #define ECON_HEAL      8 /* natural waking healing */
+// end family: ex_con
+// family: ex_int
 
 #define EINT_CASTING   1
 #define EINT_IDENT     2
 #define EINT_CREATION  3
 #define EINT_IDMON     4
 #define EINT_XAVIAS    5
-#define EINT_SABINE    5
+#define EINT_SABINE    5  /* alias of EINT_XAVIAS */
+// end family: ex_int
+// family: ex_wis
 
 #define EWIS_TURNING   1
 #define EWIS_DONATE    2
@@ -1526,6 +1665,8 @@ typedef signed int        hObj;
 #define EWIS_CONVERT   5
 #define EWIS_CREATION  6
 #define EWIS_XAVIAS    7
+// end family: ex_wis
+// family: ex_cha
 
 #define ECHA_FEAR      1
 #define ECHA_CHARM     2
@@ -1534,6 +1675,8 @@ typedef signed int        hObj;
 #define ECHA_SUMMON    5
 #define ECHA_THRONE    6
 #define ECHA_ESSIAH    7
+// end family: ex_cha
+// family: ex_luc
 
 #define ELUC_RISK      1
 #define ELUC_ITEM      2
@@ -1541,6 +1684,8 @@ typedef signed int        hObj;
 #define ELUC_CRIT      4
 #define ELUC_FOUNTAIN  5
 #define ELUC_MAEVE     6
+// end family: ex_luc
+// family: ma
 
 
 #define MA_ALL          0
@@ -1671,6 +1816,8 @@ typedef signed int        hObj;
 #define MA_CHOICE4      128
 #define MA_CHOICE5      129
 #define MA_LAST         130
+// end family: ma
+// family: mn
 
 
 
@@ -1687,6 +1834,8 @@ typedef signed int        hObj;
 
 
 #define MN_LAST_BIT     148
+// end family: mn
+// family: pur
 
 /* GetMonID Cause Constants */
 #define PUR_DUNGEON  1
@@ -1710,6 +1859,8 @@ typedef signed int        hObj;
 #define PUR_MAJOR    19
 #define PUR_CRAFT    20
 #define PUR_LISTING  100
+// end family: pur
+// family: ig
 
 #define IG_STAPLE   0x0001
 #define IG_GOOD     0x0002
@@ -1721,6 +1872,8 @@ typedef signed int        hObj;
 #define IG_CHEST    0x0080
 #define IG_MONEQUIP 0x0100
 #define IG_KNOWN    0x0200
+// end family: ig
+// family: en_enc
 
 
 #define EN_ROOM     0x00000001 /* Place monsters in last created room */
@@ -1750,6 +1903,8 @@ typedef signed int        hObj;
 #define EN_AQUATIC  0x01000000 /* Aquatic Encounter */
 #define EN_OODMON   0x02000000
 #define EN_DUNREGEN 0x04000000
+// end family: en_enc
+// family: tm
 
 #define TM_SKILL    0x0001 /* skilled kobold, veteran mind flayer, etc. */
 #define TM_CLASS    0x0002 /* orc barbarian, firenewt sorceror, etc. */
@@ -1761,6 +1916,8 @@ typedef signed int        hObj;
 #define TM_ATTR     0x0080 /* Exceptional Attribute templates */
 #define TM_DESCENT  0x0100 /* Half-Dragon, Half-Fiend, etc. */
 #define TM_PLANAR   0x0200 /* Aqueous, Flame, Celestial, Anarchic */
+// end family: tm
+// family: al
 
 #define AL_LAWFUL     0x0001
 #define AL_CHAOTIC    0x0002
@@ -1770,6 +1927,8 @@ typedef signed int        hObj;
 #define AL_NONCHAOTIC 0x0020
 #define AL_NONGOOD    0x0040
 #define AL_NONEVIL    0x0080
+// end family: al
+// family: attr
 
 #define A_STR 0
 #define A_DEX 1
@@ -1778,7 +1937,7 @@ typedef signed int        hObj;
 #define A_WIS 4
 #define A_CHA 5
 #define A_LUC 6   /* Players have "luck", others have "loyalty" */
-#define A_LOY 6 
+#define A_LOY 6  /* alias of A_LUC */
 
 #define A_SPD_ARCHERY 7    /* Archery Speed */
 #define A_SPD_BRAWL   8    /* Brawl Speed */
@@ -1830,6 +1989,8 @@ typedef signed int        hObj;
                             j == BONUS_SACRED || j == BONUS_WEAPON ||  \
                             j == BONUS_SKILL || j == BONUS_COMP ||     \
                             j == BONUS_FEAT || AttrAdj[i][j] < 0)
+// end family: attr
+// family: r_race
 
 
 #define R_HUMAN      1
@@ -1840,6 +2001,8 @@ typedef signed int        hObj;
 #define R_ORC        6
 #define R_TROLL      7
 #define R_GOBLIN     8
+// end family: r_race
+// family: encumb
 
 
 #define EN_NONE      0
@@ -1847,6 +2010,8 @@ typedef signed int        hObj;
 #define EN_MODERATE  2
 #define EN_HEAVY     3
 #define EN_EXTREME   4
+// end family: encumb
+// family: sc
 
 #define SC_ABJ       0x00000001
 #define SC_ARC       0x00000002
@@ -1867,6 +2032,8 @@ typedef signed int        hObj;
 #define SC_FORCE     0x00010000
 #define SC_LIGHT     0x00020000
 #define SC_DARKNESS  0x00040000
+// end family: sc
+// family: sp_flag
 
 /* Spell Knowledge Flags */
 #define SP_KNOWN     0x0001
@@ -1886,6 +2053,8 @@ typedef signed int        hObj;
 #define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
 #define SP_INHERENT  0x4000 /* picked by the Inherent Spell feat; castable without being memorized; needs no focus */
 #define SP_PEND_DIV  0x8000 /* divine selection, takes effect at the next rest */
+// end family: sp_flag
+// family: sp_src
 
 /* inc-4999 phase 4a: a "version" is a (spell number, source) pair, so the
    player can choose which held version of a spell to cast. MAX_SPELLS is 2048,
@@ -1898,6 +2067,8 @@ typedef signed int        hObj;
 #define SP_SRC_DIVINE 2
 #define SP_SRC_PRIMAL 3
 #define SP_SRC_BARDIC 4
+// end family: sp_src
+// family: sk
 
 /* The SpellVersionPack/SpellVersionSpell/SpellVersionSrcCode/
    SpellSrcCodeKind/SpellKindSrcCode helpers live in inc/Creature.h, near the
@@ -1912,7 +2083,7 @@ typedef signed int        hObj;
 #define SK_BLUFF      6
 #define SK_CLIMB      7
 #define SK_CONCENT    8
-#define SK_CONCENTRATION 8
+#define SK_CONCENTRATION 8  /* alias of SK_CONCENT */
 #define SK_CRAFT      9
 #define SK_DECIPHER   10
 #define SK_DIPLOMACY  11
@@ -1922,14 +2093,14 @@ typedef signed int        hObj;
 #define SK_GATHER_INF 15
 #define SK_HANDLE_DEV 16
 #define SK_HEAL       17
-#define SK_HEALING    17
+#define SK_HEALING    17  /* alias of SK_HEAL */
 #define SK_HIDE       18
 #define SK_ILLUSION   19
 #define SK_INTIMIDATE 20
 #define SK_INTUITION  21
 #define SK_JUMP       22
 #define SK_KNOW_GEO   23
-#define SK_KNOW_FIRST 23
+#define SK_KNOW_FIRST 23  /* alias of SK_KNOW_GEO */
 #define SK_KNOW_INF    24  
 #define SK_KNOW_MAGIC  25
 #define SK_KNOW_MYTH   26 
@@ -1938,33 +2109,35 @@ typedef signed int        hObj;
 #define SK_KNOW_PLANES 29
 #define SK_KNOW_THEO   30
 #define SK_KNOW_UNDEAD 31
-#define SK_KNOW_LAST   31
+#define SK_KNOW_LAST   31  /* alias of SK_KNOW_UNDEAD */
 #define SK_KNOW_ALL    23,24,25,26,27,28,29,30,31
 #define SK_LISTEN     32
 #define SK_LOCKPICKING 33
 #define SK_METAMAGIC  34
 #define SK_MINING     35
 #define SK_MOVE_SIL   36
-#define SK_MOVE_SILENTLY 36
+#define SK_MOVE_SILENTLY 36  /* alias of SK_MOVE_SIL */
 #define SK_PERFORM      37
 #define SK_PICK_POCKET 38
 #define SK_POISON_USE 39
 #define SK_RIDE       40
 #define SK_SEARCH     41
-#define SK_SEARCHING  41
+#define SK_SEARCHING  41  /* alias of SK_SEARCH */
 #define SK_SENESCHAL  42
 #define SK_SPELLCRAFT 43
 #define SK_SPOT       44
 #define SK_SWIM       45
-#define SK_SWIMMING   45
+#define SK_SWIMMING   45  /* alias of SK_SWIM */
 #define SK_TUMBLE     46
-#define SK_TUMBLING   46
+#define SK_TUMBLING   46  /* alias of SK_TUMBLE */
 #define SK_USE_MAGIC  47
 #define SK_WILDERNESS 48
-#define SK_WILD_LORE  48
+#define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
 #define SK_LASTSKILL  49
-#define SK_LAST       49
+#define SK_LAST       49  /* alias of SK_LASTSKILL */
 #define SK_ANY -1
+// end family: sk
+// family: grade
 
 #define ABYSSAL     0
 #define POOR        1
@@ -1973,6 +2146,8 @@ typedef signed int        hObj;
 #define GREAT       4
 #define SUPERIOR    5
 #define UNEARTHLY   6
+// end family: grade
+// family: ca
 //#define DIVINE      7
 
 
@@ -2120,6 +2295,8 @@ typedef signed int        hObj;
 #define CA_MASTER_ARTISAN    141
 #define CA_HIDE_IN_PLAIN_SIGHT 142
 #define CA_LAST              143
+// end family: ca
+// family: phd
 
 #define PHD_PARTY    1 /* Generic Pool / NPC Allies */
 #define PHD_MAGIC    2 /* Dominated or Summoned Mons. */
@@ -2127,9 +2304,13 @@ typedef signed int        hObj;
 #define PHD_COMMAND  4 /* Cleric's Commanded Undead */
 #define PHD_UNDEAD   5 /* Necromancer Undead Pool */
 #define PHD_FREEBIE  6 /* Do not count toward any PHD */
+// end family: phd
+// family: spec
                        
 #define SPEC_RELIGIOUS  1
 #define SPEC_MULTICLASS 2
+// end family: spec
+// family: val_base
 
 #define ABIL_VAL     1000
 #define FEAT_VAL     2000
@@ -2142,6 +2323,8 @@ typedef signed int        hObj;
 #define ALIGN_VAL    9000
 #define ATTR_VAL     10000
 #define CLEV_VAL     11000
+// end family: val_base
+// family: wg
 
 
 
@@ -2168,6 +2351,8 @@ typedef signed int        hObj;
 #define WG_LARMOUR        0x20000000
 #define WG_MARMOUR        0x40000000
 #define WG_HARMOUR        0x80000000
+// end family: wg
+// family: wq
 
 #define WQ_HOLY          1
 #define WQ_UNHOLY        2
@@ -2232,6 +2417,8 @@ typedef signed int        hObj;
 #define WQ_BLOODED       63
 
 #define WQ_LAST          64
+// end family: wq
+// family: aq
 
 #define AQ_LIGHT_FOR     1
 #define AQ_MEDIUM_FOR    2
@@ -2276,6 +2463,8 @@ typedef signed int        hObj;
 #define AQ_LAST          42
 
 #define AQ_SHATTERING    43
+// end family: aq
+// family: wq, aq
 
 
 // ww: these are really generic "item qualities", and it's getting annoying
@@ -2295,9 +2484,13 @@ typedef signed int        hObj;
 #define IQ_BLESSED       79 /* For Quality Lists Only */
 #define IQ_SACRED        80
 #define IQ_WROUGHT       81
+// end family: wq, aq
+// family: wq, aq
 
-#define AQ_TRUELAST      81
-#define WQ_TRUELAST      81
+#define AQ_TRUELAST      81  /* alias of IQ_WROUGHT */
+#define WQ_TRUELAST      81  /* alias of IQ_WROUGHT */
+// end family: wq, aq
+// family: ws
 
 
 #define WS_NOT_PROF      0
@@ -2307,6 +2500,8 @@ typedef signed int        hObj;
 #define WS_MASTERY       4
 #define WS_HIGH_MASTERY  5
 #define WS_GRAND_MASTERY 6
+// end family: ws
+// family: df_door
 
 #define DF_VERTICAL 0x01
 #define DF_OPEN     0x02
@@ -2316,7 +2511,9 @@ typedef signed int        hObj;
 #define DF_SECRET		0x20
 #define DF_BROKEN   0x40
 #define DF_SEARCHED 0x80
-#define DF_PICKED   0x80
+#define DF_PICKED   0x80  /* alias of DF_SEARCHED */
+// end family: df_door
+// family: ft
 
 /* We avoid -1, because that's a special signifier in TextVal
    arrays for the function Lookup to use. */
@@ -2333,7 +2530,7 @@ typedef signed int        hObj;
 
 
 #define FT_FIRST               (SK_LAST + 1)
-#define FT_AB                  (SK_LAST + 1)
+#define FT_AB                  (SK_LAST + 1)  /* alias of FT_FIRST */
 #define FT_ACROBATIC           (FT_AB + 1)
 #define FT_ACUTE_SENSES        (FT_AB + 2)
 /* upstream: this define lacked its closing paren, identical on Win32 (plain
@@ -2371,7 +2568,7 @@ typedef signed int        hObj;
 
 #define FT_CD                  (FT_AB + 32)
 
-#define FT_CAPTIVATING         (FT_CD + 0)
+#define FT_CAPTIVATING         (FT_CD + 0)  /* alias of FT_CD */
 #define FT_CENTERED            (FT_CD + 1)
 #define FT_CHI_STRIKE          (FT_CD + 2)
 #define FT_CHINK_IN_THE_ARMOUR  (FT_CD + 3)
@@ -2472,7 +2669,7 @@ typedef signed int        hObj;
 #define FT_IMPROVED_DEMORALIZE (FT_HI + 10)
 #define FT_IMPROVED_GRAPPLE    (FT_HI + 11)
 #define FT_IMPROVED_ATTR       (FT_HI + 13)
-#define FT_IMPROVED_STRENGTH   (FT_HI + 13)   /* Important! Do not change the order of the */
+#define FT_IMPROVED_STRENGTH   (FT_HI + 13)   /* Important! Do not change the order of the */  /* alias of FT_IMPROVED_ATTR */
 #define FT_IMPROVED_DEXTERITY  (FT_HI + 14)   /* Improved [Attr] feats! The game depends on */
 #define FT_IMPROVED_CONSTITUTION (FT_HI + 15) /* (FT_IMPROVED_ATTR + A_WIS) being equal to */
 #define FT_IMPROVED_INTELLIGENCE (FT_HI + 16) /* FT_IMPROVED_WISDOM. */
@@ -2662,6 +2859,8 @@ typedef signed int        hObj;
    numbers stored in saves are unchanged. */
 #define FT_LUCUBRATION         (FT_TUVWXYZ + 47)
 #define FT_LAST                (FT_TUVWXYZ + 48)
+// end family: ft
+// family: mm
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */
@@ -2691,6 +2890,8 @@ typedef signed int        hObj;
 #define MM_VILE          0x02000000  /* Does vile damage */
 #define MM_VOCALIZE      0x04000000  /* No verbal component */
 #define MM_WARP          0x08000000  /* Pass through Walls */
+// end family: mm
+// family: study
 
 #define STUDY_CASTING     1
 #define STUDY_BARDIC      2
@@ -2702,6 +2903,8 @@ typedef signed int        hObj;
 #define STUDY_SNEAK       8
 #define STUDY_MOUNT       9
 #define STUDY_LAST        10
+// end family: study
+// family: purpose
 
 #define EP_PLAYER_ONLY  0x00000
 #define EP_ATTACK       0x00001
@@ -2722,6 +2925,8 @@ typedef signed int        hObj;
 #define AIM_AT_DOOR     0x08000
 #define EP_UNLOCK       0x10000
 #define EP_DISPEL       0x20000
+// end family: purpose
+// family: vs
 
 #define VS_GENERAL       0
 #define VS_MELEE         1
@@ -2751,6 +2956,8 @@ typedef signed int        hObj;
 #define VS_FEAR          25
 #define VS_GAZE          26
 #define VS_HEALING       27
+// end family: vs
+// family: p_prio
 
 #define P_IMPOSSIBLE  1
 #define P_VERY_LOW    2
@@ -2761,6 +2968,8 @@ typedef signed int        hObj;
 #define P_EXTREME     7
 #define P_CRITICAL    8
 #define P_OVERRIDE    20     
+// end family: p_prio
+// family: act
 
 #define ACT_WAIT      0
 #define ACT_MOVE      1
@@ -2801,6 +3010,8 @@ typedef signed int        hObj;
 #define ACT_LOADXBOW  41
 #define ACT_PHASE     42
 #define ACT_LAST      43
+// end family: act
+// family: q
 
 
 #define Q_DIR  0x0001  
@@ -2814,8 +3025,12 @@ typedef signed int        hObj;
 #define Q_NEAR 0x0100
 #define Q_OPT  0x0200
 #define Q_ALL  0x0400
+// end family: q
+// no-family
 
 #define YU_REVERSE    0x0001
+// end no-family
+// family: bonus
 
 /* Bonus types do not match up exactly to the d20 system here. Instead,
  * several d20 types are missing due to the division between armour
@@ -2863,6 +3078,8 @@ typedef signed int        hObj;
 #define BONUS_PAIN    37
 #define BONUS_HIDE    38
 #define BONUS_LAST    39 
+// end family: bonus
+// family: rest
 
 #define REST_SAFE     0x0001
 #define REST_FULL     0x0002
@@ -2875,6 +3092,8 @@ typedef signed int        hObj;
 #define REST_DUNGEON  0x0100
 #define REST_NOIDENT  0x0200
 #define REST_FOOD     0x0400
+// end family: rest
+// family: dsm
 
 #define DSM_SILENT    0
 #define DSM_CHOICE    1
@@ -2882,41 +3101,61 @@ typedef signed int        hObj;
 #define DSM_FALL      3
 #define DSM_FLOAT     4
 #define DSM_INCOR     5
+// end family: dsm
+// family: stati
 
 
 #define GENERIC_STATI 0
 
 /* The first set of Stati represent various maladies */
 #define SICKNESS      1
-#define SICK          1
+#define SICK          1  /* alias of SICKNESS */
 #define POISONED      2
 #define BLINDNESS     3
-#define BLIND         3
+#define BLIND         3  /* alias of BLINDNESS */
+// end family: stati
+// family: val_blind
   #define BLIND_UNWANTED        0
   #define BLIND_EYES_CLOSED     1
+// end family: val_blind
+// family: stati
 #define HALLU         4
 #define STUNNED       5
 #define CONFUSED      6
 #define SLEEPING      7
-#define ASLEEP        7
+#define ASLEEP        7  /* alias of SLEEPING */
+// end family: stati
+// family: val_sleep
   #define SLEEP_MAGIC   1
   #define SLEEP_NATURAL 2
   #define SLEEP_FATIGUE 3
   #define SLEEP_PSYCH   4
   #define SLEEP_DEEP    5
+// end family: val_sleep
+// family: stati
 #define AGG_MON       8
 #define PARALYSIS     9
+// end family: stati
+// family: val_para
   #define PARA_HELD   0
   #define PARA_HYPNOTIZED 1
   #define PARA_DAZED 2
+// end family: val_para
+// family: stati
 #define AFRAID        10
+// end family: stati
+// family: val_fear
   #define FEAR_MAGIC    0
   #define FEAR_PANIC    1
   #define FEAR_MANA     2
   #define FEAR_HP       3
   #define FEAR_SKIRMISH 4
   #define FEAR_COWED    5
+// end family: val_fear
+// family: stati
 #define STUCK         11
+// end family: stati
+// family: val_stuck
     #define STUCK_STICKY  1
     #define STUCK_PINNED  2
     #define STUCK_WEAPON  3
@@ -2924,6 +3163,8 @@ typedef signed int        hObj;
     #define STUCK_ATTACK  5
     #define STUCK_BONDED  6
     #define STUCK_WEB     7
+// end family: val_stuck
+// family: stati
 #define BLEEDING      12
 #define ILLUS_DMG     13
 #define CHOKING       14
@@ -2961,6 +3202,8 @@ typedef signed int        hObj;
    cured by curative effects. */
 #define SPRINTING     60
 #define GRABBED       62
+// end family: stati
+// family: val_grabbed
   #define GR_GRABBED   1
   #define GR_GRAPPLED  2
   #define GR_SWALLOWED 3
@@ -2969,13 +3212,19 @@ typedef signed int        hObj;
   #define GR_GRAPPLER  6
   #define GR_SWALLOWER 7
   #define GR_ENGULFER  8
+// end family: val_grabbed
+// family: stati
 #define GRAPPLED      63
 #define GRAPPLING     64
 #define HIDING        65
+// end family: stati
+// family: val_hiding
   #define HI_SHADOWS   1 /* rogues */
   #define HI_CEILING   2 /* lurker above, darkmantle, etc. */
   #define HI_UNDER     3 /* hide under objects */
   #define HI_WATER     4 /* hiding beneath the water */
+// end family: val_hiding
+// family: stati
 #define RAGING        66
 #define SUMMONED      67
 #define ACTING        68 /* Eating, Digging, etc. */
@@ -2985,6 +3234,8 @@ typedef signed int        hObj;
 #define SPEC_TIMEOUT  72
 #define TRACKING      73 /* Rangers */
 #define ILLUSION      74
+// end family: stati
+// family: val_illusion
   #define IL_SPECTRAL 1
   #define IL_IMPROVED 2
   #define IL_ADVANCED 4
@@ -2992,9 +3243,13 @@ typedef signed int        hObj;
   #define IL_SHADE20  16
   #define IL_SHADE40  32
   #define IL_SHADE    (8 + 16 + 32)
+// end family: val_illusion
+// family: stati
 #define CHARGING      75
 #define TUMBLING      76
 #define SINGING       77  
+// end family: stati
+// family: val_singing
   #define BARD_COURAGE    1
   #define BARD_FASCINATE  2
   #define BARD_COUNTER    3
@@ -3003,6 +3258,8 @@ typedef signed int        hObj;
   #define BARD_PHOENIX    6
   #define BARD_MASS       7
   #define BARD_SPELLBREAK 8
+// end family: val_singing
+// family: stati
 #define ANIMAL_EMP_TRIED 78
 #define TRAP_EVENT    79
 #define HUNGER        80
@@ -3011,8 +3268,12 @@ typedef signed int        hObj;
 #define LFA_COUNT     83
 #define GENERATION    84
 #define ELEVATED      85
+// end family: stati
+// family: val_elevated
   #define ELEV_TREE    1
   #define ELEV_CEILING 2   
+// end family: val_elevated
+// family: stati
 #define SUSPEND_ATTK  86 
 #define MOUNTED       87
 #define MOUNT         88
@@ -3022,24 +3283,36 @@ typedef signed int        hObj;
 #define FLURRYING     92
 #define ANC_MEM       93
 #define ENGULFED      94
+// end family: stati
+// family: val_engulfed
   #define EG_SWALLOW  1   
   #define EG_ENGULF   2
+// end family: val_engulfed
+// family: stati
 #define ENGULFER      95
 #define DISB_TERRAIN  96
 #define CORPSE_FLAG   97
 /* The next set, magical effects that can be dispelled */
 
 #define INVIS         100
+// end family: stati
+// family: val_invis
   #define INV_NORMAL   1
   #define INV_IMPROVED 2
+// end family: val_invis
+// family: stati
 #define SEE_INVIS     101
 #define PHASED        102
+// end family: stati
+// family: val_phased
   #define PHASE_MATERIAL     0
   #define PHASE_VORTEX       1
   #define PHASE_ASTRAL       2
   #define PHASE_ETHEREAL     3
   #define PHASE_SHADOW       4
   #define PHASE_NEGATIVE     5
+// end family: val_phased
+// family: stati
 #define POLYMORPH     103
 #define RESIST        104
 #define ADJUST_IDX    105 /* Kludge for StatiIterAdjust */
@@ -3060,7 +3333,7 @@ typedef signed int        hObj;
 #define ADJUST_RES    120
 #define ADJUST_PAIN   121
 #define ADJUST_SIZE   122
-#define ADJUST_LAST   122 /* Keep this updated!!! */
+#define ADJUST_LAST   122 /* Keep this updated!!! */  /* alias of ADJUST_SIZE */
 #define SAVE_BONUS    123
 #define SKILL_BONUS   124
 #define SUSTAIN       125
@@ -3070,22 +3343,30 @@ typedef signed int        hObj;
 #define FORTIFICATION 129
 #define WATER_WALKING 130
 #define REFLECTING    131 /* General "block area magic" stati */
+// end family: stati
+// family: val_reflecting
   #define REF_REFLECT   1 /* turn beam back to origin -- Shield of Reflection */
   #define REF_TURNING   2 /* turn percent of magic back -- Spell Turning */
   #define REF_ABSORB    3 /* absorb physical magic -- Rod of Absorbtion */
   #define REF_QUENCH    4 /* cancel area effect completely -- Rod of Fire Extinguishing */
+// end family: val_reflecting
+// family: stati
 #define WATER_BREATHING 132
 #define ANCHORED      133 /* no teleporting, etc. */
 #define DETECTING     134       /* Val = MA_TYPE, Mag = Range */
 #define TIMESTOP      135
 #define PREPARED      136 /* Contingency */
 #define CHARMED       137 /* Three levels of charm in Incursion, in Val: */
+// end family: stati
+// family: val_charmed
 #define   CH_CHARM    1   /*   No longer attacks you (charm person) */
 #define   CH_CALMED   2   /*   Won't attack if you have not yet. */
 #define   CH_ALLY     3   /*   Will fight on your behalf */
 #define   CH_DOMINATE 4   /*   Will do as you say, joins party, etc. */
 #define   CH_COMMAND  5   /*   Command Undead / Fire Creatures / etc. */
 #define   CH_COMPEL   6   /*   scripted actions, i.e., Insatiable Thirst */
+// end family: val_charmed
+// family: stati
 #define POSSESSED     138 /* You run the monster! (Magic Jar) */
 #define ILLUMINATED   139 /* Faerie Fire; plusses to hit in ranged; '?' for invis */
 #define SLOW_POISON   140
@@ -3094,8 +3375,12 @@ typedef signed int        hObj;
 #define PERIODIC      143 /* Periodic Effect, i.e., =oPoly, =oBlinking */
 #define MANIFEST      144
 #define MISS_CHANCE   145
+// end family: stati
+// family: val_miss
   #define MISS_RANGED  1
   #define MISS_FULL    2
+// end family: val_miss
+// family: stati
 #define LIFESIGHT     146
 #define ENRAGED       147
 #define TRUE_SIGHT    148
@@ -3183,8 +3468,12 @@ typedef signed int        hObj;
 #define CAN_FORGET_SPELL  223
 #define HOME_REGION       224
 #define GAZE_REFLECTION   225
+// end family: stati
+// family: val_gaze_reflection
   #define GR_REFLECT      1
   #define GR_IMMUNE       2
+// end family: val_gaze_reflection
+// family: stati
 #define EYES_AVERTED      226
 #define MY_CORPSE_IS      227
 #define LOCKED            228
@@ -3194,7 +3483,7 @@ typedef signed int        hObj;
 #define HUNG_PULSE        232
 #define NO_PHD            233
 #define MAGIC_AURA        234
-#define SOCIAL_MOD        234
+#define SOCIAL_MOD        234  /* known collision: inc-upw.57 */
 #define DEATH_LOC         235
 #define ENCOUNTER         236
 #define ENTANGLED         237
@@ -3224,6 +3513,8 @@ typedef signed int        hObj;
    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
 #define HELD_MANA         250
 #define LAST_STATI        251
+// end family: stati
+// no-family
   
 
 
@@ -3231,6 +3522,8 @@ typedef signed int        hObj;
 #define IsMaladyStati(n) (((n) >= SICKNESS) && ((n) <= DISEASED))
 #define IsAdjustStati(n) (((n) >= ADJUST) && ((n) <= ADJUST_LUCK))
 #define IsAbilityStati(n) (((n) >= WEP_SKILL) && ((n) <= EXTRA_FEAT))
+// end no-family
+// family: ta
 
 #define TA_ENEMY     1
 #define TA_ALLY      2 /* Touch-healing spells */
@@ -3240,11 +3533,15 @@ typedef signed int        hObj;
 #define TA_POTENTIAL 6 /* As yet unseen */
 #define TA_WANDER    7 /* Point to wander to */
 #define TA_LEADER    8 /* Follow him around */
+// end family: ta
+// family: ti
 
 #define TI_WALL 0
 #define TI_FLOOR 1
 #define TI_ROCK 2
 #define TI_BORDER 3        
+// end family: ti
+// family: ef
 
 #define EF_PERIODIC    1
 #define EF_CURSED      2  /* Generate Cursed */
@@ -3361,11 +3658,15 @@ typedef signed int        hObj;
    it to pool the effect's own pval dice once per cast and walk the eligible
    creatures fewest-Hit-Dice-first (src/Magic.cpp). */
 #define EF_HD_POOL    108
+// end family: ef
+// no-family
 /* ponytail: the pool never touches a creature of EF_HD_POOL_CAP Hit Dice or
    more. Fixed at 9 because the only user today, Undeath to Death via Circle
    of Death, has 9; if a second HD-pool spell needs a different cap, promote
    this to an effect field rather than growing the constant. inc-kgzx. */
 #define EF_HD_POOL_CAP 9
+// end no-family
+// family: ef
 /* inc-1qyv: Item::getShopCost returns this effect's first ITEM_COST value in
    gold pieces, with no level formula and no shop markup. */
 #define EF_FIXED_PRICE 109
@@ -3374,6 +3675,8 @@ typedef signed int        hObj;
 #define EF_D10MIN     112  /* 50 * casterlevel units */
 #define EF_DHOUR      113  /* 300 * casterlevel units */
 #define EF_LAST       114
+// end family: ef
+// family: ea
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
@@ -3381,6 +3684,8 @@ typedef signed int        hObj;
 #define EA_INFLICT  3      /* xval = Stati, yval = Val, pval = Mag, rval = t */
 #define EA_DRAIN    4
 #define EA_TERRAFORM 5
+// end family: ea
+// family: val_terraform
   #define TERRA_EMPTY 1
   #define TERRA_ROCK  2
   #define TERRA_ALL   3
@@ -3390,7 +3695,11 @@ typedef signed int        hObj;
   #define TERRA_OPEN  9         /* ! SolidAt */
   #define TERRA_CLOSED 10       /* not TERRA_OPEN */
   #define TERRA_BRIDGE 11
+// end family: val_terraform
+// family: ea
 #define EA_TRAVEL   6      /* pval = Distance, rval = New Map, xval = Type */ 
+// end family: ea
+// family: val_travel
   #define TRAVEL_KNOWN     1       /* qval determines randomness/target ability */
   #define TRAVEL_ANYWHERE  2       /* yval can be coded x/y coord */
   #define TRAVEL_LEVEL     3
@@ -3398,14 +3707,22 @@ typedef signed int        hObj;
   #define TRAVEL_TO_TARG   5
   #define TRAVEL_WORLDWALK 6 /* List known wilderness locations, jump to one */   
   #define TRAVEL_POCKET    7
+// end family: val_travel
+// family: ea
 #define EA_IDENTIFY 7      /* pval = max item level, xval = known flags, yval = max traits revealed */ 
 #define EA_ILLUSION 8      
 #define EA_SUMMON   9
-  #define EF_CHOOSE     64
-  #define EF_GROUP      63
+// end family: ea
+// family: ef
+  #define EF_CHOOSE     64  /* known collision: inc-33shr */
+  #define EF_GROUP      63  /* known collision: inc-lhid2 */
+// end family: ef
+// family: ea
 #define EA_ANIMATE  10
 #define EA_FIELD    11 /* Light, Darkness, Web, Obscurement, etc. */
 #define EA_CREATION 13 /* Major Creation, etc. -- Create Item */
+// end family: ea
+// family: crea
   #define CREA_WIELD  0x01
   #define CREA_STOW   0x02
   #define CREA_DROP   0x04
@@ -3414,8 +3731,12 @@ typedef signed int        hObj;
   #define CREA_MANY   0x20
   #define CREA_TRAP   0x40
   #define CREA_XY     0x80 /* place at target xy, not evictim->xy */
+// end family: crea
+// family: ea
 #define EA_SLAYING  18 /* Slay Living, PW Kill, Disintegrate, etc. */
 #define EA_DETECT   20  /* Misc1 = Below; Misc2 = Range (or 0 = board) */
+// end family: ea
+// family: det
   #define DET_VISIBLE      0x01 /* Highlighted targets become visible */     
   #define DET_VALUABLE     0x02 /* Sort by value in gold */
   #define DET_REVEAL       0x04 /* Show text descsribing found targets */
@@ -3424,16 +3745,24 @@ typedef signed int        hObj;
   #define DET_HILIGHT      0x20 /* Highlight Found Targets */
   #define DET_NATURE       0x40 /* Reveals (in text) *what* is found */
   #define DET_INVIS        0x80 /* Reveals invisible creatures */
+// end family: det
+// family: ea
 #define EA_DISPEL   22 /* Dispel Magic / Disjunction */
+// end family: ea
+// family: dis
   #define DIS_DISPEL       0x01
   #define DIS_DISJOIN      0x02
   #define DIS_BANISH       0x04
   #define DIS_INNATE       0x08
   #define DIS_SUPPRESS     0x10
+// end family: dis
+// family: ea
 #define EA_WEAPON   23 /* Conjure Magical Weapon -- Black Blade, Spiritual Hammer, etc. */
 #define EA_BANISH   24 /* Send Away -- Imprisonment, Abjure, Banishment, etc. */
 #define EA_NOTIMP   25 
 #define EA_HEALING  26 /* Cure Light, Heal, etc; also Gain Mana, Bonus HP */
+// end family: ea
+// family: heal
   #define HEAL_HP      0x01
   #define HEAL_MANA    0x02
   #define HEAL_XP      0x04
@@ -3443,6 +3772,8 @@ typedef signed int        hObj;
   #define HEAL_HUNGER  0x40 /* by pval amount, no choking */
   #define HEAL_SATTR   0x80 /* Heal One Attribute */
   #define HEAL_ALL_MALADIES  0x100 /* like the priest spell 'Heal' */
+// end family: heal
+// family: ea
 #define EA_RAISE    27 /* Raise Dead, Resurrection */
 #define EA_MENU     28 /* Multi-Effect Staves & Artifacts */
 #define EA_CANCEL   29 /* Rod of Cancellation */
@@ -3458,21 +3789,29 @@ typedef signed int        hObj;
 #define EA_RESTORE   40
 #define EA_TURNING   41
 #define EA_REVEAL    42
-  #define EF_NEEDS_CORPSE   63
-  #define EF_TELL_DISTANCE  62
-  #define EF_TELL_INTENSITY 61
+// end family: ea
+// family: ef
+  #define EF_NEEDS_CORPSE   63  /* known collision: inc-lhid2 */
+  #define EF_TELL_DISTANCE  62  /* known collision: inc-wrqgs */
+  #define EF_TELL_INTENSITY 61  /* known collision: inc-egppt */
+// end family: ef
+// family: ea
 #define EA_ENCHANT   43         /* Magic Weapon, Keen Edge, etc. */
 #define EA_CONSTRUCT 44         /* Spiritual Weapon, Black Blade */
 #define EA_KNOCKBACK 45
-#define EA_SHIELD   8
+#define EA_SHIELD   8  /* known collision: inc-yvo8m */
 #define EA_GENERIC   46
 #define EA_VISION    47
+// end family: ea
+// family: vis
   #define VIS_MOBILE   0x01    /* Move Viewpoint About */
   #define VIS_SPECIFIC 0x02    /* See more than '?' for mons */
   #define VIS_SEE_INV  0x04    /* See Invisible */
   #define VIS_UNSEEN   0x08    /* Look at previously unseen areas */
   #define VIS_PERCEPT  0x10    /* Use 'Perception' */
   #define VIS_LOS      0x20    /* Use Regular Line of Sight */
+// end family: vis
+// family: know
 
   #define KNOW_ALIGN   0x01
   #define KNOW_HP      0x02
@@ -3482,6 +3821,8 @@ typedef signed int        hObj;
   #define KNOW_INVENT  0x20
   #define KNOW_MOMMEM  0x40
   #define KNOW_LOYALTY 0x80
+// end family: know
+// family: ar
 
 
 #define AR_NONE      0
@@ -3502,6 +3843,8 @@ typedef signed int        hObj;
 #define AR_DISEASE   15
 #define AR_CHAIN     16 /* Chain Lightning! */
 #define AR_CONE      17 
+// end family: ar
+// family: col
 
 /* Colour Sets for Effect Overlays */
 #define COL_FIRE     16
@@ -3518,6 +3861,8 @@ typedef signed int        hObj;
 #define COL_POLY     27
 #define COL_SONIC    28
 #define COL_SILVERY  29
+// end family: col
+// family: fi
 
 /* Field types are sorted in order of glyph
    precedance, so a square in fields 6 and 9
@@ -3540,6 +3885,8 @@ typedef signed int        hObj;
 #define FI_OBVIOUS    0x00004000
 #define FI_SIZE       0x00008000
 #define FI_DARKNESS   0x00010000
+// end family: fi
+// family: por
 
 #define POR_UP_STAIR   1
 #define POR_DOWN_STAIR 2
@@ -3551,6 +3898,8 @@ typedef signed int        hObj;
 #define POR_SUBDUNGEON 8
 #define POR_TOWN       9
 #define POR_RETURN     10
+// end family: por
+// family: acq
 
 #define ACQ_ACQUIRE    1
 #define ACQ_IDENT_ALL  2
@@ -3560,11 +3909,13 @@ typedef signed int        hObj;
 #define ACQ_MINOR      6
 #define ACQ_MAJOR      7
 #define ACQ_MONSTER    10
-#define ACQ_SUMMON     10
+#define ACQ_SUMMON     10  /* alias of ACQ_MONSTER */
 #define ACQ_POLYMORPH  11
 #define ACQ_GENOCIDE   12
 #define ACQ_ANYMON     13
 #define ACQ_RECALL     14
+// end family: acq
+// family: menu
 
 #define MENU_DESC         0x0001
 #define MENU_ESC          0x0002
@@ -3580,6 +3931,8 @@ typedef signed int        hObj;
 #define MENU_QKEY         0x0800
 #define MENU_WIDE         0x1000
 #define MENU_REDRAW       0x2000
+// end family: menu
+// family: hunger
 
 #define BLOATED   3000
 #define SATIATED  2900    
@@ -3590,6 +3943,8 @@ typedef signed int        hObj;
 #define WEAK       500
 #define FAINTING   250
 #define STARVED      0
+// end family: hunger
+// family: ss
 
 #define SS_ITEM  1  /* Permanent while worn */
 #define SS_ENCH  2  /* Potion, Scroll or Spell */
@@ -3607,6 +3962,8 @@ typedef signed int        hObj;
                        SS_SHLD -- ww: tower shield in CalcValues() */
 #define SS_BODY  14 /* from your current body (polymorph/race) */
 #define SS_TMPL  15 /* from your current template */
+// end family: ss
+// family: na
                          /* long sword        kobold         Asmodeus         */
 #define NA_LONG  0x0001  /* uncursed long...  injured kobold healthy Asmodeus */
 #define NA_MECH  0x0002  /* long sword +1     kobold         Asmodeus         */
@@ -3623,6 +3980,8 @@ typedef signed int        hObj;
 #define NA_IDENT  0x1000 /* pretend it is fully identified                    */
 #define NA_NO_TERSE  0x2000 /* spell it all out */
 #define NA_FLAVOR 0x4000
+// end family: na
+// family: mt
 
 #define MT_TOWN  1
 #define MT_DUNGEON 2
@@ -3631,6 +3990,8 @@ typedef signed int        hObj;
 #define MT_ENCOUNTER 5
 #define MT_ROOM 6
 #define MT_VAULT 7
+// end family: mt
+// family: foa
 
 #define FOA_ALLOW_WATER   0x0001
 #define FOA_WATER_ONLY    0x0002
@@ -3645,6 +4006,8 @@ typedef signed int        hObj;
 #define FOA_FALL_ONLY     0x0400
 #define FOA_ALLOW_WARN    0x0800
 #define FOA_WARN_ONLY     0x1000
+// end family: foa
+// family: list_id
 
 #define RM_WEIGHTS            1
 #define VAULT_WEIGHTS         2
@@ -3681,13 +4044,21 @@ typedef signed int        hObj;
 #define CROWNING_GIFTS        29
 #define AID_CHART             30
 #define GOD_RELATIONS         31
+// end family: list_id
+// no-family
   #define REL_DEFAULT         (-20)
+// end no-family
+// family: list_id
 #define FAVOURED_SKILLS        32
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
 #define SPECIALTY_SPELLS      35 /* two spells per specialist school, school order 0-8 */
 #define NECESSITIES           36 /* Roark: rows of item, effect (0 for none), tier size, kit count; inc-icp3, inc-rt8l */
+// end family: list_id
+// no-family
 #define KIT_BY_TYPE         9999 /* NECESSITIES kit count: use the item-type rule; a plain -1 would parse as a subtraction in the list (inc-rt8l) */
+// end no-family
+// family: list_id
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101
@@ -3709,6 +4080,8 @@ typedef signed int        hObj;
 #define MOUNT_LIST            117
 #define UNIVERSAL_TEMPLATE    118
 #define WEIGHT_CURVE_BY_CR    119
+// end family: list_id
+// family: const_id
 
 /* Dungeon constant IDs. */
 
@@ -3844,6 +4217,8 @@ typedef signed int        hObj;
 #define WARN_SAVE_DC_FROM_MAP 153 /* Terrain: If set, the warning save DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_SAVE_DC (i.e. max(WARN_SAVE_DC, TerraDC)). */
 #define WARN_DMG_FROM_MAP     154 /* Terrain: If set, the warning damage is the map's TerraDmg at the tested square (via Map::GetTerraDmg), overriding the WARN_DMG_NUM/SIDES/BONUS dice. */
 #define LAST_DUNCONST         155
+// end family: const_id
+// family: msg
 
 
 #define MSG_IS_ANGRY      1
@@ -3924,6 +4299,8 @@ typedef signed int        hObj;
 #define MSG_UNEASY_R     79
 #define MSG_VUNEASY_R    80
 #define MSG_AID          81
+// end family: msg
+// family: aid
 
 #define AID_HEAL         1  
 #define AID_PURIFY       2  
@@ -3942,11 +4319,15 @@ typedef signed int        hObj;
 #define AID_NEWBOOK      15
 #define AID_MANA         16
 #define AID_DEFLECT      17
+// end family: aid
+// family: sac
 
 #define SAC_ANGRY        (-100)
 #define SAC_ABOMINATION  (-101)
 #define SAC_DEFAULT      (-102)
 #define SAC_UNWORTHY     (-103)    
+// end family: sac
+// family: gs
 
 #define GS_INVOLVED      0x0001
 #define GS_FORSAKEN      0x0002
@@ -3955,6 +4336,8 @@ typedef signed int        hObj;
 #define GS_PENANCE       0x0010
 #define GS_ANATHEMA      0x0020
 #define GS_KNOWN_ANGER   0x0040
+// end family: gs
+// family: trouble
 
 #define TROUBLE_INJURY     1
 #define TROUBLE_LOWMANA    2
@@ -3973,6 +4356,8 @@ typedef signed int        hObj;
 #define TROUBLE_ENEMIES    15
 #define TROUBLE_PARALYSIS  16
 #define TROUBLE_HAUNTED    17
+// end family: trouble
+// family: fu
 
 /* TROUBLE_NOBOOK occurs when you have a known arcane spell
    that you do not have a spellbook for; you god will replace
@@ -3996,6 +4381,8 @@ typedef signed int        hObj;
 #define FU_CENTER_CIRCLE_MEDIUM  14
 #define FU_CENTER_CIRCLE_LARGE   15
 #define FU_INNER_COLUMNS      16
+// end family: fu
+// family: gf_gear
 
 /* Flags for the starting gear lists
    given to monsters, races, classes
@@ -4005,11 +4392,15 @@ typedef signed int        hObj;
 #define GF_BLESSED            0x04
 #define GF_CURSED             0x08
 #define GF_ELSE               0x10
+// end family: gf_gear
+// family: tile_item, tile_monster, tile_feature
 
 /* general tile flags */
 #define TILE_ITEM             0x01
 #define TILE_MONSTER          0x02
 #define TILE_RANDOM           0x04
+// end family: tile_item, tile_monster, tile_feature
+// family: tile_item
 
 /* item tile flags */
 #define TILE_RANDOM_EFF       0x08
@@ -4023,6 +4414,8 @@ typedef signed int        hObj;
 #define TILE_PLUS2            0x0200
 #define TILE_PLUS4            0x0400
 #define TILE_KNOWN            0x0800
+// end family: tile_item
+// family: tile_monster
 
 /* monster tile flags */
 #define TILE_PEACEFUL         0x08
@@ -4030,6 +4423,8 @@ typedef signed int        hObj;
 #define TILE_ASLEEP           0x20
 #define TILE_GUARDING         0x40
 #define TILE_NO_PARTY         0x80
+// end family: tile_monster
+// family: tile_feature
 
 /* feature tile flags */
 #define TILE_START            0x08      /* Tile: Indicates that this tile is the one where the player enters the level. */
@@ -4037,6 +4432,8 @@ typedef signed int        hObj;
 #define TILE_LOCKED           0x20
 #define TILE_OPEN             0x40
 #define TILE_STUCK            0x80
+// end family: tile_feature
+// no-family
 
 
 #define thisp ((Player*)this)
@@ -4045,9 +4442,13 @@ typedef signed int        hObj;
 #define thisi ((Item*)this)
 #define thisw ((Weapon*)this)
 #define thisa ((Armour*)this)
+// end no-family
+// family: inp
 
 #define INP_LINE 1                      /* Unused? */
 #define INP_CHAR 2                      /* Unused? */
+// end family: inp
+// family: win
 
 #define WIN_SCREEN   0
 #define WIN_MAP      1
@@ -4076,18 +4477,24 @@ typedef signed int        hObj;
 #define WIN_OPTIONS  24
 #define WIN_MESSAGE2 25
 #define WIN_LAST     26
+// end family: win
+// family: qky
 
 #define QKY_SPELL    1
 #define QKY_ITEM     2
 #define QKY_TACTIC   3
 #define QKY_VERB     4
 #define QKY_SKILL    5
+// end family: qky
+// no-family
 
 #define MAX_QKEYS       40
 //#define MAX_MACROS    48
 #define MAX_MACROS      12
 #define MAX_PATH_LENGTH 1024
 #define MAX_PARTS       16
+// end no-family
+// family: opt
 
 
 
@@ -4109,15 +4516,21 @@ typedef signed int        hObj;
 #define OPT_OOD_MONSTERS        115
 #define OPT_TRANSGRESS_HINTS    116
 #define OPT_DIFFICULTY          117
+// end family: opt
+// family: val_difficulty
 #define   DIFF_EXPLORE          0
 #define   DIFF_TRAINING         1
 #define   DIFF_BASELINE         2
 #define   DIFF_CHALLENGE        3
 #define   DIFF_NIGHTMARE        4
+// end family: val_difficulty
+// family: opt
 #define OPT_POWER_STATS         118
 #define OPT_ELUDE_DEATH         119
 #define OPT_NO_ALLY_TRANS       120       
 #define OPT_NATURAL_SPEED       121
+// end family: opt
+// no-family
 
 /* Floor applied to A_SPD_BRAWL by OPT_NATURAL_SPEED. A creature that can hold a
    weapon cannot attack faster by adding mass to its limb, so its fists, claws
@@ -4140,6 +4553,8 @@ typedef signed int        hObj;
    the same reason NATURAL_SPD_FLOOR is; tools/check_armour_model.sh fails when
    the constant and the heaviest suit in the data disagree. */
 #define NATURAL_COVERAGE        14
+// end no-family
+// family: opt
 
 // what you have to input
 #define OPC_INPUT               200
@@ -4221,6 +4636,8 @@ typedef signed int        hObj;
 #define OPT_WIND_RES            432
 #define OPT_WIND_FONT           433
 #define OPT_SOFT_PALETTE        434
+// end family: opt
+// family: val_palette
 /* Values OPT_SOFT_PALETTE may hold. The options file (Player::LoadOptions)
    stores one byte per option and is not versioned, so 0 and 1 MUST keep the
    meanings they had when this was a plain OFF/ON switch. Append new palettes
@@ -4228,11 +4645,15 @@ typedef signed int        hObj;
 #define PALETTE_CLASSIC         0
 #define PALETTE_SOFTER          1
 #define PALETTE_MUTED           2
+// end family: val_palette
+// family: opt
 /* Two by-eye lighting trims. Both are DISPLAY ONLY: they are read in
    libtcodTerm::LitPaint, downstream of every gameplay test, so neither can
    move LightLevelAt and neither is compiled into the posix backend at all. */
 #define OPT_LIGHT_EXPLORED      435
 #define OPT_LIGHT_BRIGHT        436
+// end family: opt
+// family: val_light_step
 /* The shared step scale both options use, ordered as the menu reads it:
    darkest to brightest, with the middle step reproducing the picture exactly
    as it was before either option existed. */
@@ -4241,7 +4662,9 @@ typedef signed int        hObj;
 #define LIGHT_STEP_NORMAL       2
 #define LIGHT_STEP_BRIGHTER     3
 #define LIGHT_STEP_BRIGHTEST    4
-#define LIGHT_STEP_MAX          4
+#define LIGHT_STEP_MAX          4  /* alias of LIGHT_STEP_BRIGHTEST */
+// end family: val_light_step
+// family: opt
 
 /* THE OPTIONS FILE'S VERSION, and the reason the scale above can be ordered
    the sensible way round.
@@ -4263,10 +4686,14 @@ typedef signed int        hObj;
    own OPT_GEN_* name, and add one branch to MigrateOptions. Never renumber an
    existing generation, and never lower OPT_GEN_CURRENT. */
 #define OPT_SETTINGS_GEN        437
+// end family: opt
+// family: opt_gen
 #define OPT_GEN_NONE            0   /* written before this field existed */
 #define OPT_GEN_LIGHT_TRIM      1   /* added OPT_LIGHT_EXPLORED, OPT_LIGHT_BRIGHT */
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
-#define OPT_GEN_CURRENT         2
+#define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
+// end family: opt_gen
+// family: opt
 
 
 #define OPC_TACTICAL            500
@@ -4315,6 +4742,8 @@ typedef signed int        hObj;
 #define OPT_ALL_ROLLS           812
 
 #define OPT_LAST                900
+// end family: opt
+// family: textcode
 
 /* ??? */
 
@@ -4325,6 +4754,8 @@ typedef signed int        hObj;
 
 #define LITERAL_CHAR1(value) ~(value >> 8)
 #define LITERAL_CHAR2(value) (value & 0xFF)
+// end family: textcode
+// family: colour
 
 /* Colours known by the game engine. */
 
@@ -4344,15 +4775,21 @@ typedef signed int        hObj;
 #define MAGENTA 13
 #define YELLOW  14
 #define WHITE   15
+// end family: colour
+// no-family
 
 // 1 << 4 == 16, should be covered below by *_BITS defines.
 #define MAX_COLOURS 16
+// end no-family
+// no-family
 
 #define COLOUR_BITS				4
 #define COLOUR_MASK				((1 << COLOUR_BITS) - 1)
 #define BRIGHT_MASK				(1 << (COLOUR_BITS - 1))
 #define DARK_MASK				(~BRIGHT_MASK & COLOUR_MASK)
 #define BACK_COLOUR(v)			(v << COLOUR_BITS)
+// end no-family
+// no-family
 
 /* upstream: these macros did not bracket their arguments, so an
    expression argument packed the wrong bits (GLYPH_FORE(a & b) was
@@ -4398,12 +4835,14 @@ static_assert(GLYPH_FORE(9 & COLOUR_MASK) == (9 << GLYPH_FORE_SHIFT), "GLYPH_FOR
 static_assert(GLYPH_BACK(4 | 0) == (4 << GLYPH_BACK_SHIFT), "GLYPH_BACK must bracket its argument (inc-pnv2)");
 static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR must bracket its argument (inc-pnv2)");
 #endif
+// end no-family
+// family: glyph
 
 /* Glyph values. */
 
 #define GLYPH_FIRST     256
 
-#define GLYPH_PERSON    256
+#define GLYPH_PERSON    256  /* alias of GLYPH_FIRST */
 #define GLYPH_BULK      257
 #define GLYPH_WATER     258
 #define GLYPH_FOG       259
@@ -4537,7 +4976,9 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 
 #define GLYPH_UNSEEN     375
 
-#define GLYPH_LAST       375
+#define GLYPH_LAST       375  /* alias of GLYPH_UNSEEN */
+// end family: glyph
+// family: prio
 
 #define PRIO_EMPTY               1
 #define PRIO_CORRIDOR_WALL      10
@@ -4553,6 +4994,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define PRIO_VAULT              100
 #define PRIO_FEATURE_FLOOR      110
 #define PRIO_MAX                120
+// end family: prio
+// no-family
 
 
 #define MAX_DUNGEONS       32
@@ -4566,11 +5009,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define MAX_CORRIDOR_LENGTH 8192
 #define ANNOT_INITIAL_SIZE 50
 #define MAX_SAC_CATS       10
+// end no-family
+// family: namelist
 
 
 #define MALE_NAMES 1
 #define FEMALE_NAMES 2
 #define FAMILY_NAMES 3
+// end family: namelist
+// family: errcode
 
 #define ENOFILE   1 /* File not found */
 #define ENOTARC   2 /* File not an archive */
@@ -4583,9 +5030,13 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define ETAMPER   9  /* File tampering detected */
 #define EHANDLE   10 /* Bad Object Handle */
 #define ENODIR    11 /* Directory not Found */
+// end family: errcode
+// family: save_mode
 
 #define SAVE_NEW  1
 #define SAVE_ADD  2
+// end family: save_mode
+// no-family
 
 #define PRE(a)     (a+500)
 #define POST(a)    (a+1000)
@@ -4594,6 +5045,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define EITEM(a)   (a+4000)
 #define META(a)  (a+10000)
 #define GODWATCH(a) (a+20000)
+// end no-family
+// family: ev
 
 #define EV_MOVE         1
 #define EV_BREAK        2
@@ -4605,8 +5058,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define EV_ATTK         11
 #define EV_PICKUP       12
 #define EV_WIELD        13
-#define EV_PUTON        13
-#define EV_WEAR         13
+#define EV_PUTON        13  /* alias of EV_WIELD */
+#define EV_WEAR         13  /* alias of EV_WIELD */
 #define EV_INSERT       14
 #define EV_ACTIVATE     15
 #define EV_DROP          16
@@ -4625,7 +5078,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define EV_OPEN         29
 #define EV_CLOSE        30
 #define EV_REMOVE       31
-#define EV_TAKEOFF      31
+#define EV_TAKEOFF      31  /* alias of EV_REMOVE */
 #define EV_TURN         32
 #define EV_SUNRISE      33
 #define EV_SUNSET       34
@@ -4786,6 +5239,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define EV_ENGEN_ALIGN  192
 
 #define EV_SPOT_CHECK   300  /* hide/spot check state keys (see inc/HideCheck.h) */
+// end family: ev
+// family: msg
 
 #define MSG_BLASTNAME   200  /* "fireball", "hail of burning stones" */
 #define MSG_CHATTER     201 
@@ -4806,6 +5261,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define MSG_DEFNOTE     216  /* "sheet line" / "bonus": digits, or "*" when it varies by attacker (inc-7v2i) */
 
 #ifndef ICOMP
+// end family: msg
+// family: opcode
 
 #define JUMP        1
 #define HALT        2
@@ -4862,6 +5319,8 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define ESTR        61
 #define CONT        62
 #define LAST        63
+// end family: opcode
+// family: tc
 
 #define TC_LPAREN    0xFF000001 // '('
 #define TC_RPAREN    0xFF000002 // ')'
@@ -4870,10 +5329,14 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define TC_TERM      0xFF000005 // ';'
 #define TC_ACTION    0xFF000006 // '[action]'
 #define TC_WCHOICE   0xFF000007 // '60%'
+// end family: tc
+// no-family
 
 #define MAX_OVERLAY_GLYPHS 250
 
 #ifndef max
+// end no-family
+// no-family
 #define max(a,b) (((a)>(b)) ? (a) : (b))
 #endif
 #ifndef min
@@ -4940,3 +5403,4 @@ struct ItemGen;
 #endif
 
 #endif // INCURSION_DEFINES_H
+// end no-family
