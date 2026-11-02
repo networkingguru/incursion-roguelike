@@ -1008,6 +1008,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_yuse_activate.sh` | Does activating a blast item from the `y` menu ask where to aim it, rather than resolving the beam on the activator? | LIVE |
 | `check_yuse_no_effect.sh` | Does a `y`-menu verb that changed nothing tell the player so, without doubling up on a handler that already spoke? | LIVE |
 | `check_zeal_strike.sh` | Does Zeal end when the paladin strikes a creature it did not choose, and survive both an ordinary turn and a blow at the target it did choose? | LIVE |
+| `check_zen_defense.sh` | Does Zen Defense follow the SRD (inc-0t9ol)? A loaded monk fixture is measured in 12 states by the INCURSION_ZEN_DEFENSE_PROBE hook: Mage Armour and Spirit Armour with no worn armor keep the full Wisdom bonus, worn light armor gives half (rounded up) with or without Mage Armour, worn medium armor gives none, and Moderate or Heavy encumbrance gives none. | LIVE |
 
 ### Diagnostics
 

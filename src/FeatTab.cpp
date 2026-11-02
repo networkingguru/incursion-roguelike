@@ -1461,12 +1461,12 @@ struct FeatInfoStruct FeatInfo[] = {
        FP_FEAT,FT_BLIND_FIGHT,0}}}},
        
   { FT_ZEN_DEFENSE, FF_INTUITIVE|FF_WARRIOR, "Zen Defense",
-    "When unarmoured, you gain an insight bonus to your Defense Class equal in magnitude "
-      "to your Wisdom modifier, if it is positive. This bonus stacks with the "
-      "normal Dexterity bonus. If you wear light armour, you get half the normal "
-      "bonus, rounding up. Characters in medium or heavy armour gain no benefit from "
-      "this feat. Spells that duplicate the effect of armour count as armour for the "
-      "purpose of this feat." ,
+    "When you wear no armor, you gain an insight bonus to Defense Class equal to "
+      "your Wisdom modifier, if it is positive. This bonus stacks with your "
+      "Dexterity bonus. In light armor you get half the bonus, rounded up; in "
+      "medium or heavy armor you get none. Armor spells, such as Mage Armour, do "
+      "not count as armor for this feat. You lose the bonus while your "
+      "encumbrance is Moderate or worse." ,
       {{{FP_FEAT,FT_BLIND_FIGHT,0,
          FP_FEAT,FT_EXPERTISE,0}}}},
 

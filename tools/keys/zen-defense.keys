@@ -1,0 +1,4 @@
+# inc-0t9ol: one search turn on a loaded character; INCURSION_ZEN_DEFENSE_PROBE
+# does the rest. Used by tools/check_zen_defense.sh.
+s
+@quit

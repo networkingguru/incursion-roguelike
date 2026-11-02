@@ -468,7 +468,7 @@ class Creature: public Thing, public Magic
             return def; } 
       virtual bool canTalk(Creature *to=NULL);
       int32 ChargeBonus();
-      uint32 getArmourType(bool count_shield);
+      uint32 getArmourType(bool count_shield, bool count_spells = true);
       virtual bool HasInnateSpell(rID spID);
       virtual void LoseMoneyTo(int32 amt, Creature *cr);
       virtual bool doSocialSanity(int16 ev, Creature *cr);
