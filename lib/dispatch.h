@@ -2760,6 +2760,10 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 3)
         REGS(n) = ApplyDurationMetamagic(STACK(1), STACK(2), STACK(3)!=0);
         return;
+    case 537:
+        ASSERT(REGS(63) >= 3)
+        REGS(n) = AutoStackIntoPack(oCreature(STACK(1)), oItem(STACK(2)), STACK(3)!=0);
+        return;
       default:
         Error("Illegal member function call!");
       }

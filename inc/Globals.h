@@ -115,6 +115,7 @@ int16 MaxItemPlus(int16 MaxLev,rID eID);
 Creature * InitShopkeeper(rID mID, int32 gold);
 int RestockShop(Creature *shop);
 bool RestockShopDaily(Creature *shop);
+bool AutoStackIntoPack(Creature *c, Item *item, bool wildOK);
 void CraftCosts(Item *it, int16 itemType, int16 itemSource, int16 acqVal, int16 quan, int32 *XPCostOut, int32 *gpCostOut);
 bool PossiblyPause(Term *T1, int x, int y, int timeout);
 extern String & ItemNameFromEffect(rID eID);

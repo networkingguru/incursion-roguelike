@@ -1107,6 +1107,11 @@ system bool    RestockShopDaily(hObj:T_CREATURE shop);
 /* inc-nt3z: Anchor, Mystic Preparation, Persistent and Extend on a base
    duration in status units, as EffectDuration applies them. */
 system int16   ApplyDurationMetamagic(int32 dur, uint32 mm, bool mystic);
+
+/* inc-j12i0: offer the item to each pack held in a slot (Pack slot first) that
+   already holds a stack it would join. True when a pack took it; the item may
+   then be gone (merged), so do not use it afterwards. A non-player returns false. */
+system bool    AutoStackIntoPack(hObj:T_CREATURE who, hObj:T_ITEM it, bool wildOK = false);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

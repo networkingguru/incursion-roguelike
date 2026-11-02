@@ -1,4 +1,7 @@
-/* inc-f99j: opt-in reproduction, enabled by INCURSION_AUTOLOOT_PACKS_PROBE=a|b|c|d.
+/* inc-f99j: opt-in reproduction, enabled by INCURSION_AUTOLOOT_PACKS_PROBE=a..h.
+   Cases e-h (inc-j12i0): the Pack-slot bag has room and a second slot-held bag
+   holds a matching long-sword stack (e floor item, f item taken out of a
+   chest, g the matching bag refuses on weight, h no match anywhere).
    Stages containers in inventory slots, drops a long sword at the player's
    feet and runs the AutoLoot macro twice. The key script supplies the menu
    keys (SPACE ENTER) and escapes any inventory screen. See
@@ -37,7 +40,7 @@ void AutoLootPacksProbe(Player *pl) {
     if (!lg) return;
     const char cs = *mode;
     fprintf(lg, "CASE %c\n", cs);
-    if (!pl || !pl->m || cs < 'a' || cs > 'd') {
+    if (!pl || !pl->m || cs < 'a' || cs > 'h') {
         fprintf(lg, "INCONCLUSIVE invalid setup\n"); fclose(lg); return;
     }
     Map *mp = pl->m;
@@ -69,8 +72,37 @@ void AutoLootPacksProbe(Player *pl) {
     }
     if (cs == 'd') B = alpBag(pl, SL_BELT1, "small backpack", false);
     Item *sword = Item::Create(FIND("long sword"));
+    Item *stack = NULL, *chest = NULL;
+    if (cs >= 'e') {
+        A = alpBag(pl, SL_PACK, "medium backpack", false);
+        B = alpBag(pl, SL_BELT1, "medium backpack", false);
+        sword->MakeKnown(0xff);
+        sword->Quantity = 1;
+        stack = Item::Create(FIND(cs == 'h' ? "dagger" : "long sword"));
+        stack->MakeKnown(0xff);
+        stack->Quantity = (cs == 'g') ? 100 : 3;
+        EventInfo e; e.Clear(); e.EActor = pl; e.EItem = B; e.EItem2 = stack;
+        if (((Container*)B)->Insert(e, true) != DONE || stack->GetParent() != B) {
+            fprintf(lg, "INCONCLUSIVE stack setup\n"); fclose(lg); return;
+        }
+        if ((cs != 'h') != (*stack == *sword) ||
+            (cs == 'g' ? ((Container*)B)->FitsNormal(sword, pl->HasFeat(FT_FASTER_THAN_THE_EYE)) != Container::FITS_WEIGHT
+                       : ((Container*)B)->FitsNormal(sword, pl->HasFeat(FT_FASTER_THAN_THE_EYE)) != Container::FITS) ||
+            ((Container*)A)->FitsNormal(sword, pl->HasFeat(FT_FASTER_THAN_THE_EYE)) != Container::FITS) {
+            fprintf(lg, "INCONCLUSIVE match or limits\n"); fclose(lg); return;
+        }
+    }
     pl->PlaceAt(mp, X, Y);
-    sword->PlaceAt(mp, X, Y);
+    if (cs == 'f') {
+        chest = Item::Create(FIND("large oak chest"));
+        EventInfo e; e.Clear(); e.EActor = pl; e.EItem = chest; e.EItem2 = sword;
+        if (((Container*)chest)->Insert(e, true) != DONE || sword->GetParent() != chest) {
+            fprintf(lg, "INCONCLUSIVE chest setup\n"); fclose(lg); return;
+        }
+        chest->PlaceAt(mp, X, Y);
+    } else
+        sword->PlaceAt(mp, X, Y);
+    const hObj swh = sword->myHandle;
     mp->At(X,Y).Lit = true;
     pl->Options[OPT_AUTOMORE] = 1;
     const bool wasPlay = theGame->PlayMode;
@@ -84,13 +116,26 @@ void AutoLootPacksProbe(Player *pl) {
     // per-turn call Creature::ChooseAction makes while ACTING holds.
     RES(FIND("AutoLoot"))->PEvent(EV_INITIALIZE, pl, FIND("AutoLoot"), 0);
     pl->GainPermStati(ACTING, NULL, SS_MISC, EV_MACRO, 0, FIND("AutoLoot"));
-    for (int n = 0; n < 6 && pl->HasStati(ACTING); ++n) {
+    /* A merged item lingers flagged for deletion until the turn ends, and the
+       macro would take it again, so cases e-h run one macro call. */
+    for (int n = 0; n < (cs >= 'e' ? 1 : 6) && pl->HasStati(ACTING); ++n) {
         pl->Timeout = 0;
         if (ThrowEff(EV_MACRO, FIND("AutoLoot"), pl) == ABORT)
             pl->RemoveStati(ACTING);
     }
     pl->RemoveStati(ACTING);
     fprintf(lg, "MESSAGES_BEGIN\n%sMESSAGES_END\n", term->MsgHistory);
+    if (cs >= 'e') {
+        Item *cur = (Item*)theRegistry->GetQuiet(swh);
+        const char *w = (cs != 'h' && stack->Quantity > (cs == 'g' ? 100u : 3u)) ? "bagB" :
+            (cur ? alpWhere(pl, cur, A, B, NULL) : "gone");
+        fprintf(lg, "RESULT where=%s taken=%d stackB=%u\n", w,
+            strstr(term->MsgHistory, "taken.") != NULL, (unsigned)stack->Quantity);
+        fprintf(lg, "COMPLETE\n");
+        fclose(lg);
+        theGame->PlayMode = wasPlay;
+        return;
+    }
     fprintf(lg, "RESULT where=%s taken=%d toolarge=%d canonlyhold=%d locked=%d\n",
         alpWhere(pl, sword, A, B, C),
         strstr(term->MsgHistory, "taken.") != NULL,
