@@ -15,10 +15,7 @@ deliberate second name for an existing value carries `/* alias of <NAME> */`; a
 value that is not compared with anything goes in a no-family block.
 
 MARKS (whitespace is free). Own-line block marks use `//` (`/* */` also works).
-A TRAILING mark on a #define line MUST use `/* */`, never `//`: the module
-compiler (src/cpp6.c) can lose the next define after a trailing `//` comment
-(seen: "Undefined Constant: T_TRACE"), and this check refuses the `//` form
-with exit 2.
+A TRAILING mark on a #define line MAY use `/* */` or `//`.
   // family: <name>             opens a block; `// end family: <name>` closes it
   // family: <n1>, <n2>         one block whose defines join several families;
                                 the end line names the same list
@@ -189,7 +186,6 @@ MARK = re.compile(r"^\s*(?://|/\*)\s*(end\s+)?(?:(family)\s*:\s*(.*?)|(no-family
                   r"\s*(?:\*/)?\s*$")
 ALIAS = re.compile(r"(?://|/\*).*?\balias\s+of\s+([A-Za-z_]\w*)")
 KNOWN = re.compile(r"(?://|/\*).*?\bknown\s+collision\s*:\s*([A-Za-z0-9_.-]+)")
-TRAIL_SLASH = re.compile(r"//.*\b(?:alias\s+of|known\s+collision)\b")
 COMMENT_ONLY = re.compile(r"^\s*(?://|/\*)")
 
 
@@ -229,11 +225,6 @@ def read_marks(raw_lines):
     for no, line in enumerate(raw_lines, 1):
         if not re.match(r"\s*#\s*define\b", line):
             continue
-        if TRAIL_SLASH.search(line):
-            raise Unmeasurable("line %d: a trailing alias or known-collision mark on a "
-                               "#define line MUST use /* */, not //. Write "
-                               "/* alias of <NAME> */ or /* known collision: <bead> */."
-                               % no)
         texts = [line]
         if no >= 2 and COMMENT_ONLY.match(raw_lines[no - 2]):
             texts.append(raw_lines[no - 2])
@@ -383,10 +374,13 @@ def selftest():
         assert c == 1 and "no such define" in m, (c, m)
         c, m = run(fam("a", "#define A_X 7\n") + fam("b", "#define B_Y 7 /* alias of A_X */\n"))
         assert c == 1 and "family b" in m, (c, m)  # target must share the family
-        # trailing // mark on a define line: refused with exit 2
-        for tm in ("#define A_Y 7 // alias of A_X\n", "#define A_Y 7 // known collision: inc-x\n"):
-            c, m = run(fam("a", "#define A_X 7\n" + tm))
-            assert c == 2 and "MUST use /* */" in m and "line 3" in m, (tm, c, m)
+        # trailing // mark on a define line: accepted, and still recognized
+        c, m = run(fam("a", "#define A_X 7\n#define A_Y 7 // alias of A_X\n"))
+        assert c == 0, (c, m)
+        c, m = run(fam("a", "#define A_X 7\n#define A_Y 8 // alias of A_X\n"))
+        assert c == 1 and "A_Y says 'alias of A_X'" in m and "not 8" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 7\n#define A_Y 7 // known collision: inc-x\n"))
+        assert c == 0 and "inc-x" in m, (c, m)
         # d. unmarked define: fail, names it
         c, m = run("#define LOOSE 3\n" + fam("a", "#define A_X 7\n"))
         assert c == 1 and "line 1: LOOSE is outside every family block" in m, (c, m)
