@@ -741,7 +741,8 @@ newline:
             handle_comment:
 	    for (;;) {				/* Eat a comment	*/
 		c = get();
-test:		if (keepcomments && c != EOF_CHAR)
+test:		if (keepcomments && c != EOF_CHAR
+		 && !(line_comment && c == '\n'))
 		    cput(c);
 		switch (c) {
 		case EOF_CHAR:
@@ -793,8 +794,13 @@ test:		if (keepcomments && c != EOF_CHAR)
 		case '\n':			/* we'll need a #line	*/
                     if (line_comment)
                       {
+                        /* upstream: a // comment ends at, and keeps, its line
+                           break; end_comment overwrote the newline, so the
+                           next line joined this one. Platform-independent
+                           logic, so Win32 fails the same way. Observed,
+                           inc-vsiqf, not sent. */
                         instring = FALSE;
-                        goto end_comment;
+                        return ('\n');
                       }
 		    if (!keepcomments)
 			wrongline = TRUE;	/* later...		*/
