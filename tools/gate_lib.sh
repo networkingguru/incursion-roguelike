@@ -102,6 +102,9 @@ gate_options_check() { # <baseline> <optionsfile>
 #             is no "confirmed, resolved cleanly" shape to also count: if
 #             tools/keys/dive.keys never supplies 'a'/'f'/'d'/'?'/ESC, every
 #             session that hits it is stuck by definition.
+#   prompt_stop, prompt_stop_other, prompt_stop_seed  sessions that @maponly
+#             ended at a prompt (inc-tre9h): all stops, the stops other than
+#             the death prompt, and one line per seed naming depth and prompt.
 #   message   one line per distinct message: how many sessions hit it, how many
 #             times in total, and the text. Sorted by text so two baselines
 #             can be read side by side.
@@ -222,6 +225,22 @@ gate_collect() { # <soakdir>
         threat_frozen=$((threat_frozen + 1))
     done
     printf 'threat_frozen\t%s\n' "$threat_frozen"
+
+    # inc-tre9h: sessions that @maponly ended at a prompt, one line per seed
+    # naming the depth and the prompt. A stop at "Die? [yn]" is already in
+    # 'died' above (its screen dump is the last one); 'prompt_stop' counts
+    # every stop, 'prompt_stop_other' the ones that are not a death.
+    local ps_total=0 ps_other=0 psl
+    for log in "$soak"/seed-*/logs/prompt-stop.log; do
+        [ -f "$log" ] || continue
+        seed="$(basename "$(dirname "$(dirname "$log")")")"
+        psl="$(head -1 "$log")"
+        ps_total=$((ps_total + 1))
+        case "$psl" in *'Die? [yn]'*) ;; *) ps_other=$((ps_other + 1)) ;; esac
+        printf 'prompt_stop_seed\t%s\t%s\n' "$seed" "$psl"
+    done
+    printf 'prompt_stop\t%s\n' "$ps_total"
+    printf 'prompt_stop_other\t%s\n' "$ps_other"
 
     awk -F'\t' '
         { total[$2]++; if (!(($1 SUBSEP $2) in hit)) { hit[$1 SUBSEP $2] = 1; sess[$2]++ } }

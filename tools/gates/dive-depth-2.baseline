@@ -1,0 +1,28 @@
+# Incursion regression baseline -- see tools/gate_compare.sh.
+# Recorded 2026-11-03 11:03 from cbe4d6cc.
+# Metric: error volume and message-set membership. A message that is
+# not in this file is a regression; a message that has left it is a fix.
+# inc-tre9h: one session per depth (tools/keys/dive-depth-2.keys): chargen, one jump to depth 2, wake every creature, 20 waits, s, 2 waits.
+# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
+# Per-seed outcome (run logs/gate/record-dive-depth-2-55581): completed the body: 33 seeds (1,2,4,5,6,7,9,13,14,15,16,17,18,20,21,22,23,24,25,26,27,29,30,31,32,33,34,35,36,37,38,39,40).
+#   death@ (stopped at 'You die... Die? [yn]', counted in died=6): 3@d2, 8@d2, 10@d2, 11@d2, 19@d2, 28@d2.
+#   other prompt (counted in prompt_stop_other=1): 12 "Do you want to stop searching (entangling)? [yn]".
+keys	tools/keys/dive-depth-2.keys
+first	1
+options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
+sessions	40
+played	40
+exits	0=40
+lines	0
+findings	0
+died	6
+threat_frozen	0
+prompt_stop_seed	seed-10	depth=2 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-11	depth=2 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-12	depth=2 prompt=Do you want to stop searching (entangling)? [yn]
+prompt_stop_seed	seed-19	depth=2 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-28	depth=2 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-3	depth=2 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-8	depth=2 prompt=You die... Die? [yn]
+prompt_stop	7
+prompt_stop_other	1

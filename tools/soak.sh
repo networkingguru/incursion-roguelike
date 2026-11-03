@@ -108,6 +108,16 @@ if [ "$VOID" -gt 0 ]; then
 fi
 
 echo
+echo "--- prompt stops (inc-tre9h: the session ended at the first prompt, unanswered) ---"
+PSTOPS=0
+for log in "$SOAK"/seed-*/logs/prompt-stop.log; do
+    [ -f "$log" ] || continue
+    PSTOPS=$((PSTOPS + 1))
+    echo "  $(basename "$(dirname "$(dirname "$log")")"): $(head -1 "$log")"
+done
+[ "$PSTOPS" -eq 0 ] && echo "  none"
+
+echo
 echo "--- distinct errors, and how many sessions hit each ---"
 # One line per (session, message), deduplicated inside a session first: a
 # message that fires 300 times in one dungeon and once in 40 dungeons are very

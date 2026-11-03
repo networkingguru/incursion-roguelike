@@ -3,7 +3,7 @@
 # against the baseline.
 #
 # Usage: tools/gate_compare.sh                       (every recorded baseline)
-#        tools/gate_compare.sh tools/gates/dive-short.baseline
+#        tools/gate_compare.sh tools/gates/dive-depth-5.baseline
 #
 # Ends: 0 nothing got worse, 1 a regression, 2 the comparison could not be run.
 #
@@ -170,6 +170,13 @@ for BASE in "${BASELINES[@]}"; do
     else
         echo "    threat-frozen:   $N_THREAT of $SESSIONS   (baseline $B_THREAT_RAW)"
     fi
+    # inc-tre9h: sessions @maponly ended at a prompt other than the death
+    # prompt (deaths are in 'died'). Each seed is named with depth and prompt.
+    B_PSO_RAW="$(gate_field "$BASE" prompt_stop_other)"
+    N_PSO="$(gate_field "$WORK/new" prompt_stop_other)"
+    N_PSO="${N_PSO:-0}"
+    echo "    prompt-stopped:  $N_PSO of $SESSIONS   (baseline ${B_PSO_RAW:-not recorded}; other than the death prompt)"
+    awk -F'\t' '$1=="prompt_stop_seed" { printf "      %s: %s\n", $2, $3 }' "$WORK/new"
     echo
 
     if [ "$N_PLAYED" -lt "$B_PLAYED" ]; then
@@ -271,6 +278,14 @@ for BASE in "${BASELINES[@]}"; do
             echo
             VERDICT=1
         fi
+    fi
+
+    if [ -n "$B_PSO_RAW" ] && [ "$N_PSO" -gt "$B_PSO_RAW" ]; then
+        echo "  REGRESSION: $N_PSO sessions ended at a prompt (not the death prompt),"
+        echo "  baseline had $B_PSO_RAW. Those sessions stop playing at that point"
+        echo "  and a quieter reading is not an improvement."
+        echo
+        VERDICT=1
     fi
 
     awk -F'\t' '

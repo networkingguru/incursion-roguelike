@@ -1,0 +1,32 @@
+# Incursion regression baseline -- see tools/gate_compare.sh.
+# Recorded 2026-11-03 11:04 from cbe4d6cc.
+# Metric: error volume and message-set membership. A message that is
+# not in this file is a regression; a message that has left it is a fix.
+# inc-tre9h: one session per depth (tools/keys/dive-depth-6.keys): chargen, one jump to depth 6, wake every creature, 20 waits, s, 2 waits.
+# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
+# Per-seed outcome (run logs/gate/record-dive-depth-6-72121): completed the body: 29 seeds (1,2,4,6,8,10,11,13,14,15,16,17,19,20,22,24,25,26,27,29,31,32,33,34,35,36,37,38,39).
+#   death@ (stopped at 'You die... Die? [yn]', counted in died=9): 3@d6, 5@d6, 7@d6, 9@d6, 12@d6, 18@d6, 21@d6, 23@d6, 28@d6.
+#   other prompt (counted in prompt_stop_other=2): 30 "Do you want to stop searching (entangling)? [yn]"; 40 "Do you want to stop searching (blunt damage: a skilled myconid)?".
+keys	tools/keys/dive-depth-6.keys
+first	1
+options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
+sessions	40
+played	40
+exits	0=40
+lines	0
+findings	0
+died	9
+threat_frozen	0
+prompt_stop_seed	seed-12	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-18	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-21	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-23	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-28	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-3	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-30	depth=6 prompt=Do you want to stop searching (entangling)? [yn]
+prompt_stop_seed	seed-40	depth=6 prompt=Do you want to stop searching (blunt damage: a skilled myconid)?
+prompt_stop_seed	seed-5	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-7	depth=6 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-9	depth=6 prompt=You die... Die? [yn]
+prompt_stop	11
+prompt_stop_other	2

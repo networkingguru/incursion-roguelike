@@ -1117,7 +1117,7 @@ one (`package_macos_app.sh:5-13`).
 | Path | What it is |
 |---|---|
 | `keys/*.keys` | Key scripts read by both backends. `headless.sh` uses the full POSIX harness format; the SDL build uses only the shared movement subset. `keys/trailer-demo.keys` demonstrates SDL movement, `@pause` and `@quit`. Read the header of a script before using it. |
-| `gates/dive-short.baseline` | The committed regression baseline. `gate_record.sh` overwrites it. |
+| `gates/dive-depth-<d>.baseline` | The committed regression baselines, one per depth 2..10. `gate_record.sh` overwrites one. |
 | `gates/Options.Dat` | The pinned settings file every gate run plays with. Committed on purpose. |
 | `gates/Options.Dat.md` | What is in that settings file and why. |
 | `fixtures/options-*.dat` | Frozen, dated settings files that scripted checks select explicitly. |
@@ -1463,9 +1463,9 @@ the builds, so a full run costs its minute and reports a regression in the shape
 no single check can -- a complaint appearing in several sessions at once, fewer
 sessions reaching a map, more deaths or freezes.
 
-`tools/gates/dive-short.baseline` is committed, so a clone can run `gate_compare.sh`
+`tools/gates/dive-depth-<d>.baseline` (d = 2..10, one session per depth) is committed, so a clone can run `gate_compare.sh`
 without recording anything. Do NOT run `gate_record.sh` unless you mean to
-replace that baseline — see below.
+replace a baseline — see below.
 
 ### Where each check runs: the landing gate and the nightly
 
@@ -1552,8 +1552,8 @@ reporter's own words.
 **`tools/gate_record.sh` OVERWRITES a committed baseline.** Verified:
 `:37-38` build `OUT="$ROOT/tools/gates/$NAME.baseline"` from the key script's
 name, and `:71-80` truncate that path with `>`. The default key script is
-`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` writes a new `tools/gates/dive.baseline`; the committed baseline comes from `tools/keys/dive-short.keys` and `tools/gate_record.sh tools/keys/dive-short.keys 40 1` replaces
-`tools/gates/dive-short.baseline`. Record a baseline only from a build you believe in:
+`tools/keys/dive.keys` (`gate_record.sh:21`), so a bare `tools/gate_record.sh` writes a new `tools/gates/dive.baseline`; the committed baselines come from `tools/keys/dive-depth-<d>.keys` (written by `tools/make_dive_short.sh`) and `tools/gate_record.sh tools/keys/dive-depth-5.keys 40 1` replaces
+`tools/gates/dive-depth-5.baseline`. Record a baseline only from a build you believe in:
 a baseline taken from a broken build makes the gate defend the breakage
 (`gate_record.sh:13-14`). `git diff tools/gates/` afterwards, always.
 

@@ -369,6 +369,14 @@ else
     echo "stuck-prompt: none"
 fi
 
+# inc-tre9h: a key script that uses @maponly ends at the first prompt it finds
+# where it expects the map, and the game writes one line to logs/prompt-stop.log.
+if [ -f "$RUN/logs/prompt-stop.log" ]; then
+    echo "prompt-stop: $(head -1 "$RUN/logs/prompt-stop.log")"
+else
+    echo "prompt-stop: none"
+fi
+
 # GAME TIME. Every freeze check above matches one prompt's literal text, and
 # each was written after that prompt had already wasted a soak: inc-loa.3 the
 # death prompt, inc-loa.5 the threat-disengage prompt. The class kept coming

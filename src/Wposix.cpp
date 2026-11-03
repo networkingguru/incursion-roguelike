@@ -98,6 +98,8 @@ char __buff2[80];
 #define SK_CHOOSE (-5)
 #define SK_CURSOR (-6)
 #define SK_EXPECT (-7)
+#define SK_MAPONLY (-10)
+#define SK_MENUOPEN (-11)
 
 /* How the two managers that a script has to drive mark their current row, and
    why a script must say which one it is looking at rather than let this file
@@ -241,6 +243,7 @@ public:
                        const char **why);
     bool CursorOnRow(const char *text, bool byMark);
     void ScriptFailed(const char *what, const char *detail);
+    void PromptStop();
     void LoadKeyScript(const char *fn);
     void SetMaxKeys(int32 n) { maxKeys = n; }
     void UseTerminal(bool on) { useCurses = on; }
@@ -1363,6 +1366,27 @@ void posixTerm::LoadKeyScript(const char *fn) {
             continue;
         }
 
+        /* @maponly -- end the run, unanswered, unless the game is waiting at
+           the map. Takes no key. See PromptStop. */
+        if (!strcmp(tok, "@maponly")) {
+            memset(&k, 0, sizeof(k));
+            k.ch = SK_MAPONLY;
+            AppendKey(k);
+            continue;
+        }
+
+        /* @menuopen "text" -- placed after the key that opens a menu. Goes on
+           if the screen shows text. If the game waits at a prompt instead,
+           the run ends there like @maponly. If it is back at the map, the
+           script lost its place and the run fails like @expect. */
+        if (!strcmp(tok, "@menuopen")) {
+            memset(&k, 0, sizeof(k));
+            k.ch = SK_MENUOPEN;
+            ReadQuoted(f, fn, tok, k.label, sizeof(k.label));
+            AppendKey(k);
+            continue;
+        }
+
         /* @choose "name"  -- press the letter the game printed beside name.
            @expect "text"   -- stop the run unless the screen shows text.
 
@@ -1475,6 +1499,39 @@ void posixTerm::LoadKeyScript(const char *fn) {
 
     fclose(f);
     depth--;
+}
+
+/* The game asked for a key somewhere other than the map, at a point where
+   the script expects the map. Answering would steer the character, so the
+   run ends here: the screen is dumped, one line (depth and the prompt's line)
+   goes to logs/prompt-stop.log, and the exit is a normal one. The dump stays
+   the last screen so tools/gate_lib.sh counts "Die? [yn]" as a death. */
+void posixTerm::PromptStop() {
+    char line[SCREEN_W + 2], path[MAX_PATH_LENGTH];
+    int16 last;
+    FILE *f;
+
+    DumpScreen("prompt-stop");
+    RenderRow(Windows[WIN_INPUT].Top, line);
+    {
+        char *bar = strchr(line, '|');      /* the side panel starts at the bar */
+        if (bar)
+            *bar = '\0';
+    }
+    for (last = (int16)strlen(line) - 1; last >= 0 && line[last] == ' '; last--)
+        ;
+    line[last + 1] = '\0';
+    snprintf(path, sizeof(path), "%slogs/prompt-stop.log",
+        (const char*)IncursionDirectory);
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "depth=%d prompt=%s\n",
+            (p && p->m) ? (int)p->m->Depth : 0, line);
+        fclose(f);
+    }
+    fprintf(stderr, "incursion: prompt-stop at depth %d: %s\n",
+        (p && p->m) ? (int)p->m->Depth : 0, line);
+    exit(0);
 }
 
 /* A run that has used its budget stops rather than spinning. The screen goes
@@ -1731,6 +1788,20 @@ int16 posixTerm::GetCharCmd(KeyCmdMode mode) {
 
         if (k.ch == SK_DUMP) {
             DumpScreen(k.label);
+            continue;
+        }
+        if (k.ch == SK_MAPONLY) {
+            if (theGame && theGame->InPlay() &&
+                !(GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE))
+                PromptStop();
+            continue;
+        }
+        if (k.ch == SK_MENUOPEN) {
+            if (!ScreenShows(k.label)) {
+                if (GetMode() == MO_PLAY && mode == KY_CMD_NORMAL_MODE)
+                    ScriptFailed("@menuopen", k.label);
+                PromptStop();
+            }
             continue;
         }
         if (k.ch == SK_QUIT) {
