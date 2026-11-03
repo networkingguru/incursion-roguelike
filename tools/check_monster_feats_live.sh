@@ -12,6 +12,9 @@
 #     human built under it, and sets persuasive=1 only with the feat on;
 #   - Great Blow: Murgash and the malebranche are offered A_GREA only with the
 #     feat on (offered=1), resolve it (resolved=1), and are never offered it off.
+#   - inc-ci0hl: a blackguard (human under "blackguard;template") has the inherent
+#     alignment flag M_IALIGN (ialign=1), does not have feat 53 (feat53=0), and no
+#     feat of the template prints the FeatName "---N" help fallback (fallback=0).
 # Off-and-on pairs compare one creature with itself, so a value that varies
 # between creatures cannot make the check fail.
 #
@@ -25,6 +28,8 @@
 #   # fact: Persuasive Bluff and Intimidate -- lib/mon3.irh vampire template feat list, toggled by the probe
 #   # fact: victim beside a huge malebranche -- the probe's own square search (a huge actor's footprint is not a blocker)
 #   # fact: Great Blow 25% AI roll -- INCURSION_GREAT_BLOW_FORCE=1 (set on the run below)
+#   # fact: blackguard flag and feat -- lib/mon2.irh "blackguard;template" Flags:/Feats: lines, read from the built creature
+#   # fact: feat 53 is not in the feat table -- FT_AIM_FOR_THE_EYES in inc/Defines.h has no src/FeatTab.cpp row
 # Known: the run exits 5 (NO GAMEPLAY) with tools/keys/monster-feats-live.keys,
 # so exit 5 is accepted here when the probe's DONE line is present.
 #
@@ -134,6 +139,15 @@ for name in "Murgash, the Goblin King" "malebranche"; do
     echo "PASS: $name Great Blow offered with the feat on, resolves"
   fi
 done
+
+bg="$(feat_line blackguard ialign)"
+if [ -z "$bg" ]; then
+  echo "INCONCLUSIVE: no blackguard ialign line."; fail=1
+elif [ "$(field "$bg" ialign)" != 1 ] || [ "$(field "$bg" feat53)" != 0 ] || [ "$(field "$bg" fallback)" != 0 ]; then
+  echo "FAIL: blackguard ialign/feat53/fallback is $(field "$bg" ialign)/$(field "$bg" feat53)/$(field "$bg" fallback), not 1/0/0: $bg"; fail=1
+else
+  echo "PASS: blackguard has M_IALIGN, no feat 53, no help fallback"
+fi
 
 [ "$fail" -eq 0 ] && echo "RESULT: PASS (inc-4trf)" || echo "RESULT: FAIL (inc-4trf)"
 exit "$fail"

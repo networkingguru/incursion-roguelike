@@ -17,6 +17,12 @@
 # the resource (Monster/Template line), program.i line and feat when
 # src/FeatTab.cpp has no `{ FT_...` row for it.
 #
+# A Feats: value at or above FT_FIRST is a feat to the engine (src/Creature.cpp
+# grants every such value as EXTRA_FEAT), even when an M_ monster-flag name
+# shares the number (inc-ci0hl: M_IALIGN, 53, on the blackguard). Such a value
+# FAILs unless an FT_ name for it has a src/FeatTab.cpp row. A value below
+# FT_FIRST is a skill and is judged by other tables.
+#
 # A stale lib/program.i FAILs: it may not show the current sources, so the
 # check refuses to judge it. Rebuild with `BACKEND=posix ./build_macos.sh`.
 #
@@ -25,6 +31,7 @@
 #   # fact: the Feats: lists -- lib/program.i, the preprocessed module source the build writes
 #   # fact: program.i is current -- its mtime is not older than any lib/*.irh or lib/*.irc
 #   # fact: the feat table -- the text of src/FeatTab.cpp
+#   # fact: where feats begin (FT_FIRST) -- inc/Defines.h, evaluated by the same define parser
 #   # fact: which names are feats -- the FT_ prefix, declared in inc/Defines.h
 #
 # Usage: tools/check_monster_feats_exist.sh      (exits 0 on pass, 1 on fail)
@@ -88,6 +95,16 @@ def value(name, depth=0):
         raise ValueError(name)
     return eval(expr, {"__builtins__": {}})
 
+if "FT_FIRST" not in defs:
+    print("FAIL: FT_FIRST is not defined in inc/Defines.h; the check cannot "
+          "tell skills from feats.")
+    sys.exit(2)
+try:
+    FT_FIRST = value("FT_FIRST")
+except (ValueError, KeyError, SyntaxError, ZeroDivisionError):
+    print("FAIL: FT_FIRST in inc/Defines.h does not evaluate to a number.")
+    sys.exit(2)
+
 names_of = {}
 for n in defs:
     try:
@@ -125,18 +142,17 @@ while i < len(lines):
                 continue
             v = eval(item, {"__builtins__": {}})
             hit = names_of.get(v, [])
-            if any(n.startswith("SK_") for n in hit):
-                continue  # a skill; ids 0..SK_LAST. The FT_*_LIST aliases share these small numbers
+            if v < FT_FIRST:
+                continue  # a skill (ids 0..SK_LAST), judged by other tables
             ft = [n for n in hit if n.startswith("FT_")]
-            if ft:
-                # A number can also name an M_ flag (M_IGNORE_ITEMS = FT_DASH's
-                # value); the FT_ name is still judged, so the M_ name cannot hide it.
-                if not any(n in tab for n in ft):
-                    bad.append((resource, start + 1, "/".join(ft)))
-            elif not hit:
-                bad.append((resource, start + 1,
-                            "feat id %d (no FT_ name in inc/Defines.h)" % v))
-            # else: only an SK_ skill or M_ flag, judged by other tables
+            others = [n for n in hit if not n.startswith("FT_")]
+            # A number can also name an M_ flag (M_IALIGN = 53); the engine still
+            # grants it as a feat, so the FT_ names alone are judged.
+            if not any(n in tab for n in ft):
+                label = "/".join(ft) if ft else "feat id %d (no FT_ name in inc/Defines.h)" % v
+                if others:
+                    label += " (value %d is also %s)" % (v, "/".join(others))
+                bad.append((resource, start + 1, label))
         i = j + 1
     else:
         i += 1
