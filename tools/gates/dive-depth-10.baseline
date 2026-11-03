@@ -1,12 +1,7 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 11:06 from cbe4d6cc.
+# Recorded 2026-11-03 13:19 from 0d299d88.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-# inc-tre9h: one session per depth (tools/keys/dive-depth-10.keys): chargen, one jump to depth 10, wake every creature, 20 waits, s, 2 waits.
-# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
-# Per-seed outcome (run logs/gate/record-dive-depth-10-94780): completed the body: 20 seeds (1,7,8,11,12,14,15,16,18,21,24,25,27,28,29,31,33,34,39,40).
-#   death@ (stopped at 'You die... Die? [yn]', counted in died=14): 2@d10, 3@d10, 9@d10, 10@d10, 17@d10, 19@d10, 22@d10, 23@d10, 26@d10, 30@d10, 32@d10, 35@d10, 36@d10, 37@d10.
-#   other prompt (counted in prompt_stop_other=6): 4 "Do you want to stop searching (fear: a cloaker)? [yn]"; 5 "Do you want to stop searching (stunning: a mote of vacuum)? [yn]"; 6 "Paralyzed: pray, magic, wait 10/20/30, or d for sheet? [pmd123]"; 13 "Do you want to stop searching (tripping: a white dragon)? [yn]"; 20 "Do you want to stop searching (entangling)? [yn]"; 38 "Do you want to stop searching (life drain: a drider)? [yn]".
 keys	tools/keys/dive-depth-10.keys
 first	1
 options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
@@ -39,3 +34,45 @@ prompt_stop_seed	seed-6	depth=10 prompt=Paralyzed: pray, magic, wait 10/20/30, o
 prompt_stop_seed	seed-9	depth=10 prompt=You die... Die? [yn]
 prompt_stop	20
 prompt_stop_other	6
+turns_sessions	40
+turns_median	356
+turns_seed	seed-1	1840
+turns_seed	seed-10	60
+turns_seed	seed-11	1840
+turns_seed	seed-12	1840
+turns_seed	seed-13	327
+turns_seed	seed-14	840
+turns_seed	seed-15	1834
+turns_seed	seed-16	1840
+turns_seed	seed-17	106
+turns_seed	seed-18	1840
+turns_seed	seed-19	105
+turns_seed	seed-2	163
+turns_seed	seed-20	681
+turns_seed	seed-21	1840
+turns_seed	seed-22	141
+turns_seed	seed-23	132
+turns_seed	seed-24	1840
+turns_seed	seed-25	356
+turns_seed	seed-26	301
+turns_seed	seed-27	383
+turns_seed	seed-28	372
+turns_seed	seed-29	1840
+turns_seed	seed-3	254
+turns_seed	seed-30	95
+turns_seed	seed-31	410
+turns_seed	seed-32	185
+turns_seed	seed-33	356
+turns_seed	seed-34	1840
+turns_seed	seed-35	114
+turns_seed	seed-36	172
+turns_seed	seed-37	240
+turns_seed	seed-38	354
+turns_seed	seed-39	1840
+turns_seed	seed-4	440
+turns_seed	seed-40	1840
+turns_seed	seed-5	324
+turns_seed	seed-6	96
+turns_seed	seed-7	1834
+turns_seed	seed-8	356
+turns_seed	seed-9	285

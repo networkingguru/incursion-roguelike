@@ -105,6 +105,13 @@ gate_options_check() { # <baseline> <optionsfile>
 #   prompt_stop, prompt_stop_other, prompt_stop_seed  sessions that @maponly
 #             ended at a prompt (inc-tre9h): all stops, the stops other than
 #             the death prompt, and one line per seed naming depth and prompt.
+#   turns_median, turns_sessions, turns_seed  game turns each session played
+#             (inc-ep8fv): the game's own counter, theGame->Turn, read from the
+#             "turn N" stamp in the header of the session's first and last
+#             screen dump (src/Wposix.cpp DumpScreen). Turns played = last
+#             stamp minus first. Median over the sessions that have two stamps;
+#             one 'turns_seed <seed> <turns>' line each. It counts game ticks,
+#             not player actions. No stamped session leaves turns_median empty.
 #   message   one line per distinct message: how many sessions hit it, how many
 #             times in total, and the text. Sorted by text so two baselines
 #             can be read side by side.
@@ -241,6 +248,26 @@ gate_collect() { # <soakdir>
     done
     printf 'prompt_stop\t%s\n' "$ps_total"
     printf 'prompt_stop_other\t%s\n' "$ps_other"
+
+    # inc-ep8fv: turns played per session, from the screen-dump header stamps.
+    local tfirst tlast tn tlist
+    tlist="$(mktemp "${TMPDIR:-/tmp}/gate-turns.XXXXXX")"
+    for scr in "$soak"/seed-*/logs/screens; do
+        [ -d "$scr" ] || continue
+        seed="$(basename "$(dirname "$(dirname "$scr")")")"
+        tfirst="$(ls "$scr" 2>/dev/null | sort | head -1)"
+        tlast="$(ls "$scr" 2>/dev/null | sort | tail -1)"
+        [ -n "$tfirst" ] || continue
+        tfirst="$(sed -n '1s/.*turn \([0-9]*\) ===.*/\1/p' "$scr/$tfirst")"
+        tlast="$(sed -n '1s/.*turn \([0-9]*\) ===.*/\1/p' "$scr/$tlast")"
+        [ -n "$tfirst" ] && [ -n "$tlast" ] || continue
+        tn=$((tlast - tfirst))
+        printf '%s\t%s\n' "$seed" "$tn" >> "$tlist"
+    done
+    printf 'turns_sessions\t%s\n' "$(wc -l < "$tlist" | tr -d ' ')"
+    printf 'turns_median\t%s\n' "$(cut -f2 "$tlist" | sort -n | awk '{ a[NR]=$1 } END { if (NR==0) exit; if (NR%2) print a[(NR+1)/2]; else print int((a[NR/2]+a[NR/2+1])/2) }')"
+    awk -F'\t' '{ printf "turns_seed\t%s\t%s\n", $1, $2 }' "$tlist"
+    rm -f "$tlist"
 
     awk -F'\t' '
         { total[$2]++; if (!(($1 SUBSEP $2) in hit)) { hit[$1 SUBSEP $2] = 1; sess[$2]++ } }
