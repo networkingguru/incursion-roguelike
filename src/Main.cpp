@@ -251,12 +251,91 @@ static void NoteGameplayReached() {
     fclose(f);
 }
 
+/* inc-3nvr4: direct innate Detonate reproduction; no monster AI selection.
+   One scene per process keeps the control observable when the NULL case crashes. */
+static void DetonateProbe(Player *pl) {
+    const char *scene = getenv("INCURSION_DETONATE_PROBE");
+    if (!scene) return;
+    char path[1024];
+    snprintf(path, sizeof(path), "%slogs/detonate-probe.log",
+        (const char*)T1->IncursionDirectory);
+    FILE *log = fopen(path, "w");
+    if (!log) return;
+    setvbuf(log, NULL, _IONBF, 0);
+    const bool control = !strcmp(scene, "control");
+    const rID effect = FIND("Detonate"), monster = FIND("kobold"),
+        item = FIND("dagger"), floor = FIND("floor");
+    if ((!control && strcmp(scene, "null")) || !pl || !pl->m ||
+        !effect || !monster || !item || !floor ||
+        pl->m->SizeX() < 25 || pl->m->SizeY() < 25) {
+        fprintf(log, "SETUP_FAIL resources/map/scene\n");
+        fclose(log); return;
+    }
+    Map *mp = pl->m;
+    const bool wasInPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
+    Thing *obj; int index;
+    for (;;) {
+        Thing *remove = NULL;
+        MapIterate(mp, obj, index)
+            if (obj != pl) { remove = obj; break; }
+        if (!remove) break;
+        remove->Remove(true);
+    }
+    const rID region = mp->RegionAt(pl->x, pl->y);
+    Rect rect(0, 0, mp->SizeX()-1, mp->SizeY()-1);
+    for (int y = 5; y <= 22; ++y)
+        for (int x = 5; x <= 22; ++x) {
+            mp->RemoveTerraXY(x, y);
+            mp->WriteAt(rect, x, y, floor, region, PRIO_MAX, true);
+        }
+    pl->PlaceAt(mp, 20, 20);
+    Monster *caster = new Monster(monster), *victim = new Monster(monster);
+    caster->CalcValues(); victim->CalcValues();
+    caster->PlaceAt(mp, 10, 10, true);
+    victim->PlaceAt(mp, 13, 10, true);
+    caster->mHP = caster->cHP = victim->mHP = victim->cHP = 10000;
+    caster->mMana = 10000; caster->uMana = caster->hMana = 0;
+    caster->cFP = 100;
+    Item *plain = control ? Item::Create(item) : NULL;
+    if (plain) victim->GainItem(plain, true);
+    Item *first = victim->FirstInv();
+    const bool inventoryOK = control ?
+        (plain && first == plain && !plain->isMagic() &&
+         plain->Owner() == victim && !victim->NextInv()) : !first;
+    extern int8 LOFGetForcedSaveThrowRoll();
+    const int fort = caster->GetAttr(A_SAV_FORT);
+    const bool ready = inventoryOK && fort < 8 &&
+        !victim->isMType(MA_UNDEAD) && !victim->isMType(MA_CONSTRUCT) &&
+        LOFGetForcedSaveThrowRoll() == 1 &&
+        caster->m == mp && victim->m == mp &&
+        caster->x == 10 && caster->y == 10 &&
+        victim->x == 13 && victim->y == 10 && pl->x == 20 && pl->y == 20;
+    hObj itemHandle = plain ? plain->myHandle : 0;
+    fprintf(log, "READY scene=%s ready=%d items=%d fort=%d fatigue=%d save_roll=%d\n",
+        scene, (int)ready, first ? 1 : 0, fort, caster->cFP,
+        (int)LOFGetForcedSaveThrowRoll());
+    if (ready) {
+        /* Monster::ChooseAction: innate Source==(Item*)1, Q_TAR, it==NULL. */
+        EvReturn result = ThrowEff(EV_INVOKE, effect, caster, victim, NULL);
+        Item *after = itemHandle ? oItem(itemHandle) : NULL;
+        const bool gone = itemHandle && (!after || (after->Flags & F_DELETE));
+        fprintf(log, "RESULT scene=%s returned=1 result=%d fatigue=%d item_gone=%d\n",
+            scene, (int)result, caster->cFP, (int)gone);
+    }
+    caster->Remove(true); victim->Remove(true);
+    theGame->PlayMode = wasInPlay;
+    fclose(log);
+}
+
 void Game::Play() {
     Thing *t; int16 i,j;
     uint32 relative_turn;
     Map    *mp = oMap(m[0]);
     Player *pp = oPlayer(p[0]);
     ASSERT(mp && pp)
+
+    DetonateProbe(pp);
 
     /* inc-s1m5: opt-in reproduction only; see tools/check_belt_potion_stack.sh. */
     extern void BeltPotionProbe(Player *pl);

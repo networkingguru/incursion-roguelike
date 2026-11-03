@@ -545,6 +545,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_dequ_save_dc.sh` | Does every equipment-destroyer's retaliation allow a Reflex save? An attack that lists no DC rolls at 11 + CR/3, armed and unarmed, and a level-1 warrior passes near the predicted 50%; listed DCs are unchanged (inc-2ok4). | LIVE |
 | `check_dequ_save_message.sh` | Does the equipment-save message name the character and reach him, rather than naming the item twice and speaking to the item? | LIVE |
 | `check_dequ_sunder.sh` | Does sundering an armed equipment-destroyer damage the striker's weapon rather than the monster's own? A caryatid column's cursed long sword is sundered with a maul, and the maul's page is the oracle. | LIVE |
+| `check_detonate_null_target.sh` | Does an innate monster Detonate cast safely handle an empty victim inventory, while destroying a mundane dagger in the control? An env-gated probe stages both scenes directly, fixes fatigue and the Will roll, and fails on a crash, a Detonate NULL reference, or missing evidence. (inc-3nvr4) | LIVE |
 | `check_devour_negative_cr.sh` | Does devouring a corpse of negative challenge rating leave experience alone, while an ordinary corpse still pays? | LIVE |
 | `check_devour_template_source.sh` | Does `Creature::Devour(Corpse*)` read the TEMPLATE stati off the corpse rather than off the eater, with the iteration opening and closing on the same object? | LIVE |
 | `check_dig_zero_skill.sh` | Does a dig by a miner with zero Mining skill finish cleanly, rather than dividing by zero? | LIVE |

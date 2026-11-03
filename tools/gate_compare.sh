@@ -39,8 +39,17 @@
 #   More sessions ended in Fatal() or the watchdog  regression.
 #   More sessions killed by a signal (exit       regression. A crash after the
 #   128 or above: 139 SIGSEGV, 134 SIGABRT)     first map still counts as played.
-#   More sessions died, or got stuck at the         regression, and see below.
-#   OPT_NODEATH death prompt, than the baseline
+#   EVERY session died or got stuck at the death    regression, and see below.
+#   prompt (inc-ep8fv)
+#   Deaths at least double the baseline's AND at    regression, and see below.
+#   least 10 more (inc-ep8fv)
+#   Any smaller rise in deaths                      printed as a NOTE, not failed.
+#   Median game turns played per session under      regression (inc-ep8fv).
+#   half the baseline's median
+#   EVERY session ended at a non-death prompt, or   regression (inc-ep8fv). A
+#   that count at least double the baseline's AND   smaller rise is a NOTE.
+#   at least 10 more
+#   Run or baseline carries no turns figure         exit 2, cannot measure.
 #   More sessions frozen at the threat-disengage     regression, and see below.
 #   prompt (inc-loa.5) than the baseline
 #   A known message firing much more often          reported, not failed. A fix
@@ -60,10 +69,19 @@
 # rest of its key budget, generates no more real gameplay from that point --
 # so it logs fewer errors and fewer audit findings than a live session, and
 # used to read as "quieter than the baseline" with nothing to say otherwise.
-# tools/gate_lib.sh counts both shapes as one 'died' tally; this script fails
-# the comparison when that count rises, and warns instead of guessing when the
-# baseline predates the count entirely. See tools/headless.sh's "death:" line
-# for what a single session sees.
+# tools/gate_lib.sh counts both shapes as one 'died' tally. Since inc-tre9h a
+# session plays one depth and stops at its first prompt, so a change that only
+# reshuffles the random game moves deaths both ways by chance; one extra death
+# must not fail the gate (inc-ep8fv). Deaths and turns are indicators, and fail
+# only when wildly off: every session dead, deaths doubled and 10 more, or the
+# median turns played under half the baseline's. Below that a rise is a NOTE.
+# A dead session still plays less and logs fewer errors, so the NOTE says to
+# read the count before reading quieter as healthier. The gate warns instead of
+# guessing when the baseline predates the death count entirely. See
+# tools/headless.sh's "death:" line for what a single session sees.
+#
+# TURNS (inc-ep8fv) are theGame->Turn game ticks, not player actions, read from
+# the "turn N" stamp in each session's first and last screen dump.
 #
 # THE THREAT-DISENGAGE PROMPT (inc-loa.5). "You are in a threatened area.
 # Abort, Flee or Disengage?" (src/Move.cpp:941) has no OPT_ gate at all.
@@ -247,12 +265,50 @@ for BASE in "${BASELINES[@]}"; do
     else
         B_DIED="${B_DIED_RAW:-0}"
         if [ "$N_DIED" -gt "$B_DIED" ]; then
-            echo "  REGRESSION: $N_DIED sessions died or got stuck at the death prompt,"
-            echo "  baseline had $B_DIED. Everything below is drawn from more stumps"
-            echo "  than the baseline and a quieter reading is not an improvement."
-            echo
-            VERDICT=1
+            if [ "$N_DIED" -ge $((B_DIED * 2)) ] && [ "$N_DIED" -ge $((B_DIED + 10)) ]; then
+                echo "  REGRESSION: $N_DIED sessions died or got stuck at the death prompt,"
+                echo "  baseline had $B_DIED (at least double and at least 10 more)."
+                echo "  Everything below is drawn from more stumps than the baseline"
+                echo "  and a quieter reading is not an improvement."
+                echo
+                VERDICT=1
+            else
+                echo "  NOTE: $N_DIED sessions died or got stuck at the death prompt,"
+                echo "  baseline had $B_DIED. Not failed: below double and 10 more."
+                echo "  A dead session logs less, so read this before reading quieter"
+                echo "  as healthier."
+                echo
+            fi
         fi
+    fi
+    if [ "$N_PLAYED" -gt 0 ] && [ "$N_DIED" -ge "$N_PLAYED" ]; then
+        echo "  REGRESSION: every one of the $N_PLAYED sessions that played died or got"
+        echo "  stuck at the death prompt. Nothing here measured real gameplay."
+        echo
+        VERDICT=1
+    fi
+
+    # inc-ep8fv: median game turns played per session. Fails only when it falls
+    # under half the baseline's. Missing on either side: exit 2, never a pass.
+    B_TMED="$(gate_field "$BASE" turns_median)"
+    N_TMED="$(gate_field "$WORK/new" turns_median)"
+    N_TSES="$(gate_field "$WORK/new" turns_sessions)"
+    echo "    turns played:    median ${N_TMED:-none} per session   (baseline ${B_TMED:-not recorded})"
+    if [ -z "$N_TMED" ] || [ "$(( ${N_TSES:-0} * 2 ))" -lt "$N_PLAYED" ]; then
+        echo "  CANNOT MEASURE: only ${N_TSES:-0} of $N_PLAYED played sessions carry a turn"
+        echo "  stamp in their screen dumps (src/Wposix.cpp DumpScreen)."
+        exit 2
+    fi
+    if [ -z "$B_TMED" ]; then
+        echo "  CANNOT MEASURE: $BASE records no turns_median. Re-record it:"
+        echo "    tools/gate_record.sh $KEYS $SESSIONS $FIRST"
+        exit 2
+    fi
+    if [ "$((N_TMED * 2))" -lt "$B_TMED" ]; then
+        echo "  REGRESSION: median turns played per session fell to $N_TMED from $B_TMED"
+        echo "  (under half). The sessions stop playing early."
+        echo
+        VERDICT=1
     fi
 
     # inc-loa.5: same rule, for the unguarded threat-disengage prompt. A
@@ -280,12 +336,27 @@ for BASE in "${BASELINES[@]}"; do
         fi
     fi
 
-    if [ -n "$B_PSO_RAW" ] && [ "$N_PSO" -gt "$B_PSO_RAW" ]; then
-        echo "  REGRESSION: $N_PSO sessions ended at a prompt (not the death prompt),"
-        echo "  baseline had $B_PSO_RAW. Those sessions stop playing at that point"
-        echo "  and a quieter reading is not an improvement."
+    # inc-ep8fv: an indicator like deaths. Fails only when every played session
+    # stopped at a non-death prompt, or the count is at least double the
+    # baseline's and at least 10 more. A smaller rise is a NOTE.
+    if [ "$N_PLAYED" -gt 0 ] && [ "$N_PSO" -ge "$N_PLAYED" ]; then
+        echo "  REGRESSION: every one of the $N_PLAYED sessions that played ended at a prompt"
+        echo "  (not the death prompt). Nothing here measured real gameplay."
         echo
         VERDICT=1
+    elif [ -n "$B_PSO_RAW" ] && [ "$N_PSO" -gt "$B_PSO_RAW" ]; then
+        if [ "$N_PSO" -ge $((B_PSO_RAW * 2)) ] && [ "$N_PSO" -ge $((B_PSO_RAW + 10)) ]; then
+            echo "  REGRESSION: $N_PSO sessions ended at a prompt (not the death prompt),"
+            echo "  baseline had $B_PSO_RAW (at least double and at least 10 more)."
+            echo "  Those sessions stop playing at that point and a quieter reading"
+            echo "  is not an improvement."
+            echo
+            VERDICT=1
+        else
+            echo "  NOTE: $N_PSO sessions ended at a prompt (not the death prompt),"
+            echo "  baseline had $B_PSO_RAW. Not failed: below double and 10 more."
+            echo
+        fi
     fi
 
     awk -F'\t' '
