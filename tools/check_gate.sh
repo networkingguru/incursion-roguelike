@@ -9,6 +9,12 @@
 # survive the real test only until the day something actually breaks.
 #
 # Usage: tools/check_gate.sh   (exits 0 on pass, 1 on fail)
+#
+# fact: turns played per session -- control: the "turn N" stamp in the header of
+#   a hand-built screen dump (make_soak writes first and last dump, so the
+#   figure is SOAK_TURNS exactly, never a played game)
+# fact: deaths per run -- control: hand-built death.log / last-screen fixtures
+# fact: which sessions played -- control: the hand-built exits file
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -32,7 +38,17 @@ make_soak() { # <dir> <how many sessions ended in NO GAMEPLAY> [seed:message ...
     : > "$dir/exits"
     for i in $(seq 1 "$SESSIONS"); do
         if [ "$i" -le "$void" ]; then echo "$i 5" >> "$dir/exits"
-        else echo "$i 0" >> "$dir/exits"; fi
+        else
+            echo "$i 0" >> "$dir/exits"
+            # inc-ep8fv: first and last dump carry the game's turn stamp.
+            if [ "${SOAK_TURNS:-500}" != "none" ]; then
+                mkdir -p "$dir/seed-$i/logs/screens"
+                echo "=== screen 0001 arrival  key 1  mode 2  turn 198000 ===" \
+                    > "$dir/seed-$i/logs/screens/0001-arrival.txt"
+                echo "=== screen 0002 final  key 9  mode 2  turn $((198000 + ${SOAK_TURNS:-500})) ===" \
+                    > "$dir/seed-$i/logs/screens/0002-final.txt"
+            fi
+        fi
     done
     for pair in "$@"; do
         seed="${pair%%:*}"
@@ -51,8 +67,8 @@ make_confirmed_death() { # <dir> <seed>
 }
 make_stuck_death() { # <dir> <seed>
     mkdir -p "$1/seed-$2/logs/screens"
-    printf '=== screen ===\nYou die... Die? [yn]\n' \
-        > "$1/seed-$2/logs/screens/0001-final.txt"
+    printf '=== screen 0009 final  key 9  mode 2  turn 198500 ===\nYou die... Die? [yn]\n' \
+        > "$1/seed-$2/logs/screens/0009-final.txt"
 }
 
 # inc-loa.5: same idea, for the threat-disengage prompt. f7ff2d7 (2026-08-28)
@@ -61,8 +77,15 @@ make_stuck_death() { # <dir> <seed>
 # fixture models the frozen (never-answered) shape only.
 make_threat_frozen() { # <dir> <seed>
     mkdir -p "$1/seed-$2/logs/screens"
-    printf '=== screen ===\nYou are in a threatened area. Abort, Flee or Disengage? [afd?]\n' \
-        > "$1/seed-$2/logs/screens/0001-final.txt"
+    printf '=== screen 0009 final  key 9  mode 2  turn 198500 ===\nYou are in a threatened area. Abort, Flee or Disengage? [afd?]\n' \
+        > "$1/seed-$2/logs/screens/0009-final.txt"
+}
+
+# inc-ep8fv: a session @maponly stopped at a prompt that is not the death prompt.
+make_prompt_stop() { # <dir> <seed>
+    mkdir -p "$1/seed-$2/logs"
+    echo "depth=5 prompt=Do you want to stop searching (entangling)? [yn]" \
+        > "$1/seed-$2/logs/prompt-stop.log"
 }
 
 # The baseline is written by the real collector, so this checks the format the
@@ -145,22 +168,113 @@ if ! grep -q '^died	2$' "$W/died.baseline"; then
     fail "gate_collect did not count one confirmed and one stuck death as 2"
 fi
 
+# inc-ep8fv (b): deaths at least double the baseline's AND at least 10 more
+# (2 -> 14) must fail.
 make_soak "$W/died-more" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
 make_confirmed_death "$W/died-more" 10
-make_stuck_death "$W/died-more" 11
-make_stuck_death "$W/died-more" 12
+for i in $(seq 11 23); do make_stuck_death "$W/died-more" "$i"; done
 if ./tools/gate_compare.sh --from "$W/died-more" "$W/died.baseline" > "$W/out6a" 2>&1; then
     tail -20 "$W/out6a"
-    fail "a run with more dead/stuck sessions than the baseline was reported as a pass"
-elif ! grep -q "died or got stuck" "$W/out6a"; then
-    fail "the extra dead/stuck sessions were not named as the reason for the fail"
+    fail "a run with deaths 2 -> 14 against its baseline was reported as a pass"
+elif ! grep -q "at least double and at least 10 more" "$W/out6a"; then
+    fail "the doubled deaths were not named as the reason for the fail"
 fi
 
-# The same run against itself must still pass -- this rule fires on an
-# INCREASE, not on the mere presence of a death.
+# inc-ep8fv (c): a rise of 50% (6 -> 9) with nothing else changed must PASS and
+# print a NOTE.
+make_soak "$W/died6" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+for i in $(seq 10 15); do make_stuck_death "$W/died6" "$i"; done
+make_baseline "$W/died6.baseline" "$W/died6"
+make_soak "$W/died9" 0 "1:$QUIET" "2:$QUIET" "3:$QUIET"
+for i in $(seq 10 18); do make_stuck_death "$W/died9" "$i"; done
+if ! ./tools/gate_compare.sh --from "$W/died9" "$W/died6.baseline" > "$W/out6k" 2>&1; then
+    tail -20 "$W/out6k"
+    fail "deaths 6 -> 9 with nothing else changed failed the gate"
+elif ! grep -q "NOTE: 9 sessions died" "$W/out6k"; then
+    fail "deaths 6 -> 9 passed without a NOTE"
+fi
+
+# inc-ep8fv (a): every session that played died. Even against a baseline that
+# also had every session die, so it is the rule that fires, not the increase.
+make_soak "$W/alldead" 0 "1:$QUIET"
+for i in $(seq 1 "$SESSIONS"); do make_stuck_death "$W/alldead" "$i"; done
+make_baseline "$W/alldead.baseline" "$W/alldead"
+if ./tools/gate_compare.sh --from "$W/alldead" "$W/alldead.baseline" > "$W/out6l" 2>&1; then
+    tail -20 "$W/out6l"
+    fail "a run where every session died was reported as a pass"
+elif ! grep -q "every one of the 40 sessions" "$W/out6l"; then
+    fail "the all-dead run was not named as the reason for the fail"
+fi
+
+# inc-ep8fv: prompt-stop-other is an indicator. 2 -> 3 must PASS with a NOTE;
+# 2 -> 14 (double and +10) must FAIL.
+make_soak "$W/ps2" 0 "1:$QUIET"
+for i in 10 11; do make_prompt_stop "$W/ps2" "$i"; done
+make_baseline "$W/ps2.baseline" "$W/ps2"
+make_soak "$W/ps3" 0 "1:$QUIET"
+for i in 10 11 12; do make_prompt_stop "$W/ps3" "$i"; done
+if ! ./tools/gate_compare.sh --from "$W/ps3" "$W/ps2.baseline" > "$W/out6q" 2>&1; then
+    tail -20 "$W/out6q"
+    fail "prompt-stop-other 2 -> 3 failed the gate"
+elif ! grep -q "NOTE: 3 sessions ended at a prompt" "$W/out6q"; then
+    fail "prompt-stop-other 2 -> 3 passed without a NOTE"
+fi
+make_soak "$W/ps14" 0 "1:$QUIET"
+for i in $(seq 10 23); do make_prompt_stop "$W/ps14" "$i"; done
+if ./tools/gate_compare.sh --from "$W/ps14" "$W/ps2.baseline" > "$W/out6r" 2>&1; then
+    tail -20 "$W/out6r"
+    fail "prompt-stop-other 2 -> 14 was reported as a pass"
+elif ! grep -q "ended at a prompt (not the death prompt),$" "$W/out6r" || ! grep -q "at least double and at least 10 more" "$W/out6r"; then
+    fail "prompt-stop-other 2 -> 14 was not named as the reason for the fail"
+fi
+make_soak "$W/psall" 0 "1:$QUIET"
+for i in $(seq 1 "$SESSIONS"); do make_prompt_stop "$W/psall" "$i"; done
+if ./tools/gate_compare.sh --from "$W/psall" "$W/ps2.baseline" > "$W/out6s" 2>&1; then
+    fail "every session ending at a non-death prompt was reported as a pass"
+fi
+
+# The same run against itself must still pass -- this rule fires on a large
+# RISE, not on the mere presence of a death.
 if ! ./tools/gate_compare.sh --from "$W/died" "$W/died.baseline" > "$W/out6b" 2>&1; then
     tail -20 "$W/out6b"
     fail "a run with the same dead/stuck count as its own baseline did not pass"
+fi
+
+# inc-ep8fv (d): median turns under half the baseline's must fail; at half or
+# above must pass.
+SOAK_TURNS=500 make_soak "$W/turns-base" 0 "1:$QUIET"
+make_baseline "$W/turns.baseline" "$W/turns-base"
+if ! grep -q '^turns_median	500$' "$W/turns.baseline"; then
+    fail "gate_collect did not record turns_median 500"
+fi
+SOAK_TURNS=249 make_soak "$W/turns-low" 0 "1:$QUIET"
+if ./tools/gate_compare.sh --from "$W/turns-low" "$W/turns.baseline" > "$W/out6m" 2>&1; then
+    tail -20 "$W/out6m"
+    fail "a median of 249 turns against a baseline of 500 was reported as a pass"
+elif ! grep -q "median turns played per session fell to 249 from 500" "$W/out6m"; then
+    fail "the low turn count was not named as the reason for the fail"
+fi
+SOAK_TURNS=250 make_soak "$W/turns-ok" 0 "1:$QUIET"
+if ! ./tools/gate_compare.sh --from "$W/turns-ok" "$W/turns.baseline" > "$W/out6n" 2>&1; then
+    tail -20 "$W/out6n"
+    fail "a median of exactly half the baseline's turns failed the gate"
+fi
+
+# inc-ep8fv (e): a run with no turn stamps cannot be measured: exit 2, not 0.
+SOAK_TURNS=none make_soak "$W/turns-none" 0 "1:$QUIET"
+./tools/gate_compare.sh --from "$W/turns-none" "$W/turns.baseline" > "$W/out6o" 2>&1
+RC=$?
+if [ "$RC" -ne 2 ] || ! grep -q "CANNOT MEASURE" "$W/out6o"; then
+    tail -20 "$W/out6o"
+    fail "a run with no turn stamps ended $RC, not exit 2 CANNOT MEASURE"
+fi
+# ...and a baseline with no turns_median likewise.
+grep -v '^turns_' "$W/turns.baseline" > "$W/turns-old.baseline"
+./tools/gate_compare.sh --from "$W/turns-ok" "$W/turns-old.baseline" > "$W/out6p" 2>&1
+RC=$?
+if [ "$RC" -ne 2 ] || ! grep -q "CANNOT MEASURE" "$W/out6p"; then
+    tail -20 "$W/out6p"
+    fail "a baseline with no turns_median ended $RC, not exit 2 CANNOT MEASURE"
 fi
 
 # A baseline recorded before this fix existed has no 'died' field at all.
@@ -278,8 +392,10 @@ if [ "$FAILED" -eq 0 ]; then
     echo "PASS: the gate fails on an unseen message in many sessions, tolerates"
     echo "      one in a single session, fails when sessions stop reaching the"
     echo "      map, reports a message that has gone as an improvement, fails"
-    echo "      when more sessions die or get stuck at the death prompt or the"
-    echo "      threat-disengage prompt than the baseline while warning rather"
+    echo "      when every session dies, deaths double and rise by 10, or median"
+    echo "      turns halve, passes a small death rise with a NOTE, exits 2 when"
+    echo "      turns are missing, fails on more threat-disengage freezes than"
+    echo "      the baseline while warning rather"
     echo "      than guessing when a baseline never counted one at all, and"
     echo "      refuses to compare across two different sets of settings"
     exit 0
