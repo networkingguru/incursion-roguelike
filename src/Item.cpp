@@ -720,8 +720,8 @@ void Item::MakeKnown(uint8 k)
           if (em->PFlavorID)
             em->PKnown = true;
           }
-        else if (em->FlavorID)
-          em->Known = true;
+        else if (em->FlavorID || TEFF(eID)->HasSource(AI_WONDER))
+          em->Known = true; /* inc-dd5m: a wondrous kind has no flavour */
         }
     if (theGame->GetPlayer(0))
       if (theGame->GetPlayer(0)->Perceives(this))
