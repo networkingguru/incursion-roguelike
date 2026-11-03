@@ -5,6 +5,11 @@ NEVER run `./incursion` or `./incursion-headless` directly from the repo root â€
 Why: prevents a scripted run from overwriting real saves.
 History: docs/rules-history/test-harness-mechanics.md#incursion-never-run-the-binary-from-the-repo-root.
 
+## brian-plays-from-his-own-folder
+Brian plays from `~/Games/Incursion`, outside every repository and worktree. `~/Games/Incursion/play.sh` sets `INCURSIONPATH` to that folder and runs the epic's SDL binary, `~/Scripts/Incursion-inc-pu6v/incursion`. The folder holds Brian's real `save/` (gallery included), `logs/` and `Options.Dat`; `mod`, `lib`, `fonts`, `graphics` and `lang` are symlinks into `~/Scripts/Incursion-inc-pu6v`. "Rebuild my bins" means `./build_macos.sh` (SDL) in `~/Scripts/Incursion-inc-pu6v`; the play folder needs no change after a rebuild. When the epic lands or Brian names another build, repoint `play.sh` and the five symlinks. MUST NOT run any binary, check or script with `INCURSIONPATH` set to `~/Games/Incursion`, and MUST NOT write into that folder except to repoint it. A `save/` inside a repository or worktree holds no real character.
+Why: test characters kept landing in the gallery of the folder Brian played from.
+History: new rule, no prior narrative to archive. Bead inc-ew3sc.
+
 ## incursion-one-run-one-directory
 Pass a unique `INCURSION_RUN_DIR` for every run in a loop; count run directories and confirm the count equals runs before trusting a per-seed number. `tools/check_headless.sh` assertion 11 is the one case that must NOT pass `INCURSION_RUN_DIR` (tests the shared-default guard).
 Why: sessions sharing a run directory merge their logs into what reads as one session.
