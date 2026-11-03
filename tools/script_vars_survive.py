@@ -7,8 +7,8 @@ WORK = pathlib.Path(tempfile.mkdtemp(prefix='script-vars-survive.', dir=ROOT/'lo
 BIN = ROOT/'incursion-headless'
 print(f'Specimens: {WORK}', flush=True)
 
-def run(sb, args, label):
-    env = dict(os.environ, INCURSIONPATH=str(sb)+'/', INCURSION_SEED='1')
+def run(sb, args, label, extra_env=None):
+    env = dict(os.environ, INCURSIONPATH=str(sb)+'/', INCURSION_SEED=os.environ.get('INCURSION_SVS_SEED','1'), **(extra_env or {}))
     with (sb/'logs'/label).open('w') as out:
         return subprocess.run([str(BIN), *map(str,args)], cwd=ROOT, env=env,
                               stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT).returncode
@@ -47,7 +47,7 @@ a=text.index('hObj h;',start)+len('hObj h;')
 text=text[:a]+'\noracleA = 12345; oracleB = 67890; oracleGlobal = 24680; RedirectEff(e,$"Khasrach",EV_BIRTH);'+text[a:]; p.write_text(text)
 edit(base,'religion.irh','God "Khasrach"\n  {','God "Khasrach"\n  {\nint32 oracleGod;\nOn Event EV_BIRTH { oracleGod = 13579; };')
 compile(base)
-assert run(base,['-keys',ROOT/'tools/keys/smoke.keys'],'session.log')==0
+assert run(base,['-keys',ROOT/'tools/keys/script-vars-base.keys'],'session.log')==0
 save=next((base/'save').glob('*.sav'))
 rc,original,_=dump(base,save); assert rc==0
 assert original[('Orc;race',0)][2]==12345, original
@@ -125,9 +125,16 @@ command=sandbox('30',base)
 edit(command,'pspells.irh','        TPrint(e, "You point at the <EVictim>',
      '        EActor->IPrint(Format("COMMAND_HTEXT=%d",str));\n        TPrint(e, "You point at the <EVictim>')
 compile(command)
-rc=run(command,['-keys',ROOT/'tools/keys/script-vars-command.keys'],'session.log')
+import hashlib
+base_sha=hashlib.sha256(save.read_bytes()).hexdigest()
+shutil.copyfile(save,command/'save'/save.name)
+rc=run(command,['-keys',ROOT/'tools/keys/script-vars-command.keys'],'session.log',{'INCURSION_FORCE_SAVE_ROLL':'20'})
 command_saves=list((command/'save').glob('*.sav'))
-if rc==0 and command_saves:
+rewritten=bool(command_saves) and hashlib.sha256(command_saves[0].read_bytes()).hexdigest()!=base_sha
+if rc==0 and command_saves and not rewritten:
+    print(f'case 30: FAIL save unchanged after session (sha256 {base_sha}); the session did not rewrite it',flush=True)
+    failed+=1
+elif rc==0 and command_saves:
     first=command_saves[0]
     dump_rc,command_rows,_=dump(command,first)
     text_value=[v[2] for (owner,ordinal),v in command_rows.items() if owner=='Command' and v[0]=='str']
