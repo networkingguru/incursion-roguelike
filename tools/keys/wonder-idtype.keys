@@ -1,0 +1,61 @@
+# Does identifying one wondrous item teach the KIND? Oracle for inc-dd5m.
+#
+#   tools/headless.sh tools/keys/wonder-idtype.keys 1
+#
+# Same shape as amulet-idtype.keys (read its header for why the In-the-Air line
+# is the measurement). A Mandolin of Musical Defense is an AI_WONDER effect with no
+# flavour. Take one unidentified, identify the pack, take a second, read both
+# names. The ring is the control, as in the amulet script.
+#
+# [s] stows, ESC leaves the manager (ENTER does nothing once the cursor has
+# moved to an empty belt slot).
+#
+# The SECOND item of each kind joins its matching stack in the pack (inc-j12i0
+# automatic pickup), so no manager opens and nothing is left in the air. The
+# measurement for the -2 dumps is the "AutoStowing: <name>." message line, not
+# the In-the-Air line, and no [s] is sent for them.
+#
+# The WONDER count is an index into ItemGlyphs (src/Tables.cpp:320), from
+# zero: wonder 39, ring 26.
+
+@include chargen.keys
+
+@dump:arrival
+
+w
+y
+@choose "Acquire Unknown Item"
+RIGHT*39
+@until "Mandolin of Musical Defense" DOWN
+ENTER
+@dump:wonder-1-in-air
+s
+ESC
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*26
+@until "Fire Resistance" DOWN
+ENTER
+@dump:ring-1-in-air
+s
+ESC
+
+w
+@choose "Identify Whole Pack"
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*39
+@until "Mandolin of Musical Defense" DOWN
+ENTER
+@dump:wonder-2-in-air
+
+w
+@choose "Acquire Unknown Item"
+RIGHT*26
+@until "Fire Resistance" DOWN
+ENTER
+@dump:ring-2-in-air
+
+@quit

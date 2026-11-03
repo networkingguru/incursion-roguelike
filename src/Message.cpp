@@ -1163,6 +1163,8 @@ String & Item::Name(int16 Flags) {
             }
             flav = Trim(NAME(em->FlavorID));
         }
+        else if (!isType(T_POTION) && em->Known && TEFF(eID)->HasSource(AI_WONDER))
+            Known |= KN_MAGIC; /* inc-dd5m: unflavored wondrous kind, never reads FlavorID */
         if ((em = EFFMEM(eID, theGame->GetPlayer(0)))->PFlavorID && isType(T_POTION)) {
             /* This REALLY doesn't belong here, but there is no better
                place to put it that insures it gets called every single
