@@ -70,8 +70,8 @@
 #   the layout sweep        does this build still play the same game when its
 #                           objects move? The inc-dhc class, about an hour a
 #                           site to hunt by hand.
-#   the soak                40 seeded sessions against tools/gates/*.baseline,
-#                           about a minute. It is the canary the ratchet is
+#   the soak                40 seeded sessions against each of the nine
+#                           tools/gates/dive-depth-<d>.baseline files, a few minutes. It is the canary the ratchet is
 #                           not: it names no rule, and reports a new complaint
 #                           in several sessions at once, fewer sessions
 #                           reaching a map, or more deaths and freezes.
