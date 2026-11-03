@@ -2,6 +2,8 @@
 # gate: live
 # gate-serial: race wall-clock watchdog/proxy/stream deadlines; CPU load could flip them
 #
+# fact: weekly budget route read by dispatch_gate.py -- HOME set to a temp dir with no usage file
+#
 # Does tools/opencode_ds.sh refuse the shared checkout, bill exactly one
 # ledger row for a successful harness run (cost = the sum of its step_finish
 # costs, steps = the count), poison the ledger when opencode quotes tokens but
@@ -797,7 +799,8 @@ WORK="$TMP/wt3b"; mkdir -p "$WORK"
 BRIEF="$TMP/brief3b.txt"; echo "do a thing" > "$BRIEF"
 LEDGER="$TMP/ledger3b.jsonl"; : > "$LEDGER"
 : > "$TMP/rec.3b"
-RC="$(INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.3b" INCURSION_FAKE_MODE=success \
+FAKEHOME="$TMP/home3b"; mkdir -p "$FAKEHOME"
+RC="$(HOME="$FAKEHOME" INCURSION_OPENCODE_BIN="$FAKE" INCURSION_FAKE_REC="$TMP/rec.3b" INCURSION_FAKE_MODE=success \
     INCURSION_DS_PREAMBLE="$TMP/does-not-exist-preamble.md" \
     INCURSION_DEEPSEEK_KEY=canary-x INCURSION_DEEPSEEK_LEDGER="$LEDGER" \
     "$WRAPPER" "$WORK" "$BRIEF" > "$TMP/out.3b" 2> "$TMP/err.3b"; echo $?)"
