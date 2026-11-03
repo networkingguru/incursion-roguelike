@@ -183,6 +183,8 @@ static void log_great_blow(const char *tag, const char *name, Monster *mn) {
         (int)(TMON(mn->tmID)->Attk[0].AType != 0));
 }
 
+extern const char * FeatName(int16 ft);
+
 void MonsterFeatProbe(Player *pl) {
     /* inc-4trf: opt-in probe for tools/check_monster_feats_live.sh. */
     if (!getenv("INCURSION_MONSTER_FEAT_PROBE"))
@@ -289,6 +291,23 @@ void MonsterFeatProbe(Player *pl) {
         log_great_blow("greatblow-off", gb[i], mn);
         memcpy(t->Feats, saved, sizeof saved);
         log_great_blow("greatblow-on", gb[i], mn);
+    }
+    /* inc-ci0hl: the blackguard template lists M_IALIGN (a monster flag, 53) in its
+       Feats:, so a blackguard got feat 53 and no inherent alignment. Log both, and
+       whether any template feat prints the FeatName "---N" fallback in help. */
+    {
+        Monster *bg = make_monster_beside("human", "blackguard;template");
+        if (bg) {
+            bg->CalcValues();
+            TTemplate *bt = TTEM(FIND("blackguard;template"));
+            int fallback = 0;
+            for (int i = 0; i < 16 && bt->NewFeats[i]; ++i)
+                if (bt->NewFeats[i] > SK_LAST &&
+                    strncmp(FeatName(bt->NewFeats[i]), "---", 3) == 0)
+                    fallback = 1;
+            Error("MONSTER_FEAT name=blackguard tag=ialign ialign=%d feat53=%d fallback=%d",
+                (int)bg->HasMFlag(M_IALIGN), (int)bg->HasFeat(53), fallback);
+        }
     }
     Error("MONSTER_FEAT DONE");
 }
