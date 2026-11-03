@@ -1,12 +1,41 @@
-# inc-glnx case 30: cast Command on self so its hText str is assigned.
-@include chargen.keys
+# inc-glnx case 30: cast Command on a summoned rat so its hText str is assigned.
+# inc-d9iot: the character is the base save (restored, not generated).
+# Controls: no monster acts (Genocide Everything, then Freeze Monsters on the
+# one rat summoned as target), the cast cannot fail, and the check sets
+# INCURSION_FORCE_SAVE_ROLL=20 so the rat's Will save always resists. The
+# target is the rat, not the caster: Magic.cpp:1423 gives a self-target no save.
+@expect "Initial Choices"
+@choose "Restore a Saved Game"
+@expect "Choose a character:"
+a
+@until "Things in View" ESC
 w y
+@until "Wizard Mode Options:" w
+@choose "Genocide Everything"
+SPACE*40
+@until "Wizard Mode Options:" w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE            # Row 6: Ignore Spell Failure ON.
+DOWN*5 SPACE            # Row 11: Freeze Monsters ON.
+ESC
+@until "Wizard Mode Options:" w
+@choose "Change terrain type"   # the square east of the player becomes plain
+RIGHT ENTER                     #   floor, whatever the seed's map put there
+e                               # [e] Floor ("Floor" and "Floor;2" show the same
+                                #   name, so @choose cannot pick one)
+@until "Wizard Mode Options:" w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT ENTER
+@while "more --" SPACE
+@until "Wizard Mode Options:" w
 @choose "Learn Any Spell"
 "Command" ENTER
 m
 @choose "Command"
-*
+l
+RIGHT ENTER
 h
 @dump:command-cast
-@while "You are paralyzed" 1
 @quit
