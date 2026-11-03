@@ -1,0 +1,26 @@
+# inc-d9iot: the base character for tools/check_script_vars_survive.sh.
+# Same character as chargen.keys (male neutral Orc (Standard) Barbarian, named
+# by @choose), but with Point Buy attributes, so no seed changes the scores.
+# It quits on arrival: no turn passes, so no monster acts before the save.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Barbarian"
+p       # Abort to Point Buy; every attribute starts at 8, with 75 points
+        # STR 14, DEX 16, CON 18, INT 18, WIS 12, CHA 16, LUC 17 == exactly 75
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+a       # First feat
+a       # Second feat
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+y       # Worship the offered god
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+@quit
