@@ -1923,9 +1923,14 @@ AI_PSIONIC Effect "Detonate" : EA_BLAST
               && !hTarget->HasMFlag(M_INCOR) && hTarget->GetAttr(A_INT) == 0))
           {
             hTarget = hTarget->FirstInv();
-            while (hTarget->isMagic())
+            /* upstream: the walk must stop at NULL_OBJ; a victim with no
+               mundane item crashes the script on Win32 too. Observed
+               (tools/check_detonate_null_target.sh), inc-3nvr4, not sent. */
+            while (hTarget != NULL_OBJ && hTarget->isMagic())
               hTarget = EVictim->NextInv();
-          }   
+            if (hTarget == NULL_OBJ)
+              return ABORT;
+          }
       
       if (hTarget->isType(T_ITEM) && (hTarget->Owner() != NULL_OBJ))
         hSaver = hTarget->Owner();
