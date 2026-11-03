@@ -1103,8 +1103,10 @@ Restart:
     if (HasFeat(FT_ZEN_ARCHERY))
         AddBonus(BONUS_INSIGHT,A_HIT_ARCHERY,Mod(A_WIS));
 
-    if (HasFeat(FT_ZEN_DEFENSE)) { 
-        uint32 at = getArmourType(true);
+    /* inc-0t9ol: worn armor only (armor spells do not count), and no bonus
+       above light encumbrance. */
+    if (HasFeat(FT_ZEN_DEFENSE) && Encumbrance() <= EN_LIGHT) { 
+        uint32 at = getArmourType(true, false);
         if (!at)
             AddBonus(BONUS_INSIGHT,A_DEF,Mod(A_WIS)); 
         else if (!(at & (WG_MARMOUR|WG_HARMOUR)))
@@ -3026,7 +3028,7 @@ int16 Character::GetBAB(int16 mode)
     return max(BAB,sBAB);
   }
 
-uint32 Creature::getArmourType(bool count_shield)
+uint32 Creature::getArmourType(bool count_shield, bool count_spells)
   {
     Item *arm; uint32 at;
     int16 i, sl[] = { SL_ARMOUR, SL_READY, SL_WEAPON, 0 };
@@ -3042,7 +3044,7 @@ uint32 Creature::getArmourType(bool count_shield)
       }
       
     StatiIter(this)
-      if (S->eID && S->Nature != HELD_MANA && (RES(S->eID)->Type == T_TEFFECT))
+      if (count_spells && S->eID && S->Nature != HELD_MANA && (RES(S->eID)->Type == T_TEFFECT))
         {
           TEffect *te = TEFF(S->eID);
           if (te->HasFlag(EF_LARMOUR))

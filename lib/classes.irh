@@ -1301,8 +1301,12 @@ Class "Monk"
       and above, the monk takes only half damage on a failed Saving Throw.\n
       __Levels of this ability from the monk and rogue classes stack.\n
       __*_<7>Zen Defense<2> -- At 1st level, the monk receives the Zen Defense feat
-      for free. This allows her to add her Wisdom modifier, if positive, to her
-      defense class.\n
+      for free. When she wears no armor, she gains an insight bonus to Defense
+      Class equal to her Wisdom modifier, if it is positive. This bonus stacks
+      with her Dexterity bonus. In light armor she gets half the bonus, rounded
+      up; in medium or heavy armor she gets none. Armor spells, such as Mage
+      Armour, do not count as armor for this feat. She loses the bonus while her
+      encumbrance is Moderate or worse.\n
       __*_<7>Deflect Arrows<2> -- At 2nd level, the monk receives the Deflect Arrows
       feat for free, even if she does not meet the normal prerequisites.\n
       __*_<7>Still Mind<2> -- At 3rd level, the monk gains a +2 bonus to saving throws
