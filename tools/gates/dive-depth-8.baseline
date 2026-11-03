@@ -1,0 +1,38 @@
+# Incursion regression baseline -- see tools/gate_compare.sh.
+# Recorded 2026-11-03 11:04 from cbe4d6cc.
+# Metric: error volume and message-set membership. A message that is
+# not in this file is a regression; a message that has left it is a fix.
+# inc-tre9h: one session per depth (tools/keys/dive-depth-8.keys): chargen, one jump to depth 8, wake every creature, 20 waits, s, 2 waits.
+# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
+# Per-seed outcome (run logs/gate/record-dive-depth-8-83354): completed the body: 23 seeds (2,4,7,9,10,11,12,13,15,16,18,20,21,23,27,28,29,30,33,34,35,38,39).
+#   death@ (stopped at 'You die... Die? [yn]', counted in died=16): 1@d8, 3@d8, 5@d8, 6@d8, 8@d8, 14@d8, 19@d8, 22@d8, 24@d8, 25@d8, 26@d8, 31@d8, 32@d8, 36@d8, 37@d8, 40@d8.
+#   other prompt (counted in prompt_stop_other=1): 17 "Do you want to stop searching (fear: a human ghost)? [yn]".
+keys	tools/keys/dive-depth-8.keys
+first	1
+options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
+sessions	40
+played	40
+exits	0=40
+lines	0
+findings	0
+died	16
+threat_frozen	0
+prompt_stop_seed	seed-1	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-14	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-17	depth=8 prompt=Do you want to stop searching (fear: a human ghost)? [yn]
+prompt_stop_seed	seed-19	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-22	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-24	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-25	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-26	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-3	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-31	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-32	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-36	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-37	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-40	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-5	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-6	depth=8 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-8	depth=8 prompt=You die... Die? [yn]
+prompt_stop	17
+prompt_stop_other	1
