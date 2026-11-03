@@ -1,12 +1,12 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 11:05 from cbe4d6cc.
+# Recorded 2026-11-03 17:37 from 0d299d88.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
 # inc-tre9h: one session per depth (tools/keys/dive-depth-9.keys): chargen, one jump to depth 9, wake every creature, 20 waits, s, 2 waits.
 # The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
-# Per-seed outcome (run logs/gate/record-dive-depth-9-89921): completed the body: 23 seeds (3,4,5,6,7,11,13,14,15,16,18,19,23,24,27,28,32,33,34,36,37,38,40).
-#   death@ (stopped at 'You die... Die? [yn]', counted in died=15): 1@d9, 2@d9, 9@d9, 10@d9, 12@d9, 20@d9, 21@d9, 22@d9, 25@d9, 26@d9, 29@d9, 30@d9, 31@d9, 35@d9, 39@d9.
-#   other prompt (counted in prompt_stop_other=2): 8 "Do you want to stop searching (pure magic: a sylph)? [yn]"; 17 "Do you want to stop searching (blunt damage: an ethereal hippogr".
+# inc-y2fkq: re-recorded after the inventory walk cursor fix. Loops that stopped after the first item now visit every item, so seeded sessions draw more random numbers and play out differently. Against the cbe4d6cc baseline (died=15): no longer died 9, 21, 30; newly died 5, 7, 17, 27, 38. Fresh master 0d299d88 reproduced died=15 exactly; the fixed build gave died=17 at load ~26 and again at load ~3; 0 error lines, 0 findings, 40 of 40 played. Depth 10 moved the other way (14 -> 13) and still passes.
+# Per-seed outcome (run logs/gate/record-dive-depth-9-99882): died=17: 1, 2, 5, 7, 10, 12, 17, 20, 22, 25, 26, 27, 29, 31, 35, 38, 39 (all @d9, 'You die... Die? [yn]').
+#   other prompt (counted in prompt_stop_other=2): 8 "Do you want to stop searching (pure magic: a sylph)? [yn]"; 21 "Do you want to stop searching (tripping: a sphinx)? [yn]".
 keys	tools/keys/dive-depth-9.keys
 first	1
 options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
@@ -15,24 +15,26 @@ played	40
 exits	0=40
 lines	0
 findings	0
-died	15
+died	17
 threat_frozen	0
 prompt_stop_seed	seed-1	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-10	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-12	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-17	depth=9 prompt=Do you want to stop searching (blunt damage: an ethereal hippogr
+prompt_stop_seed	seed-17	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-2	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-20	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-21	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-21	depth=9 prompt=Do you want to stop searching (tripping: a sphinx)? [yn]
 prompt_stop_seed	seed-22	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-25	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-26	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-27	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-29	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-30	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-31	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-35	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-38	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-39	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-5	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-7	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-8	depth=9 prompt=Do you want to stop searching (pure magic: a sylph)? [yn]
-prompt_stop_seed	seed-9	depth=9 prompt=You die... Die? [yn]
-prompt_stop	17
+prompt_stop	19
 prompt_stop_other	2

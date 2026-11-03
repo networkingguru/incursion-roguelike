@@ -352,6 +352,11 @@ void Game::Play() {
     extern void SoakTorchProbe(Player *pl);
     SoakTorchProbe(pp);
 
+    /* inc-y2fkq: off unless INCURSION_INV_CURSOR_PROBE is set. See
+       InvCursorProbe (src/InvCursorProbe.cpp). */
+    extern void InvCursorProbe(Player *pl);
+    InvCursorProbe(pp);
+
     /* inc-pt7h: off unless INCURSION_STONING_DUR_PROBE is set. See
        StoningDurProbe (src/StoningDurProbe.cpp). */
     extern void StoningDurProbe(Player *pl);

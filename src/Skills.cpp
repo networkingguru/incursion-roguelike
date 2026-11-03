@@ -800,6 +800,7 @@ bool Character::DisarmTrap(Trap *tr, bool active)
 }
 
 int8 Creature::SkillKitMod(int16 sk) {
+	InvCursorGuard invCursorGuard;
 	Item *it; int16 mod, best, sec, i, cKit, rope_mod;
 	rID kits[65];
 
@@ -846,6 +847,7 @@ int8 Creature::SkillKitMod(int16 sk) {
 }
 
 bool Creature::HasSkillKit(int16 sk) {
+	InvCursorGuard invCursorGuard;
 	Item *it;
 
 	/* These frequently rolled skills have no skill kit

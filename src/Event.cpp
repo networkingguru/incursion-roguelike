@@ -430,6 +430,7 @@ Again:
 }
 
 EvReturn RealThrow(EventInfo &e) {
+    InvCursorGuard invCursorGuard;
     EvReturn r;
     int16 Ev;
 
