@@ -9,7 +9,9 @@
 /* Character::GodID and Character::FavourLev are protected, and TextTerm keeps
    its view list there too. This free function reads them, so they are opened
    here and nowhere else. */
+#include <algorithm>
 #include <set>
+#include <string>
 #include <vector>
 #define protected public
 #include "Incursion.h"
@@ -174,8 +176,8 @@ static void hezrouCases() {
 }
 
 /* Resource::GrantGear gives an NPC FT_EXOTIC_WEAPON for an exotic weapon, bow
-   or hand crossbow. The drow carries a hand crossbow; the githzerai may carry
-   a spiked chain, so it is tried up to 40 times. */
+   or hand crossbow. The drow carries a hand crossbow; the githzerai's spiked
+   chain is forced with GenItemForceArm, once. */
 static void grantCases() {
     struct { const char *mon, *what; } C[2] = { { "drow", "hand crossbow" },
                                                 { "githzerai", "spiked chain" } };
@@ -185,15 +187,18 @@ static void grantCases() {
             Error("WEAPONTYPE_PROBE case=grant item=%s INCONCLUSIVE missing resource", C[c].what);
             continue;
         }
-        int tries = 0, got = 0;
-        for (; tries < (c ? 40 : 1) && !got; tries++) {
-            Monster *mn = new Monster(mid);
-            TMON(mid)->GrantGear(mn, mid, true);
-            got = mn->HasStati(EXTRA_FEAT, FT_EXOTIC_WEAPON) ? 1 : 0;
-            mn->Remove(true);
-        }
-        Error("WEAPONTYPE_PROBE case=grant item=%s exotic_feat=%d tries=%d",
-            C[c].what, got, tries);
+        /* The githzerai's weapon line reaches Item::GenItem on either branch
+           of its 50% gear roll, so a forced spiked chain is the one weapon. */
+        if (c) GenItemForceArm("spiked chain");
+        int before = GenItemForceConsumed();
+        Monster *mn = new Monster(mid);
+        TMON(mid)->GrantGear(mn, mid, true);
+        int got = mn->HasStati(EXTRA_FEAT, FT_EXOTIC_WEAPON) ? 1 : 0;
+        mn->Remove(true);
+        int consumed = GenItemForceConsumed() - before;
+        GenItemForceArm(NULL);
+        Error("WEAPONTYPE_PROBE case=grant item=%s exotic_feat=%d consumed=%d",
+            C[c].what, got, consumed);
     }
 }
 
@@ -253,9 +258,42 @@ static void viewListCases(Player *p) {
         (int)(pos[2] >= 0 && pos[1] >= 0 && pos[2] < pos[1]));
 }
 
-/* Kysul's gift check flags a bow the follower cannot use. The gift is random,
-   so the real EV_GODPULSE runs many times and every gifted bow or missile is
-   counted by whether the follower is proficient with it. */
+/* Kysul's gift check flags a bow the follower cannot use. INCURSION_GENITEM_FORCE
+   (GenItemForceArm) makes each gift roll a named item, so two single pulses
+   offer a bow, then a bow-compatible sword, and a missile, then a sword. The
+   probe arms the list right before each pulse and reads the consumed count
+   before and after it. A pulse that consumes 2 entries offered the first item
+   and refused it. Every gift is removed, wherever it landed, so none can stay
+   "In the Air" with an inventory screen open. */
+static void kysulPulse(Player *p, rID kys, const char *offered, const char *list) {
+    std::set<hObj> had;
+    for (Item *i = p->FirstInv(); i; i = p->NextInv()) had.insert(i->myHandle);
+    if (Item *air = p->InSlot(SL_INAIR)) had.insert(air->myHandle);
+    int before = GenItemForceConsumed();
+    GenItemForceArm(list);
+    EventInfo e;
+    e.Clear();
+    e.EActor = p;
+    e.eID = kys;
+    TGOD(kys)->Event(e, kys, EV_GODPULSE);
+    int consumed = GenItemForceConsumed() - before;
+    GenItemForceArm(NULL);
+    std::vector<Item *> gifts;
+    for (Item *i = p->FirstInv(); i; i = p->NextInv())
+        if (!had.count(i->myHandle)) gifts.push_back(i);
+    if (Item *air = p->InSlot(SL_INAIR))
+        if (!had.count(air->myHandle) &&
+            std::find(gifts.begin(), gifts.end(), air) == gifts.end())
+            gifts.push_back(air);
+    std::string name = gifts.empty() ? "none" : NAME(gifts[0]->iID);
+    for (size_t k = 0; k < name.size(); k++)
+        if (name[k] == ' ') name[k] = '_';
+    Error("WEAPONTYPE_PROBE case=kysul item=%s gift=%s gifts=%d consumed=%d",
+        offered, name.c_str(), (int)gifts.size(), consumed);
+    for (size_t k = 0; k < gifts.size(); k++)
+        gifts[k]->Remove(true);
+}
+
 static void kysulCases(Player *p) {
     rID kys = FIND("Kysul");
     if (!kys) {
@@ -270,33 +308,12 @@ static void kysulCases(Player *p) {
     p->GainPermStati(SUSTAIN, NULL, SS_MISC, A_INT, 3);
     p->GodID = kys;
     p->FavourLev[gn] = 9;
-    std::set<hObj> had;
-    for (Item *i = p->FirstInv(); i; i = p->NextInv()) had.insert(i->myHandle);
-    int pulses = 2000, ranged = 0, notprof = 0, melee = 0, meleeNP = 0;
-    for (int n = 0; n < pulses; n++) {
-        EventInfo e;
-        e.Clear();
-        e.EActor = p;
-        e.eID = kys;
-        TGOD(kys)->Event(e, kys, EV_GODPULSE);
-        for (Item *i = p->FirstInv(); i; i = p->NextInv()) {
-            if (had.count(i->myHandle)) continue;
-            had.insert(i->myHandle);
-            if (i->isType(T_BOW) || i->isType(T_MISSILE)) {
-                ranged++;
-                if (p->WepSkill(i->iID) == WS_NOT_PROF) notprof++;
-            } else if (i->isType(T_WEAPON)) {
-                melee++;
-                if (p->WepSkill(i->iID) == WS_NOT_PROF) meleeNP++;
-            }
-        }
-    }
+    kysulPulse(p, kys, "bow", "short bow:1;long sword:1");
+    kysulPulse(p, kys, "bolt", "crossbow bolt:1;long sword:1");
     p->GodID = oldGod;
     p->FavourLev[gn] = oldFav;
     p->RemoveStati(SUSTAIN, SS_MISC, A_INT, 3);
     p->Options[OPT_AUTOMORE] = autoMore;
-    Error("WEAPONTYPE_PROBE case=kysul item=gift pulses=%d bow_gifts=%d notprof_bow_gifts=%d weapon_gifts=%d notprof_weapon_gifts=%d",
-        pulses, ranged, notprof, melee, meleeNP);
 }
 
 /* Augment's menus are key-driven: the key script answers each prompt. Every
