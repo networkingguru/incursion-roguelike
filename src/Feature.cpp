@@ -522,6 +522,19 @@ bool Portal::EnterDir(Dir d) {
     }
 }
 
+/* Test hook (bd inc-0re7): INCURSION_DOOR_LOCK_ROLL=<0..99> replaces both lock
+   rolls in Door::Door. Unset or invalid: random(100), stream unchanged. */
+static int DoorLockRoll() {
+    static int fixed = -2;
+    if (fixed == -2) {
+        const char *s = getenv("INCURSION_DOOR_LOCK_ROLL");
+        char *end = NULL;
+        long v = (s && *s) ? strtol(s, &end, 10) : -1;
+        fixed = (s && *s && *end == 0 && v >= 0 && v <= 99) ? (int)v : -1;
+    }
+    return fixed >= 0 ? fixed : random(100);
+}
+
 Door::Door(rID fID, int16 depth) : Feature(TFEAT(fID)->Image, fID, T_DOOR) {
 #ifndef WEIMER
     DoorFlags = 0;
@@ -536,13 +549,13 @@ Door::Door(rID fID, int16 depth) : Feature(TFEAT(fID)->Image, fID, T_DOOR) {
         DoorFlags |= DF_OPEN;
     else {
         Flags |= F_SOLID;
-        if (random(100) < lockChance)
+        if (DoorLockRoll() < lockChance)
             DoorFlags |= DF_LOCKED;
     }
     if (!random(7)) {
         DoorFlags &= ~DF_OPEN;
         DoorFlags |= DF_SECRET;
-        if (random(100) < lockChance)
+        if (DoorLockRoll() < lockChance)
             DoorFlags |= DF_LOCKED;
     }
 #else
