@@ -50,6 +50,8 @@ m
 1 ENTER                 # Bind spellkey 1, then cast.
 RIGHT ENTER
 @while "resists your magic" 1 RIGHT ENTER
+# A god-anger line can overflow the message area and raise "-- more --", which would eat the next key.
+@while "-- more --" SPACE
 @dump:dominate-kobold
 
 @until "Wizard Mode Options:" w
@@ -71,6 +73,8 @@ m
 1 ENTER
 LEFT ENTER
 @while "resists your magic" 1 LEFT ENTER
+# Same guard before the `v` key.
+@while "-- more --" SPACE
 v
 @dump:dominate-giant
 ESC
