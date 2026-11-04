@@ -1,117 +1,100 @@
 #!/bin/bash
 # gate: live
-# Does a random closed door lock at the depth-scaled rate? (bd inc-h22n)
+# Does a random closed door lock exactly when the roll is below the depth's
+# lock chance? (bd inc-h22n, rewritten as an exact test in bd inc-0re7)
 #
-# THE RULE (design point 1). A closed random door is locked with chance
-# 25 + (depth - 1) * 50 / 9 percent: 25% at depth 1, 75% at depth 10.
-# Designed-room locks (TILE_LOCKED) and the forced secret-and-locked door are
-# NOT random doors and are not counted: only Map::MakeDoor's doors are.
+# THE RULE (src/Feature.cpp, Door::Door). lockChance = 25 + (depth-1)*50/9,
+# integer math: depth 2 -> 30, depth 10 -> 75. A closed door locks when
+# random(100) < lockChance. Designed-room locks and the forced secret-and-locked
+# door are not random doors and are not counted.
 #
-# THE ORACLE. INCURSION_DOORGEN_PROBE=1 makes Map::MakeDoor log one line per
-# random door it places, after the generator has finished with it
+# THE TEST. INCURSION_DOOR_LOCK_ROLL=<0..99> replaces the lock roll, so a door
+# locks exactly when the value is below its depth's chance. Four sessions:
+#   roll 29: every closed depth-2 door locks   (29 < 30)
+#   roll 30: no closed depth-2 door locks      (30 is not < 30)
+#            every closed depth-10 door locks  (30 < 75)
+#   roll 74: every closed depth-10 door locks  (74 < 75)
+#   roll 75: no closed depth-10 door locks     (75 is not < 75)
+# A flat 50% rule fails roll 30 at depth 2 and roll 29 is the same for both,
+# so the check is red on the old code. A closed door is one with neither
+# DF_OPEN (0x02) nor DF_SECRET (0x20) set; DF_BROKEN is ignored (inc-95d).
+# Locked is DF_LOCKED (0x08). Log lines come from INCURSION_DOORGEN_PROBE=1
 # (src/DoorPickProbe.cpp, logs/doorgen.log):  DOORGEN depth=D flags=0xFF
-# tools/keys/door-rate.keys starts a new character (a fresh depth-1 level) and
-# jumps to depth 10 with the wizard 'p' command, which also builds the levels in
-# between, so one session logs doors for depths 1..10. The gate settings file
-# is used because chargen.keys only works on every seed with it. A door is CLOSED when neither DF_OPEN (0x02) nor DF_SECRET
-# (0x20) is set; DF_BROKEN is ignored, because Door::SetImage brands doors
-# broken while their frame is unbuilt (inc-95d) and un-brands them later. A
-# closed door is LOCKED when DF_LOCKED (0x08) is set.
 #
-# THE TOLERANCE. The 10 SEEDS give about 300 closed doors per depth (measured: 513 and
-# 392 over 16 seeds), so one standard deviation is under 3 points. Depth 1 must land in 25 +/- 10 and
-# depth 10 in 75 +/- 10. The unmodified code locks half of all closed doors,
-# which is 6 standard deviations from 25 and from 75, so the check is RED there
-# and GREEN for any implementation of the design.
+# WHY DEPTH 2, NOT DEPTH 1. A loaded save brings its own depth-1 level, which
+# is not regenerated, so no depth-1 door is built in the session. Depth 1 uses
+# the same formula as every other depth.
 #
-# THE GUARD. Fewer than MIN_CLOSED closed doors at either depth is INCONCLUSIVE
-# (exit 2), never a pass: a run that measured nothing proves nothing.
+# THE GUARD. A needed depth with zero closed doors in a session is
+# INCONCLUSIVE (exit 2), never a pass.
 #
-# Usage: tools/check_door_lock_rate.sh [--selftest]   exit 0 pass, 1 fail, 2 inconclusive
+# fact: character -- fixture orc-mage-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: levels 2..10 built -- wizard 'p' jump to depth 10 (tools/keys/door-rate.keys)
+# fact: the lock roll -- INCURSION_DOOR_LOCK_ROLL
+# fact: number of closed doors per depth (open roll 1-in-10, no control) -- not asserted on, zero is exit 2
+#
+# Usage: tools/check_door_lock_rate.sh [--prove-red]   exit 0 pass, 1 fail, 2 inconclusive
 . "$(dirname "$0")/check_lib.sh"
 
-CHECK_OPTIONS=tools/gates/Options.Dat
-# Seeds 2 and 4 replaced by 11 and 13: they hit the engine ASSERT cHP == mHP + Attr[A_THP] (inc-tmys).
-SEEDS="1 11 3 13 5 6 7 8 9 10"   # not 12: it offers no "Neutral" alignment, so chargen.keys cannot pass it
-MIN_CLOSED=120
-TOL=10
+CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-# analyse <log>: exit 0 pass, 1 fail, 2 inconclusive.
-analyse() {
-python3 - "$1" "$MIN_CLOSED" "$TOL" <<'PY'
+# The old flat rule: roll 30 locks depth-2 doors.
+check_mutation src/Feature.cpp \
+    '    int lockChance = 25 + (depth - 1) * 50 / 9;' \
+    '    int lockChance = 50;'
+
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_DOORGEN_PROBE=1
+
+# tally <log> <depth>: prints "<closed> <locked>".
+tally() {
+    python3 - "$1" "$2" <<'PY'
 import re, sys
-path, minc, tol = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-closed, locked = {}, {}
-for line in open(path):
+c = l = 0
+for line in open(sys.argv[1]):
     m = re.match(r"DOORGEN depth=(\d+) flags=0x([0-9a-f]+)", line)
-    if not m:
+    if not m or int(m.group(1)) != int(sys.argv[2]):
         continue
-    d, f = int(m.group(1)), int(m.group(2), 16)
+    f = int(m.group(2), 16)
     if f & 0x02 or f & 0x20:
         continue
-    closed[d] = closed.get(d, 0) + 1
-    if f & 0x08:
-        locked[d] = locked.get(d, 0) + 1
-rc = 0
-for d, want in ((1, 25), (10, 75)):
-    n = closed.get(d, 0)
-    if n < minc:
-        print("INCONCLUSIVE: only %d closed random doors at depth %d (need %d)" % (n, d, minc))
-        sys.exit(2)
-    pct = 100.0 * locked.get(d, 0) / n
-    ok = abs(pct - want) <= tol
-    print("  depth %-2d  %4d closed  %4d locked  %5.1f%%  want %d +/- %d  %s"
-          % (d, n, locked.get(d, 0), pct, want, tol, "ok" if ok else "FAIL"))
-    if not ok:
-        rc = 1
-sys.exit(rc)
+    c += 1
+    l += bool(f & 0x08)
+print(c, l)
 PY
 }
 
-# --selftest: the analyser on hand-made logs, no game. The design's rates pass,
-# the unmodified code's 50% at both depths fails, too few doors is inconclusive.
-if [ "${1:-}" = "--selftest" ]; then
-    T="$(mktemp)"; bad=0
-    mk() { python3 -c "
-import sys
-d1, d10, n = float(sys.argv[1]), float(sys.argv[2]), int(sys.argv[3])
-for depth, p in ((1, d1), (10, d10)):
-    for i in range(n):
-        print('DOORGEN depth=%d flags=0x%02x' % (depth, 0x08 if i < p * n else 0x00))
-" "$@" > "$T"; }
-    mk 0.25 0.75 200; analyse "$T" > /dev/null; got=$?
-    [ "$got" -eq 0 ] && echo "selftest ok    design rates pass" || { echo "selftest FAIL  design rates -> $got"; bad=1; }
-    mk 0.50 0.50 200; analyse "$T" > /dev/null; got=$?
-    [ "$got" -eq 1 ] && echo "selftest ok    50%/50% (unmodified code) fails" || { echo "selftest FAIL  50/50 -> $got"; bad=1; }
-    mk 0.25 0.75 20; analyse "$T" > /dev/null; got=$?
-    [ "$got" -eq 2 ] && echo "selftest ok    too few doors is inconclusive" || { echo "selftest FAIL  few doors -> $got"; bad=1; }
-    rm -f "$T"; exit "$bad"
-fi
-
-export INCURSION_DOORGEN_PROBE=1
-
-ALL="$(mktemp)"
-OUT="$(mktemp)"
-# check_run is quiet on success; on a refusal it exits, and this shows why.
-# (The trap runs inside check_run's redirect, so it must write to stderr.)
-trap 'rc=$?; [ "$rc" -eq 2 ] && [ -s "$OUT" ] && cat "$OUT" >&2; rm -f "$ALL" "$OUT"' EXIT
-for s in $SEEDS; do
-    : > "$OUT"
-    check_run tools/keys/door-rate.keys "$s" > "$OUT"
+FAIL=0
+# run_roll <roll>: runs a session; leaves its log path in LOG.
+run_roll() {
+    INCURSION_DOOR_LOCK_ROLL="$1" check_run tools/keys/door-rate.keys 1 > /dev/null
     LOG="$CHECK_RUN/logs/doorgen.log"
     [ -f "$LOG" ] || _check_die 2 \
-        "seed $s wrote no $LOG, so the probe never ran. Is DoorGenProbe" \
+        "roll $1 wrote no $LOG, so the probe never ran. Is DoorGenProbe" \
         "still the last statement of Map::MakeDoor (src/MakeLev.cpp)?"
-    cat "$LOG" >> "$ALL"
-done
+}
+# expect <roll> <depth> all|none
+expect() {
+    local c l want ok=ok
+    read -r c l < <(tally "$LOG" "$2")
+    [ "$c" -gt 0 ] || _check_die 2 \
+        "roll $1 built no closed random door at depth $2."
+    if [ "$3" = all ]; then [ "$l" -eq "$c" ] || ok=FAIL
+    else [ "$l" -eq 0 ] || ok=FAIL; fi
+    [ "$ok" = ok ] || FAIL=1
+    printf '  roll %-2s depth %-2s  %4d closed  %4d locked  want %-4s  %s\n' "$1" "$2" "$c" "$l" "$3" "$ok"
+}
 
-analyse "$ALL"
-RC=$?
+run_roll 29; expect 29 2 all
+run_roll 30; expect 30 2 none; expect 30 10 all
+run_roll 74; expect 74 10 all
+run_roll 75; expect 75 10 none
+
 echo
-if [ "$RC" -eq 2 ]; then exit 2; fi
-if [ "$RC" -ne 0 ]; then
-    echo "FAIL: the lock rate is not 25% at depth 1 and 75% at depth 10 (inc-h22n point 1)"
+if [ "$FAIL" -ne 0 ]; then
+    echo "FAIL: a door locked or stayed open on the wrong side of its depth's lock chance (inc-h22n point 1)"
     exit 1
 fi
-echo "PASS: random closed doors lock at about 25% (depth 1) and 75% (depth 10)"
+echo "PASS: closed doors lock exactly below 25 + (depth-1)*50/9 (depth 2: 30, depth 10: 75)"
 exit 0

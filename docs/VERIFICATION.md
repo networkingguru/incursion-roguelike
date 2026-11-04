@@ -74,6 +74,7 @@ known hole.
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
 | Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
 | Percent-chance roll | *none* |
+| Door lock roll (Door::Door, both the closed and the secret lock roll) | `INCURSION_DOOR_LOCK_ROLL=<0..99>` (`src/Feature.cpp`). A door locks when the value is below its depth's lock chance. Used by tools/check_door_lock_rate.sh. |
 | Monster AI choice | *none* |
 | A save for one creature only | *none* |
 | Text the seed decides | Do not assert on it. Read the name from the run, or fix its source with a fixture. |
