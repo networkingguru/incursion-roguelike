@@ -324,6 +324,7 @@ static void TouchDefProbeNote(Creature *c) {
 }
 
 void Creature::CalcValues(bool KnownOnly, Item *thrown) {
+    InvCursorGuard invCursorGuard;
 #define XMod(a) (KnownOnly ? KMod(a) : Mod(a))
 #define XMod2(a) (KnownOnly ? KMod2(a) : Mod2(a))
     int8 i;
@@ -1864,6 +1865,7 @@ bool Creature::InherentCreatureReach() {
 
 void Character::CalcValues(bool KnownOnly, Item *thrown)
 {
+  InvCursorGuard invCursorGuard;
   int16 i,j;
   bool one_body = HasFeat(FT_ONE_BODY_ONE_SOUL) ||
        (Attr[A_CON] == 0);

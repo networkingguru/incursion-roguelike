@@ -262,25 +262,35 @@ void Monster::DropAll()
       }
   }
 
+/* upstream: FirstInv()/NextInv() kept the walk cursor in one function-local
+   static per class, so a walk begun inside another walk of the same class
+   moved the outer cursor. INVARIANT: a nested walk leaves the outer cursor
+   where it was (InvCursorGuard). Upstream's: plain shared state, no platform
+   or typedef dependence, so Win32 fails the same way. Observed via
+   tools/check_inv_cursor.sh (inc-y2fkq); not sent. */
+struct MonInvCursor { Item *it, *it2; hObj itH, owner; };
+static MonInvCursor g_monCur;
+
 Item* Monster::GetInv(bool first)
   {
-    static Item *it, *it2;
+    Item *&it = g_monCur.it, *&it2 = g_monCur.it2;
+    hObj &itH = g_monCur.itH;
     Thing *t;
 
     if (first)
-      { it = oItem(Inv); }
+      { it = oItem(Inv); itH = it ? it->myHandle : 0; g_monCur.owner = myHandle; }
     
     if (!it)
       return NULL;
 
     it2 = it;
     if (it->isType(T_CONTAIN) && ((Container*)it)->Contents) {
-      it = oItem(((Container*)it)->Contents);
+      it = oItem(((Container*)it)->Contents); itH = it ? it->myHandle : 0;
       return it2;
       }
 
     if (it->Next) {
-      it = oItem(it->Next);
+      it = oItem(it->Next); itH = it ? it->myHandle : 0;
       return it2;
       }
 
@@ -293,6 +303,7 @@ Item* Monster::GetInv(bool first)
       it = NULL;
     else
       Error("Glitch in Monster::GetInv!");
+    itH = it ? it->myHandle : 0;
 
     return it2;
 }
@@ -843,14 +854,65 @@ Item* Creature::FindBestItemOrCreate(rID iID)
   return best; 
 }
 
+struct ChrInvCursor { Item *it, *it2; hObj itH; int8 sl; hObj owner; };
+static ChrInvCursor g_chrCur;
+
+/* The walk cursors are saved and restored together; see InvCursorGuard. */
+InvCursorGuard::InvCursorGuard() {
+    chIt = g_chrCur.itH;
+    chIt2 = g_chrCur.it2; chSl = g_chrCur.sl; chOwner = g_chrCur.owner;
+    mnIt = g_monCur.itH;
+    mnIt2 = g_monCur.it2; mnOwner = g_monCur.owner;
+}
+
+/* True when handle h is a live item inside the pack of creature owner. Reads
+   every link with GetQuiet: a dead link ends the walk up the chain, silently. */
+static bool InPackOf(hObj h, hObj owner) {
+    Object *o = theRegistry->GetQuiet(h);
+    if (!o || !owner || !o->isItem() || !theRegistry->GetQuiet(owner))
+        return false;
+    Thing *t = ((Item*)o)->GetParentQuiet();
+    for (int depth = 0; t && depth < 64; depth++) {
+        if (t->isCreature())
+            return t->myHandle == owner;
+        if (!t->isItem())
+            return false;
+        t = ((Item*)t)->GetParentQuiet();
+    }
+    return false;
+}
+
+InvCursorGuard::~InvCursorGuard() {
+    g_chrCur.it2 = chIt2; g_chrCur.sl = chSl; g_chrCur.owner = chOwner;
+    if (!chIt)
+        g_chrCur.it = NULL;
+    else if (InPackOf(chIt, chOwner))
+        g_chrCur.it = (Item*)theRegistry->GetQuiet(chIt);
+    else {
+        g_chrCur.it = NULL;
+        g_chrCur.sl = SL_LAST;
+    }
+    g_chrCur.itH = g_chrCur.it ? chIt : 0;
+    g_monCur.it2 = mnIt2; g_monCur.owner = mnOwner;
+    if (!mnIt)
+        g_monCur.it = NULL;
+    else if (InPackOf(mnIt, mnOwner))
+        g_monCur.it = (Item*)theRegistry->GetQuiet(mnIt);
+    else
+        g_monCur.it = NULL;
+    g_monCur.itH = g_monCur.it ? mnIt : 0;
+}
+
 Item* Character::GetInv(bool first) {
-    static Item *it, *it2; 
-    static int8 sl;
+    Item *&it = g_chrCur.it, *&it2 = g_chrCur.it2;
+    int8 &sl = g_chrCur.sl;
+    hObj &itH = g_chrCur.itH;
     Thing *t;
 
     if (first) {
         sl = 0;
-        it = oItem(Inv[sl]);
+        it = oItem(Inv[sl]); itH = it ? it->myHandle : 0;
+        g_chrCur.owner = myHandle;
     }
 
     if (!it) {
@@ -864,17 +926,17 @@ Item* Character::GetInv(bool first) {
             (sl == SL_READY && Inv[sl] == Inv[sl+1]) );
         if (sl == SL_LAST)
             return NULL;
-        it = oItem(Inv[sl]);
+        it = oItem(Inv[sl]); itH = it ? it->myHandle : 0;
     }
 
     it2 = it;
     if (it->isType(T_CONTAIN) && ((Container*)it)->Contents) {
-        it = oItem(((Container*)it)->Contents);
+        it = oItem(((Container*)it)->Contents); itH = it ? it->myHandle : 0;
         return it2;
     }
 
     if (it->Next) {
-        it = oItem(it->Next);
+        it = oItem(it->Next); itH = it ? it->myHandle : 0;
         return it2;
     }
 
@@ -887,6 +949,7 @@ Item* Character::GetInv(bool first) {
         it = NULL;
     else
         Error("Glitch in Character::GetInv!");
+    itH = it ? it->myHandle : 0;
 
     return it2;
 }

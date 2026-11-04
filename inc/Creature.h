@@ -223,6 +223,21 @@ struct SkillTarget
 void HungerProbeResetCalls();
 int  HungerProbeGetCalls();
 
+/* Saves both FirstInv/NextInv walk cursors on entry and restores them on every
+   exit, so a walk begun inside a guarded call leaves an outer walk where it was.
+   Defined in src/Inv.cpp. */
+class InvCursorGuard {
+  public:
+    InvCursorGuard();
+    ~InvCursorGuard();
+  private:
+    InvCursorGuard(const InvCursorGuard&);
+    InvCursorGuard& operator=(const InvCursorGuard&);
+    hObj chIt, mnIt, chOwner, mnOwner;
+    class Item *chIt2, *mnIt2;
+    int8 chSl;
+};
+
 class Creature: public Thing, public Magic
   {
     ARCHIVE_CLASS(Creature,Thing,r)
