@@ -12,6 +12,7 @@ against. Each is the exact `Options.Dat` blob from the named repository commit:
 | `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is now 0, the Beginner's Kit off. This keeps a change to Roark's NECESSITIES list from shifting seed-pinned checks. |
 | `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off. |
 | `options-sneak-invis-maxhp.dat` | n/a (derived) | `options-sneak-invis.dat` with `OPT_MON_MAX_HP` (108) forced from 0 to 3 (DOUBLE), so a summoned monster has fixed hit points. `tools/check_sneak_invis.sh` and the fixture `orc-rogue-sneak-seed1` use it (bead inc-b4l3g.30). |
+| `options-2026-08-22-maxhp.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_MON_MAX_HP` (108) forced from 0 to 3 (DOUBLE), so a summoned monster has fixed hit points. `tools/check_dequ_reach.sh` and the fixture `orc-warrior-dequ-seed5-maxhp` use it (bead inc-drr0). |
 | `options-2026-08-22-freeadv.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_FREE_ADV` (803) forced to 1. `tools/keys/levelup-caster-sheet.keys` uses it to buy a real level through the character sheet's `G`/`A` command (Player::AdvanceLevel) on a frozen XP-0 fixture; the inc-ngku no-study control otherwise gets its level-up through `INCURSION_LEVELUP_PROBE`. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
 | `options-2026-08-22-noroomdesc.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_DESC_ROOM` (407) forced from 2 to 0. `tools/check_crowd_turn_cost.sh` uses it: with the default, the first room a ghostwalking sweep enters opens a description box that eats keys. `OPT_MON_DJIKSTRA` (114) stays 1, which that check requires. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
 | `options-2026-08-22-kit.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_BEGINKIT` (101) forced to 1. `tools/check_beginner_kit.sh` runs each build with it and with `options-2026-08-22.dat` (kit off), and reads the Beginner's Kit as the difference. |
@@ -189,6 +190,19 @@ tools/make_char_fixture.sh orc-barbarian-seed1-opt0818-store \
 
 A regeneration rolls a new stock; read the new Weapons group from the store
 screen and update the literals in `tools/check_store_find.sh`.
+
+### orc-warrior-dequ-seed5-maxhp
+
+The male orc Warrior (chaotic good) that `tools/keys/dequ-setup.keys` builds on seed 5,
+made with `options-2026-08-22-maxhp.dat` from `tools/keys/dequ-save-message-save.keys`
+(the same chargen). `tools/check_dequ_reach.sh` loads him so no roll decides his
+attributes (bead inc-drr0).
+
+```bash
+tools/make_char_fixture.sh orc-warrior-dequ-seed5-maxhp \
+    tools/keys/dequ-save-message-save.keys 5 \
+    tools/fixtures/options-2026-08-22-maxhp.dat --force
+```
 
 ## Tool-check fixtures
 

@@ -36,6 +36,7 @@
 circle-stack-adjust-seed20260905-gate  tools/keys/circle-stack-adjust-save.keys   20260905    tools/gates/Options.Dat
 dequ-save-dc-seed5-opt0822             tools/keys/dequ-save-dc-save.keys          5           tools/fixtures/options-2026-08-22.dat
 dequ-save-message-seed5-opt0822        tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22.dat
+orc-warrior-dequ-seed5-maxhp         tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22-maxhp.dat
 dragonkin-sheet-seed1-opt0818          tools/keys/dragonkin-sheet-save.keys       1           tools/fixtures/options-2026-08-18.dat
 elf-search-seed1-opt0818               tools/keys/elf-search-save.keys            1           tools/fixtures/options-2026-08-18.dat
 human-paladin-seed4-gate               tools/keys/chargen-paladin-save.keys       4           tools/gates/Options.Dat

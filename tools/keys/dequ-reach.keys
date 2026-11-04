@@ -1,7 +1,8 @@
 # Strike an acid blob from TWO squares away with a glaive, and read the
-# glaive's own description page before and after (bd inc-m2zi).
+# glaive's own description page before and after (bd inc-m2zi, seed-proofed by inc-drr0).
 #
-#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-warrior-dequ-seed5-maxhp.sav \
 #       tools/headless.sh tools/keys/dequ-reach.keys 5
 #
 # WHAT IS BEING MEASURED. Before this change the loop in Creature::Strike that
@@ -20,12 +21,38 @@
 # so wielding it sets MS_HAS_REACH, and a direction key then attacks a creature
 # two squares away instead of walking (src/Player.cpp:1335-1339).
 #
-# ONE BLOB PER BLOW, for the reason tools/keys/dequ-hardness-plain.keys sets
-# out: a blow that kills its target leaves no item for the retaliation to aim
-# at. Each blob is summoned two squares east, which is also where the blow is
-# aimed, so the character never moves.
+# ONE BLOB, THREE BLOWS. The check forces the character's damage to its minimum
+# (INCURSION_FORCE_DAMAGE_ROLL=1: every blow and every acid splash is minimum) and doubles
+# the blob's hit points (OPT_MON_MAX_HP in the options file), so the blob
+# survives all three blows and answers each one. The blob is summoned two
+# squares east, which is also where the blows are aimed, so the character never
+# moves.
+#
+# THE CHARACTER IS LOADED (INCURSION_LOAD, set by tools/check_dequ_reach.sh):
+# tools/fixtures/chars/orc-warrior-dequ-seed5-maxhp.sav. This script does what
+# dequ-setup.keys does after chargen: wizard mode on, the level cleared with
+# Genocide Everything, Freeze Monsters on. Freeze Monsters keeps the blob still;
+# it still ANSWERS a blow, because A_DEQU fires from inside the resolution of
+# the player's own attack.
 
-@include dequ-setup.keys
+@until "Things in View" ESC
+
+# 'w' opens wizard mode and 'y' confirms it the first time.
+@until "Wizard Mode Options" w y
+@choose "Genocide Everything"
+SPACE*40                 # dismiss the genocide message chain; the level is then empty
+
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+# The switch list draws no cursor a screen dump can see, so this counts rows:
+# Freeze Monsters is the eleventh, and the cursor opens on the first.
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE                    # Freeze Monsters: NO -> YES
+@expect "Wizard Mode Options"
+ESC                      # Close the switches list.
+@until "Things in View" ESC
 
 # The starting kit now readies a shield, and a two-handed weapon will not go
 # into a hand pair that holds one (inc-zzwm): stow it before the swap below.
@@ -62,20 +89,10 @@ RIGHT
 @while "Attack the" y
 @dump:reach-strike-1
 
-w
-@choose "Monster Summoning"
-@choose "Jellies"
-@choose "acid blob"
-RIGHT RIGHT ENTER
 RIGHT
 @while "Attack the" y
 @dump:reach-strike-2
 
-w
-@choose "Monster Summoning"
-@choose "Jellies"
-@choose "acid blob"
-RIGHT RIGHT ENTER
 RIGHT
 @while "Attack the" y
 @dump:reach-strike-3
