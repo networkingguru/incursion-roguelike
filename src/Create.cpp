@@ -6802,6 +6802,10 @@ void Player::MigrateInherentSpell() {
 
 /* True when bookKind is a book kind this player carries but has not picked. */
 bool Player::LucubrationPickable(rID bookKind) {
+    /* The guard is port code (2dd7d5d3, inc-2jd0): ChooseLucubrationBook walks
+       the pack and calls this, which walks it again. INVARIANT: the caller's
+       walk survives this call. */
+    InvCursorGuard invCursorGuard;
     if (!bookKind || RES(bookKind)->Type != T_TITEM || TITEM(bookKind)->IType != T_BOOK)
         return false;
 

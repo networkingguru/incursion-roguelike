@@ -443,6 +443,7 @@ static void ScriptCovNote(rID x, int16 ev)
 
 int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
   {
+    InvCursorGuard invCursorGuard;
     int8 table_size, i; int32 val;
     static const bool scriptCov = getenv("INCURSION_SCRIPT_COV") != NULL;
     if (scriptCov) ScriptCovNote(_xID, e->Event);

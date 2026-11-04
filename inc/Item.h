@@ -81,6 +81,8 @@ class Item: public Thing, public Magic
           return oThing(Parent)->isCreature() ? 
             oCreature(Parent) : oItem(Parent)->Owner(); }
       virtual Thing* GetParent() { return oThing(Parent); }
+      /* Silent: NULL for a dead parent. For InPackOf (src/Inv.cpp). */
+      Thing* GetParentQuiet() { return (Thing*)theRegistry->GetQuiet(Parent); }
       /* The signature must track Thing::Remove exactly, or this stops being an
          override and item removal silently runs the base body instead. */
       virtual void Remove(bool isDelete, bool keepMobileFields = false);
