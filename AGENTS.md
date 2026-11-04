@@ -39,7 +39,7 @@ History: docs/rules-history/AGENTS.md#if-you-are-codex.
 
 ## Marking base-code bugs
 
-Every upstream (not port) defect fix MUST get a lowercase `upstream:` comment at the fix site, a row in `docs/REPORTING-GATE.md`'s "Base-code bugs fixed locally" table, and bead label `upstream` (`bd label add <id> upstream`). Assume upstream unless you can say why not. Missing the label: `tools/sync_issues.sh` refuses to run, surfacing as UNMEASURED in `tools/nightly_verify.sh` (the gate `tools/finish_bead.sh` runs before merge) — found only after a ~50-min gate run.
+Every upstream (not port) defect fix MUST get a lowercase `upstream:` comment at the fix site, a row in `docs/REPORTING-GATE.md`'s "Base-code bugs fixed locally" table, and bead label `upstream` (`bd label add <id> upstream`). Assume upstream unless you can say why not. Missing the label: `tools/sync_issues.sh` refuses to run, surfacing as UNMEASURED in `tools/nightly_verify.sh` (the gate `tools/finish_bead.sh` runs before merge) — found only after a full gate run (`tools/finish_bead.sh` prints the expected time when the gate starts).
 
 Comment states: (1) upstream's AND WHY (would it misbehave on Win32/original typedefs/upstream compiler? if no, it's a port artefact, MUST NOT mark); (2) evidence tier — Observed/Traced/Reasoned; (3) tracking id; (4) whether sent. Marking creates no reporting obligation; sending still needs Brian's literal-text read.
 Verify: `tools/check_upstream_marks.sh`. Find all: `grep -rn "upstream:" src/ inc/`.
