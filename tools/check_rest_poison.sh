@@ -1,10 +1,13 @@
 #!/bin/bash
 # gate: live
-# fact: character and rest rolls -- seed 2, temporary re-pin explicitly authorized by inc-rt8l
+# fact: character -- fixture orc-barbarian-seed5-opt0822 (INCURSION_LOAD)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: depth and initial hostiles -- wizard Ascend / Descend Depth and Genocide Everything
 # fact: poison -- test god grants arsenic; POISONED control dump must show it
-# fact: rest and poison resolution -- confirm prompt, wake message, save message and after dump
+# fact: poison saves -- INCURSION_FORCE_SAVE_ROLL=20 (three successes, no failures)
+# fact: rest not interrupted -- Genocide Everything leaves no hostile, so RestEncounterChance (src/Player.cpp) is 0
+# fact: monsters spawned during the rest (Map::DaysPassed) -- no game turn passes between waking and the last dump
+# fact: message texts -- engine strings
 # gate-serial: retained for source-mutating --prove-red; ordinary scratch paths are unique
 # Does the player's Rest ('z', KY_CMD_SLEEP -> EV_REST) work while POISONED,
 # and do the poison's Fort saves roll during the rest? (bd inc-gmrj)
@@ -45,9 +48,10 @@
 #            instead (OPT_SAFEREST is off in the pinned settings file).
 #   WOKE     'y' answers the prompt and the rest runs; "You awaken feeling
 #            well rested and recovered." is the rest-happened marker.
-#   AFTER    the same dump again; POISONED must be gone. Seed 2 reliably clears
-#            arsenic's three-success threshold well inside one night's 360
-#            possible checks at cval 4, against a barbarian's Fortitude.
+#   AFTER    the same dump again; POISONED must be gone. Every save rolls a
+#            natural 20, so arsenic clears after three saves.
+#   HISTORY  the message history (v) holds "overcome the arsenic"; the woke
+#            screen cannot, because the save lines scroll off its top.
 #
 # --PROVE-RED declares TWO mutations, because the fix has two halves and
 # either one going red proves nothing about the other (docs/VERIFICATION.md
@@ -79,7 +83,6 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-# re-pinned for inc-rt8l (kit turned off in the fixtures; the random stream shifted once)
 SEED=2
 
 # Which of the two --prove-red mutations runs first (see the header). "loop"
@@ -134,6 +137,10 @@ else
     KEYS=tools/keys/rest-poison.keys
 fi
 
+# A frozen character, not a generated one (tools/fixtures/README.md).
+export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed5-opt0822.sav
+export INCURSION_FORCE_SAVE_ROLL=20
+
 INCURSION_RUN_DIR="$SCRATCH" check_run "$KEYS" "$SEED"
 
 check_screens '*control*'
@@ -150,6 +157,9 @@ if [ "${CHECK_MUTATED:-0}" != 1 ] || [ "$PROVE_LOOP" = 1 ]; then
     check_screens '*woke*'
     check_expect "awaken" \
         "the rest ran to completion (short, because the wake line's own word-wrap point shifts with whatever text precedes it)"
+    check_reject "An encounter!" "the rest was not interrupted"
+
+    check_screens '*history*'
     check_expect "overcome the arsenic" \
         "a poison save rolled during the rest, per PoisonPulse's own message"
 
