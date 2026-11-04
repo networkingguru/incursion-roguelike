@@ -3,8 +3,22 @@
 # Does a hostile creature that walks into a monster's Aura of Menace get
 # touched by it? (bd inc-bp44)
 #
-#   tools/check_aura_of_menace.sh [seed ...]    default seeds: 4 5
-#   exit 0 the aura fired on every seed, 1 it did not, 2 could not measure
+#   tools/check_aura_of_menace.sh [seed ...]    default seed: 4
+#   exit 0 the aura fired as the forced save roll says, 1 it did not, 2 could not measure
+#
+# A seed MUST NOT change the verdict (docs/VERIFICATION.md, "A check must not
+# depend on the seed"). Every fact the check reads, and what fixes it:
+# fact: character (Chaotic Evil orc barbarian, stats, kit) -- fixture orc-barbarian-ce-opt0822 (INCURSION_LOAD, every session)
+# fact: arrival level holds no other monster -- wizard "Genocide Everything"
+# fact: archon placement (five squares east) -- wizard "Monster Summoning"
+# fact: archon is hostile to the character -- wizard "All Monster Aggravate" (src/Target.cpp LowPriorityStatiHostility)
+# fact: archon stays still -- wizard switch "Freeze Monsters"
+# fact: character survives -- wizard switch "Cheat Death"
+# fact: Will save fails (penalty case) -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: Will save is made (immunity case) -- INCURSION_FORCE_SAVE_ROLL=20
+# fact: hit mode: Will save fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: hit mode: the swing lands -- INCURSION_LOF_FORCE_ROLL=20 (a natural 20 always hits: src/Fight.cpp Creature::Strike isHit)
+# fact: message and Stati texts -- engine strings this check exists to read ("washes over you", "steel yourself", "You shake off", eID Aura of Menace)
 #
 # THE DEFECT. CA_AURA_OF_MENACE (seven monsters carry it: lantern, torch and
 # hound archons among them) was declared and described but no engine code read
@@ -12,8 +26,8 @@
 # FI_MODIFIER field (src/Display.cpp Thing::PlaceAt) and Creature::FieldOn
 # (src/Status.cpp) makes a hostile creature that enters it roll a Will save.
 #
-# THE SESSION is tools/keys/aura-of-menace.keys: a Chaotic Evil orc barbarian
-# summons a lantern archon (wizard mode, "Monster Summoning") five squares east,
+# THE SESSION is tools/keys/aura-of-menace.keys: the loaded Chaotic Evil orc
+# barbarian clears the level, summons a lantern archon (wizard mode, "Monster Summoning") five squares east,
 # Freeze Monsters holds it still, and the barbarian walks three squares east, to
 # two squares from it (the aura's radius is the ability level, 2).
 #
@@ -23,9 +37,9 @@
 #   - the player's own Stati list holds an entry whose eID is "Aura of
 #     Menace": three ADJUST rows (A_HIT, A_SAV, A_DEF, -2) after a failed save,
 #     an EFF_FLAG1 immunity row after a made one.
-# Both must agree. At least one seed must show the penalty rows, so a run of
-# nothing but made saves cannot pass for the whole effect; the default seeds 4
-# (fails the save) and 5 (makes it) cover both.
+# Both must agree. Each seed runs two sessions: the save forced to fail (the
+# message and the penalty rows must appear) and forced to succeed (the message
+# and the immunity row must appear). Both are required for PASS.
 #
 # IT CANNOT PASS BY DEFAULT. Exit 2 when a session did not play, the player
 # died, the archon is not on the map, or the walk did not end two squares from
@@ -48,17 +62,21 @@ HITKEYS=tools/keys/aura-of-menace-hit.keys
 # CASE A seeds and then the CASE B hit mode, so one command covers both.
 HITONLY=0
 if [ "${1:-}" = "--hit" ]; then HITONLY=1; shift; fi
-if [ "$#" -gt 0 ]; then SEEDS="$*"; else SEEDS="4 5"; fi
+if [ "$#" -gt 0 ]; then SEEDS="$*"; else SEEDS="4"; fi
+CHAR=tools/fixtures/chars/orc-barbarian-ce-opt0822.sav
+[ -f "$CHAR" ] || { echo "INCONCLUSIVE: fixture $CHAR is not there"; exit 2; }
 TOKEN="$$-$(date +%s)"
-FIRED=0; PENALTY=0; NOTFIRED=0; TOTAL=0
+FIRED=0; PENALTY=0; IMMUNE=0; NOTFIRED=0; TOTAL=0
 BASERC=0
 
 if [ "$HITONLY" -eq 0 ]; then
 for seed in $SEEDS; do
+for ROLL in 1 20; do
     TOTAL=$((TOTAL+1))
-    RUN="$ROOT/logs/runs/check-aura-of-menace-$TOKEN-seed$seed"
+    RUN="$ROOT/logs/runs/check-aura-of-menace-$TOKEN-seed$seed-save$ROLL"
     rm -rf "$RUN"
     out="$(INCURSION_RUN_DIR="$RUN" INCURSION_OPTIONS="$OPTIONS" \
+            INCURSION_LOAD="$CHAR" INCURSION_FORCE_SAVE_ROLL="$ROLL" \
             tools/headless.sh "$KEYS" "$seed" 2>&1)"
     S="$RUN/logs/screens"
     if grep -qE 'NO GAMEPLAY|the key script looked for something|WATCHDOG|FATAL|ASSERT' <<< "$out" \
@@ -96,27 +114,30 @@ for seed in $SEEDS; do
     ADJ="$(awk '/ADJUST from SS MISC/ {adj=$0; next} /eID:Aura of Menace/ && adj {n++} {adj=""} END {print n+0}' "$STATI")"
     IMM="$(awk '/EFF FLAG1 from SS MISC/ {f=$0; next} /eID:Aura of Menace/ && f {n++} {f=""} END {print n+0}' "$STATI")"
 
-    if { [ "$MSG" = washes ] && [ "$ADJ" -eq 3 ]; } || { [ "$MSG" = steels ] && [ "$IMM" -ge 1 ]; }; then
+    # The forced roll says which outcome the session MUST show.
+    if [ "$ROLL" = 1 ]; then WANT=washes; else WANT=steels; fi
+    if { [ "$WANT" = washes ] && [ "$MSG" = washes ] && [ "$ADJ" -eq 3 ]; } \
+       || { [ "$WANT" = steels ] && [ "$MSG" = steels ] && [ "$IMM" -ge 1 ] && [ "$ADJ" -eq 0 ]; }; then
         FIRED=$((FIRED+1))
-        [ "$MSG" = washes ] && PENALTY=$((PENALTY+1))
-        echo "seed $seed: aura fired ($MSG; ADJUST rows $ADJ, immunity rows $IMM)"
+        if [ "$WANT" = washes ]; then PENALTY=$((PENALTY+1)); else IMMUNE=$((IMMUNE+1)); fi
+        echo "seed $seed save $ROLL: aura fired ($MSG; ADJUST rows $ADJ, immunity rows $IMM)"
     else
         NOTFIRED=$((NOTFIRED+1))
-        echo "seed $seed: aura did NOT fire (message '${MSG:-none}'; ADJUST rows $ADJ, immunity rows $IMM); see $RUN"
+        echo "seed $seed save $ROLL: aura did NOT behave (wanted '$WANT'; message '${MSG:-none}'; ADJUST rows $ADJ, immunity rows $IMM); see $RUN"
     fi
+done
 done
 
 echo
 if [ "$NOTFIRED" -gt 0 ]; then
-    echo "FAIL: the aura fired on $FIRED of $TOTAL seeds. A hostile creature two squares"
-    echo "      from a lantern archon got no message and no Aura of Menace status."
+    echo "FAIL: the aura behaved on $FIRED of $TOTAL sessions. A hostile creature two squares"
+    echo "      from a lantern archon got the wrong message or Aura of Menace status."
     BASERC=1
-elif [ "$PENALTY" -lt 1 ]; then
-    echo "INCONCLUSIVE: the aura fired on every seed but no seed failed its save, so the"
-    echo "              -2 penalty rows were never seen. Add a seed that fails it."
+elif [ "$PENALTY" -lt 1 ] || [ "$IMMUNE" -lt 1 ]; then
+    echo "INCONCLUSIVE: the failed-save session or the made-save session did not run."
     BASERC=2
 else
-    echo "PASS: the aura fired on $FIRED of $TOTAL seeds; $PENALTY showed the three -2 penalty rows."
+    echo "PASS: the aura behaved in $FIRED of $TOTAL sessions; $PENALTY showed the three -2 penalty rows, $IMMUNE the immunity row."
     BASERC=0
 fi
 fi   # end CASE A (skipped entirely under --hit)
@@ -138,10 +159,11 @@ fi   # end CASE A (skipped entirely under --hit)
 # Exit 1 only when a blow landed over a live penalty and the state never changed.
 HITRC=0
 if [ -f "$HITKEYS" ]; then
-    HSEED="${HITSEED:-5}"  # was 4; seed 4 now makes the save (INCONCLUSIVE) since inc-dp5u shifted the RNG stream
+    HSEED="${HITSEED:-4}"  # any seed gives the same verdict: the facts are pinned (header)
     HRUN="$ROOT/logs/runs/check-aura-of-menace-hit-$TOKEN-seed$HSEED"
     rm -rf "$HRUN"
     hout="$(INCURSION_RUN_DIR="$HRUN" INCURSION_OPTIONS="$OPTIONS" \
+            INCURSION_LOAD="$CHAR" INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=20 \
             tools/headless.sh "$HITKEYS" "$HSEED" 2>&1)"
     HS="$HRUN/logs/screens"
     if grep -qE 'NO GAMEPLAY|the key script looked for something|WATCHDOG|FATAL|ASSERT' <<< "$hout" \
@@ -159,9 +181,13 @@ if [ -f "$HITKEYS" ]; then
         HITRC=2
     else
         HLOG="$(ls "$HS"/*-log.txt | head -1)"
+        HWALKED="$(ls "$HS"/*-walked.txt 2>/dev/null | head -1)"
         HBEFORE="$(ls "$HS"/*-stati-before.txt | head -1)"
         hab="$(awk '/ADJUST from SS MISC/ {adj=$0; next} /eID:Aura of Menace/ && adj {n++} {adj=""} END {print n+0}' "$HBEFORE")"
-        if ! grep -qE 'hitting the hound archon|You hit the hound archon|hitting .*archon' "$HLOG"; then
+        if [ -z "$HWALKED" ] || ! grep -qE '@.A' <<< "$(cut -d'|' -f1 "$HWALKED")"; then
+            echo "INCONCLUSIVE: hit mode seed $HSEED the walk did not end two squares from the archon; see $HRUN"
+            HITRC=2
+        elif ! grep -q 'hitting the hound' "$HLOG"; then
             echo "INCONCLUSIVE: hit mode seed $HSEED no blow landed in the session; see $HRUN"
             HITRC=2
         elif [ "$hab" -lt 1 ]; then
