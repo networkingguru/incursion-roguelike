@@ -12,8 +12,7 @@
 # via _check_session_verdict's exit-6 case). This script only needs the
 # refusal to prove red, so it never sends those keys at all.
 
-@include chargen.keys
-@until "HP:" ESC
+@until "Things in View" ESC
 
 # Same armour-strip step as tools/keys/rest-poison.keys (see its header, bd
 # inc-zzwm): the character now starts WEARING its proficient armour, and this
@@ -26,12 +25,13 @@ SPACE
 s
 ESC
 
-w y
+@until "Wizard Mode Options" w y
 @choose "Ascend / Descend Depth"
 "2" ENTER
-@until "HP:" ESC
+@while "Press [ENTER] to continue" ENTER   # a seed-chosen arrival square can be a hole ("You fall...")
+@until "Things in View" ESC
 
-w
+@until "Wizard Mode Options" w
 @choose "Genocide Everything"
 @until "HP:" ESC
 
