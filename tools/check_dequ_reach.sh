@@ -24,10 +24,10 @@
 #                   the ITEM is the victim of the response attack.
 #   the damage      the glaive's own description page, before and after.
 #
-# Measured on the current tree, seed 5:
+# Measured on the current tree (bd inc-drr0):
 #
 #   before  The Uncursed Glaive ('v')                It has 56 out of 56 hit
-#   after   The Mildly Melted Uncursed Glaive ('v')  It has 49 out of 56 hit
+#   after   The Mildly Melted Uncursed Glaive ('v')  It has 50 out of 56 hit
 #
 # WHY A GLAIVE. It is an iron polearm carrying WT_REACH (lib/weapons.irh:192),
 # so wielding it sets MS_HAS_REACH and a direction key attacks a creature two
@@ -49,10 +49,23 @@
 #   | FAIL: a blow struck at reach still costs the striker his weapon
 #   PROVED RED: with src/Fight.cpp mutated, this check exits 1.
 #
+# fact: character (race, class, stats, kit) -- fixture orc-warrior-dequ-seed5-maxhp (INCURSION_LOAD)
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat
+# fact: blob hit points -- OPT_MON_MAX_HP DOUBLE in that options file, with INCURSION_FORCE_DAMAGE_ROLL=1 so the blob outlives three blows
+# fact: level has no other monster -- wizard Genocide Everything
+# fact: blob does not move -- wizard switch Freeze Monsters
+# fact: blob two squares east -- wizard Monster Summoning, cursor RIGHT RIGHT
+# fact: the attack hits -- INCURSION_LOF_FORCE_ROLL=15 (hits Def 8, below a critical threat)
+# fact: the warrior's Reflex save vs A_DEQU fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: acid damage and blow damage -- INCURSION_FORCE_DAMAGE_ROLL=1 (minimum, acid 2d4 -> 2 per splash)
+# fact: glaive hit points and curse -- plain wizard item with no eID, so no curse roll (src/Item.cpp MakeMagical)
+# fact: map and position -- the loaded save, then wizard summoning
+# fact: message texts -- engine strings
+#
 # Usage: tools/check_dequ_reach.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
 
-CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+CHECK_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat
 
 check_mutation src/Fight.cpp \
 'if (!is_response_attk(e.AType) &&
@@ -60,14 +73,21 @@ check_mutation src/Fight.cpp \
          (e.ETarget->isCreature() && e.EVictim->HasAttk(A_DEQU)))) {' \
 'if (!is_response_attk(e.AType) && e.EVictim->isBeside(e.EActor)) {'
 
+# A frozen character, not a generated one: an rID is a POSITION, so a lib/
+# change silently rebuilds a seed-pinned character (tools/fixtures/README.md).
+export INCURSION_LOAD=tools/fixtures/chars/orc-warrior-dequ-seed5-maxhp.sav
+export INCURSION_FORCE_SAVE_ROLL=1
+export INCURSION_LOF_FORCE_ROLL=15
+export INCURSION_FORCE_DAMAGE_ROLL=1
+
 check_run tools/keys/dequ-reach.keys 5
 
 check_screens '*-reach-strike-*'
-check_expect "@.j" \
+check_expect_all "@.j" \
     "the character and the acid blob are two squares apart, floor between"
-check_expect "hitting the acid blob" \
+check_expect_all "hitting the acid blob" \
     "a blow was resolved against the blob two squares away"
-check_expect "Acid splashes the glaive" \
+check_expect_all "Acid splashes the glaive" \
     "the blob answered that blow by attacking the glaive"
 
 check_screens '*-reach-before'
