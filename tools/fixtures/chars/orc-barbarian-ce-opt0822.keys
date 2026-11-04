@@ -1,0 +1,18 @@
+# Make the Chaotic Evil orc barbarian tools/check_aura_of_menace.sh loads, and
+# SAVE him, so tools/make_char_fixture.sh can freeze him (bd inc-d9dg).
+#
+#   tools/make_char_fixture.sh orc-barbarian-ce-opt0822 \
+#       tools/keys/aura-of-menace-save.keys 1 tools/fixtures/options-2026-08-22.dat
+#
+# The chargen is aura-of-menace-chargen.keys (Chaotic Evil: a lawful good archon
+# is hostile only to an evil visitor). The save tail is the one explained in
+# tools/keys/chargen-default-save.keys.
+
+@include aura-of-menace-chargen.keys
+
+@dump:arrival
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved
