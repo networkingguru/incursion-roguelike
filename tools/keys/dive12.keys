@@ -3,16 +3,12 @@
 #
 #   tools/headless.sh tools/keys/dive12.keys 8
 #
-# THE NAME IS OLDER THAN THE MEASUREMENT. This file asks for depths 2 to 12 in
-# order, but the last two requests are refused. Wizard 'Ascend / Descend Depth'
-# rejects any depth above the dungeon's DUN_DEPTH (src/Debug.cpp:805-809), and
-# The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh:17). So depths 11 and
-# 12 print "Invalid depth." and the session stops at depth 10. The screen this
-# file dumps as "depth12" is a depth 10 screen carrying that message; corrected
-# 2026-08-17 after reading the dump. Do not read a depth deeper than 10 out of
-# any run of this script.
+# THE NAME IS HISTORICAL. This file asks for depths 2 to 10 in order, and none
+# is above DUN_DEPTH 10 (lib/dungeon.irh:17). It once asked for 11 and 12 too;
+# wizard 'Ascend / Descend Depth' refused both (src/Debug.cpp:805-809), and
+# inc-wrc40 removed them. Do not read a depth deeper than 10 out of any run.
 #
-# Why this exists. dive.keys asks for 36 depth jumps and takes about ten
+# Why this exists. dive.keys asks for 14 depth jumps and takes about ten
 # seconds. The nondeterminism it exposes appears between depth 6 and the
 # bottom, so everything after that is cost with no information. This is the
 # same keystrokes, cut at the first screen past the divergence.
@@ -21,7 +17,7 @@
 # seed 8: this script split into two different games in 4 runs of 12, where the
 # full dive split in 1 of 6.
 #
-# Generated from dive.keys; the keystrokes through the depth 12 request are
+# Generated from dive.keys; the keystrokes through the depth 10 request are
 # identical, so a screen dumped here matches the same dump from dive.keys on
 # the same seed.
 
@@ -48,10 +44,6 @@ w p "9" ENTER
 DOWN*3 END*1 LEFT*5 PGUP*3 DOWN*2 DOWN*3 s .*2
 w p "10" ENTER
 HOME*2 END*4 HOME*1 UP*2 LEFT*3 HOME*5 s .*2
-w p "11" ENTER
-HOME*4 LEFT*2 DOWN*5 END*5 RIGHT*5 HOME*2 s .*2
-w p "12" ENTER
-@dump:depth12
-PGUP*3 END*5 END*3 END*1 PGDN*3 RIGHT*3 s .*2
+@dump:depth10
 
 @quit

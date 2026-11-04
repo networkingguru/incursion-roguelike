@@ -27,22 +27,6 @@ w p "9" ENTER
 @dump:d9a
 UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
 @dump:d9b
-w p "11" ENTER
-@dump:d11a
-UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
-@dump:d11b
-w p "13" ENTER
-@dump:d13a
-UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
-@dump:d13b
-w p "15" ENTER
-@dump:d15a
-UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
-@dump:d15b
-w p "17" ENTER
-@dump:d17a
-UP*8 RIGHT*8 DOWN*8 LEFT*8 UP*8
-@dump:d17b
 
 @dump:final
 @quit
