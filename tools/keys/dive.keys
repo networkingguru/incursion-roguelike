@@ -13,15 +13,13 @@
 # stairs. Entering wizard mode needs a confirmation the first time and not
 # afterwards, which is why the first line differs from the rest.
 #
-# THE DEPTH CEILING. This file asks for 36 depth jumps -- 2 down to 25, then
-# 24 back up to 2 -- but only 14 of them are accepted. Wizard 'Ascend / Descend
-# Depth' rejects any depth above the dungeon's DUN_DEPTH (src/Debug.cpp:805-809)
-# and The Goblin Caves declares DUN_DEPTH 10 (lib/dungeon.irh:17), so every
-# request for 11 or deeper prints "Invalid depth." and generates nothing. The
-# session never goes below depth 10, and it visits at most 10 distinct levels.
-# This paragraph replaced the claim "Roughly 45 levels per session, down to
-# depth 25 and back up", which was wrong; corrected 2026-08-17. Do not size a
-# measurement on the number of jump lines in this file.
+# THE DEPTH CEILING. This file asks for 14 depth jumps -- 2 down to 10, then
+# back up to 2 -- and none is above DUN_DEPTH 10 (lib/dungeon.irh:17). Wizard
+# 'Ascend / Descend Depth' rejects any depth above DUN_DEPTH
+# (src/Debug.cpp:805-809). The 22 refused jumps above 10 were removed under
+# inc-wrc40: their waits and searches all ran on the depth 10 level (seed 1 on
+# the inc-y2fkq build: 250755 turns and 347 s before, 14675 turns and 22 s
+# after). No key script may ask for a depth above 10.
 #
 # THE WAITS. Between jumps the character waits ('.') instead of walking. The
 # walk keys used to lead into whatever terrain the seed put in their path, and
@@ -76,78 +74,6 @@ w p "9" ENTER
 @while "You die... Die?" n
 w p "10" ENTER
 .*17 s .*2
-@while "You die... Die?" n
-w p "11" ENTER
-.*23 s .*2
-@while "You die... Die?" n
-w p "12" ENTER
-@dump:depth12
-.*18 s .*2
-@while "You die... Die?" n
-w p "13" ENTER
-.*18 s .*2
-@while "You die... Die?" n
-w p "14" ENTER
-.*17 s .*2
-@while "You die... Die?" n
-w p "15" ENTER
-.*20 s .*2
-@while "You die... Die?" n
-w p "16" ENTER
-.*22 s .*2
-@while "You die... Die?" n
-w p "17" ENTER
-.*18 s .*2
-@while "You die... Die?" n
-w p "18" ENTER
-@dump:depth18
-.*21 s .*2
-@while "You die... Die?" n
-w p "19" ENTER
-.*17 s .*2
-@while "You die... Die?" n
-w p "20" ENTER
-.*12 s .*2
-@while "You die... Die?" n
-w p "21" ENTER
-.*15 s .*2
-@while "You die... Die?" n
-w p "22" ENTER
-.*18 s .*2
-@while "You die... Die?" n
-w p "23" ENTER
-.*21 s .*2
-@while "You die... Die?" n
-w p "24" ENTER
-@dump:depth24
-.*19 s .*2
-@while "You die... Die?" n
-w p "25" ENTER
-.*22 s .*2
-@while "You die... Die?" n
-w p "24" ENTER
-@dump:depth24
-.*19 s .*2
-@while "You die... Die?" n
-w p "22" ENTER
-.*11 s .*2
-@while "You die... Die?" n
-w p "20" ENTER
-.*9 s .*2
-@while "You die... Die?" n
-w p "18" ENTER
-@dump:depth18
-.*17 s .*2
-@while "You die... Die?" n
-w p "16" ENTER
-.*25 s .*2
-@while "You die... Die?" n
-w p "14" ENTER
-.*22 s .*2
-@while "You die... Die?" n
-w p "12" ENTER
-@dump:depth12
-.*23 s .*2
 @while "You die... Die?" n
 w p "10" ENTER
 .*22 s .*2
