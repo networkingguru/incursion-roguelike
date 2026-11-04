@@ -1,12 +1,7 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 17:37 from 0d299d88.
+# Recorded 2026-11-03 13:18 from 0d299d88.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-# inc-tre9h: one session per depth (tools/keys/dive-depth-9.keys): chargen, one jump to depth 9, wake every creature, 20 waits, s, 2 waits.
-# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
-# inc-y2fkq: re-recorded after the inventory walk cursor fix. Loops that stopped after the first item now visit every item, so seeded sessions draw more random numbers and play out differently. Against the cbe4d6cc baseline (died=15): no longer died 9, 21, 30; newly died 5, 7, 17, 27, 38. Fresh master 0d299d88 reproduced died=15 exactly; the fixed build gave died=17 at load ~26 and again at load ~3; 0 error lines, 0 findings, 40 of 40 played. Depth 10 moved the other way (14 -> 13) and still passes.
-# Per-seed outcome (run logs/gate/record-dive-depth-9-99882): died=17: 1, 2, 5, 7, 10, 12, 17, 20, 22, 25, 26, 27, 29, 31, 35, 38, 39 (all @d9, 'You die... Die? [yn]').
-#   other prompt (counted in prompt_stop_other=2): 8 "Do you want to stop searching (pure magic: a sylph)? [yn]"; 21 "Do you want to stop searching (tripping: a sphinx)? [yn]".
 keys	tools/keys/dive-depth-9.keys
 first	1
 options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
@@ -15,26 +10,66 @@ played	40
 exits	0=40
 lines	0
 findings	0
-died	17
+died	15
 threat_frozen	0
 prompt_stop_seed	seed-1	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-10	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-12	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-17	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-17	depth=9 prompt=Do you want to stop searching (blunt damage: an ethereal hippogr
 prompt_stop_seed	seed-2	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-20	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-21	depth=9 prompt=Do you want to stop searching (tripping: a sphinx)? [yn]
+prompt_stop_seed	seed-21	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-22	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-25	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-26	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-27	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-29	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-30	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-31	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-35	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-38	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-39	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-5	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-7	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-8	depth=9 prompt=Do you want to stop searching (pure magic: a sylph)? [yn]
-prompt_stop	19
+prompt_stop_seed	seed-9	depth=9 prompt=You die... Die? [yn]
+prompt_stop	17
 prompt_stop_other	2
+turns_sessions	40
+turns_median	356
+turns_seed	seed-1	236
+turns_seed	seed-10	286
+turns_seed	seed-11	1840
+turns_seed	seed-12	121
+turns_seed	seed-13	356
+turns_seed	seed-14	1797
+turns_seed	seed-15	1834
+turns_seed	seed-16	356
+turns_seed	seed-17	363
+turns_seed	seed-18	1840
+turns_seed	seed-19	356
+turns_seed	seed-2	113
+turns_seed	seed-20	348
+turns_seed	seed-21	134
+turns_seed	seed-22	329
+turns_seed	seed-23	372
+turns_seed	seed-24	1840
+turns_seed	seed-25	106
+turns_seed	seed-26	117
+turns_seed	seed-27	356
+turns_seed	seed-28	1840
+turns_seed	seed-29	85
+turns_seed	seed-3	367
+turns_seed	seed-30	160
+turns_seed	seed-31	111
+turns_seed	seed-32	1842
+turns_seed	seed-33	356
+turns_seed	seed-34	1840
+turns_seed	seed-35	264
+turns_seed	seed-36	1840
+turns_seed	seed-37	356
+turns_seed	seed-38	632
+turns_seed	seed-39	150
+turns_seed	seed-4	1840
+turns_seed	seed-40	1840
+turns_seed	seed-5	1841
+turns_seed	seed-6	356
+turns_seed	seed-7	356
+turns_seed	seed-8	1355
+turns_seed	seed-9	180

@@ -1,12 +1,7 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 11:04 from cbe4d6cc.
+# Recorded 2026-11-03 13:17 from 0d299d88.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-# inc-tre9h: one session per depth (tools/keys/dive-depth-7.keys): chargen, one jump to depth 7, wake every creature, 20 waits, s, 2 waits.
-# The script answers no prompt; a session ends, unanswered, at the first prompt it finds where it expects the map (@maponly / @menuopen).
-# Per-seed outcome (run logs/gate/record-dive-depth-7-78593): completed the body: 26 seeds (1,2,4,5,6,7,9,10,11,13,14,15,18,19,20,21,25,26,27,28,30,33,34,35,37,40).
-#   death@ (stopped at 'You die... Die? [yn]', counted in died=14): 3@d7, 8@d7, 12@d7, 16@d7, 17@d7, 22@d7, 23@d7, 24@d7, 29@d7, 31@d7, 32@d7, 36@d7, 38@d7, 39@d7.
-#   other prompt (counted in prompt_stop_other=0): none.
 keys	tools/keys/dive-depth-7.keys
 first	1
 options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
@@ -33,3 +28,45 @@ prompt_stop_seed	seed-39	depth=7 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-8	depth=7 prompt=You die... Die? [yn]
 prompt_stop	14
 prompt_stop_other	0
+turns_sessions	40
+turns_median	356
+turns_seed	seed-1	797
+turns_seed	seed-10	356
+turns_seed	seed-11	1841
+turns_seed	seed-12	173
+turns_seed	seed-13	356
+turns_seed	seed-14	1840
+turns_seed	seed-15	1840
+turns_seed	seed-16	293
+turns_seed	seed-17	251
+turns_seed	seed-18	383
+turns_seed	seed-19	372
+turns_seed	seed-2	356
+turns_seed	seed-20	356
+turns_seed	seed-21	1840
+turns_seed	seed-22	47
+turns_seed	seed-23	348
+turns_seed	seed-24	175
+turns_seed	seed-25	477
+turns_seed	seed-26	1840
+turns_seed	seed-27	1840
+turns_seed	seed-28	1834
+turns_seed	seed-29	69
+turns_seed	seed-3	63
+turns_seed	seed-30	1840
+turns_seed	seed-31	123
+turns_seed	seed-32	249
+turns_seed	seed-33	356
+turns_seed	seed-34	356
+turns_seed	seed-35	1840
+turns_seed	seed-36	269
+turns_seed	seed-37	1840
+turns_seed	seed-38	103
+turns_seed	seed-39	67
+turns_seed	seed-4	1895
+turns_seed	seed-40	356
+turns_seed	seed-5	356
+turns_seed	seed-6	1834
+turns_seed	seed-7	356
+turns_seed	seed-8	143
+turns_seed	seed-9	1840

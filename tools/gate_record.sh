@@ -52,6 +52,8 @@ tail -5 "$SOAK.log"
 
 BODY="$(gate_collect "$SOAK")" || exit 2
 PLAYED="$(printf '%s\n' "$BODY" | gate_field /dev/stdin played)"
+TMED="$(printf '%s\n' "$BODY" | gate_field /dev/stdin turns_median)"
+[ -n "$TMED" ] || { echo "REFUSED: no session carries a turn stamp; cannot record turns_median."; exit 2; }
 
 # A baseline recorded from sessions that never entered a map says nothing, and
 # it says nothing quietly: every later comparison against it passes. That is

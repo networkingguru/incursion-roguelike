@@ -5471,8 +5471,11 @@ Template "blackguard;template" : TM_CLASS for MA_SAPIENT
 	  ABILITY(CA_SPELLCASTING,1);
     Stati[ADJUST_INH,A_MAN,+6];
     Immune: DF_DISE, DF_FEAR;
-    Flags: M_CHAOTIC, M_EVIL, !M_GOOD, !M_LAWFUL, M_CLOSEID, M_HOSTILE;
-    Feats: FT_POWER_ATTACK, FT_MASTER_GREAT_BLOW, M_IALIGN,
+    // upstream: M_IALIGN sat in the Feats: list, so the template granted feat 53
+    // (no feat-table row, debug name in help) and never set inherent alignment.
+    // Upstream's own data, same on Win32. Observed (inc-ci0hl probe). Not sent.
+    Flags: M_CHAOTIC, M_EVIL, !M_GOOD, !M_LAWFUL, M_CLOSEID, M_HOSTILE, M_IALIGN;
+    Feats: FT_POWER_ATTACK, FT_MASTER_GREAT_BLOW,
            FT_MASTER_DISARM, FT_SUNDER,
            FT_AP_LIGHT, FT_AP_MEDIUM, FT_AP_HEAVY,
            SK_ATHLETICS, SK_HEALING, SK_RIDE, SK_CONCENT, SK_SPOT,
