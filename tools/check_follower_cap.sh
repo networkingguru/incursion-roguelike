@@ -36,9 +36,18 @@
 #     the party test passed, and the giant joined the party: PHD MAGIC read
 #     8 / 1 and PHD PARTY read 7 / 3.
 #
-# Both tests are deterministic on seed 1: the giant is dominated through its
-# Will save by natural-1 retries (a natural 1 always fails, src/Creature.cpp:
-# 3596), and the refusal save is drawn from the same fixed sequence.
+# Both tests are deterministic: INCURSION_FORCE_SAVE_ROLL=1 makes a natural 1
+# always fail, so every monster fails its Will save against Dominate and the
+# mage fails the refusal save, so the giant always breaks free.
+#
+# fact: character (race, class, stats, kit) -- fixture orc-mage-seed1-opt0822 (INCURSION_LOAD)
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: kobold and hill giant beside the player -- wizard Genocide Everything, then Monster Summoning
+# fact: monsters do not move -- wizard switch Freeze Monsters
+# fact: the spell does not fail -- wizard switches Ignore Spell Failure and Infinite Mana
+# fact: monster Will saves vs Dominate and the mage's refusal Will save fail -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: pool CR readings -- arithmetic from fixed monster CRs (kobold 0, hill giant 7)
+# fact: god-anger line after a cast (percent roll, no control) -- not asserted on; the key script clears any "-- more --" prompt, so the line count does not matter
 #
 # The mutation below breaks fault 2 (the giant is admitted again); the manual
 # red proof recorded with this bead broke both sites at once. See the bead note.
@@ -57,6 +66,7 @@ check_mutation src/Social.cpp \
 
 # A frozen character, not a generated one: an rID is a POSITION, so a lib/
 # change silently rebuilds a seed-pinned character (tools/fixtures/README.md).
+export INCURSION_FORCE_SAVE_ROLL=1
 export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
 check_run tools/keys/follower-cap.keys 1
 
