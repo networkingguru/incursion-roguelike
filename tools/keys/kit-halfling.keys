@@ -20,8 +20,15 @@ a       # Alignment: the first offered
 @while "Choose a feat" a
 @choose "short sword"   # Weapon Focus target: the build's melee weapon
 
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
-RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+# Two ranks each on four skills, named so Climb gets none (inc-b4l3g.43).
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Athletics" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
 ENTER y # Done, and confirm keeping the ranks
 
 @while "wish to worship" y
