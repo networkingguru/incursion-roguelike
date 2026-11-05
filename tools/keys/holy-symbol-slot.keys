@@ -2,9 +2,12 @@
 # Read by tools/check_holy_symbol_slots.sh, bead inc-tf6l.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed1-opt0822.sav \
 #       tools/headless.sh tools/keys/holy-symbol-slot.keys 1
 #
-# A priest of Aiswin, built by @include chargen-priest.keys. The session must
+# A priest of Aiswin, LOADED from the frozen fixture orc-priest-seed1-opt0822
+# (inc-b4l3g.8), never generated: a generated one depends on the seed, because
+# chargen may not offer the alignment the script chooses. The session must
 # run against the SCRATCH module the check builds (lib/ plus
 # tools/fixtures/holy-symbol-slot-helm.irh appended), never the shipped one:
 # that fixture adds a helmet whose effect is named "Aiswin Test Helm", which is
@@ -12,10 +15,8 @@
 #
 # THE STEPS, and why each is here.
 #
-#   ESC                      chargen-priest ends with the four starting spells
-#                            and leaves a "Select direction, location or
-#                            target:" prompt open; ESC answers it. (Same first
-#                            key as tools/keys/divine-feat-gear.keys.)
+#   (no opening key)         a loaded game opens no prompt, so the first key
+#                            is 'i'.
 #
 #   i                        the inventory manager. The priest starts with his
 #   o SPACE s                holy symbol WORN in the Neck slot (races.irh's
@@ -27,6 +28,10 @@
 #
 #   w y                      wizard mode, then its options menu. 'w' is the
 #                            wizard key and 'y' answers the enable prompt.
+#   Wizard Mode Switches     Freeze Monsters (the tenth row), so no monster acts
+#                            during the played turns. ESC leaves the
+#                            menu; a second 'w' reopens wizard mode (no enable
+#                            prompt the second time).
 #
 #   Item Acquisition         the acquisition browser.
 #   RIGHT*18                 walk the glyph row to Helms. ItemGlyphs
@@ -62,10 +67,6 @@
 #   @dump:turn-pack          turning is refused with the helm in the pack, on
 #                            both builds -- the pack is not a worn slot.
 
-@include chargen-priest.keys
-
-ESC
-
 i
 o SPACE s
 @dump:symbol-stowed
@@ -73,6 +74,14 @@ ESC
 
 w
 y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
+w
 @choose "Item Acquisition"
 RIGHT*18
 @until "Aiswin Test Helm" DOWN

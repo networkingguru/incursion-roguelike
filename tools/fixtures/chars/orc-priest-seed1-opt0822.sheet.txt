@@ -1,0 +1,236 @@
+=== fixture: orc-priest-seed1-opt0822 ===
+
+This file is the audit record for
+  tools/fixtures/chars/orc-priest-seed1-opt0822.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-11-05 11:47:28 EST
+made at commit   c7b215c9
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             1
+settings         tools/fixtures/options-2026-08-22.dat
+key script       tools/keys/chargen-priest-save.keys
+                 copied to tools/fixtures/chars/orc-priest-seed1-opt0822.keys
+saved in game as Rathak.sav
+sha256 .sav      db41fcc0bfe1c16050998f35e9feb1d267f6ba07044957daf936d59d0584a944
+sha256 module    9e5bbfd2cfa8ff37fd61ef3f355c459ac11862270798080d572eebbf6c674be7
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh orc-priest-seed1-opt0822 tools/keys/chargen-priest-save.keys 1 tools/fixtures/options-2026-08-22.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/orc-priest-seed1-opt0822.sav
+
+=== the character, as the engine writes him ===
+
+                        Rathak the Breaker, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Priest 1
+Faith  Aiswin
+XP     0
+Next @ 1000
+Align  Lawful Good
+
+
+STR: 21/00 [+5/+5] (base 17, +4 natural)
+DEX: 13/00 [+1/+1] (base 13)
+CON: 14/00 [+2/+1] (base 14)
+INT: 12/00 [+1/+0] (base 14, -2 natural)
+WIS: 18/00 [+4/+3] (base 16, +2 natural)
+CHA: 11/00 [+0/+0] (base 13, -2 natural)
+LUC: 10/00 [+0/+0] (base 10)
+Fortitude   +4(Priest +2, +2 Con)
+Reflex      +1(Priest +0, +1 Dex)
+Will        +6(Priest +2, +4 Wis)
+           (+4 vs. disintegration)
+Melee   +toHit +6  (Priest +0, +5 Str, +1 weapon)
+        Damage +6  (base 1d10 / 1d8, +5 Str, +1 weapon)
+        Speed  80% (base 100%) x 80% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  14:
+  (base 10, +1 Dex, +3 dodge)
+_______________(7 while casting)
+
+Coverage       7:
+  (base 0, +7 armour)
+
+Movement Rate  100%:
+  (base 100%) x 115% skill x 90% encumbrance
+
+Hit Dice Rolls 37:
+   [20 + 1d8 (8) + 2 (CON bonus)] + 25% (Toughness)
+Mana Rolls     26:
+   10 + 1d12 (12) x 1 + 4 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 77.6s, Moderate 233.0s, Heavy 466.0s, Extreme 700.0s, Max Press 920.0s)
+
+Spell Slots    1st:
+  1+2
+
+Special Abilities:
+  Domains:
+    Night
+    Fate
+    Knowledge
+  Fatesense
+  Darkvision (90 ft)
+  Scent (30 ft)
+  Spellcasting (1st)
+  Turn Undead: 1
+  Spell Fury
+  Caster Level: Divination +1
+
+Feats:
+  Acrobatic
+  Dodge
+  Exotic Weapon
+  Scribe Scroll
+  Toughness
+  Cannibalism
+
+Resistances and Armour:
+  Slashing Damage 6
+  Piercing Damage 3
+  Blunt Damage 3
+
+Proficiencies Simple Weapons, Long Blades, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour, short sword, dire flail and shotput
+
+Skill Ratings:
+  Athletics        +7  (0 ranks, +5 STR, +2 train)
+  Concentration    +5  (2 ranks, +1 CON, +2 train)
+  Craft            +7  (2 ranks, +1 DEX, +2 train, +2 kit)
+  Healing          +9  (2 ranks, +3 WIS, +2 train, +2 kit)
+  Intimidate       +7  (0 ranks, +5 STR, +2 train)
+  Intuition        +9  (0 ranks, +3 WIS, +2 train, +4 domain)
+  Jump             +8  (0 ranks, +5 STR, +3 feat)
+  Knowledge (Theyra) +2  (0 ranks, +2 train)
+  Knowledge (Infernal) +2  (0 ranks, +2 train)
+  Knowledge (Magic) +2  (0 ranks, +2 train)
+  Knowledge (Mythology) +2  (0 ranks, +2 train)
+  Knowledge (Nature) +2  (0 ranks, +2 train)
+  Knowledge (Oceans) +2  (0 ranks, +2 train)
+  Knowledge (Planes) +2  (0 ranks, +2 train)
+  Knowledge (Theology) +9  (0 ranks, +3 WIS, +2 train, +4 kit)
+  Knowledge (Undead) +2  (0 ranks, +2 train)
+  Metamagic        +2  (0 ranks, +2 train)
+  Seneschal        +2  (0 ranks, +2 train)
+  Spellcraft       +2  (0 ranks, +2 train)
+  Tumble           +4  (0 ranks, +1 DEX, +3 feat)
+
+Spiritual State:
+__You are devoted to Aiswin.
+__Aiswin is noncommital.
+__Aiswin has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are decisively Good.
+__You are decisively Lawful.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  b orcish heavy mace
+  b orcish ranseur
+  b orcish dire flail
+  clerical vestment
+  b orcish coat of plates
+  Holy symbol of Aiswin
+  5 Potions of Healing [2d8+8]
+  6 b orcish shotputs
+  medium backpack
+  66 gold pieces
+  12 strips of cured meat
+  craftsman's tools
+  healing kit
+  vial of holy water [3d6]
+  b orcish knife
+  b orcish short sword
+
+On The Ground:
+
+Known Spells:
+  True Strike                     1   90%    2 +10
+  Read Magic                      1  100%   10 +5
+  Sleep                           1   75%    3 
+  Bane                            1   90%    2 -1
+  Bless                           1  100%    5 +1
+  Call Light                      1   95%    1 
+  Cure Light Wounds               1   90%    0 1d8+1
+  Call Companions                 1   95%    2 
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:37/37 M:26/26 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:37/37 M:26/26 XP:0) 
+  OOD monster elf (CR 3) generated on dlev 1 by Encounter 'adventurer'. [EN_SINGLE]
+
+12:00 AM, 1st of Suntide: Unknown Location (H:18/22 M:14/14 XP:0) 
+  Starting Perks:
+     Bonus Feat: Dodge.
+     Save Bonus: +4 vs. Disintegration.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:10/10 XP:0) 
+  An angry voice declades, "I deal not with filth and base creatures!"
+
+12:00 AM, 1st of Suntide: Unknown Location (H:17/21 M:10/10 XP:0) 
+  "You whose people have slain my children for millenia now appeal to me? Suffer!"
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   53|      1|     0|    0| 253 / 3826 = 6%
+
+Messages:
+Welcome back to Incursion, Rathak!
+"Blessed be those who walk the path of shadows!"
+You find nothing of significance.
+Autosave... 
