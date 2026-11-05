@@ -6,6 +6,8 @@
 
      
 */
+#include <string>
+#include <vector>
 #include "Incursion.h"
 
 /* TODO:
@@ -3166,6 +3168,62 @@ static void MakeMagicWeaponArmour(Item *it, int _plusLevel,
   return; 
 }
 
+/* inc-1pfq: INCURSION_GENITEM_FORCE test control. Off unless set: no draws,
+   no change. Entries are "name" or "name:plus", separated by ';'. */
+static std::vector<std::string> gForceList;
+static size_t gForceNext = 0;
+static int gForceConsumed = 0;
+static bool gForceEnvRead = false;
+
+void GenItemForceArm(const char *list) {
+    gForceEnvRead = true;
+    gForceList.clear();
+    gForceNext = 0;
+    if (!list)
+        return;
+    std::string cur;
+    for (const char *c = list; ; c++) {
+        if (*c == ';' || !*c) {
+            if (!cur.empty())
+                gForceList.push_back(cur);
+            cur.clear();
+            if (!*c)
+                break;
+        } else
+            cur += *c;
+    }
+}
+
+int GenItemForceConsumed() { return gForceConsumed; }
+
+static Item *GenItemForced() {
+    if (!gForceEnvRead) {
+        gForceEnvRead = true;
+        GenItemForceArm(getenv("INCURSION_GENITEM_FORCE"));
+    }
+    if (gForceNext >= gForceList.size())
+        return NULL;
+    std::string e = gForceList[gForceNext++];
+    gForceConsumed++;
+    int plus = 0;
+    bool hasPlus = false;
+    size_t colon = e.rfind(':');
+    if (colon != std::string::npos) {
+        plus = atoi(e.c_str() + colon + 1);
+        hasPlus = true;
+        e.erase(colon);
+    }
+    rID fID = FIND(e.c_str());
+    if (!fID) {
+        Error("INCURSION_GENITEM_FORCE: no item named \"%s\"", e.c_str());
+        return NULL;
+    }
+    Item *it = Item::Create(fID);
+    if (it && hasPlus)
+        it->SetInherentPlus(plus);
+    return it;
+}
+
 Item* Item::GenItem(uint16 Flags, rID xID, int16 Depth, int8 Luck, ItemGen *Gen) {
     int16 i, minlev, maxlev, adjlev, restart_count, roll, IType = 0;
     uint32 mag; bool proto = false; String s;
@@ -3175,6 +3233,9 @@ Item* Item::GenItem(uint16 Flags, rID xID, int16 Depth, int8 Luck, ItemGen *Gen)
     rID iID, eID;
     Item* theItem;
     int16 qv = 0;
+
+    if (Item *forced = GenItemForced())
+        return forced;
 
     /* Explanation here: high Luck occasionally turns good items
        into very good (i.e., out of depth) items. Logically, this

@@ -22,12 +22,24 @@
 #                chain does
 #   viewlist     src/Term.cpp ViewListPriorityMod: a mundane bow beside the
 #                player sorts below a gem 3 squares off, as a sword does
-#   kysul        lib/religion.irh Kysul EV_GODPULSE, run 2000 times: no gifted
-#                bow or weapon is one the follower is not proficient with
+#   kysul        lib/religion.irh Kysul EV_GODPULSE, two forced pulses: a bow,
+#                then a bolt, is offered first and refused as a gift the
+#                follower is not proficient with; the sword after it is kept
 #   augment      src/Skills.cpp Augment: a bow and a bolt are candidates and
 #                reach the quality menu (screen dumps, key-driven)
 #   showdamage   src/Term.cpp TextTerm::ShowDamage: a known Flaming bow prints
 #                "+1d6 Fire" in the sidebar, as a Flaming sword does
+#
+# SEED-INDEPENDENT (bd inc-1pfq): every fact the check reads, and its control.
+# fact: character -- fixture orc-mage-seed4-gate (INCURSION_LOAD)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: follower is not proficient with bows or bolts -- the fixture's sheet (Long Blades, Staves, Impact, Polearms, Spears, Daggers)
+# fact: each item Kysul rolls as a gift -- INCURSION_GENITEM_FORCE list, armed by the probe right before the pulse (GenItemForceArm)
+# fact: the bow and the bolt were offered and refused -- consumed=2, counted by GenItemForceConsumed before and after the pulse
+# fact: githzerai gear roll (50% quarterstaff or spiked chain) -- both branches call Item::GenItem, so GenItemForceArm("spiked chain") fixes the weapon; consumed=1
+# fact: drow gear -- fixed in lib/mon*.irh (a hand crossbow, no random weapon choice)
+# fact: map, monsters, item rolls in the other runs -- the probe builds each item with Item::Create or places it on a cell it picks; nothing is generated
+# fact: sidebar and Augment screen text -- fixed items, fixed keys, matched text names no seed-decided value
 #
 # NOT OBSERVED, and why (bd inc-f38k):
 #   - src/Player.cpp Map::DaysPassed loot weakening: it sits inside the spawn
@@ -40,7 +52,7 @@
 # Game::Play() (src/Main.cpp) on the loaded player. Its value picks a mode:
 #   1 or unset-by-check  log cases, read from errors.log:
 #                        "WEAPONTYPE_PROBE case=<c> item=<name> key=value ..."
-#   kysul                the 2000 pulses, with tools/keys/weapon-types-kysul.keys
+#   kysul                two forced pulses, with tools/keys/weapon-types-kysul.keys
 #   augment              tools/keys/weapon-types-augment.keys answers the menus
 #   screen-bow/-sword    tools/keys/weapon-types-screen.keys dumps the sidebar
 # A missing or unparsable line is a FAIL, never a pass.
@@ -258,6 +270,7 @@ for it in "sheaf arrow" "short bow" "long sword"; do
 done
 _need grant "hand crossbow" exotic_feat 1 "an NPC given a hand crossbow gains no exotic proficiency"
 _need grant "spiked chain"  exotic_feat 1 "control: an NPC given a spiked chain gains no exotic proficiency"
+_need grant "spiked chain"  consumed 1 "setup: the forced spiked chain was not the githzerai's weapon, so the probe measures nothing"
 _need viewlist list listed  ">=3" "the probe offered fewer than 3 items to the view list"
 _need viewlist list gem_before_sword 1 "control: a mundane sword does not sort below a gem 3 squares off"
 _need viewlist list gem_before_bow   1 "a mundane bow does not sort below a gem 3 squares off"
@@ -265,9 +278,10 @@ _need viewlist list gem_before_bow   1 "a mundane bow does not sort below a gem 
 # --- run 2: Kysul's gift ------------------------------------------------------
 INCURSION_WEAPONTYPE_PROBE=kysul check_run tools/keys/weapon-types-kysul.keys "$SEED"
 _load_log
-_need kysul gift weapon_gifts         ">=1" "setup: Kysul gifted no weapon in 2000 pulses, so the probe measures nothing"
-_need kysul gift notprof_weapon_gifts 0     "control: Kysul gifted a weapon its follower cannot use"
-_need kysul gift notprof_bow_gifts    0     "Kysul gifted a bow or missile its follower cannot use"
+_need kysul bow  consumed 2 "setup: Kysul's first pulse did not offer the bow and then the sword"
+_need kysul bow  gift long_sword "Kysul gifted a bow its follower cannot use, or no sword"
+_need kysul bolt consumed 2 "setup: Kysul's second pulse did not offer the bolt and then the sword"
+_need kysul bolt gift long_sword "Kysul gifted a bolt its follower cannot use, or no sword"
 
 # --- run 3: Augment's menus ---------------------------------------------------
 INCURSION_WEAPONTYPE_PROBE=augment check_run tools/keys/weapon-types-augment.keys "$SEED"

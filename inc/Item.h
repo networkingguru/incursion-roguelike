@@ -491,6 +491,13 @@ extern ItemGen DungeonItems[],
                MageItems[],
                StapleItems[];
 
+/* inc-1pfq: INCURSION_GENITEM_FORCE test control (src/Encounter.cpp). A list
+   "name[:plus];name[:plus]" makes each Item::GenItem call return the next
+   named item. GenItemForceArm replaces the list (NULL or "" empties it);
+   GenItemForceConsumed counts entries used since the process started. */
+void GenItemForceArm(const char *list);
+int GenItemForceConsumed();
+
 /* inc-a7jq: the loot claim (src/Inv.cpp). LootClaimant maps a kill's killer
    to the player who owns the claim; LootRoomHolds tests whether the claim's
    player is in the drop's room; LootClaimLive reports whether a claimed item
