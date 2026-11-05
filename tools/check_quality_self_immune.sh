@@ -1,5 +1,15 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture orc-mage-seed5-opt0822 (INCURSION_LOAD)
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: character level -- wizard "Free Advancement" switch, four G presses
+# fact: the suit -- plain leather armour from wizard "Item Acquisition" (Item::Create, no MakeMagical)
+# fact: the quality -- wizard "Add Quality to Armour", AQ_FIRE_RES (arm B only)
+# fact: fire damage to the worn suit -- wizard "Burn Worn Armour" (src/Debug.cpp), fixed 10, no actor, no dice
+# fact: scroll reads -- INCURSION_RUNTO_SKILL_ROLL=20 (each read totals 22, above DC 15, not above 25)
+# fact: enchant limit -- level 5 plus Charisma modifier, from the fixture and the four levels
+# fact: curse status -- Item::Create draws none for a plain suit (src/Term.cpp:3287)
+# fact: matched text -- engine strings
 # A resistance quality makes its OWN item immune, and still resists for the
 # wearer (bd inc-to9x).
 #
@@ -9,9 +19,9 @@
 # pass a build that had silently taken the wearer's resistance away; half two
 # alone would pass a build where Item::Hardness never learned the quality.
 #
-# TWO ARMS, ONE SEED. The character, the suit and the monsters are identical in
-# both. The only difference is wizard option 13 putting AQ_FIRE_RES on the worn
-# suit before the burning starts.
+# TWO ARMS, ONE SEED. The character and the suit are identical in both. The
+# only difference is wizard option 13 putting AQ_FIRE_RES on the worn suit
+# before the burn.
 #
 #   Arm A, tools/keys/quality-self-immune-plain.keys: no quality. The suit must
 #   BURN, its page must show fewer than 56 of 56 hit points, its hardness table
@@ -26,41 +36,31 @@
 # THE ORACLES. The suit's own page is built by ItemHardnessDesc
 # (src/Help.cpp:3471-3527), which calls Item::Hardness once per damage type and
 # sorts the -1 answers into "It is immune to ...". That is a direct reading of
-# the function this change edits, and it needs no lucky roll. The hit points
-# and the item's name are the behavioural half, and they need the blast to
-# reach the armour: measured on seed 5, it does so twice in the hundred turns
-# the fixture plays.
+# the function this change edits. The hit points and the item's name are the
+# behavioural half.
 #
-# WHY THE DAMAGE COMES FROM MONSTERS AND NOT A SELF-CAST SPELL. Item::Damage
-# reads "If you are attacking your own items, ignore their hardness"
-# (src/Item.cpp:1485-1488) and sets hard = 0, which erases the -1 immunity sentinel.
-# The equipment block calls ThrowDmg, which clears isTrap and eID, so that test
-# reduces to EActor == owner. A mage fireballing himself and a character
-# stepping on his own trap were both measured on 2026-09-11, and both printed
-# "vs. 0 (leather)" on a suit whose own page in the same session said it was
-# immune to fire. Only a blast whose actor is somebody else measures anything.
+# WHY THE FIRE COMES FROM A WIZARD COMMAND. A player-driven blast reaches worn
+# gear only through the equipment block in Magic::Blast (src/Effects.cpp:395-421),
+# whose save and coin tosses have no control. "Burn Worn Armour" (src/Debug.cpp,
+# inc-aoi4i) sends a fixed 10 points of fire straight to the suit, with no actor
+# and no random number. The check used to summon hell hounds for this, and the
+# burn missed on seed 8.
 # tools/keys/quality-self-immune-setup.keys carries the rest of that argument.
 #
-# Measured 2026-09-11, seed 5, tools/fixtures/options-2026-08-22.dat:
-#   arm A ends at 43 of 56 hit points, named "mildly burnt leather armour",
-#         with Fire still in its "0 to ..." group and no Fire on the sheet;
-#   arm B ends at 56 of 56, unburnt, with Fire in its immunity list, and the
-#         sheet reads "Fire 6" once the suit is +2.
+# WHY THE SCROLL ROLL IS FORCED. Each Enchant Armour read is a Decipher Script
+# check and a high total preserves the scroll on a coin toss (src/Magic.cpp:6214).
+# INCURSION_RUNTO_SKILL_ROLL=20 makes every read total 22: success, no preserve.
 #
-# RE-CALIBRATED 2026-09-11, same day, after inc-19ay. That fix gave every breath
-# weapon the dice its statblock declares, so the hounds breathe 2d6 instead of
-# 1d6 and the random stream diverges at the first breath. Two numbers moved and
-# neither is a property of this check: arm A's suit now ends at 43 of 56 rather
-# than 52, and one of arm B's two Enchant Armour reads fell on a failed Decipher
-# check, which left the suit at +1 and the sheet at "Fire 3". The answer is in
-# tools/keys/quality-self-immune-quality.keys: the reader now wears a helm that
-# adds +10 to Decipher Script, so a read no longer turns on a die this fixture
-# cannot see. No assertion was weakened; "+2" and "Fire 6" still stand.
+# Measured 2026-11-04 (inc-aoi4i), every seed: arm A ends at 46 of 56 hit
+# points, named "mildly burnt leather armour", Fire still in its "0 to ..."
+# group, no Fire on the sheet; arm B ends at 56 of 56, unburnt, Fire in its
+# immunity list, and the sheet reads "Fire 6" once the suit is +2.
+# tools/seed_sweep.sh: SEED-INDEPENDENT on seeds 101..505 and on 1 2 3 4 6 7 8 9.
 # Usage: tools/check_quality_self_immune.sh [--prove-red]
 # Declared mutation: Item::Hardness returns 0 instead of the -1 immunity.
-# PROVED RED 2026-09-11. Arm A stays green, which is right -- it carries no
-# quality, so the mutation cannot reach it. Arm B fails five assertions
-# (inner exit 1, outer exit 0):
+# PROVED RED 2026-11-04, same five failures as 2026-09-11. Arm A stays green,
+# which is right -- it carries no quality, so the mutation cannot reach it.
+# Arm B fails five assertions (inner exit 1, outer exit 0):
 #   |   FAIL  0/1 screens carry: Light Damage, Fire,
 #   |         it should prove: the quality makes the suit itself immune to fire
 #   |   FAIL  0/1 screens carry: It has 56 out of 56 hit
@@ -74,6 +74,9 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# A frozen character, not a generated one (tools/fixtures/README.md).
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.sav
+export INCURSION_RUNTO_SKILL_ROLL=20
 check_mutation src/Item.cpp \
 '  if (QualityImmune(DType))
     return -1;' \
