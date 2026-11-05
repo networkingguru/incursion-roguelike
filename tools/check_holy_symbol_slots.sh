@@ -50,6 +50,14 @@
 # check exits 1 on it and 0 on the rebuilt fixed binary. Confirmed by reverting
 # the helper call at the Turn site by hand and rebuilding.
 #
+# The priest is LOADED, never generated: INCURSION_LOAD names the frozen
+# fixture, because chargen on some seeds offers no "Lawful Good" (inc-b4l3g.8).
+#
+# fact: character, god, starting neck symbol -- fixture orc-priest-seed1-opt0822
+# fact: the helm -- wizard Item Acquisition, chosen by name
+# fact: monster actions during the played turns -- wizard Freeze Monsters
+# fact: screen text read -- fixed game lines and inventory slot labels only
+#
 # Usage: tools/check_holy_symbol_slots.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
 
@@ -58,6 +66,7 @@ cd "$ROOT"
 
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 KEYS=tools/keys/holy-symbol-slot.keys
+FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.sav
 GOD_FIXTURE=tools/fixtures/holy-symbol-slot-helm.irh
 
 [ -x ./incursion-headless ] || {
@@ -66,6 +75,7 @@ GOD_FIXTURE=tools/fixtures/holy-symbol-slot-helm.irh
 }
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE: key script $KEYS is not there"; exit 2; }
+[ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: character fixture $FIXTURE is not there"; exit 2; }
 [ -f "$GOD_FIXTURE" ] || { echo "INCONCLUSIVE: fixture $GOD_FIXTURE is not there"; exit 2; }
 
 TOKEN="${INCURSION_CHECK_TOKEN:-$$-$(date +%s)}"
@@ -85,15 +95,16 @@ if [ ! -f "$SCRATCH/mod/Incursion.Mod" ]; then
     exit 2
 fi
 
-out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$SCRATCH" \
+out="$(INCURSION_LOAD="$FIXTURE" INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$SCRATCH" \
         tools/headless.sh "$KEYS" 1 2>&1)"
 status=$?
 echo "$out" | sed 's/^/  | /'
 echo
 
 if grep -q "the key script looked for something" <<< "$out"; then
-    echo "INCONCLUSIVE: the key script could not find the fixture helm on"
-    echo "              screen. Run dir: $SCRATCH"
+    last="$(ls "$SCRATCH"/logs/screens/*.txt 2>/dev/null | tail -1)"
+    echo "INCONCLUSIVE: the key script stopped on a screen it did not expect."
+    echo "              Last screen dump: ${last:-none}  Run dir: $SCRATCH"
     exit 2
 fi
 if [ "$status" -ne 0 ]; then
