@@ -13,6 +13,14 @@
 #   HUNGER_PROBE case=live fasting=<n> M=<n>
 # The Ranger needs fasting >= 1 and an M strictly below the Warrior's.
 #
+# fact: character attributes -- Point Buy in the key scripts (inc-b4l3g.20)
+# fact: race, class, skills -- chosen by name (@choose) in the key scripts
+# fact: feats -- taken by letter; the order comes from lib/, not the seed
+# fact: monsters in the arrival room -- wizard "Genocide Everything" in the key scripts
+# fact: a wandering monster spawned after the genocide -- the key scripts play no turn after the genocide, which leaves one spawn roll; the roll is a percent chance and the catalog has no hook for it
+# fact: live hunger line -- logged by HungerProbe at game start (src/Main.cpp), before any turn
+# fact: character name -- seed text, not asserted
+#
 # PROVED RED with --prove-red: the mutation removes the Ranger Fasting grant.
 #
 # Usage: tools/check_ranger_fasting.sh [--prove-red]  (0 pass, 1 fail, 2 inconclusive)
