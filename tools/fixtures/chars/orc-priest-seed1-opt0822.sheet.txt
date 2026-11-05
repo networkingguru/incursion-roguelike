@@ -7,16 +7,16 @@ by hand: it would then describe a character the .sav beside it does
 not hold, and that is the one failure tools/check_char_fixture.sh
 exists to catch.
 
-made on          2026-11-05 11:47:28 EST
-made at commit   c7b215c9
+made on          2026-11-05 10:08:15 EST
+made at commit   9d977b72
                  the working tree was dirty, so this fixture may hold changes that commit does not
 seed             1
 settings         tools/fixtures/options-2026-08-22.dat
 key script       tools/keys/chargen-priest-save.keys
                  copied to tools/fixtures/chars/orc-priest-seed1-opt0822.keys
 saved in game as Rathak.sav
-sha256 .sav      db41fcc0bfe1c16050998f35e9feb1d267f6ba07044957daf936d59d0584a944
-sha256 module    9e5bbfd2cfa8ff37fd61ef3f355c459ac11862270798080d572eebbf6c674be7
+sha256 .sav      4ce8230cb5789483d8496c132efbf71dd3b6f116c1ed1de9da035b465a94feb7
+sha256 module    eda384299c52dfeb30438512a227094581f7fc0b148b29cd9bfed9248c53df5b
                  mod/Incursion.Mod is what the save's rID manifest
                  was written against. A fixture that stops loading
                  is worth comparing against the module that made it.
@@ -227,7 +227,7 @@ Level Statistics:
 
 Lvl | Act | Key | Turns | Secs |  XP | Explored
 ----+-----+-----+-------+------+-----+------------------
-1   |    1|   53|      1|     0|    0| 253 / 3826 = 6%
+1   |    1|   53|      1|     1|    0| 253 / 3826 = 6%
 
 Messages:
 Welcome back to Incursion, Rathak!
