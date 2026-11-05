@@ -175,3 +175,14 @@ See [[incursion-a-diagnosis-needs-its-falsifier]] and [[incursion-headless-false
 
 ## probe-dump-guard-blindness
 Diagnostic guards can hide the defect you are hunting. src/Light.cpp ProbeDump wrote a dump block only when the map, the player position or the source count changed. Casting a spell changes none of the three, so a fog cloud produced NO block at all and fog was invisible to every light check. Fixed 2026-09-02 (inc-qh0w) by folding an FNV-1a signature over the FILTER grid into the guard, via a new FilterMark(). LESSON: before trusting a check that reads a log, confirm the log actually records the state you are testing -- grep the dump for the thing itself, not for the absence of a complaint.
+
+## check-fact-lines-close-the-hole-first
+Filed 2026-11-04 as inc-131k2 after inc-pu6v.1.1 found eight Xel checks whose fact lines read "known hole: no INCURSION_LOAD fixture", eight with no fact lines, and three that relied on the pulse lottery. Nothing read the fact lines; tools/nightly_seed_sweep.sh only reported, and swept master only.
+
+The first proposal ratcheted against the base branch and ran from the fast set (bead worktrees only). Brian, 2026-11-04: "I want this hook to be branch independant. Any check that gets made, before it can commit, MUST conform with the test spec or have a verbal exemption from me."
+
+On the exemption: "do not make me name the file. You ask 'is <FOO> exempt', and if I answer affirm (even if I mistype a char or two, e.g, yy, uy, ty, yg, y., etc) it is exempted for THAT SINGLE COMMMIT. Perm exemptions use a diffrerent mechanism, perhpas a line in the top of the file or something/"
+
+The proposal then put the exemption question straight after a refusal. Brian: "2 shoudl NOT FUCKING OCCUR unless you absolutely cannot find a way to resolve the hole AND you have already asked me and *I* ALSO cannot think of a way to close it. It shoudl be EXCEEDINGLY rare."
+
+On forged passes: "Explicit cheats are not in scope; if you do that, it will become apparent when things break that the test was supposed to catch, and then I will get medieval abotu the tests". On a fixed list of "none" wordings versus free text: "free text is fine. Again, if a agent cheats, we will find out fiarly quickly and can ratchet the test down".
