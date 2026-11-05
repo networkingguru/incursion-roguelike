@@ -13,8 +13,12 @@
 #      (EF_LIM_MTYPE, tval MA_UNDEAD) accepts a bodak at all. If it did not, the
 #      cap was never reached and R3 was never tested.
 #
-# THE SCENES, built by tools/keys/undeath-to-death-pool.keys (the caster is the
-# same orc priest of Aiswin at character level 11, so the pool is 11d4 = 11..44
+# THE SCENES, built by tools/keys/undeath-to-death-pool.keys (the caster is an
+# orc priest of Aiswin LOADED from the fixture orc-priest-seed1-opt0822 and
+# raised to character level 11, arriving at (81,76); the scene is laid by
+# offsets relative to him. A generated character was seed-dependent: on seed
+# 404 chargen asked a feat question the script did not answer, inc-b4l3g.38.
+# The seed-varied input left is the 11d4 pool roll, so the pool is 11d4 = 11..44
 # per cast). The key file explains why a single burst cannot show R2 and R3
 # together: the walk sorts fewest Hit Dice first, so a 9-HD bodak is always
 # last, and a burst whose sub-cap creatures already exceed the pool always
@@ -40,6 +44,15 @@
 # A MISSING OR EMPTY PROBE LOG IS A FAIL, not an inconclusive: the probe IS the
 # measurement, and a run that left none measured nothing.
 #
+# fact: character (orc priest of Aiswin, Priest 1, Lawful Good) -- fixture orc-priest-seed1-opt0822 (INCURSION_LOAD)
+# fact: arrival map and caster square (81,76) -- the same fixture (a save pins the dungeon)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat (INCURSION_OPTIONS)
+# fact: level 11 and the spell learned (Undeath to Death) -- wizard-mode Free Advancement and Learn Any Spell in tools/keys/undeath-to-death-pool-setup.keys, no dice
+# fact: monster positions and that they stay put -- summoned at fixed offsets from the caster; Freeze Monsters wizard switch
+# fact: pool roll 11d4 -- range assertion: every assertion holds for any total in POOL_MIN..POOL_MAX (11..44), checked per cast
+# fact: probe log lines (cast, WALK, REJECT-TARGET) -- INCURSION_HDPOOL_PROBE=1 and INCURSION_TARGET_PROBE=1, set below
+# fact: matched message text "will save:" -- fixed game string
+#
 # Usage: tools/check_undeath_to_death_pool.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
 
@@ -48,6 +61,7 @@ cd "$ROOT"
 
 KEYS=tools/keys/undeath-to-death-pool.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
+FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.sav
 POOL_MIN=11
 POOL_MAX=44
 
@@ -57,6 +71,12 @@ POOL_MAX=44
 }
 
 fail() { echo "FAIL: $*"; exit 1; }
+
+[ -f "$FIXTURE" ] || {
+    echo "FAIL: the fixture $FIXTURE is missing. Nothing was measured."
+    exit 1
+}
+export INCURSION_LOAD="$FIXTURE"
 
 mkdir -p logs/inc-kgzx/pool
 

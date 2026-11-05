@@ -80,3 +80,4 @@ wood-elf-rogue-seed7-opt0818           tools/keys/wood-elf-rogue-save.keys      
 xsummon-priest-seed5-opt0822           tools/keys/xsummon-priest-save.keys        5           tools/fixtures/options-2026-08-22.dat
 gnome-warrior-wis3-pickaxe-seed1-opt0822 tools/keys/gnome-warrior-pickaxe-save.keys 1           tools/fixtures/options-2026-08-22.dat
 orc-barbarian-reapply-seed4 tools/keys/reapply-barbarian-save.keys 4 tools/fixtures/options-2026-08-22.dat
+orc-priest-seed1-opt0822 tools/keys/chargen-priest-save.keys 1 tools/fixtures/options-2026-08-22.dat
