@@ -10,9 +10,10 @@
 # never reach +20, the alignment never changed and the game never printed
 # "You are now ...". This run prints it.
 #
-# THE CHARACTER is an elf rogue who spends all eighteen skill ranks on skills
-# other than Bluff's rivals, so Bluff +7 outranks both Intimidate +5 and
-# Diplomacy +5. Creature::Request (src/Social.cpp:1184-1192) checks Intimidate
+# THE CHARACTER is the fixture elf-rogue-bluff-seed1-opt0822 (INCURSION_LOAD),
+# an elf rogue whose skill ranks went to skills other than Bluff's rivals, so
+# Bluff +7 outranks both Intimidate +5 and Diplomacy +5. This script starts in
+# the dungeon, with that character already loaded. Creature::Request (src/Social.cpp:1184-1192) checks Intimidate
 # first and Bluff second: with Intimidate not greater than Diplomacy, and Bluff
 # greater, it offers "Use Bluff?" and fires the TREACHERY aligned act
 # (AL_NONLAWFUL|AL_CHAOTIC, magnitude 3). An ORC cannot be used here: the orc
@@ -35,46 +36,9 @@
 # THE COUNT. alignLC starts at 0 and each treachery adds 3, so the +20 threshold
 # is crossed on the seventh (alignLC = 21). Eight are sent for margin.
 #
-# Determinism: seed 1, tools/fixtures/options-2026-08-22.dat.
+# Determinism: the fixture's character and map; options tools/fixtures/options-2026-08-22.dat.
 
-a
-n
-y
-@choose "Elf"
-@choose "Elf (Standard)"
-@choose "Rogue"
-a
-@choose "Neutral"
-a
-a
-
-@expect "Unspent Skill Ranks"
-@cursorto:mark "Bluff" DOWN
-RIGHT*3
-@cursorto:mark "Listen" DOWN
-RIGHT*3
-@cursorto:mark "Lockpicking" DOWN
-RIGHT*3
-@cursorto:mark "Move Silently" DOWN
-RIGHT*3
-@cursorto:mark "Perform" DOWN
-RIGHT*3
-@cursorto:mark "Pick Pockets" DOWN
-RIGHT*3
-@cursorto:mark "Poison Use" DOWN
-RIGHT*3
-@cursorto:mark "Ride" DOWN
-RIGHT*3
-@cursorto:mark "Spot" DOWN
-RIGHT*3
-ENTER y
-
-y
-a
-
-.*2
-@dump:arrival
-
+s                       # one real turn; without it the first "d" did not open the sheet (observed)
 d
 @until "Desired Alignment" D
 @choose "Chaotic Neutral"

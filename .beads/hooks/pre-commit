@@ -138,6 +138,26 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   fi
 fi
 
+# --- INCURSION: a tools/check_* header must keep its seed controls honest (inc-131k2) ---
+# Runs on every commit on every branch, so there is no nightly or worktree
+# condition. tools/check_fact_lines.py reads the STAGED check files and judges
+# their "# fact:" lines against docs/VERIFICATION.md. Exit 1 refuses the commit;
+# exit 2 is "could not measure" and only warns. Process script: runs from the
+# shared checkout (inc-x604). The rules and the self-test are in that script.
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/check_fact_lines.py" ]; then
+    "$_inc_shared/tools/check_fact_lines.py"
+    _inc_fact=$?
+    if [ $_inc_fact -eq 1 ]; then
+      echo >&2 "pre-commit: REFUSED. A staged tools/check_* file breaks the fact-line rules in docs/VERIFICATION.md (reasons above)."
+      exit 1
+    elif [ $_inc_fact -ne 0 ]; then
+      echo >&2 "pre-commit: tools/check_fact_lines.py could not measure (exit $_inc_fact); the commit CONTINUES."
+    fi
+  fi
+fi
+
 # --- INCURSION: a bare `git merge master` on an epic branch is refused ---
 # (inc-pu6v, 2026-09-24). The reason, the gated path and the escape hatch are
 # in tools/check_epic_merge.sh, whose --selftest proves each case.

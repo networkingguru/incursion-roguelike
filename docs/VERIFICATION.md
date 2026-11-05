@@ -48,7 +48,8 @@ line per fact, under the line that names the defect:
 A fact with no control in the catalog below is a hole. Close the hole first:
 file the missing hook, or choose a different scenario. Do not write the check
 around the hole. A check that reads a fact its header does not list depends on
-the seed.
+the seed. `tools/check_fact_lines.py` refuses a commit, on any branch, that adds
+or changes a `tools/check_*` file whose fact lines break this rule.
 
 **The controls catalog.** Use these to fix a fact. A row marked *none* is a
 known hole.
