@@ -892,7 +892,17 @@ SkipShifting:
       }
       /* The every-turn arrival search is unconditional; the older lost-sight /
          heard-noise case still rolls one turn in three (phase 5). */
-      if (arrivedSearch || ((lostSight) && !random(3)))
+      /* inc-b4l3g.7: INCURSION_LOSTSIGHT_SEARCH_ROLL=<0..2> replaces the
+         one-in-three roll (0 searches). Unset or invalid: random(3) as before. */
+      bool lostRoll = false;
+      if (!arrivedSearch && lostSight) {
+        const char *fr = getenv("INCURSION_LOSTSIGHT_SEARCH_ROLL");
+        if (fr && fr[0] >= '0' && fr[0] <= '2' && !fr[1])
+          lostRoll = (fr[0] == '0');
+        else
+          lostRoll = !random(3);
+      }
+      if (arrivedSearch || lostRoll)
         AddAct(ACT_SEARCH, P_MODERATE, NULL);
     }
 
@@ -1361,8 +1371,18 @@ NothingToDo:
              turn like ACT_WAIT does (Timeout += 15). HideSearch runs the spot
              checks for hidden creatures; it never returns a fresh monster
              action, so the turn is done. */
-          if (getenv("INCURSION_HIDE_SEARCH_PROBE"))
-            Error("HIDE_SEARCH ACT watcher=%d", (int)myHandle);
+          if (getenv("INCURSION_HIDE_SEARCH_PROBE")) {
+            /* the hiders HideSearch can roll against (same filter) */
+            int watchable = 0;
+            Creature *hc; int hi;
+            MapIterate(m, hc, hi)
+              if (hc && hc->isCreature() && hc->HasStati(HIDING) &&
+                  HideCanWatch(this, hc)) {
+                if (watchable >= HIDE_WATCH_MAX) break;
+                watchable++;
+              }
+            Error("HIDE_SEARCH ACT watcher=%d watchable=%d", (int)myHandle, watchable);
+          }
           {
             const hObj searcher = myHandle;
             HideSearch(this);
