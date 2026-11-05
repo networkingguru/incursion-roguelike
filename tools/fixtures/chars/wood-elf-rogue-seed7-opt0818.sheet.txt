@@ -1,0 +1,242 @@
+=== fixture: wood-elf-rogue-seed7-opt0818 ===
+
+This file is the audit record for
+  tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.sav
+and tools/make_char_fixture.sh writes the whole of it. Do not edit it
+by hand: it would then describe a character the .sav beside it does
+not hold, and that is the one failure tools/check_char_fixture.sh
+exists to catch.
+
+made on          2026-11-05 08:11:39 EST
+made at commit   3b29c754
+                 the working tree was dirty, so this fixture may hold changes that commit does not
+seed             7
+settings         tools/fixtures/options-2026-08-18.dat
+key script       tools/keys/wood-elf-rogue-save.keys
+                 copied to tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.keys
+saved in game as Ivellios.sav
+sha256 .sav      57e45f3d35ca0e4d1475b033bd085d8452862dcab0367644cc0da5171b22093f
+sha256 module    96ebff46681a4d62ac687be3894085ab4bdeed92697f7e42a8dbf3ace951eefd
+                 mod/Incursion.Mod is what the save's rID manifest
+                 was written against. A fixture that stops loading
+                 is worth comparing against the module that made it.
+
+regenerate with
+  tools/make_char_fixture.sh wood-elf-rogue-seed7-opt0818 tools/keys/wood-elf-rogue-save.keys 7 tools/fixtures/options-2026-08-18.dat --force
+Regenerating gives a BYTE-DIFFERENT .sav holding the SAME character:
+a save carries clocks and counters no second run repeats. Judge a
+regeneration by this sheet, never by the size of the diff.
+
+The character below is the engine's own dump. It was taken by LOADING
+the .sav beside this file and saving it again under
+INCURSION_CHAR_PROBE=1 (Game::SaveGame, src/Registry.cpp:1105-1111).
+A few of its lines belong to that reading session and not to the
+character: the torch's remaining turns, the Level Statistics table
+and the Messages at the end all move by the turns
+tools/keys/load-char-sheet.keys spends. Everything above Inventory is the
+character. For the resource ids behind the item names, which are what
+a module change moves, run:
+  tools/dump_save.sh tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.sav
+
+=== the character, as the engine writes him ===
+
+                        Ivellios Gemflower, The Ambitious Conqueror (Explore Mode)
+
+Gender Male
+Race   Wood Elf
+Class  Rogue 1
+Faith  Maeve
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 14/00 [+2/+1] (base 13, +1 natural)
+DEX: 13/00 [+1/+1] (base 11, +2 natural)
+CON: 16/00 [+3/+2] (base 15, +1 natural)
+INT: 13/00 [+1/+1] (base 13)
+WIS: 14/00 [+2/+1] (base 14)
+CHA: 16/00 [+3/+2] (base 15, +1 natural)
+LUC: 16/00 [+3/+2] (base 17, -1 natural)
+Fortitude   +3(Rogue +0, +3 Con)
+Reflex      +4(Rogue +2, +1 Dex, +1 competence)
+Will        +2(Rogue +0, +2 Wis)
+           (+2 vs. death magic, +2 vs. enchantment, +2 vs. theft, +1 vs. knockdown)
+Melee   +toHit +4  (Rogue +0, +2 Str, +2 weapon)
+        Damage +2  (base 1d8 / 1d8+1, +2 Str)
+        Speed  125%(base 100%) x 125% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  11:
+  (base 10, +1 Dex)
+
+Coverage       11:
+  (base 0, +11 armour)
+
+Movement Rate  100%:
+  (base 100%) x 115% skill x 90% encumbrance
+
+Hit Dice Rolls 29:
+   20 + 1d6 (6) + 3 (CON bonus)
+Mana Rolls     23:
+   15 + 1d6 (6) x 1 + 2 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 28.6s, Moderate 86.0s, Heavy 173.0s, Extreme 260.0s, Max Press 350.0s)
+
+Magic Resist   25%:
+  (base 0, +25 natural)
+
+Special Abilities:
+  Animal Companions
+  Lowlight Vision (20 ft)
+  Magical Nature +5
+  Nature Sense
+  Reverie
+  Sharp Senses +1
+  Sneak Attack +1d6
+  Species Affinity:
+    Sylvan Creatures
+  Thief in the Night (100%)
+  Neutral: Sylvan Creatures
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+
+Resistances and Armour:
+  Slashing Damage 3
+  Piercing Damage 1
+  Blunt Damage 3
+  Fire 2
+  Cold 2
+
+Complete Immunities:
+  Sleep
+
+Proficiencies Simple Weapons, Short Blades, Archery, Thrown, Daggers, Flexible, Light Armour, handaxe, long sword, long bow and short bow
+
+Skill Ratings:
+  Alchemy          +3  (0 ranks, +1 INT, +2 train)
+  Animal Empathy   +5  (2 ranks, +1 WIS, +2 train)
+  Appraise         +3  (0 ranks, +1 WIS, +2 train)
+  Athletics        +6  (2 ranks, +2 CON, +2 train)
+  Balance          +3  (0 ranks, +1 DEX, +2 train)
+  Bluff            +4  (0 ranks, +2 CHA, +2 train)
+  Climb            +4  (0 ranks, +1 STR, +3 train)
+  Craft            +3  (0 ranks, +1 DEX, +2 train)
+  Decipher Script  +3  (0 ranks, +1 INT, +2 train)
+  Diplomacy        +4  (0 ranks, +2 CHA, +2 train)
+  Disguise         +4  (0 ranks, +2 CHA, +2 train)
+  Escape Artist    +3  (0 ranks, +1 DEX, +2 train)
+  Find Weakness    +3  (0 ranks, +1 WIS, +2 train)
+  Handle Device    +7  (0 ranks, +1 DEX, +2 train, +4 magic)
+  Healing          +3  (0 ranks, +1 WIS, +2 train)
+  Hide in Shadows  +5  (2 ranks, +1 DEX, +2 train)
+  Intimidate       +4  (0 ranks, +2 CHA, +2 train)
+  Intuition        +3  (0 ranks, +1 WIS, +2 train)
+  Jump             +6  (0 ranks, +1 STR, +2 train, +3 feat)
+  Knowledge (Theyra) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Infernal) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Magic) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Mythology) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Nature) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Oceans) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Planes) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Theology) +7  (0 ranks, +1 WIS, +2 train, +4 kit)
+  Knowledge (Undead) +3  (0 ranks, +1 INT, +2 train)
+  Listen           +8  (0 ranks, +1 WIS, +3 train, +3 feat, +1 inherent)
+  Lockpicking      +7  (0 ranks, +1 DEX, +2 train, +4 magic)
+  Move Silently    +6  (2 ranks, +1 DEX, +3 train)
+  Perform          +4  (0 ranks, +2 CHA, +2 train)
+  Pick Pockets     +8  (0 ranks, +2 CHA, +2 train, +4 magic)
+  Poison Use       +3  (0 ranks, +1 DEX, +2 train)
+  Ride             +5  (2 ranks, +1 DEX, +2 train)
+  Searching        +6  (2 ranks, +1 INT, +2 train, +1 inherent)
+  Spot             +7  (0 ranks, +1 WIS, +2 train, +3 feat, +1 inherent)
+  Tumble           +6  (0 ranks, +1 DEX, +2 train, +3 feat)
+  Use Magic        +4  (0 ranks, +2 CHA, +2 train)
+  Wilderness Lore  +5  (2 ranks, +1 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Maeve.
+__Maeve is noncommital.
+__Maeve has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: OFF
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
+Inventory:
+  elven long sword
+  torch (with 2999 turns of light left)
+  elven darkwood short bow
+  peasant garb
+  elven leather armour
+  Cloak of Nondetection
+  Holy symbol of Maeve
+  Gauntlets +2 of Nimble Fingers [+4]
+  40 elven darkwood sheaf arrows
+  9 Potions of Healing [2d8+8]
+  6 Potions of Dimension Door [2d20+3]
+  medium backpack
+  262 gold pieces
+  9 pieces of elven waybread
+  3 torches (with 3000 turns of light left)
+  tanglefoot bag
+  elven short sword
+  elven stiletto
+
+On The Ground:
+
+Known Spells:
+
+Journal:
+
+12:00 AM, 1st of Suntide: Entry Chamber, 10' (H:29/29 M:23/23 XP:0) 
+  You arrive at 10' in the The Goblin Caves.
+
+12:00 AM, 1st of Suntide: Unknown Location (H:18/23 M:12/12 XP:0) 
+  Starting Perks:
+  Extra Ability: Animal Companions.
+
+Monsters Encountered:
+  Total: 0
+
+Level Statistics:
+
+Lvl | Act | Key | Turns | Secs |  XP | Explored
+----+-----+-----+-------+------+-----+------------------
+1   |    1|   68|      1|     0|    0| 399 / 4023 = 9%
+
+Messages:
+Welcome back to Incursion, Ivellios!
+"And there shall be laughter and magic and blood, and we shall dance our dance until the end of time..."
+Autosave... 
