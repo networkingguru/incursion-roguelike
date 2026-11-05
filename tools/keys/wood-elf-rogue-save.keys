@@ -1,0 +1,36 @@
+# Build the Wood Elf Rogue 1 fixture wood-elf-rogue-seed7-opt0818 and save it in the dungeon.
+# tools/check_xp_penalty.sh loads it (via tools/keys/xp-penalty-crash.keys).
+# The creation steps are those of the old xp-penalty-crash.keys, unchanged.
+# Ends with Save and Continue, never @quit; see tools/keys/lizardfolk-monk-save.keys.
+
+a
+n
+y
+@choose "Elf"
+@choose "Wood Elf"
+@choose "Rogue"
+a
+@choose "Neutral"
+@until "Unspent Skill Ranks" a
+@cursorto:mark "Athletics" DOWN
+RIGHT*2
+@cursorto:mark "Hide in Shadows" DOWN
+RIGHT*2
+@cursorto:mark "Move Silently" DOWN
+RIGHT*2
+@cursorto:mark "Ride" DOWN
+RIGHT*2
+@cursorto:mark "Searching" DOWN
+RIGHT*2
+@cursorto:mark "Animal Empathy" DOWN
+RIGHT*2
+@cursorto:mark "Wilderness Lore" DOWN
+RIGHT*2
+ENTER y
+a
+ESC
+@dump:arrival
+ESC
+@expect "System Menu"
+b
+@dump:saved

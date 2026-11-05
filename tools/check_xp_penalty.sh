@@ -32,14 +32,26 @@
 #   Without this half, deleting the key script's contents would make the check
 #   pass. See tools/check_headless.sh for the same trap in its original form.
 #
-# THE CHARACTER. tools/keys/xp-penalty-crash.keys builds a Wood Elf Rogue 2 /
-# Warrior 1 on seed 7 and then asks for his sheet. Wood elves favour Barbarian,
-# Ranger and Druid (lib/subraces.irh:498). All three ids are non-zero, so an
-# empty slot matches none of them and, without the guard, reaches TCLASS. His
-# third slot is empty. One class is enough to reach it: in the proved-red run
-# below, the build died at the key script's first sheet, while he was still
-# Rogue 1. The second class stays because the sheet half of the assertion
-# looks for it.
+# THE CHARACTER is the fixture wood-elf-rogue-seed7-opt0818, a Wood Elf Rogue 1
+# that the check LOADS (INCURSION_LOAD); tools/keys/wood-elf-rogue-save.keys
+# built it. tools/keys/xp-penalty-crash.keys then levels him to Rogue 2 /
+# Warrior 1 by wizard switch and asks for his sheet. A built character was
+# seed-dependent: the rolled Int set the skill-rank count, and on seeds 202
+# and 303 the fixed spending desynced. Wood elves favour Barbarian, Ranger and
+# Druid (lib/subraces.irh:498). All three ids are non-zero, so an empty slot
+# matches none of them and, without the guard, reaches TCLASS. An orc has only
+# two favoured classes, so it would hide the crash. His third slot is empty.
+# One class is enough to reach it: in the proved-red run below, the build died
+# at the key script's first sheet, while he was still Rogue 1. The second class
+# stays because the sheet half of the assertion looks for it.
+#
+# fact: character (Wood Elf Rogue 1) -- fixture wood-elf-rogue-seed7-opt0818 (INCURSION_LOAD)
+# fact: arrival map -- the same fixture (a save pins the dungeon)
+# fact: settings, including OPT_FAVOURED_CLASS, which would return before the class loop -- tools/fixtures/options-2026-08-18.dat (INCURSION_OPTIONS)
+# fact: Wood Elf has three non-zero favoured classes -- game data lib/subraces.irh:498
+# fact: the level gains to Rogue 2 / Warrior 1 -- wizard switch and sheet [G], no dice
+# fact: crash signal -- exit status 139
+# fact: matched text "Rogue 2", "Warrior 1" -- fixed game strings
 #
 # PROVED RED on 2026-09-13 (bd inc-jnnp), on builds differing only in the
 # guard at the top of the class loop in Character::XPPenalty,
@@ -67,6 +79,7 @@ cd "$ROOT"
 
 SEED=7
 KEYS=tools/keys/xp-penalty-crash.keys
+FIXTURE=tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.sav
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -76,6 +89,12 @@ KEYS=tools/keys/xp-penalty-crash.keys
     echo "FAIL: $KEYS is missing, so nothing can be measured."
     exit 1
 }
+
+[ -f "$FIXTURE" ] || {
+    echo "INCONCLUSIVE: the fixture $FIXTURE is missing. Nothing was measured."
+    exit 2
+}
+export INCURSION_LOAD="$FIXTURE"
 
 OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 STATUS=$?

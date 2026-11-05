@@ -1,29 +1,8 @@
-a
-n
-y
-@choose "Elf"
-@choose "Wood Elf"
-@choose "Rogue"
-a
-@choose "Neutral"
-@until "Unspent Skill Ranks" a
-@cursorto:mark "Athletics" DOWN
-RIGHT*2
-@cursorto:mark "Hide in Shadows" DOWN
-RIGHT*2
-@cursorto:mark "Move Silently" DOWN
-RIGHT*2
-@cursorto:mark "Ride" DOWN
-RIGHT*2
-@cursorto:mark "Searching" DOWN
-RIGHT*2
-@cursorto:mark "Animal Empathy" DOWN
-RIGHT*2
-@cursorto:mark "Wilderness Lore" DOWN
-RIGHT*2
-ENTER y
-a
-ESC
+# Wood Elf Rogue 1 on a loaded character, then Rogue 2 / Warrior 1 by wizard level-ups.
+# tools/check_xp_penalty.sh sets INCURSION_LOAD to the fixture wood-elf-rogue-seed7-opt0818,
+# built by tools/keys/wood-elf-rogue-save.keys, so no seed decides his skill ranks.
+# The first key is one real turn: after a load the first menu key does not open without it.
+s
 w
 y
 w
