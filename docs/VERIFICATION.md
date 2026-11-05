@@ -48,7 +48,8 @@ line per fact, under the line that names the defect:
 A fact with no control in the catalog below is a hole. Close the hole first:
 file the missing hook, or choose a different scenario. Do not write the check
 around the hole. A check that reads a fact its header does not list depends on
-the seed.
+the seed. `tools/check_fact_lines.py` refuses a commit, on any branch, that adds
+or changes a `tools/check_*` file whose fact lines break this rule.
 
 **The controls catalog.** Use these to fix a fact. A row marked *none* is a
 known hole.
@@ -61,6 +62,7 @@ known hole.
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
 | Summoned monster's gear | `INCURSION_SUMMON_NO_GEAR=1` (`src/Debug.cpp`). A monster made by the wizard "Monster Summoning" gets no starting Gear (no weapon, armor or items), so its blows do not vary with random enchantment. Other monster creation is untouched. Used by tools/check_feed_upon_pain.sh. |
 | An item | Wizard menu, "Item Acquisition". |
+| Fire damage to the worn armour | Wizard menu, "Burn Worn Armour" (`src/Debug.cpp`). A fixed 10 points of fire, sent with no actor and no random number, so the item's hardness and a quality's immunity count. Used by tools/check_quality_self_immune.sh. |
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
 | Depth | Wizard menu, "Ascend / Descend Depth". |
 | A known spell | Wizard menu, "Learn Any Spell". |
@@ -73,6 +75,7 @@ known hole.
 | Move Silently vs Listen contest (victim hears an attacker) | `INCURSION_SNEAK_FORCE_LISTEN=heard` or `unheard` (`src/Fight.cpp`, `PreStrike`). It applies to every attack that reaches the contest; unset, the dice decide. |
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
 | Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
+| An item an item generator returns (`Item::GenItem`: gifts, monster gear, floor loot) | `INCURSION_GENITEM_FORCE="name[:plus];name[:plus]"` (`src/Encounter.cpp`). Each GenItem call returns the next entry; with the list used up, generation is unchanged. A probe re-arms it with `GenItemForceArm("...")` and counts uses with `GenItemForceConsumed()` (`inc/Item.h`). Used by tools/check_weapon_types.sh. |
 | Percent-chance roll | *none* |
 | Door lock roll (Door::Door, both the closed and the secret lock roll) | `INCURSION_DOOR_LOCK_ROLL=<0..99>` (`src/Feature.cpp`). A door locks when the value is below its depth's lock chance. Used by tools/check_door_lock_rate.sh. |
 | Monster AI choice | *none* |

@@ -2,9 +2,10 @@
 # The negative control for quality-self-immune-quality.keys (bd inc-to9x).
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.sav \
 #       tools/headless.sh tools/keys/quality-self-immune-plain.keys 5
 #
-# Nothing is added to the suit here. Twelve self-cast fireballs must therefore
+# Nothing is added to the suit here. The wizard burn must therefore
 # burn it: its numbers line must read "vs. 0 (leather)", its page must show
 # fewer than 56 of 56 hit points, and its hardness table must still list Fire
 # among the types it resists by 0 rather than among the ones it is immune to.

@@ -82,14 +82,14 @@ generation-0 parent every time, and the generation cap at `src/Creature.cpp:556`
 `:599`, before the child is placed at `:604`.
 
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
-(`src/Feature.cpp:1372`) calls `PlaceAt` (`:1646`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:240`, `:330`) and
+(`src/Feature.cpp:1385`) calls `PlaceAt` (`:1659`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:240`, `:330`) and
 calls `TerrainEffects` (`:393`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:475`;
 `src/Move.cpp:1585`, inside `Creature::TerrainEffects` at `src/Move.cpp:1446`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
-call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1392`), bounded at
-`:1539`; `static Creature* Displace[64]` (`src/Display.cpp:456`) still violates it. *Fix:* the re-entry was not the cause. The
+call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1405`), bounded at
+`:1552`; `static Creature* Displace[64]` (`src/Display.cpp:456`) still violates it. *Fix:* the re-entry was not the cause. The
 down path read `RES(0)` whenever `BELOW_DUNGEON` is unset, which is every dungeon in `lib/`; the zero check at
-`src/Feature.cpp:1484` stops it.
+`src/Feature.cpp:1497` stops it.
 
 **3. Wild resource id crashes `Game::Get` inside `Magic::Blast`. Fixed (inc-upw.16).** Handlers get ids from three unvalidated
 places: the `eID` a caller put in the frame (`src/Event.cpp:631`), script assignment `pe->eID = val` (`lib/dispatch.h:3540`), and

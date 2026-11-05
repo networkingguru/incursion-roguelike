@@ -33,6 +33,17 @@
 # because no non-evil class kit carries one; see tools/keys/yuse-poison-vial.keys
 # for the walk and why check_yuse_activate.sh's acquisition step is not reused.
 #
+# The character is LOADED, not made: chargen rolls attributes and a kit that
+# differ by seed (bd inc-b4l3g.41).
+#
+# fact: character and kit (loincloth, orcish longspear) -- fixture orc-barbarian-seed1-gate (INCURSION_LOAD)
+# fact: arrival map -- the same fixture (a save pins the dungeon)
+# fact: settings -- tools/gates/Options.Dat (INCURSION_OPTIONS)
+# fact: monster actions and their messages -- wizard switch Freeze Monsters
+# fact: Pour and Apply handler outcomes -- lib/mundane.irh handlers roll no dice
+# fact: wizard Item Acquisition category walk and item list -- game data order (ItemGlyphs, src/Tables.cpp), not the seed
+# fact: matched text -- fixed game strings
+#
 # Usage: tools/check_yuse_no_effect.sh     (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
 
@@ -41,6 +52,13 @@ cd "$ROOT"
 
 SEED=1
 fail=0
+
+FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-gate.sav
+[ -f "$FIXTURE" ] || {
+    echo "INCONCLUSIVE: character fixture missing: $FIXTURE"
+    exit 2
+}
+export INCURSION_LOAD="$FIXTURE"
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

@@ -6,8 +6,12 @@ y
 @choose "Athletics"
 @choose "Bluff"
 @choose "Warrior"
-a
-a
+p       # Abort to Point Buy; fixed scores, no seed (docs/VERIFICATION.md)
+        # STR 14, DEX 16, CON 18, INT 18, WIS 12, CHA 16, LUC 17
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER
+y       # Are these your final stats? -- yes
+@choose "Neutral"
 @while "Choose a feat" a
 @choose "long sword"
 @expect "Unspent Skill Ranks"
@@ -43,6 +47,16 @@ ENTER y
 @while "wish to worship" y
 @while "personality archetype" a
 ESC*3
+# Freeze Monsters, so no wanderer interrupts the three search turns.
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
 s*3
 d
 @expect "Race   Human"

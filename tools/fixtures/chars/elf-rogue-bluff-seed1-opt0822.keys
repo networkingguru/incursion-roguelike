@@ -1,0 +1,46 @@
+# Build the elf rogue fixture elf-rogue-bluff-seed1-opt0822 and save it in the dungeon.
+# tools/check_align_treachery_play.sh loads it. Skill ranks are spent so that Bluff
+# outranks Diplomacy and Intimidate does not (Creature::Request offers "Use Bluff?" only then).
+# Ends with Save and Continue, never @quit; see tools/keys/lizardfolk-monk-save.keys.
+
+a
+n
+y
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Rogue"
+a
+@choose "Neutral"
+a
+a
+
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Listen" DOWN
+RIGHT*3
+@cursorto:mark "Lockpicking" DOWN
+RIGHT*3
+@cursorto:mark "Move Silently" DOWN
+RIGHT*3
+@cursorto:mark "Perform" DOWN
+RIGHT*3
+@cursorto:mark "Pick Pockets" DOWN
+RIGHT*3
+@cursorto:mark "Poison Use" DOWN
+RIGHT*3
+@cursorto:mark "Ride" DOWN
+RIGHT*3
+@cursorto:mark "Spot" DOWN
+RIGHT*3
+ENTER y
+
+y
+a
+
+.*2
+@dump:arrival
+ESC
+@expect "System Menu"
+b
+@dump:saved

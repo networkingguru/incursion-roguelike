@@ -8,8 +8,22 @@
 # printing. Player::YuseMenu threw the event and read nothing back, so the
 # player saw no line at all. Two dumps pin the run: pour-target proves the
 # target prompt was reached, after-pour is the screen the check reads.
+#
+# The character is LOADED (INCURSION_LOAD, set by the check): the saved orc
+# barbarian with a loincloth and an orcish longspear. The wizard switch Freeze
+# Monsters then stops monsters from acting, so no monster message can reach
+# the screen.
 
-@include chargen.keys
+s                       # one real turn; menus do not open on the first key after a load (observed)
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
 
 y
 @choose "Pour"

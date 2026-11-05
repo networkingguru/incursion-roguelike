@@ -1,71 +1,44 @@
 # The character and the suit both arms of the quality-immunity check share.
 # Included by quality-self-immune-plain.keys and quality-self-immune-quality.keys.
-# Read by tools/check_quality_self_immune.sh (bd inc-to9x).
+# Read by tools/check_quality_self_immune.sh (bd inc-to9x, inc-aoi4i).
 #
-# WHY THE DAMAGE MUST COME FROM A MONSTER. Only one route brings an elemental
-# damage type to a WORN suit: the equipment block in Magic::Blast
-# (src/Effects.cpp:378-403), which damages one carried item when a blast that
-# ALLOWED a save was not saved against. Three conditions gate it, and the third
-# is why no self-inflicted blast can be used:
-#   - EF_PARTIAL on the effect, or Magic::Blast never rolls a save and
-#     save_type stays NOSAVE. The "Breath Weapon" resource (lib/main.irc:193)
-#     carries `sval: REF partial`, which is that flag.
-#   - the save must FAIL, because e.Resist is what the block tests.
-#   - the blast's actor must not be the item's owner. src/Item.cpp:1485-1488 reads
-#     "If you are attacking your own items, ignore their hardness" and sets
-#     hard = 0, which erases the -1 immunity sentinel along with every other
-#     hardness. ThrowDmg clears isTrap and eID on the way in, so for the
-#     equipment block that test is just EActor == owner: a character who
-#     fireballs himself, or steps on his own trap, measures nothing. Both were
-#     tried and both showed "vs. 0 (leather)" on a suit whose own page said it
-#     was immune.
+# THE CHARACTER is the frozen fixture orc-mage-seed5-opt0822, loaded by the
+# check script (INCURSION_LOAD), not generated in the run: a generated
+# character's Charisma and Decipher Script vary with the seed.
 #
-# The wearer must also have NO resistance to the damage type. Creature::Damage
-# sets e.Resist for ANY non-weapon damage the victim resists at all
-# (src/Fight.cpp:6292 and :6318), so one point of fire resistance makes the
-# block skip the wearer's gear entirely. That is why the suit stays +0 while it
-# burns: the quality's EA_GRANT is PLUS_3PER1 of the item's plus, so at +0 it
-# gives the wearer nothing and the item half stays measurable. Arm B buys the
-# plus back with two scrolls AFTER the burning, and measures the wearer half
-# there.
-#
-# WHY A MAGE AT LEVEL FIVE. Nothing here casts a spell; the four levels are hit
-# points and nothing else. Three hell hounds bite and breathe at him for a
-# hundred turns, and a level-one character spends that whole time in the Cheat
-# Death prompt. His Reflex save stays poor, which is what the measurement
-# wants: a MADE save sets e.Resist, and the equipment block runs only when
-# e.Resist is false.
+# WHY THE BURN IS A WIZARD COMMAND. A player-driven blast reaches worn gear only
+# through the equipment block in Magic::Blast (src/Effects.cpp:395-421), whose
+# save and coin tosses have no control. The wizard command "Burn Worn Armour"
+# (src/Debug.cpp, inc-aoi4i) sends a fixed 10 points of fire straight to the
+# worn suit, with no actor and no random number. It replaces the three hell
+# hounds this script used to summon, whose breath no control reaches.
 #
 # WHY A PLAIN LEATHER SUIT. MaterialHardness gives MAT_LEATHER a fire hardness
-# of 0 (src/Item.cpp:1258), so every roll that reaches it scratches it, and
-# Item::Damage names the material in its own numbers line -- "vs. 0 (leather)"
-# against "vs. Immune (leather)" is the whole measurement.
+# of 0 (src/Item.cpp:1258), so every point of fire reaches it, and Item::Damage
+# names the material in its own numbers line -- "vs. 0 (leather)" against
+# "vs. Immune (leather)" is the whole measurement. A plain suit from the
+# acquisition menu is made by Item::Create alone (src/Term.cpp:3287): no
+# MakeMagical, so no random curse, and no plus.
+#
+# WHY LEVEL FIVE. Enchant Armour needs the item's level <= the reader's level
+# plus Charisma modifier, and the mage starts at level one. 'd' opens the
+# character screen and 'G' gains a level; Free Advancement (wizard switch 3)
+# makes it free.
 
-@include chargen-mage.keys
-
-# chargen-mage.keys stops on the arrival room description. Dismiss it, or the
-# [w] below is eaten by the description.
-ESC
+@until "Things in View" ESC
 
 # Wizard switches, counted from the top of the list in src/Tables.cpp:2679:
-#   1 Cheat Death, 3 Free Advancement, 5 Always Rest Safely.
-# Cheat Death is not a convenience: an unanswered death prompt spends every key
-# after it. Always Rest Safely stops new monsters being generated while the
-# character stands still, which is what keeps the room to the three summoned
-# hounds for most of the hundred turns. Freeze Monsters is NOT set and must not be: a breath is
-# the hound's own turn, not an answer to a blow.
+#   3 Free Advancement.
 w
 y
 @choose "Wizard Mode Switches"
 SPACE
 DOWN*2
 SPACE
-DOWN*2
-SPACE
 ESC
 @until "Things in View" ESC
 
-# Four free levels, for hit points. 'd' opens the character screen and 'G'
+# Four free levels. 'd' opens the character screen and 'G'
 # gains a level; SPACE leaves it.
 d
 G
@@ -105,13 +78,6 @@ ENTER
 j
 SPACE
 @while "two-handed" y
-# The mage's armour slot was empty, so the swap put nothing in the air. Empty
-# the weapon hand instead and stow the knife: with SL_WEAPON empty, the
-# equipment block reaches the armour on one coin toss rather than two
-# (src/Effects.cpp:384-387).
-b
-SPACE
-s
 @until "Things in View" ESC
 
 # An unidentified item's page hides its hit points, and the hit points are half

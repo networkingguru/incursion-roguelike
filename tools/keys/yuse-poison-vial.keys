@@ -2,11 +2,13 @@
 # and returns NOTHING; the y-menu fallback must NOT add a second line. Read by
 # tools/check_yuse_no_effect.sh, bd inc-k8uw.
 #
-# The orc barbarian's kit holds no vial, so the vial is made in wizard mode.
-# Neither chargen nor the standard class kits give a small glass vial to a
+# The character is LOADED (INCURSION_LOAD, set by the check): the saved orc
+# barbarian. The wizard switch Freeze Monsters stops monsters from acting.
+# The saved kit holds no vial, so the vial is made in wizard mode.
+# Neither the saved kit nor the standard class kits give a small glass vial to a
 # non-evil character (lib/classes.irh gives one only to an EVIL actor), so the
-# wizard route is used: [w] enters wizard mode, [y] confirms the first time and
-# opens the menu, "Item Acquisition" opens the browser. Item Acquisition does
+# wizard route is used: [w] enters wizard mode (the freeze step already
+# confirmed it, so no [y] here) and opens the menu, "Item Acquisition" opens the browser. Item Acquisition does
 # not currently work through tools/check_yuse_activate.sh because its scripted
 # @until target name is stale, but the browser itself works; see that check's
 # header for the general shape.
@@ -30,11 +32,19 @@
 # printed a second line, "The loincloth cannot be applied."; after the guard
 # only the handler's line is on the screen.
 
-@include chargen.keys
+s                       # one real turn; menus do not open on the first key after a load (observed)
+w
+y
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
 
 # --- acquire a small glass vial --------------------------------------------
 w
-y
 @choose "Item Acquisition"
 RIGHT*35
 @until "Small glass vial" DOWN
