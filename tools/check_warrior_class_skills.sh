@@ -1,6 +1,12 @@
 #!/bin/bash
 # gate: live
 # inc-k2ws: the Warrior class alone must allow ranks in both named skills.
+# fact: race and class -- chosen by name in the keys (Human, Warrior)
+# fact: attribute scores -- Point Buy, fixed scores bought in the keys
+# fact: skill-rank budget -- follows from INT bought by Point Buy
+# fact: starting kit -- chosen by name ("long sword")
+# fact: map events during the played turns -- wizard Freeze Monsters
+# fact: sheet text read -- only the rank count of the Appraise and Diplomacy lines
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -11,7 +17,7 @@ cd "$ROOT"
 mkdir -p "$ROOT/logs/runs"
 RUN="$(mktemp -d "$ROOT/logs/runs/warrior-class-skills-XXXXXX")" || exit 1
 INCURSION_BIN=./incursion-headless INCURSION_LOAD= INCURSION_LAUNCHER= \
-INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat INCURSION_RUN_DIR="$RUN" \
+INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat INCURSION_RUN_DIR="$RUN" \
     tools/headless.sh tools/keys/warrior-class-skills.keys 1 >"$RUN/headless.log" 2>&1
 rc=$?
 echo "run: $RUN"
