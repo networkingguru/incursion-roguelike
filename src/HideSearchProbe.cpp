@@ -136,6 +136,9 @@ void HideSearchProbe(Player *pl) {
         pl->Options[OPT_AUTOMORE] = autoMore; theGame->PlayMode = wasInPlay; return;
     }
     hid->GainPermStati(HIDING, NULL, SS_CLAS, HI_SHADOWS, 1);
+    /* inc-b4l3g.7: it gets no turn before the player's search key, so it cannot
+       break its own hiding (seed-dependent). */
+    hid->Timeout = 10000;
     HideStarted(hid, false);
     if (!HideCanWatch(pl, hid)) {
         Error("HIDE_SEARCH INCONCLUSIVE player cannot watch the hidden monster");

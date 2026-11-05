@@ -78,6 +78,7 @@ known hole.
 | An item an item generator returns (`Item::GenItem`: gifts, monster gear, floor loot) | `INCURSION_GENITEM_FORCE="name[:plus];name[:plus]"` (`src/Encounter.cpp`). Each GenItem call returns the next entry; with the list used up, generation is unchanged. A probe re-arms it with `GenItemForceArm("...")` and counts uses with `GenItemForceConsumed()` (`inc/Item.h`). Used by tools/check_weapon_types.sh. |
 | Percent-chance roll | *none* |
 | Door lock roll (Door::Door, both the closed and the secret lock roll) | `INCURSION_DOOR_LOCK_ROLL=<0..99>` (`src/Feature.cpp`). A door locks when the value is below its depth's lock chance. Used by tools/check_door_lock_rate.sh. |
+| Lost-sight search roll (Monster::ChooseAction, one turn in three) | `INCURSION_LOSTSIGHT_SEARCH_ROLL=<0..2>` (`src/Monster.cpp`). The value replaces `random(3)`; 0 makes a monster that lost sight of its target search. Unset or any other value leaves the roll unchanged. Used by tools/check_hide_search.sh. |
 | Monster AI choice | *none* |
 | A save for one creature only | *none* |
 | Text the seed decides | Do not assert on it. Read the name from the run, or fix its source with a fixture. |
