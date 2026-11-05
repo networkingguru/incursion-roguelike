@@ -1187,13 +1187,11 @@ EvReturn Creature::WAttack(EventInfo &e)
     if (e.EVictim->HasStati(ILLUSION))
       e.vicIllusion = true;
 
-    if (HasStati(GRABBED) || HasStati(GRAPPLED) || 
-          HasStati(GRAPPLING) || HasStati(ENGULFED)) {
-      /* ww: from the SRD: when you are grabbed or grappling, you may
-       * only use natural attacks or a "light" weapon. For humans
-       * this includes knives and whatnot which are SZ_TINY. */
-      if (EInSlot(SL_WEAPON)->isType(T_WEAPON) && 
-          !((Weapon *)EInSlot(SL_WEAPON))->useInGrapple(e.EActor)) {
+    /* ww: from the SRD: when you are grabbed or grappling, you may
+     * only use natural attacks or a "light" weapon. For humans
+     * this includes knives and whatnot which are SZ_TINY. */
+    if (HoldRefusesMelee(EInSlot(SL_WEAPON))) {
+      {
         s = Format("Your weapon is too large to use while %s! Brawl?",
               HasStati(ENGULFED) ? ( GetStatiVal(ENGULFED) == EG_ENGULF ?
                 "engulfed" : "swallowed" ) : "grappled");
@@ -1218,19 +1216,18 @@ EvReturn Creature::WAttack(EventInfo &e)
       return ABORT; 
 
     /* Paranoia */
-    if (isBeside(e.ETarget)) {
-      if (e.EActor->StateFlags & MS_REACH_ONLY && e.ETarget->isCreature()) 
-          {
-            IPrint("You can't strike something that close with a reach weapon.");
-            return ABORT;
-          }
-    } else if (!isBeside(e.ETarget,1)) {
-      IPrint("You can't strike something *that* far away.");
-      return ABORT;
-    } else if (!(e.EActor->StateFlags & MS_HAS_REACH)) {
-      IPrint("You can't strike something that far away.");
-      return ABORT;
-    }
+    switch (ReachRefusal(e.ETarget, (e.EActor->StateFlags & MS_HAS_REACH) != 0,
+                         (e.EActor->StateFlags & MS_REACH_ONLY) != 0)) {
+      case RR_TOO_CLOSE:
+        IPrint("You can't strike something that close with a reach weapon.");
+        return ABORT;
+      case RR_FAR:
+        IPrint("You can't strike something *that* far away.");
+        return ABORT;
+      case RR_NO_REACH:
+        IPrint("You can't strike something that far away.");
+        return ABORT;
+      }
 
     if (!ConfirmDequAttack(e,EInSlot(SL_WEAPON)))
       return ABORT;
@@ -1482,8 +1479,7 @@ EvReturn Creature::RAttack(EventInfo &e)
   } 
 
   /* You *CAN* fire a crossbow while swallowed or engulfed. */
-  if (e.EActor->HasStati(GRAPPLED) || e.EActor->HasStati(GRABBED)
-      || (e.EActor->HasStati(ENGULFED) && (!e.EItem || !e.EItem->HasIFlag(WT_CROSSBOW)))) {
+  if (e.EActor->FireHoldRefusal(e.EItem) == 1) {
     e.EActor->IPrint("You can't <Str> while you're <Str>!",
         e.EItem ? "shoot" : "throw things",
         HasStati(ENGULFED) ? ( GetStatiVal(ENGULFED) == EG_ENGULF ?
@@ -1491,7 +1487,7 @@ EvReturn Creature::RAttack(EventInfo &e)
     return ABORT;
   }
 
-  if (e.EActor->HasStati(GRAPPLING)) {
+  if (e.EActor->FireHoldRefusal(e.EItem) == 2) {
     e.EActor->IPrint("You can't <Str> while you're grappling!",
         e.EItem ? "shoot" : "throw things");
     return ABORT;
@@ -11396,4 +11392,59 @@ SkipMainMessage:
 
     Silence = saveSil;
     return DONE;
+}
+
+/* inc-h5aql: the attack path's refusals as functions, so Character::Exchange
+   asks the same questions about a candidate weapon. */
+
+/* Reach that a creature has while wielding wep (NULL: bare hands). */
+void Creature::WeaponReach(Item *wep, bool &hasReach, bool &reachOnly) {
+    hasReach = reachOnly = false;
+    if (wep && wep->HasIFlag(WT_REACH)) {
+        hasReach = true;
+        reachOnly = wep->isReachOnly();
+    } else if (InherentCreatureReach())
+        hasReach = true;
+}
+
+/* true: grabbed, grappling or engulfed, and wep is too large to swing. */
+bool Creature::HoldRefusesMelee(Item *wep) {
+    if (!(HasStati(GRABBED) || HasStati(GRAPPLED) ||
+          HasStati(GRAPPLING) || HasStati(ENGULFED)))
+        return false;
+    return wep && wep->isType(T_WEAPON) &&
+           !((Weapon *)wep)->useInGrapple(this);
+}
+
+/* 0: may fire wep (NULL: throw); 1: refused grappled, grabbed or engulfed;
+   2: refused while grappling. */
+int Creature::FireHoldRefusal(Item *wep) {
+    if (HasStati(GRAPPLED) || HasStati(GRABBED) ||
+        (HasStati(ENGULFED) && (!wep || !wep->HasIFlag(WT_CROSSBOW))))
+        return 1;
+    if (HasStati(GRAPPLING))
+        return 2;
+    return 0;
+}
+
+int Creature::ReachRefusal(Thing *t, bool hasReach, bool reachOnly) {
+    if (isBeside(t)) {
+        if (reachOnly && t->isCreature())
+            return RR_TOO_CLOSE;
+    } else if (!isBeside(t, 1))
+        return RR_FAR;
+    else if (!hasReach)
+        return RR_NO_REACH;
+    return RR_OK;
+}
+
+/* Could this creature attack t from where it stands, holding wep? */
+bool Creature::CanStrikeWith(Item *wep, Thing *t) {
+    bool hasReach, reachOnly;
+    if (wep && wep->isType(T_BOW))
+        return FireHoldRefusal(wep) == 0;
+    if (HoldRefusesMelee(wep))
+        return false;
+    WeaponReach(wep, hasReach, reachOnly);
+    return ReachRefusal(t, hasReach, reachOnly) == RR_OK;
 }

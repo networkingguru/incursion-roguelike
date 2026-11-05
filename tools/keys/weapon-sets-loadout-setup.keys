@@ -1,0 +1,11 @@
+# inc-h5aql: R bow (shoulder), X longspear (shoulder), M long sword (belt),
+# S orcish dagger (belt). Hands empty.
+@until "SPACE:Swap" i
+b SPACE
+t SPACE
+a S
+a SPACE
+u SPACE
+e X
+@dump:setup-done
+@until "Things in View" ESC

@@ -1,0 +1,12 @@
+# inc-h5aql LOADOUT: a hostile goblin one square east; X is reach-only, so the
+# cycle is R, M (sword), S (dagger).
+@include weapon-sets-loadout-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail6.keys

@@ -1,0 +1,29 @@
+# inc-h5aql AC7(c): the player grapples a goblin (same setup as weapon-sets-grapple.keys),
+# then forces the reach set from the C menu. The '-' key refuses a reach weapon
+# while grappling; the forced choice must not.
+@until "SPACE:Swap" i
+0 1 SPACE
+t SPACE
+t S
+e X
+a s
+b s
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+c
+@choose "Grapple"
+RIGHT
+@dump:grapple-target
+c
+@choose "Switch Weapon Sets"
+@choose "Reach set"
+@dump:forced-message
+@until "SPACE:Swap" i
+@dump:forced-after
+@quit

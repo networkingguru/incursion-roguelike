@@ -1,0 +1,7 @@
+# inc-h5aql AC10: a character loaded from the configured save saves again.
+@until "Things in View" ESC
+ESC
+b
+.*2
+@dump:reload-saved
+@quit

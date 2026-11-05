@@ -322,6 +322,12 @@ Item* Character::InSlot(int8 sl, bool eff) {
     return sl > SL_LAST ? NULL : oItem(Inv[sl]);
 }
 
+/* inc-h5aql: Wield's two-hand test, shared with the weapon-set picker. */
+bool Character::NeedsBothHands(Item *it) {
+    return (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID) && !HasFeat(FT_MONKEY_GRIP)) ||
+           (it->Size(this) + TITEM(it->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : HasFeat(FT_MONKEY_GRIP))));
+}
+
 EvReturn Character::Wield(EventInfo &e) {
     int8 paramslot = (int8)e.EParam;
     if (!TMON(mID)->HasSlot(paramslot)) {
@@ -397,8 +403,7 @@ EvReturn Character::Wield(EventInfo &e) {
                design choice, not an upstream defect, so it carries no
                upstream: mark. Values.cpp grants such a grip the two-handed
                1.5x Strength bonus at a -2 to hit. */
-            if ((TITEM(e.EItem->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,e.EItem->iID) && !HasFeat(FT_MONKEY_GRIP)) ||
-                (e.EItem->Size(this) + TITEM(e.EItem->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (e.EItem->isType(T_SHIELD) ? 0 : HasFeat(FT_MONKEY_GRIP))))) {
+            if (NeedsBothHands(e.EItem)) {
                 if (Inv[SL_WEAPON] || Inv[SL_READY]) {
                     IPrint("You grip the <Obj> experimentally, and find you would need both hands free to wield it well.", e.EItem);
                     return ABORT;
@@ -490,6 +495,18 @@ EvReturn Character::TakeOff(EventInfo &e) {
                       e.EItem->MakeKnown(KN_CURSE);
                       return ABORT;
                   }
+      }
+
+      /* upstream: taking a held weapon off provokes an attack of opportunity
+         (SRD 3.5, sheathing); no take-off path called ProvokeAoO. Plain game
+         logic, so Win32 misbehaves the same. Observed (tools/check_weapon_sets.sh
+         AC8); inc-h5aql; not sent. Exchange provokes once itself (isExchange). */
+      if (!isExchange && m && !HasFeat(FT_FASTER_THAN_THE_EYE) &&
+          (e.EParam == SL_WEAPON || e.EParam == SL_READY) &&
+          (e.EItem->isType(T_WEAPON) || e.EItem->isType(T_BOW))) {
+          ProvokeAoO();
+          if (isDead())
+              return DONE;
       }
 
       for(i=0;i!=SL_LAST;i++)
@@ -954,110 +971,160 @@ Item* Character::GetInv(bool first) {
     return it2;
 }
 
-void Character::Exchange()
+/* inc-h5aql: where Exchange puts a weapon away: a belt slot first, then a
+   shoulder, by Item::allowedSlot. occ is the slot table to judge against. */
+static int8 StowSlotFor(Character *c, Item *it, hObj *occ) {
+    static const int8 order[] = { SL_BELT1, SL_BELT2, SL_BELT3, SL_BELT4,
+                                  SL_BELT5, SL_LSHOULDER, SL_RSHOULDER };
+    for (size_t i = 0; i != sizeof(order) / sizeof(order[0]); i++)
+        if (!occ[order[i]] && it->allowedSlot(order[i], c))
+            return order[i];
+    return -1;
+}
+
+/* inc-h5aql: the four sets in the fixed order R, X, M, S (WSET_*). */
+void Character::WeaponSetRefs(hObj **mainp, hObj **offp)
   {
-    Item *new1, *new2, *old1, *old2;
-    int8 si, sl1, sl2;
+    mainp[WSET_R] = &defRanged; mainp[WSET_X] = &defReach;
+    mainp[WSET_M] = &defMelee;  mainp[WSET_S] = &defShort;
+    offp[WSET_R] = NULL;        offp[WSET_X] = &defReachOff;
+    offp[WSET_M] = &defOffhand; offp[WSET_S] = &defShortOff;
+  }
 
-    if (!theRegistry->Exists(defMelee))   defMelee = 0;
-    if (!theRegistry->Exists(defOffhand)) defOffhand = 0;
-    if (!theRegistry->Exists(defRanged))  defRanged = 0;
+/* Clears stale handles; fills configured[] and cur (the set whose main item
+   is in SL_WEAPON, or -1); returns how many sets are configured. A martial
+   artist or unarmed striker with no melee weapon set has bare hands as the
+   M main item, and that set counts. */
+int Character::WeaponSets(bool *configured, int &cur)
+  {
+    hObj *setMain[WSET_COUNT], *setOff[WSET_COUNT];
+    int k, ns = 0;
+    bool bareM;
+    WeaponSetRefs(setMain, setOff);
+    for (k = 0; k != WSET_COUNT; k++)
+      if (!theRegistry->Exists(*setMain[k])) *setMain[k] = 0;
+    for (k = 0; k != WSET_COUNT; k++)
+      if (setOff[k] && !theRegistry->Exists(*setOff[k])) *setOff[k] = 0;
     if (!theRegistry->Exists(defAmmo))    defAmmo = 0;
+    /* Bare hands count as the M set only when another set (R, X or S) exists. */
+    bareM = !defMelee && (HasFeat(FT_MARTIAL_MASTERY) || HasAbility(CA_UNARMED_STRIKE)) &&
+            (*setMain[WSET_R] || *setMain[WSET_X] || *setMain[WSET_S]);
+    cur = -1;
+    for (k = 0; k != WSET_COUNT; k++) {
+      configured[k] = *setMain[k] != 0 || (k == WSET_M && bareM);
+      if (configured[k]) ns++;
+      if (configured[k] && Inv[SL_WEAPON] == *setMain[k]) cur = k;
+      }
+    return ns;
+  }
 
-    new1 = new2 = old1 = old2 = NULL; sl1 = sl2 = 0;
-    isExchange = true;
+/* A set is usable when its main item (and off-hand item) sit in an
+   equipment slot. */
+bool Character::WeaponSetUsable(int k)
+  {
+    hObj *setMain[WSET_COUNT], *setOff[WSET_COUNT];
+    int8 si;
+    bool ok = false;
+    WeaponSetRefs(setMain, setOff);
+    if (!*setMain[k]) ok = true;
+    else for (si = 0; si != SL_LAST; si++)
+      if (Inv[si] == *setMain[k]) { ok = true; break; }
+    if (ok && setOff[k] && *setOff[k]) {
+      ok = false;
+      for (si = 0; si != SL_LAST; si++)
+        if (Inv[si] == *setOff[k]) { ok = true; break; }
+      }
+    return ok;
+  }
 
-    if (defRanged == 0 && defMelee == 0)
-      { IPrint("You need to set your default melee and ranged weapons "
-               "before you can use the swap weapons command effectively. "
-               "Type '?' on the inventory window for more information.");
-        goto XAbortNoItem; }
-        
+/* True (after the message) when a cursed weapon or shield cannot be let go. */
+bool Character::CursedGrip()
+  {
     if (Inv[SL_WEAPON] && oItem(Inv[SL_WEAPON])->isCursed())
       {
         IPrint("You try to change weapons, but find that you cannot "
                "release your grip on the <Obj>!", oItem(Inv[SL_WEAPON]));
         oItem(Inv[SL_WEAPON])->MakeKnown(KN_CURSE);
-        return;
+        return true;
       }
     if (Inv[SL_READY] && oItem(Inv[SL_READY])->isCursed())
       {
         IPrint("You try to change weapons, but find that you cannot "
                "release your grip on the <Obj>!", oItem(Inv[SL_READY]));
         oItem(Inv[SL_READY])->MakeKnown(KN_CURSE);
-        return;
+        return true;
       }
-      
-    if (Inv[SL_WEAPON] == defMelee) {
-      /* Try to switch to ranged */
-      if (defRanged) {  
-        for (si=0;si!=SL_LAST;si++)
-          if (Inv[si] == defRanged)
-            { sl1 = si; goto foundRanged; }
-        IPrint("Your default ranged weapon isn't easily accessible right now.");
-        goto XAbortNoItem;
+    return false;
+  }
 
-        foundRanged:
-        new1 = oItem(defRanged);
-        new2 = NULL; sl2 = 0;
-        old1 = InSlot(SL_WEAPON);
-        if (Inv[SL_READY] && (new1->HasIFlag(WT_TWO_HANDED) + new1->Size() > Attr[A_SIZ]))
-          old2 = InSlot(SL_READY);
-        else
-          old2 = 0;
-        }
-      else {
-        IPrint("You have no default ranged weapon selected.");
-        goto XAbortNoItem;
-        }
+/* Wield set `pick` (a WSET_* index). The `-` key calls it after it has picked
+   a set; the C menu calls it for the set the player chose. It has no range
+   test and no grapple test. */
+void Character::ChangeToSet(int pick)
+  {
+    Item *new1, *new2, *old1, *old2;
+    int8 si, sl1, sl2;
+    hObj *setMain[WSET_COUNT], *setOff[WSET_COUNT];
+    bool configured[WSET_COUNT];
+    int cur, k;
+
+    new1 = new2 = old1 = old2 = NULL; sl1 = sl2 = 0;
+    isExchange = true;
+    WeaponSetRefs(setMain, setOff);
+    WeaponSets(configured, cur);
+    if (pick < 0 || pick >= WSET_COUNT || !configured[pick] || pick == cur)
+      goto XAbortNoItem;
+    if (CursedGrip())
+      /* upstream: Exchange returned with isExchange still true (cursed
+         grip, death mid-swap), so later Wield calls skipped their
+         two-handed prompt. Plain control flow, no platform dependence,
+         so Win32 misbehaves the same. Traced; inc-h5aql; not sent. */
+      goto XAbortNoItem;
+    if (!WeaponSetUsable(pick))
+      { IPrint("That set's weapon is not in your hand, shoulder or belt slots.");
+        goto XAbortNoItem; }
+
+    new1 = oItem(*setMain[pick]);
+    new2 = setOff[pick] ? oItem(*setOff[pick]) : NULL;
+    for (si = 0; si != SL_LAST; si++) {
+      if (Inv[si] == *setMain[pick]) sl1 = si;
+      if (new2 && Inv[si] == *setOff[pick]) sl2 = si;
       }
-    else {
-      if (defMelee) {
-        for (si=0;si!=SL_LAST;si++)
-          if (Inv[si] == defMelee)
-            { sl1 = si; goto foundMelee; }
-        IPrint("Your default melee weapon isn't easily accessible right now.");
-        goto XAbortNoItem;
+    old1 = InSlot(SL_WEAPON);
+    if (Inv[SL_READY] && ((new1 && NeedsBothHands(new1)) || new2))
+      old2 = InSlot(SL_READY);
+    else
+      old2 = 0;
+    if (old2 == old1) old2 = NULL;
 
-        foundMelee:
-        if (!defOffhand)
-          goto foundBoth;
-        for (si=0;si!=SL_LAST;si++)
-          if (Inv[si] == defOffhand)
-            { sl2 = si; goto foundBoth; }
-        IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbortNoItem;
-
-        foundBoth:
-        new1 = oItem(defMelee);
-        new2 = oItem(defOffhand);
-        old1 = InSlot(SL_WEAPON);
-        if (Inv[SL_READY] && (new1->HasIFlag(WT_TWO_HANDED) + new1->Size() > Attr[A_SIZ] || new2))
-          old2 = InSlot(SL_READY);
-        else
-          old2 = 0;
+    /* Before anything moves, check that each weapon put away has a slot. */
+    {
+      hObj occ[NUM_SLOTS];
+      memcpy(occ, Inv, sizeof(occ));
+      if (new1) occ[sl1] = 0;
+      if (new2) occ[sl2] = 0;
+      Item *away[2] = { old1, old2 };
+      for (k = 0; k != 2; k++)
+        if (away[k]) {
+          if ((si = StowSlotFor(this, away[k], occ)) < 0) {
+            IPrint("You have nowhere to put away the <Obj>.", away[k]);
+            goto XAbortNoItem;
+          }
+          occ[si] = away[k]->myHandle;
         }
-      else if (HasFeat(FT_MARTIAL_MASTERY) || HasAbility(CA_UNARMED_STRIKE)) {
+    }
 
-        if (!defOffhand)
-          goto foundOffOnly;
-        for (si=0;si!=SL_LAST;si++)
-          if (Inv[si] == defOffhand)
-            { sl2 = si; goto foundOffOnly; }
-        IPrint("Your default offhand weapon isn't easily accessible right now.");
-        goto XAbortNoItem;
-
-        foundOffOnly:
-        new1 = NULL;
-        new2 = oItem(defOffhand);
-        old1 = InSlot(SL_WEAPON);
-        old2 = defOffhand ? InSlot(SL_READY) : NULL;
-
-        }
-      else {
-        IPrint("You have no default melee weapon selected.");
-        goto XAbortNoItem;
-        }
+    /* upstream: sheathing a weapon provokes an attack of opportunity (SRD
+       3.5) and drawing one does not; no wield, take-off or Exchange path
+       called ProvokeAoO. Plain game logic, so Win32 misbehaves the same.
+       Observed (tools/check_weapon_sets.sh AC8); inc-h5aql; not sent.
+       Faster Than The Eye provokes none. */
+    if (!HasFeat(FT_FASTER_THAN_THE_EYE) &&
+        ((old1 && (old1->isType(T_WEAPON) || old1->isType(T_BOW))) ||
+         (old2 && (old2->isType(T_WEAPON) || old2->isType(T_BOW))))) {
+      ProvokeAoO();
+      if (isDead())
+        { isExchange = false; return; }
       }
 
     ASSERT(!Inv[SL_INAIR]);
@@ -1080,20 +1147,8 @@ void Character::Exchange()
     /* Find some place to put the first old weapon */
     if (old1) {
 
-      if (!Inv[SL_LSHOULDER] && old1->allowedSlot(SL_LSHOULDER,this))
-        si = SL_LSHOULDER;
-      else if (!Inv[SL_RSHOULDER] && old1->allowedSlot(SL_RSHOULDER,this))
-        si = SL_RSHOULDER;
-      else if (!Inv[SL_BELT1] && old1->allowedSlot(SL_BELT1,this))
-        si = SL_BELT1;
-      else if (!Inv[SL_BELT2] && old1->allowedSlot(SL_BELT2,this))
-        si = SL_BELT2;
-      else if (!Inv[SL_BELT3] && old1->allowedSlot(SL_BELT3,this))
-        si = SL_BELT3;
-      else if (!Inv[SL_BELT4] && old1->allowedSlot(SL_BELT4,this))
-        si = SL_BELT4;
-      else if (!Inv[SL_BELT5] && old1->allowedSlot(SL_BELT5,this))
-        si = SL_BELT5;
+      if ((si = StowSlotFor(this,old1,Inv)) >= 0)
+        ;
       else {
         IPrint("You have no slot open to hold your <Obj>.",old1);
         goto XAbort;
@@ -1111,20 +1166,8 @@ void Character::Exchange()
 
     /* Find some place to put the second old weapon */
     if (old2) {
-      if (!Inv[SL_LSHOULDER] && old2->allowedSlot(SL_LSHOULDER,this))
-        si = SL_LSHOULDER;
-      else if (!Inv[SL_RSHOULDER] && old2->allowedSlot(SL_RSHOULDER,this))
-        si = SL_RSHOULDER;
-      else if (!Inv[SL_BELT1] && old2->allowedSlot(SL_BELT1,this))
-        si = SL_BELT1;
-      else if (!Inv[SL_BELT2] && old2->allowedSlot(SL_BELT2,this))
-        si = SL_BELT2;
-      else if (!Inv[SL_BELT3] && old2->allowedSlot(SL_BELT3,this))
-        si = SL_BELT3;
-      else if (!Inv[SL_BELT4] && old2->allowedSlot(SL_BELT4,this))
-        si = SL_BELT4;
-      else if (!Inv[SL_BELT5] && old2->allowedSlot(SL_BELT5,this))
-        si = SL_BELT5;
+      if ((si = StowSlotFor(this,old2,Inv)) >= 0)
+        ;
       else {
         IPrint("You have no slot open to hold your <Obj>!",old2);
         goto XAbort;
@@ -1145,7 +1188,7 @@ void Character::Exchange()
       if (!Swap(SL_READY))
         goto Abort;
       if (isDead())
-        return;
+        { isExchange = false; return; }
       Inv[SL_WEAPON] = 0;
       if ((Inv[SL_READY] != new2->myHandle) || Inv[SL_INAIR])
         Error("Weapon Exchange wierdness");
@@ -1159,7 +1202,7 @@ void Character::Exchange()
       if (!Swap(SL_WEAPON))
         { Inv[SL_INAIR] = 0; goto Abort; }
       if (isDead())
-        return;
+        { isExchange = false; return; }
       if ((Inv[SL_WEAPON] != new1->myHandle) || Inv[SL_INAIR])
         Error("Weapon Exchange wierdness");
       }
@@ -1207,6 +1250,87 @@ XAbort:
       new1->PlaceAt(m,x,y);
     if (new2)
       new2->PlaceAt(m,x,y);
+    isExchange = false;
+    return;
+}
+
+/* The `-` key: pick the next set by the rules of the weapon-sets spec
+   section 3, then change to it. */
+void Character::Exchange()
+  {
+    hObj *setMain[WSET_COUNT], *setOff[WSET_COUNT];
+    int cur = -1, pick = -1, k, n, ns;
+    bool configured[WSET_COUNT], usable[WSET_COUNT];
+    Creature *target = NULL, *c;
+    bool held = false;
+    const char *why = NULL;
+
+    WeaponSetRefs(setMain, setOff);
+    isExchange = true;
+    ns = WeaponSets(configured, cur);
+
+    if (!ns)
+      { IPrint("You have no weapon sets. Set them up in the Inventory Manager, "
+               "and type '?' there for help.");
+        goto XAbortNoItem; }
+
+    if (CursedGrip())
+      goto XAbortNoItem;
+
+    for (k = 0; k != WSET_COUNT; k++)
+      usable[k] = configured[k] && k != cur && WeaponSetUsable(k);
+
+    /* Rules 3 and 4 of the spec: a hold, or an aware enemy in melee range,
+       limits the sets. */
+    held = HasStati(GRABBED) || HasStati(GRAPPLED) ||
+           HasStati(GRAPPLING) || HasStati(ENGULFED);
+    if (!held && m) {
+      /* Melee range is the reach distance the engine uses for a player. */
+      int extra = (*setMain[WSET_X] || (StateFlags & MS_HAS_REACH)) ? 1 : 0;
+      int best = 99;
+      MapIterate(m,c,n)
+        if (c->isCreature() && c != this && isBeside(c,extra)) {
+          /* What the look command shows: a creature the player perceives
+             and the game labels hostile (Creature::Name). */
+          if (!Perceives(c) || !c->isHostileTo(this)) continue;
+          int d = max(abs(x - c->x), abs(y - c->y));
+          if (d < best) { best = d; target = c; }
+          }
+      }
+
+    for (n = 1; n <= WSET_COUNT; n++) {
+      k = (cur < 0 ? WSET_R - 1 + n : cur + n) % WSET_COUNT;
+      if (k == cur || !configured[k]) continue;
+      if (!usable[k]) { why = "isn't easily accessible right now."; continue; }
+      if (held) {
+        Item *mi = oItem(*setMain[k]);
+        if (mi && (mi->isType(T_BOW) ? FireHoldRefusal(mi) : HoldRefusesMelee(mi)))
+          continue;
+        }
+      else if (target && !CanStrikeWith(oItem(*setMain[k]), target))
+        continue;
+      pick = k;
+      break;
+      }
+
+    if (pick < 0) {
+      if (held)
+        IPrint(HasStati(ENGULFED)
+          ? "None of your other weapon sets can be used while you are engulfed."
+          : "None of your other weapon sets can be used while you are grappled.");
+      else if (target)
+        IPrint("None of your other weapon sets can reach the <Obj>.", target);
+      else if (why)
+        IPrint("That set's weapon is not in your hand, shoulder or belt slots.");
+      else
+        IPrint("You have no other weapon set to change to.");
+      goto XAbortNoItem;
+      }
+
+    ChangeToSet(pick);
+    return;
+
+XAbortNoItem:
     isExchange = false;
     return;
 }

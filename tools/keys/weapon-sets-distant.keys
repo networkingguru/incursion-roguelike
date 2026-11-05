@@ -1,0 +1,12 @@
+# inc-h5aql AC4: a hostile goblin two squares east.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail.keys

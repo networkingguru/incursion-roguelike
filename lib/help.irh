@@ -987,26 +987,28 @@ Text "help::interface"
      being put into that slot and the remainder staying where they are.\n\n
      
      <13>Default Weapons\n
-     __<5>Incursion allows you to choose four weapons as your default weapons:
-     a melee weapon, an offhand weapon (or shield), a ranged weapon (bow, 
-     sling or crossbow) and a missile (arrow, bolt, rock, dagger, etc.) These
-     defaults are used to determine the outcome of the Swap Weapons command,
-     which allows you to toggle between ranged and melee combat easily, and
-     also with the [SHIFT] + [DIR] ranged attack shortcut -- this always uses
-     your default ammo, rather than having you choose a projectile from a
-     menu like the 'f' command.\n
-     __To select a weapon as your default weapon in one of these four categories,
-     first move the inventory cursor over to the slot that currently holds the
-     weapon in question, then type a capital letter representing the category
-     in question: 'M' to set the chosen weapon as your default melee weapon,
-     'R' for the default ranged weapon, 'O' for the offhand weapon, and 'A'
-     for the default ammunition or thrown weapon.\n
-     __If you type the appropriate letter over a weapon that is currently set
-     as the default already, that will blank the default slot in question. This
-     might be useful if you don't want the [SHIFT] + [DIR] command to work (to
-     avoid dangerous typos) or if as a Monk you want to set your default melee
-     weapon to nothing, allowing you to use the Swap Weapons command to toggle
-     between ranged and unarmed combat.\n\n
+     __<5>Incursion lets you set up four weapon sets and a default missile.
+     The sets are ranged (a bow, sling or crossbow), reach (a reach weapon),
+     melee, and short (a weapon small enough to use in a grapple). The reach,
+     melee and short sets can also hold an offhand weapon or shield when the
+     main weapon leaves a hand free. The Swap Weapons command ('-') changes
+     between your sets. The [SHIFT] + [DIR] ranged attack shortcut always uses
+     your default missile (an arrow, bolt, rock, dagger and so on), so you do
+     not choose a projectile from a menu as you do with the 'f' command.\n
+     __To put a weapon in a set, move the inventory cursor to the slot that
+     holds it, then type the capital letter for the set: 'R' for ranged, 'X'
+     for reach, 'M' for melee and 'S' for short. Type 'O' over a weapon or
+     shield to make it an offhand item, and a short menu then asks which set
+     it belongs to. Type 'A' for the default missile or thrown weapon. A
+     weapon belongs to only one set. A set cannot use a weapon in your pack,
+     so keep set weapons in your hand, shoulder or belt slots. Your belt holds
+     a melee weapon up to your own size.\n
+     __Type the same letter again over a weapon already in that set to take it
+     out of the set. Clearing your default missile turns off the [SHIFT] +
+     [DIR] shortcut, which can prevent a dangerous typo. A Monk, or a
+     character with the Martial Mastery feat, who leaves the melee set empty
+     fights bare-handed in that set. Swap Weapons then changes between ranged
+     and unarmed combat.\n\n
 
      <13>THE OPTIONS PANEL {OP}\n
      =================<5>\n
@@ -1319,14 +1321,18 @@ Text "help::commands"
      monsters and allies to act or catch up.\n\n
 
      <15>Swap Weapons ('<13>-<15>')<6>
-     \n__This command allows you to toggle your character between wielding
-     your default ranged weapon and your default melee weapon (along with
-     your default offhand weapon or shield, if any). You can set your
-     default weapons using the Inventory Manager.
-     \n__Note that using the swap weapons command has a lower timecost than
-     performing these actions manually using the Inventory Manager. If you
-     have the feat Quick Draw, it takes you 10 segments to swap weapons;
-     otherwise, it takes 30 segments.\n\n
+     \n__This command changes your weapons to your next weapon set. You have
+     up to four sets: ranged, reach, melee and short. The command takes them
+     in that order and skips any set you have not set up. When an enemy you
+     know of is within reach, it skips any set that cannot hit the nearest
+     such enemy. When you are grappled or engulfed, it skips any set you
+     cannot use in a grapple. Putting away a weapon provokes an attack of
+     opportunity. You set up your weapon sets in the Inventory Manager. To
+     change to one specific set, use Switch Weapon Sets in the combat options
+     menu ('C').
+     \n__Swapping with this command takes less time than doing the same thing
+     in the Inventory Manager. A swap takes 30 segments, or less with a high
+     Dexterity. With the Quick Draw feat, it takes a quarter of that time.\n\n
 
      <15>Fire Ranged Weapon ([SHIFT] + [CURSOR KEY])<6>
      \n__This shortcut for the 'f' command allows you to fire your default

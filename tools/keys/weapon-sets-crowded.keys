@@ -1,0 +1,12 @@
+# inc-h5aql: a swap that cannot stow must change nothing and drop nothing.
+# See weapon-sets-crowded-setup.keys. A hostile goblin stands one square east.
+@include weapon-sets-crowded-setup.keys
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail6.keys

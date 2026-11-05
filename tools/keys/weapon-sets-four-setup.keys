@@ -1,0 +1,15 @@
+# inc-h5aql: four sets, all in equipment slots, hands empty. R bow (R. shoulder),
+# R is the fixture's own bow default. X longspear (L. shoulder), M orcish dagger (belt u), S orcish knife +1 (belt t).
+# The long sword goes to the pack: with a medium character only the two
+# shoulders hold a big weapon, so a big M would leave the cycle no place to
+# stow it.
+@until "SPACE:Swap" i
+b s
+a M
+a SPACE
+u SPACE
+0 1 SPACE
+t SPACE
+t S
+e X
+@dump:setup-done

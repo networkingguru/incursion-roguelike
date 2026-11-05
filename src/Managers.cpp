@@ -1059,43 +1059,91 @@ InventorySwap:
                 UpdateScrollArea(offset = 0);
             break;
         case 'M':
-            changed = true;
-            if (oItem(INV(CurrSlot)))
-                if (oItem(INV(CurrSlot))->isType(T_WEAPON)) {
-                    if (INV(CurrSlot) == p->defMelee)
-                        p->defMelee = 0;
-                    else
-                        p->defMelee = INV(CurrSlot);
-                    if (INV(CurrSlot) == p->defOffhand)
-                        p->defOffhand = 0;
-                    if (INV(CurrSlot) == p->defAmmo)
-                        p->defAmmo = 0;
-                }
-            break;
-        case 'O':
-            changed = true;
-            if (oItem(INV(CurrSlot)))
-                if (oItem(INV(CurrSlot))->isType(T_WEAPON) || oItem(INV(CurrSlot))->isType(T_SHIELD)) {
-                    if (INV(CurrSlot) == p->defOffhand)
-                        p->defOffhand = 0;
-                    else
-                        p->defOffhand = INV(CurrSlot);
-                    if (INV(CurrSlot) == p->defMelee)
-                        p->defMelee = 0;
-                    if (INV(CurrSlot) == p->defAmmo)
-                        p->defAmmo = 0;
-                }
-            break;
         case 'R':
+        case 'X':
+        case 'S': {
+            /* inc-h5aql: make the selected item the main item of one set. */
             changed = true;
-            if (oItem(INV(CurrSlot)))
-                if (oItem(INV(CurrSlot))->isType(T_BOW)) {
-                    if (INV(CurrSlot) == p->defRanged)
-                        p->defRanged = 0;
-                    else
-                        p->defRanged = INV(CurrSlot);
-                }
+            Item *si = oItem(INV(CurrSlot));
+            if (!si)
+                break;
+            hObj sh = INV(CurrSlot);
+            hObj *mainF, *offF;
+            bool fits;
+            if (ch == 'M') {
+                mainF = &p->defMelee; offF = &p->defOffhand;
+                fits = si->isType(T_WEAPON);
+            } else if (ch == 'R') {
+                mainF = &p->defRanged; offF = NULL;
+                fits = si->isType(T_BOW);
+            } else if (ch == 'X') {
+                mainF = &p->defReach; offF = &p->defReachOff;
+                fits = si->isType(T_WEAPON) && si->HasIFlag(WT_REACH);
+            } else {
+                mainF = &p->defShort; offF = &p->defShortOff;
+                fits = si->isType(T_WEAPON) && ((Weapon *)si)->useInGrapple(p);
+            }
+            if (!fits)
+                break;
+            if (*mainF == sh) {
+                *mainF = 0;
+                break;
+            }
+            hObj *all[] = { &p->defMelee, &p->defOffhand, &p->defRanged,
+                            &p->defReach, &p->defReachOff,
+                            &p->defShort, &p->defShortOff };
+            for (size_t k = 0; k != sizeof(all) / sizeof(all[0]); k++)
+                if (*all[k] == sh)
+                    *all[k] = 0;
+            if (ch != 'R' && p->defAmmo == sh)
+                p->defAmmo = 0;
+            *mainF = sh;
+            /* A main item that needs both hands leaves no off-hand item. */
+            if (offF && p->NeedsBothHands(si))
+                *offF = 0;
             break;
+        }
+        case 'O': {
+            /* inc-h5aql: pick which set takes the selected item as off-hand. */
+            changed = true;
+            Item *si = oItem(INV(CurrSlot));
+            if (!si || !(si->isType(T_WEAPON) || si->isType(T_SHIELD)))
+                break;
+            hObj sh = INV(CurrSlot);
+            hObj *mains[3] = { &p->defMelee, &p->defReach, &p->defShort };
+            hObj *offs[3]  = { &p->defOffhand, &p->defReachOff, &p->defShortOff };
+            const char *names[3] = { "Melee set", "Reach set", "Short set" };
+            int nq = 0;
+            for (int k = 0; k != 3; k++) {
+                Item *mi = oItem(*mains[k]);
+                if (!mi || *mains[k] == sh || p->NeedsBothHands(mi))
+                    continue;
+                LOption(names[k], k);
+                nq++;
+            }
+            if (!nq) {
+                p->IPrint("No weapon set can take an offhand item.");
+                break;
+            }
+            int32 pick = LMenu(MENU_ESC | MENU_BORDER, "Offhand item for which set?", WIN_MENUBOX);
+            SetWin(WIN_INVEN);
+            if (pick < 0 || pick > 2)
+                break;
+            if (*offs[pick] == sh) {
+                *offs[pick] = 0;
+                break;
+            }
+            hObj *all[] = { &p->defMelee, &p->defOffhand, &p->defRanged,
+                            &p->defReach, &p->defReachOff,
+                            &p->defShort, &p->defShortOff };
+            for (size_t k = 0; k != sizeof(all) / sizeof(all[0]); k++)
+                if (*all[k] == sh)
+                    *all[k] = 0;
+            if (p->defAmmo == sh)
+                p->defAmmo = 0;
+            *offs[pick] = sh;
+            break;
+        }
         case 'A':
             changed = true;
             if (oItem(INV(CurrSlot)))
@@ -1110,6 +1158,14 @@ InventorySwap:
                         p->defMelee = 0;
                     if (INV(CurrSlot) == p->defOffhand)
                         p->defOffhand = 0;
+                    if (INV(CurrSlot) == p->defReach)
+                        p->defReach = 0;
+                    if (INV(CurrSlot) == p->defReachOff)
+                        p->defReachOff = 0;
+                    if (INV(CurrSlot) == p->defShort)
+                        p->defShort = 0;
+                    if (INV(CurrSlot) == p->defShortOff)
+                        p->defShortOff = 0;
                 }
             break;
         default:

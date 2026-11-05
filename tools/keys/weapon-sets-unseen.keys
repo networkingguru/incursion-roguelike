@@ -1,0 +1,19 @@
+# inc-h5aql AC5: a hostile goblin two squares east, inside the reach distance but
+# behind a Dungeon Wall that the script builds one square east after the summon
+# (the summon prompt refuses an unseen square). The player has no line of sight
+# to it, so Perceives() is false for it.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+w
+@choose "Change terrain type"
+RIGHT ENTER
+@choose "Dungeon Wall"
+@dump:monster-placed
+@include weapon-sets-cycle-tail.keys

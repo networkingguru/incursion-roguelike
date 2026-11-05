@@ -657,12 +657,14 @@ Restart:
         StackBonus(BONUS_ENHANCE,A_SPD_ARCHERY,10);
 
     StateFlags &= ~(MS_HAS_REACH | MS_REACH_ONLY);
-    if (InSlot(SL_WEAPON) && InSlot(SL_WEAPON)->HasIFlag(WT_REACH)) {
-        StateFlags |= MS_HAS_REACH;
-        if (InSlot(SL_WEAPON)->isReachOnly())
+    {
+        bool hasReach, reachOnly;
+        WeaponReach(InSlot(SL_WEAPON), hasReach, reachOnly);
+        if (hasReach)
+            StateFlags |= MS_HAS_REACH;
+        if (reachOnly)
             StateFlags |= MS_REACH_ONLY;
-    } else if (InherentCreatureReach())
-        StateFlags |= MS_HAS_REACH;
+    }
 
 #define KNOWN \
     if (KnownOnly && S->h && oThing(S->h)->isItem() && !oItem(S->h)->isKnown(KN_PLUS)) continue

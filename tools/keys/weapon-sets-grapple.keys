@@ -1,0 +1,33 @@
+# inc-h5aql AC6: the player grapples a goblin one square east with bare hands. A
+# forced d20 of 20 (INCURSION_LOF_FORCE_ROLL=20) makes the hit that starts it.
+# Sets: R bow, X longspear, M long sword (packed), S orcish knife +1 (belt).
+@until "SPACE:Swap" i
+0 1 SPACE
+t SPACE
+t S
+e X
+a s
+b s
+@dump:grapple-setup
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+c
+@choose "Grapple"
+RIGHT
+@dump:grapple-target
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:held-step1
+@until "Things in View" ESC
+-
+@dump:held-message
+@until "SPACE:Swap" i
+@dump:held-step2
+@quit

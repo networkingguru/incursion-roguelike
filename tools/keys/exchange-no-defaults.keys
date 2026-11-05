@@ -1,7 +1,7 @@
 # Press the swap-weapons command ('-') on a character with NO default melee or
 # ranged weapon set. Character::Exchange (src/Inv.cpp) takes its first early
-# path: it prints the explanatory "You need to set your default melee and
-# ranged weapons ..." line and then, before inc-3ax, also printed the false
+# path: it prints the explanatory "You have no weapon sets. Set them up
+# in the Inventory Manager ..." line and then, before inc-3ax, also printed the false
 # "You fumble the items you were trying to exchange, dropping them!" line.
 #
 # WHY A FIXTURE. tools/fixtures/chars/lizardfolk-monk-seed1.sav carries no
@@ -24,6 +24,8 @@
 
 ESC             # leave the inventory; the queued messages are drawn now
 @dump:after-esc
+
+ESC             # the new message needs no --MORE--, so the first ESC opened the System Menu; close it
 
 # One real turn, so the run counts as a session (headless.sh reports NO
 # GAMEPLAY otherwise). The messages above are already dumped.

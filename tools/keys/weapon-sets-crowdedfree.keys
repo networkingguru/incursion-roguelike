@@ -1,0 +1,4 @@
+# inc-h5aql: the crowded loadout with no enemy: the longspear is a legal X, and
+# its shoulder frees for the bow. See weapon-sets-crowded-setup.keys.
+@include weapon-sets-crowded-setup.keys
+@include weapon-sets-cycle-tail6.keys

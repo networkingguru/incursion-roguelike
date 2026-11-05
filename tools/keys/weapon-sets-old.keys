@@ -1,0 +1,12 @@
+# Old-format defaults must still restore sword + shield and bow.
+@until "SPACE:Swap" i
+@dump:old-start
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:old-ranged
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:old-melee
+@quit

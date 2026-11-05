@@ -1510,6 +1510,10 @@ String & Item::Name(int16 Flags) {
             s = Format("%c%s%c", -AZURE, (const char*)Decolorize(s), -GREY);
         if (p->defRanged == myHandle)
             s = Format("%c%s%c", -PINK, (const char*)Decolorize(s), -GREY);
+        if (p->defReach == myHandle || p->defReachOff == myHandle)
+            s = Format("%c%s%c", -YELLOW, (const char*)Decolorize(s), -GREY);
+        if (p->defShort == myHandle || p->defShortOff == myHandle)
+            s = Format("%c%s%c", -GREEN, (const char*)Decolorize(s), -GREY);
         if (p->defAmmo == myHandle)
             s = Format("%c%s%c", -MAGENTA, (const char*)Decolorize(s), -GREY);
     }

@@ -1,0 +1,54 @@
+# Fixture has Freeze Monsters on and a cleared level. Force hostility explicitly.
+@until "Things in View" ESC
+# inc-h5aql AC8(e): same as weapon-sets-aoo.keys, but the character wears Gauntlets of
+# Legerdemain, which grant Faster Than The Eye. '-' must provoke no attack of opportunity.
+w
+@choose "Item Acquisition"
+RIGHT*17
+DOWN*6
+@expect "Gauntlets of Legerdemain"
+ENTER
+@while "Enter Item Level" ENTER
+p
+SPACE
+@until "Things in View" ESC
+@until "SPACE:Swap" i
+@expect "of Legerdemain"
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+# The global 60-segment tick replenishes the summoned goblin's AoO counter.
+.*8
+@until "SPACE:Swap" i
+@dump:aoo-before
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:aoo-after
+@until "Things in View" ESC
+# Inventory take-off of the held weapon with the feat: also no attack of opportunity.
+.*8
+@until "SPACE:Swap" i
+@dump:takeoff-before
+b SPACE
+@dump:takeoff-after
+@until "Things in View" ESC
+# Control: take the gauntlets off (the feat goes), draw a weapon, refill, take it off again. The goblin must now
+# take its attack of opportunity, so the 0 above is not a goblin that cannot attack.
+@until "SPACE:Swap" i
+p SPACE
+@dump:nofeat-gear
+@until "Things in View" ESC
+-
+@until "Things in View" ESC
+.*8
+@until "SPACE:Swap" i
+@dump:control-before
+b SPACE
+@dump:control-after
+@quit

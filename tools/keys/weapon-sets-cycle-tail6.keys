@@ -1,0 +1,34 @@
+# Six '-' presses, each followed by an inventory-screen dump. The
+# expected main hand after each press is named by the check. Needs the setup
+# and the monster already in place.
+@until "Things in View" ESC
+-
+@dump:msg1
+@until "SPACE:Swap" i
+@dump:step1
+@until "Things in View" ESC
+-
+@dump:msg2
+@until "SPACE:Swap" i
+@dump:step2
+@until "Things in View" ESC
+-
+@dump:msg3
+@until "SPACE:Swap" i
+@dump:step3
+@until "Things in View" ESC
+-
+@dump:msg4
+@until "SPACE:Swap" i
+@dump:step4
+@until "Things in View" ESC
+-
+@dump:msg5
+@until "SPACE:Swap" i
+@dump:step5
+@until "Things in View" ESC
+-
+@dump:msg6
+@until "SPACE:Swap" i
+@dump:step6
+@quit
