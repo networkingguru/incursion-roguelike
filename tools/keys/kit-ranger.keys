@@ -1,4 +1,4 @@
-# inc-zzwm: make a Human Ranger and stop in the arrival room, so the creation kit
+# inc-zzwm: make a Human Ranger and stop in the arrival room (after a wizard-mode genocide, inc-yief4), so the creation kit
 # arrangement can be read from INCURSION_KIT_PROBE. Read by
 # tools/check_kit_arrangement.sh. Race and class are named, not counted;
 # feats are taken by counted letter, so judge the build by the probe's
@@ -34,5 +34,7 @@ ENTER y # Done, and confirm keeping the ranks
 @while "personality archetype" a
 
 ESC*3   # dismiss the arrival room description
-s*3     # one turn, so the session counts as played
+w       # wizard mode
+y       # Enter wizard mode? -- yes
+@choose "Genocide Everything"   # no monster can interrupt the quit; the genocide itself is the played turn
 @quit
