@@ -1,0 +1,11 @@
+# inc-h5aql AC7(a): the fixture's two defaults (sword = M, bow = R) are switched
+# off with their own keys, so no set is configured. The C menu must hide the row.
+@until "SPACE:Swap" i
+b M
+f R
+@dump:none-set
+@until "Things in View" ESC
+c
+@dump:menu-open
+ESC
+@quit

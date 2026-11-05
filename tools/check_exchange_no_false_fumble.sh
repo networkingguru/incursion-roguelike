@@ -1,5 +1,12 @@
 #!/bin/bash
 # gate: live
+# fact: character, stats, feats, gear and default weapon sets (none set) -- INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav
+# fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: terrain and starting position -- saved map in the character fixture
+# fact: path taken by the swap command (early no-defaults path of Character::Exchange) -- fixture has no default weapon sets; proved by the "You have no weapon sets" line in the after-dash dump
+# fact: screen text matched ("You have no weapon sets", fumble fragment) -- fixed game strings, not seed text; screens dumped by @dump in tools/keys/exchange-no-defaults.keys
+# fact: key actions and dump boundaries (-, ESC, ESC, s) -- tools/keys/exchange-no-defaults.keys
+# fact: no dice roll decides the outcome -- the early path returns before any roll
 # inc-3ax: the swap-weapons command must not print a false
 # "You fumble the items you were trying to exchange, dropping them!" when it
 # fails BEFORE it picks up any item.
@@ -16,7 +23,7 @@
 #
 # THE ORACLE is two screen dumps from one session. A frozen fixture with no
 # default weapons is loaded and '-' is pressed: the after-dash dump must carry
-# the explanatory "default melee and ranged" line, which is the proof the
+# the explanatory "You have no weapon sets" line, which is the proof the
 # early path ran at all, and no chosen dump may carry the fumble line. The
 # check FAILS (exit 2) if it cannot find the explanatory line, so it cannot
 # pass by never reaching the code.
@@ -41,9 +48,9 @@ export INCURSION_LOAD="$LOAD"
 check_run "$KEYS" "$SEED"
 
 # The explanatory line wraps across two screen lines; this fragment sits wholly
-# on one of them ("You need to set your default melee and ranged").
+# on one of them ("You have no weapon sets").
 check_screens
-check_expect "default melee and ranged" \
+check_expect "You have no weapon sets" \
     "the session reached Character::Exchange's early no-defaults path"
 
 # The fumble line also wraps; this fragment sits wholly on one line.

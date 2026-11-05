@@ -1,0 +1,44 @@
+# inc-h5aql AC8(b)(c)(d): a goblin stands next to the player. Each action runs
+# after eight waits that refill the goblin's attack of opportunity.
+# Hands start empty (four-setup), so the first '-' draws R and puts nothing away.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+.*8
+@until "SPACE:Swap" i
+@dump:control-before
+0 1 SPACE
+@dump:control-after
+0 1 SPACE
+@dump:control-back
+@until "Things in View" ESC
+.*8
+@until "SPACE:Swap" i
+@dump:empty-before
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:empty-after
+@until "Things in View" ESC
+.*8
+@until "SPACE:Swap" i
+@dump:forced-before
+@until "Things in View" ESC
+c
+@choose "Switch Weapon Sets"
+@choose "Melee set"
+@until "SPACE:Swap" i
+@dump:forced-after
+@until "Things in View" ESC
+.*8
+@until "SPACE:Swap" i
+@dump:takeoff-before
+b SPACE
+@dump:takeoff-after
+@quit

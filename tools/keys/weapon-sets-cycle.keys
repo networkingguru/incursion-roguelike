@@ -1,0 +1,25 @@
+# inc-h5aql AC1: no enemy in the level (Genocide Everything in the fixture), so
+# '-' steps through every configured set. The hands start empty, so the first
+# step starts at R.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:cycle-r
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:cycle-x
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:cycle-m
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:cycle-s
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:cycle-wrap
+@quit

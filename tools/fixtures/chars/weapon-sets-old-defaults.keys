@@ -1,0 +1,50 @@
+# inc-h5aql: load dequ-save-message-seed5-opt0822.sav with options-2026-08-22.dat.
+# Regenerate: tools/check_weapon_sets.sh --make-fixture --force
+# Freeze normal monster actions; clear the saved level before arranging gear.
+@include dequ-setup-loaded.keys
+w
+@choose "Genocide Everything"
+@until "SPACE:Swap" i
+@dump:starting-inventory
+@until "Things in View" ESC
+w
+@choose "Item Acquisition"
+RIGHT*9
+@until "Long sword" DOWN
+DOWN
+ENTER
+b SPACE
+@while "two-handed" n
+s
+@dump:sword-equipped
+@until "Things in View" ESC
+w
+@choose "Item Acquisition"
+@until "]: Missile Weapons" RIGHT
+@until "Short bow" DOWN
+DOWN
+ENTER
+@dump:bow-acquired
+# Bow on right shoulder; pack the shield, then ready the belt dagger as O.
+f SPACE
+a SPACE
+a s
+v SPACE
+a SPACE
+# O needs a set first: M, then the off-hand picker (one set offered).
+b M
+a O
+ENTER
+f R
+# Free four belt slots so every swap can stow both old hands.
+t s
+u s
+w s
+y s
+@dump:fixture-equipped
+@until "Things in View" ESC
+ESC
+b
+.*2
+@dump:fixture-saved
+@quit

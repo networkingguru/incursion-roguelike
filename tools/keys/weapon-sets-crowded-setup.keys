@@ -1,0 +1,22 @@
+# inc-h5aql: crowded slots. A Medium character's belt takes a sword but not a
+# bow or a Large weapon. The bow (R), the longspear (X) and a wielded dire flail
+# (in no set) are three such items for two shoulders. M is the orcish dagger
+# and S the orcish knife +1, both on belts; the long sword is in the pack.
+@until "SPACE:Swap" i
+0 1 SPACE
+t SPACE
+t S
+a M
+a SPACE
+u SPACE
+b s
+@until "Things in View" ESC
+w
+@choose "Item Acquisition"
+RIGHT*9
+ENTER
+@until "SPACE:Swap" i
+b SPACE
+e X
+@dump:setup-done
+@until "Things in View" ESC

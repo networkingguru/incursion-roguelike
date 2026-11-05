@@ -349,8 +349,8 @@ static const SchemaPad MonsterPads[] = {
    to Character, the two rows move together and both must be re-measured. */
 static const SchemaPad CharacterPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
-    { 2698, 2 }, { 11138, 2 }, { 12490, 2 }
+    { 1953, 1 }, { 2189, 1 }, { 2279, 1 }, { 2294, 2 }, { 2599, 1 },
+    { 2714, 2 }, { 11154, 2 }, { 12506, 2 }
 };
 
 /* Player: CharacterPads without Character's tail pad -- Player's
@@ -363,10 +363,10 @@ static const SchemaPad CharacterPads[] = {
    not change. */
 static const SchemaPad PlayerPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1937, 1 }, { 2173, 1 }, { 2263, 1 }, { 2278, 2 }, { 2583, 1 },
-    { 2698, 2 }, { 11138, 2 }, { 12490, 2 },
-    { 12653, 1 }, { 12718, 2 }, { 21922, 6 }, { 21954, 6 },
-    { 22354, 6 }, { 22745, 3 }, { 23706, 6 }
+    { 1953, 1 }, { 2189, 1 }, { 2279, 1 }, { 2294, 2 }, { 2599, 1 },
+    { 2714, 2 }, { 11154, 2 }, { 12506, 2 },
+    { 12669, 1 }, { 12734, 2 }, { 21938, 6 }, { 21970, 6 },
+    { 22370, 6 }, { 22761, 3 }, { 23722, 6 }
 };
 
 /* Feature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
@@ -4205,6 +4205,8 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           pl->Inv[i] = (hObj)(i ? 0 : m2h);
         pl->defMelee = m2h; pl->defRanged = ph;
         pl->defAmmo = 0;    pl->defOffhand = m2h;
+        pl->defReach = ph;  pl->defReachOff = m2h;
+        pl->defShort = m2h; pl->defShortOff = ph;
         for (i = 0; i != 7; i++)
           pl->BAttr[i] = (int16)(10 + i);
         for (i = 0; i != ATTR_LAST; i++)
@@ -4371,6 +4373,8 @@ bool Registry::V1RunSchemaTest(const char *outDir)
                   v1Mismatch(i, "Inv[i]", (long)a->Inv[i], (long)b->Inv[i]);
               V1CMP(0, defMelee);   V1CMP(0, defRanged);
               V1CMP(0, defAmmo);    V1CMP(0, defOffhand);
+              V1CMP(0, defReach);   V1CMP(0, defReachOff);
+              V1CMP(0, defShort);   V1CMP(0, defShortOff);
               for (i = 0; i != 7; i++)
                 if (a->BAttr[i] != b->BAttr[i])
                   v1Mismatch(i, "BAttr[i]", (long)a->BAttr[i],

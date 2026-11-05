@@ -1,0 +1,12 @@
+# inc-h5aql AC2: a hostile goblin one square east; X is reach-only. Six presses.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail6.keys

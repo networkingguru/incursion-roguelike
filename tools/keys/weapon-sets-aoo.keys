@@ -1,0 +1,26 @@
+# Fixture has Freeze Monsters on and a cleared level. Force hostility explicitly.
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+# The global 60-segment tick replenishes the summoned goblin's AoO counter.
+.*8
+@until "SPACE:Swap" i
+@dump:aoo-before
+@until "Things in View" ESC
+-
+@until "SPACE:Swap" i
+@dump:aoo-after
+@until "Things in View" ESC
+# Positive control: withdrawing a pack item provokes through the same generic
+# ProvokeAoO path. Refill first; no normal monster action can intervene.
+.*8
+@until "SPACE:Swap" i
+@dump:control-before
+0 1 SPACE
+@dump:control-after
+@quit

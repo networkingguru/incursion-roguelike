@@ -1117,6 +1117,7 @@ CastSpell:
             Timeout++;
             break;
         case KY_CMD_ATTACK_MENU: {
+            enum { A_SWITCH_SETS = 1000 }; /* menu value only; no game event */
             struct CombatOption {
                 const char *Verb;
                 int16 Event;
@@ -1209,6 +1210,15 @@ CastSpell:
                     " destroy it. This provokes an attack of opportunity from the person"
                     " using the weapon. Weapons with a magical plus can not be destroyed"
                     " by any weapon with a lower magical plus than their own.", NULL, false },
+                { "Switch Weapon Sets", A_SWITCH_SETS, "You change to a weapon set that you"
+                    " choose from a list of your other sets. Unlike Swap Weapons ('-'),"
+                    " this option ignores where your enemies are and whether you are"
+                    " grappled. Putting away a weapon provokes an attack of opportunity.",
+                    [](Creature *c) {
+                        bool cf[Character::WSET_COUNT]; int cur;
+                        return c->isCharacter() &&
+                               ((Character*)c)->WeaponSets(cf, cur) > 0;
+                    }, false },
                 { "Throw", A_THRO, "You throw an enemy you are grappling"
                     " with already one or more squares away from you. You must succeed"
                     " in a grapple check against them, and this action ends the grapple."
@@ -1428,6 +1438,29 @@ FindNonReachVictim:
             case A_CALL:
                 IPrint("Not implemented yet.");
                 return;
+            case A_SWITCH_SETS: {
+                /* inc-h5aql: force a weapon set, skipping the `-` key's range
+                   and grapple tests. */
+                static const char *const setName[Character::WSET_COUNT] = {
+                    "Ranged set", "Reach set", "Melee set", "Short set" };
+                bool cf[Character::WSET_COUNT]; int cur, k, listed = 0;
+                WeaponSets(cf, cur);
+                for (k = 0; k != Character::WSET_COUNT; k++)
+                    if (cf[k] && k != cur) {
+                        MyTerm->LOption(setName[k], k + 1);
+                        listed++;
+                    }
+                if (!listed) {
+                    IPrint("You have no other weapon set to change to.");
+                    return;
+                }
+                n = (int16)MyTerm->LMenu(MENU_ESC | MENU_BORDER,
+                    " -- Switch Weapon Sets -- ", WIN_MENUBOX);
+                if (n <= 0)
+                    break;
+                ChangeToSet(n - 1);
+                return;
+            }
             default:
                 Error("Strange tactical option!");
             }

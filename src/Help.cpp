@@ -5179,6 +5179,14 @@ String & Weapon::Describe(Player *p) {
             Desc += Format("__%cThis is your default offhand weapon.%c\n", -WHITE, -GREY);
         if (myHandle == p->defRanged)
             Desc += Format("__%cThis is your default ranged weapon.%c\n", -WHITE, -GREY);
+        if (myHandle == p->defReach)
+            Desc += Format("__%cThis is your default reach weapon.%c\n", -WHITE, -GREY);
+        if (myHandle == p->defReachOff)
+            Desc += Format("__%cThis is the offhand item of your reach set.%c\n", -WHITE, -GREY);
+        if (myHandle == p->defShort)
+            Desc += Format("__%cThis is your default short weapon.%c\n", -WHITE, -GREY);
+        if (myHandle == p->defShortOff)
+            Desc += Format("__%cThis is the offhand item of your short set.%c\n", -WHITE, -GREY);
         if (myHandle == p->defAmmo)
             Desc += Format("__%cThis is your default projectile.%c\n", -WHITE, -GREY);
     }

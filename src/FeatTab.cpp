@@ -218,13 +218,13 @@ struct FeatInfoStruct FeatInfo[] = {
     "You organize and improvise your inventory exceptionally well, and can get at anything "
     "you need quickly. This feat grants the following benefits:\n"
     "\n__Inventory actions "
-    "(wielding a weapon, taking an item out of a container, putting an item "
+    "(wielding or putting away a weapon, taking an item out of a container, putting an item "
     "into a container, dumping a container, picking an item up from the ground) "
-    "take you 1/4th the normal time (even during combat) and never provoke attacks of "
-    "opportunity.\n"
-    "__When you insert an item into a container you treat the container's weight "
-    "and item count capacity as if they were doubled. You may insert items one size "
-    "larger than that container would normally allow.",
+    "take you 1/4th the normal time, even during combat. Putting away a weapon, "
+    "taking an item out of a container, dumping a container and picking an item up "
+    "no longer provoke attacks of opportunity.\n"
+    "__Your containers also hold twice their normal weight and number of items, "
+    "and you can store items one size larger than a container would normally allow.",
     {{{ FP_FEAT, FT_QUICK_DRAW, 0}}} },
 
   { FT_RUN,        0, "Run",

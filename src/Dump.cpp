@@ -450,6 +450,22 @@ bool RunSaveDump(const char *path) {
     }
     printf("\n");
 
+    printf("=== Weapon Sets ===\n");
+    {
+        static const char *const label[8] = { "M main", "M off-hand",
+            "R main", "ammo", "X main", "X off-hand", "S main", "S off-hand" };
+        for (int k = 0; k != 8; k++) {
+            Item *it = oItem(p->DefaultItem(k));
+            printf("  %s: ", label[k]);
+            if (it)
+                PrintPlain(it->Name(NA_LONG));
+            else
+                printf("(none)");
+            printf("\n");
+        }
+    }
+    printf("\n");
+
     printf("=== Player Stati ===\n");
     DumpStati(p);
     printf("\n");

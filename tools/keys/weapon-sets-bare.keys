@@ -1,0 +1,27 @@
+# inc-h5aql: a Monk (Unarmed Strike) has no melee weapon set. R is a short bow
+# on the shoulder, and M is bare hands. A hostile goblin stands one square east.
+@include dequ-setup-loaded.keys
+w
+@choose "Genocide Everything"
+w
+@choose "Item Acquisition"
+@until "]: Missile Weapons" RIGHT
+@until "Short bow" DOWN
+DOWN
+ENTER
+@until "SPACE:Swap" i
+e SPACE
+e R
+f s
+b d
+@dump:bare-set
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail.keys

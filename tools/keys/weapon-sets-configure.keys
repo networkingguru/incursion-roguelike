@@ -1,0 +1,21 @@
+# inc-h5aql AC10: configure the weapon sets through the inventory-screen keys,
+# then Save and Continue. The loaded fixture already holds M (sword, dagger
+# off-hand) and R (bow). Add X (longspear), S (knife, kite shield off-hand) and
+# the ammo (shotputs). No one-handed reach weapon exists for a Medium character,
+# so X has no off-hand item here.
+@until "SPACE:Swap" i
+e X
+0 1
+S
+0 5
+O
+@choose "Short set (S)"
+0 2
+A
+@dump:cfg-inventory
+@until "Things in View" ESC
+ESC
+b
+.*2
+@dump:cfg-saved
+@quit

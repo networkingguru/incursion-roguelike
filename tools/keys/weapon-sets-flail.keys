@@ -1,0 +1,24 @@
+# inc-h5aql AC3: X is a dire flail (WT_REACH and WT_STRIKE_NEAR) in place of the
+# longspear; a hostile goblin stands one square east.
+@include weapon-sets-four-setup.keys
+@until "SPACE:Swap" i
+e s
+@until "Things in View" ESC
+w
+@choose "Item Acquisition"
+RIGHT*9
+ENTER
+@until "SPACE:Swap" i
+e SPACE
+e X
+@dump:flail-set
+@until "Things in View" ESC
+w
+@choose "Monster Summoning"
+@choose "Goblinkin"
+@choose "goblin"
+RIGHT ENTER
+w
+@choose "All Monster Aggravate"
+@dump:monster-placed
+@include weapon-sets-cycle-tail.keys

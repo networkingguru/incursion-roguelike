@@ -1100,6 +1100,9 @@ bool Item::allowedSlot(int16 slot, Creature *me)
         case SL_BELT3:
         case SL_BELT4:
         case SL_BELT5:
+          /* inc-h5aql: a melee weapon rides a belt up to the wearer's own size. */
+          if (Type == T_WEAPON && Isz <= Msz)
+            return true;
           return (Isz <= SZ_SMALL) || (Isz <= Msz - 1);
           // ww: a giant can put bigger things on its belt!
         case SL_PACK:

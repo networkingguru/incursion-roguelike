@@ -466,6 +466,13 @@ class Creature: public Thing, public Magic
         { return (Perceives(t) & (~(PER_SHADOW|PER_SCENT|PER_DETECT))) != 0; }
       virtual bool isShadowShape() { return TMON(mID)->Size >= SZ_SMALL; }
       bool isBeside(Thing *t, int extra_dist = 0);
+      /* inc-h5aql: the attack path's refusals, shared with Character::Exchange. */
+      enum { RR_OK, RR_TOO_CLOSE, RR_FAR, RR_NO_REACH };
+      void WeaponReach(Item *wep, bool &hasReach, bool &reachOnly);
+      bool HoldRefusesMelee(Item *wep);
+      int  FireHoldRefusal(Item *wep);
+      int  ReachRefusal(Thing *t, bool hasReach, bool reachOnly);
+      bool CanStrikeWith(Item *wep, Thing *t);
       bool isAerial();
       bool isInvisTo(Creature*);
       bool isSmallRace()
@@ -805,6 +812,8 @@ class Character: public Creature
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
+      /* inc-h5aql: X (reach) and S (short) weapon sets; M and R keep the four above. */
+      hObj defReach, defReachOff, defShort, defShortOff;
       int16 BAttr[7], KAttr[ATTR_LAST]; //Base Attributes
       int8 SkillRanks[SK_LASTSKILL];
       uint16 Feats[(FT_LAST/8)+1];
@@ -906,6 +915,22 @@ class Character: public Creature
       virtual void     DropAll();
       virtual Item*    GetInv(bool first);
       virtual void     Exchange();
+      /* inc-h5aql: the four weapon sets, in the fixed order of the `-` key. */
+      enum { WSET_R, WSET_X, WSET_M, WSET_S, WSET_COUNT };
+      void             WeaponSetRefs(hObj **mainp, hObj **offp);
+      int              WeaponSets(bool *configured, int &cur);
+      bool             WeaponSetUsable(int k);
+      bool             CursedGrip();
+      void             ChangeToSet(int pick);
+      bool             NeedsBothHands(Item *it);
+      /* inc-h5aql: read-only view of the default-item handles, for the -dump report.
+         0 M main, 1 M off-hand, 2 R main, 3 ammo, 4 X main, 5 X off-hand,
+         6 S main, 7 S off-hand. */
+      hObj             DefaultItem(int i) {
+          hObj *t[8] = { &defMelee, &defOffhand, &defRanged, &defAmmo,
+                         &defReach, &defReachOff, &defShort, &defShortOff };
+          return (i >= 0 && i < 8) ? *t[i] : (hObj)0;
+      }
 
       bool Swap(int8 Slot);
       virtual void GainItem(Item *it, bool starting=false);
@@ -1096,7 +1121,7 @@ class Character: public Creature
          which are real rIDs and are named. Upgrade path: write these as
          rows keyed through the name table, the way the spec's "resource
          memory segment" section already requires for MonMem/EffMem. */
-      static_assert(sizeof(Character) == 12648,
+      static_assert(sizeof(Character) == 12664,
                     "Character's coverage pin row pads assume this");
       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
@@ -1107,6 +1132,10 @@ class Character: public Creature
       FIELD_H  (386, defRanged);
       FIELD_H  (387, defAmmo);
       FIELD_H  (388, defOffhand);
+      FIELD_H  (449, defReach);
+      FIELD_H  (450, defReachOff);
+      FIELD_H  (451, defShort);
+      FIELD_H  (452, defShortOff);
       FIELD_ARRAY(389, BAttr, sizeof(int16), 7);
       FIELD_ARRAY(390, KAttr, sizeof(int16), ATTR_LAST);
       FIELD_ARRAY(391, SkillRanks, sizeof(int8), SK_LASTSKILL);
@@ -1586,7 +1615,7 @@ class Player: public Character
          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
          not rIDs. Same ceiling and same upgrade path as the note in
          Character's list above. */
-      static_assert(sizeof(Player) == 23712,
+      static_assert(sizeof(Player) == 23728,
                     "Player's coverage pin row pads assume this");
       static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
       static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");

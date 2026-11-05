@@ -1,0 +1,3 @@
+# inc-h5aql LOADOUT: no enemy; the sword rides a belt, so all four sets cycle.
+@include weapon-sets-loadout-setup.keys
+@include weapon-sets-cycle-tail6.keys

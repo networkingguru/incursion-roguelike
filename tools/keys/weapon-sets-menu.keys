@@ -1,0 +1,12 @@
+# inc-h5aql AC7(b): four sets configured, no enemy on the level. The first '-'
+# wields R, so the C menu's submenu must list X, M and S and not R.
+@include weapon-sets-four-setup.keys
+@until "Things in View" ESC
+-
+@until "Things in View" ESC
+c
+@dump:menu-open
+@choose "Switch Weapon Sets"
+@dump:submenu
+ESC
+@quit
