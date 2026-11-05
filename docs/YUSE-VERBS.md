@@ -127,8 +127,8 @@ or friendly.
 | Shoot / Throw | ranged attack — **one event**, `EV_RATTACK` | `src/Creature.cpp:906` |
 | Insert | put an item into a container | `src/Inv.cpp:1175` |
 | Divide | split a stack; refuses singular items; the new stack is `DROPPED` for 10 turns | `src/Player.cpp:2024` |
-| Open / Open With | doors and containers | `src/Feature.cpp:732` |
-| Close | shut a door | `src/Feature.cpp:829` |
+| Open / Open With | doors and containers | `src/Feature.cpp:745` |
+| Close | shut a door | `src/Feature.cpp:842` |
 | Enter | portals and the like | `src/Feature.cpp:334` |
 | Break | break a target | `src/Creature.cpp:1100` |
 | Push | shove a target | `src/Creature.cpp:861` |
