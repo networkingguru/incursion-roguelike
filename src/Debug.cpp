@@ -572,6 +572,8 @@ void Player::WizardOptions() {
     MyTerm->LOption("Create Altar", 38);
     /* inc-b0ziu.2: appended last so no existing entry's menu letter moves. */
     MyTerm->LOption("Wake Every Creature", 39);
+    /* inc-aoi4i: appended last so no existing entry's menu letter moves. */
+    MyTerm->LOption("Burn Worn Armour", 40);
 
     switch(MyTerm->LMenu(MENU_ESC|MENU_BORDER|MENU_2COLS,"Wizard Mode Options:",WIN_MENUBOX)) {
     case -1:
@@ -1091,6 +1093,20 @@ Restart:
             Error("WAKE_PROBE: before=%d after=%d", (int)before, (int)after);
         }
         IPrint(Format("Woke %d creatures.", (int)woke));
+        break;
+    }
+    case 40: {
+        /* inc-aoi4i: fire damage to the worn armour, with NO actor and no
+           random number. A null actor never equals the owner, so
+           Item::Damage keeps the item's hardness (the "attacking your own
+           items" bypass does not apply) and a quality's immunity counts.
+           tools/check_quality_self_immune.sh is the caller. */
+        Item *arm = InSlot(SL_ARMOUR);
+        if (!arm) {
+            IPrint("You wear no armour.");
+            break;
+        }
+        ThrowDmg(EV_DAMAGE,AD_FIRE,10,NULL,NULL,arm);
         break;
     }
     case 38: {

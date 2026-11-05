@@ -62,6 +62,7 @@ known hole.
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
 | Summoned monster's gear | `INCURSION_SUMMON_NO_GEAR=1` (`src/Debug.cpp`). A monster made by the wizard "Monster Summoning" gets no starting Gear (no weapon, armor or items), so its blows do not vary with random enchantment. Other monster creation is untouched. Used by tools/check_feed_upon_pain.sh. |
 | An item | Wizard menu, "Item Acquisition". |
+| Fire damage to the worn armour | Wizard menu, "Burn Worn Armour" (`src/Debug.cpp`). A fixed 10 points of fire, sent with no actor and no random number, so the item's hardness and a quality's immunity count. Used by tools/check_quality_self_immune.sh. |
 | Terrain | Wizard menu, "Change terrain type"; or a probe that builds the map (`INCURSION_RUNTO_STAGE`). |
 | Depth | Wizard menu, "Ascend / Descend Depth". |
 | A known spell | Wizard menu, "Learn Any Spell". |
