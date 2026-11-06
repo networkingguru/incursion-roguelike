@@ -4,7 +4,8 @@
      Contains the BNF+ grammar for the IncursionScript compiler,
 	 along with semantic actions that essentially compose the bulk
 	 of the compiler. Designed to be fed into the ACCENT compiler
-	 compiler system to produce yygram.cpp.
+	 compiler system to produce yygram.cpp. Regenerate with
+	 tools/regen_yygram.sh after any change here (inc-b0ii).
 */
 
 #include "Incursion.h"
@@ -24,6 +25,14 @@
 #define pBSysFunc                 BSysFunc*
 int16 currMap;
 int16 ArtPowerType;
+/* Enclosing loop/switch kinds, innermost last: 'L' loop, 'S' switch. A
+   `continue;` uses it to count the switches it leaves (inc-b0ii). */
+int8  BrkCtx[64];
+int16 BrkCtxN;
+#define BRKCTX_PUSH(k) \
+  do { if (BrkCtxN >= 64) yyerror("Loops and switches nested too deeply."); \
+       else BrkCtx[BrkCtxN++] = (k); } while (0)
+#define BRKCTX_POP()   do { if (BrkCtxN > 0) BrkCtxN--; } while (0)
 uint32 TempList[2048]; 
 int16 TempListLoc;
 extern int16 Errors;
@@ -1486,9 +1495,15 @@ statement <VBlock st>:
       st->Add(&st1);
     }
   | FOR '(' expr<ex1> ';' expr<ex2> ';' expr <ex3> ')'
+      { BRKCTX_PUSH('L'); }
       statement<st1>
     {
       int16 jumpback;
+      BRKCTX_POP();
+      /* upstream: `continue;` was resolved here for `for` only, and sized
+         after the JFAL below; resolve it before the sizes are read.
+         Observed (tools/check_script_loops.sh); inc-b0ii; not sent. */
+      st1.ProcessContinues();
       ex1.Code->TrimGratuitousMOV();
       ex3.Code->TrimGratuitousMOV();
       st->Add(ex1.Code);
@@ -1505,12 +1520,14 @@ statement <VBlock st>:
                          (ex2.Code ? ex2.Code->GetSize() : 0) > 511 ? 3 : 2));
       if (ex2.Storage == RT_REGISTER)
         FreeRegister((int16)ex2.Value);
-      st1.ProcessContinues();
       st->Add(&st1);
       st->Add(ex3.Code);
       if (ex3.Storage == RT_REGISTER)
         FreeRegister((int16)ex3.Value);
       st->Generate(JUMP,RT_CONSTANT,jumpback - st->GetSize());
+      /* upstream: no loop pushed a break target, so `break;` in a loop did
+         nothing. Observed; inc-b0ii; not sent. */
+      st->AddBreakTarget();
     }
   | SWITCH '(' expr<ex> ')' '{'
       {
@@ -1521,6 +1538,7 @@ statement <VBlock st>:
         CaseCount = 0;
         DefaultAddr = 0;
         CaseAddr[0] = 0; 
+        BRKCTX_PUSH('S');
       }
     ( CASE ( cexpr<val> | res_ref<rr> { val = rr; } ) ':'    
       { CaseCode[CaseCount] = new VBlock; }
@@ -1543,6 +1561,7 @@ statement <VBlock st>:
     
     '}'
       {
+        BRKCTX_POP();
         /* Now we code the *entire* switch statement! */
         
         /* Evaluate the Expression */
@@ -1588,19 +1607,34 @@ statement <VBlock st>:
       }
   | CONTINUE ';'
       {
+        /* upstream: a `continue;` inside a switch left that switch's break
+           target on the stack. It now frees one per switch it leaves.
+           Observed; inc-b0ii; not sent. */
+        int16 k, nsw;
+        nsw = 0;
+        for (k = BrkCtxN - 1; k >= 0 && BrkCtx[k] != 'L'; k--)
+          nsw++;
+        if (k >= 0)
+          while (nsw--)
+            st->Generate(FBRK);
         st->Generate(CONT);
       }
-  | DO statement<st1> WHILE '(' expr<ex> ')' ';'
+  | DO { BRKCTX_PUSH('L'); } statement<st1> WHILE '(' expr<ex> ')' ';'
       {
+        BRKCTX_POP();
+        st1.ProcessContinues();
         st->Add(&st1);
         st->Add(ex.Code);
         st->Generate(JTRU,ex.Storage,ex.Value,
           RT_CONSTANT, -st->GetSize());
         if (ex.Storage == RT_REGISTER)
           FreeRegister((int16)ex.Value);
+        st->AddBreakTarget();
       }
-  | WHILE '(' expr<ex> ')' statement<st1>
+  | WHILE '(' expr<ex> ')' { BRKCTX_PUSH('L'); } statement<st1>
       {
+        BRKCTX_POP();
+        st1.ProcessContinues();
         st->Add(ex.Code);
         st->Generate(JFAL,ex.Storage,ex.Value,
           RT_CONSTANT, st1.GetSize()+
@@ -1609,6 +1643,7 @@ statement <VBlock st>:
         st->Generate(JUMP,RT_CONSTANT, - st->GetSize());
         if (ex.Storage == RT_REGISTER)
           FreeRegister((int16)ex.Value);
+        st->AddBreakTarget();
       }
   | block<bl>               
       { 
@@ -1640,7 +1675,7 @@ block<VBlock bl>:
   ;
 
 routine<VBlock bl>:
-   { VBlock decl_code; StackHead = 0; ClearStrings(); }
+   { VBlock decl_code; StackHead = 0; BrkCtxN = 0; ClearStrings(); }
   '{' ( { code.Clear(); } l_declaration<code> { decl_code.Add(&code); } 
         | STATIC r_declaration )*
       { if (StackHead)
