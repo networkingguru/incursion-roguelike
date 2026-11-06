@@ -32,13 +32,22 @@ struct PQEntry
     int16 Weight;
     uint16 Node;
     unsigned long Seq;
+    int16 Breaks;   /* inc-zm6li: doors to break; ordered before Weight */
   };
 
 static PQEntry *PQHeap = NULL;
 static int PQHeapN = 0, PQHeapCap = 0;
 static unsigned long PQSeq = 0;
 
-static void PQHeapPush(int16 Weight, uint16 Node)
+static inline bool PQLess(const PQEntry &a, const PQEntry &b)
+  {
+    return a.Breaks < b.Breaks ||
+           (a.Breaks == b.Breaks &&
+            (a.Weight < b.Weight ||
+             (a.Weight == b.Weight && a.Seq < b.Seq)));
+  }
+
+static void PQHeapPush(int16 Weight, uint16 Node, int16 Breaks)
   {
     if (PQHeapN == PQHeapCap)
       {
@@ -49,12 +58,11 @@ static void PQHeapPush(int16 Weight, uint16 Node)
     PQHeap[i].Weight = Weight;
     PQHeap[i].Node   = Node;
     PQHeap[i].Seq    = PQSeq++;
+    PQHeap[i].Breaks = Breaks;
     while (i > 0)
       {
         int p = (i - 1) / 2;
-        if (PQHeap[p].Weight < PQHeap[i].Weight ||
-            (PQHeap[p].Weight == PQHeap[i].Weight &&
-             PQHeap[p].Seq <= PQHeap[i].Seq))
+        if (!PQLess(PQHeap[i], PQHeap[p]))
           break;
         PQEntry t = PQHeap[p]; PQHeap[p] = PQHeap[i]; PQHeap[i] = t;
         i = p;
@@ -71,15 +79,9 @@ static void PQHeapPop()
     for (;;)
       {
         int l = i * 2 + 1, r = l + 1, s = i;
-        if (l < PQHeapN &&
-            (PQHeap[l].Weight < PQHeap[s].Weight ||
-             (PQHeap[l].Weight == PQHeap[s].Weight &&
-              PQHeap[l].Seq < PQHeap[s].Seq)))
+        if (l < PQHeapN && PQLess(PQHeap[l], PQHeap[s]))
           s = l;
-        if (r < PQHeapN &&
-            (PQHeap[r].Weight < PQHeap[s].Weight ||
-             (PQHeap[r].Weight == PQHeap[s].Weight &&
-              PQHeap[r].Seq < PQHeap[s].Seq)))
+        if (r < PQHeapN && PQLess(PQHeap[r], PQHeap[s]))
           s = r;
         if (s == i)
           break;
@@ -90,8 +92,8 @@ static void PQHeapPop()
 
 uint16 ThePath[MAX_PATH_LENGTH];
 
-void Map::PQInsert(uint16 Node, int16 Weight)
-  { PQHeapPush(Weight, Node); }
+void Map::PQInsert(uint16 Node, int16 Weight, int16 Breaks)
+  { PQHeapPush(Weight, Node, Breaks); }
   
 int32 Map::PQPeekMin()          
   {
@@ -160,13 +162,21 @@ static inline int AStarH(int x, int y, int tx, int ty)
   }
 
 
-/* inc-vhkei: wall-connected areas. WallLabel[x][y] numbers each 8-connected
-   component of squares a !Incor, !Meld runner can enter (InBounds, not (0,0),
-   not SolidAt); solid squares get 0. */
-static uint16 WallLabel[256][256];
-static uint32 WallLabelMap = 0;
-static uint32 WallLabelTurn = 0;
-static bool   WallLabelValid = false;
+/* inc-vhkei: wall-connected areas. WallLabel[set][x][y] numbers each
+   8-connected component of squares a !Incor, !Meld runner can enter (InBounds,
+   not (0,0), not a wall); wall squares get 0. inc-zm6li: there are three sets,
+   one per door rule. Set 0 treats every SolidAt square as a wall, closed doors
+   included: it is exact for a runner that does not open doors. Set 1 treats a
+   closed door that is neither locked nor secret as open (LabelSolid): it is
+   exact for a runner that opens doors (DF_OPEN_DOORS). Set 2 treats every
+   closed door that is not secret as open: it joins at least what a runner with
+   DF_BASH_DOORS reaches (per-monster five-try walls are not in the labels, so
+   it may join more, never less). ShortestPath picks the set from its
+   dangerFactor. Each set has its own validity state. */
+static uint16 WallLabel[3][256][256];
+static uint32 WallLabelMap[3] = {0, 0, 0};
+static uint32 WallLabelTurn[3] = {0, 0, 0};
+static bool   WallLabelValid[3] = {false, false, false};
 #ifdef LABEL_SELFCHECK
 static unsigned long LS_Refusals, LS_Mismatch;
 static void LS_Report()
@@ -177,7 +187,18 @@ static void LS_Report()
   }
 #endif
 
-static void BuildWallLabels(Map *m, int16 sizeX, int16 sizeY)
+static bool LabelSolid(Map *m, int x, int y, int set)
+  {
+    if (!m->SolidAt(x,y))
+      return false;
+    for (Door *d = m->FDoorAt(x,y); d; d = m->NDoorAt(x,y))
+      if (!d->isPassable() &&
+          !(d->DoorFlags & (set == 2 ? DF_SECRET : (DF_LOCKED | DF_SECRET))))
+        return false;
+    return true;
+  }
+
+static void BuildWallLabels(Map *m, int16 sizeX, int16 sizeY, int set)
   {
 #ifdef PATH_PROBE
     double ppT0 = PP_Now();
@@ -186,17 +207,18 @@ static void BuildWallLabels(Map *m, int16 sizeX, int16 sizeY)
     int lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
     int x, y, k;
     uint16 next = 0;
+    uint16 (*L)[256] = WallLabel[set];
     for (x = 0; x != 256; x++)
       for (y = 0; y != 256; y++)
-        WallLabel[x][y] = 0;
+        L[x][y] = 0;
     for (x = 0; x != lx; x++)
       for (y = 0; y != ly; y++)
         {
-          if (WallLabel[x][y] || (x == 0 && y == 0) || m->SolidAt(x,y))
+          if (L[x][y] || (x == 0 && y == 0) || (set ? LabelSolid(m,x,y,set) : m->SolidAt(x,y)))
             continue;
           next++;
           int qh = 0, qt = 0;
-          WallLabel[x][y] = next;
+          L[x][y] = next;
           Queue[qt++] = x + y*256;
           while (qh != qt)
             {
@@ -210,16 +232,16 @@ static void BuildWallLabels(Map *m, int16 sizeX, int16 sizeY)
                   int nx = cx + DirX[k], ny = cy + DirY[k];
                   if (nx < 0 || ny < 0 || nx >= lx || ny >= ly) continue;
                   if (nx == 0 && ny == 0) continue;
-                  if (WallLabel[nx][ny] || !m->InBounds(nx,ny)) continue;
-                  if (m->SolidAt(nx,ny)) continue;
-                  WallLabel[nx][ny] = next;
+                  if (L[nx][ny] || !m->InBounds(nx,ny)) continue;
+                  if (set ? LabelSolid(m,nx,ny,set) : m->SolidAt(nx,ny)) continue;
+                  L[nx][ny] = next;
                   Queue[qt++] = nx + ny*256;
                 }
             }
         }
-    WallLabelMap = m->myHandle;
-    WallLabelTurn = theGame->Turn;
-    WallLabelValid = true;
+    WallLabelMap[set] = m->myHandle;
+    WallLabelTurn[set] = theGame->Turn;
+    WallLabelValid[set] = true;
 #ifdef PATH_PROBE
     PP_LabelRebuilds++;
     PP_LabelSecs += PP_Now() - ppT0;
@@ -233,12 +255,16 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     int32 xy, i, c; int16 x, y, nx, ny;
     static int16 Dist[256][256];
     static uint16 Parent[256][256];
+    /* inc-zm6li: doors to break on the best path to each square. Used only
+       when dangerFactor has DF_BASH_DOORS; every other search leaves it alone. */
+    static int16 Brk[256][256];
+    const bool bash = (dangerFactor & DF_BASH_DOORS) != 0;
 
     if (!ThePath)
       ThePath = ::ThePath;
 
 #ifdef PATH_PROBE
-    PP_Call ppCall;
+    PP_Call ppCall(dangerFactor,sx,sy,tx,ty);
 #endif
     ASSERT(InBounds(sx,sy))
     ASSERT(InBounds(tx,ty))
@@ -275,27 +301,35 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     /* inc-vhkei: refuse only when walls alone separate start and target, on
        labels built just now (solid squares change as doors open and close,
        even within one Turn, so a refusal never rests on older labels). A
-       same-area answer is only a hint, so the search runs. Exact for
-       !Incor && !Meld runners. */
+       same-area answer is only a hint, so the search runs. Invariant: a label
+       refusal never refuses a route the full search finds. The runner's door
+       rule picks the set (DF_BASH_DOORS: set 2, DF_OPEN_DOORS: set 1, else
+       set 0); sets 0 and 1 are exact, set 2 may join more (inc-zm6li). */
 #ifdef LABEL_SELFCHECK
     bool labelCut = false;
+    int  labelSet = 0;
 #endif
     if (!Incor && !Meld)
       {
-        if (!WallLabelValid || WallLabelMap != (uint32)myHandle)
-          BuildWallLabels(this,sizeX,sizeY);
-        if (WallLabel[sx][sy] && WallLabel[sx][sy] != WallLabel[tx][ty])
+        const int set = (dangerFactor & DF_BASH_DOORS) ? 2 :
+                        (dangerFactor & DF_OPEN_DOORS) ? 1 : 0;
+        uint16 (*L)[256] = WallLabel[set];
+        if (!WallLabelValid[set] || WallLabelMap[set] != (uint32)myHandle)
+          BuildWallLabels(this,sizeX,sizeY,set);
+        if (L[sx][sy] && L[sx][sy] != L[tx][ty])
           {
-            BuildWallLabels(this,sizeX,sizeY);
-            if (WallLabel[sx][sy] && WallLabel[sx][sy] != WallLabel[tx][ty])
+            BuildWallLabels(this,sizeX,sizeY,set);
+            if (L[sx][sy] && L[sx][sy] != L[tx][ty])
               {
 #ifdef PATH_PROBE
                 PP_LabelCut++;
+                PP_LabelCutSet[ppCall.door]++;
 #endif
 #ifdef LABEL_SELFCHECK
                 static bool lreg = false;
                 if (!lreg) { lreg = true; atexit(LS_Report); }
                 labelCut = true;
+                labelSet = set;
 #else
                 MCCacheOn = false;
                 return false;
@@ -320,6 +354,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
           {
             Dist[x][y]   = 30000;
             Parent[x][y] = 0;
+            if (bash) Brk[x][y] = 30000;
           }
     }
 
@@ -327,20 +362,23 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
     ppCall.FloodStart();
 #endif
     Dist[sx][sy] = 0;
+    if (bash) Brk[sx][sy] = 0;
 
-    PQInsert(sx+sy*256,AStarH(sx,sy,tx,ty));
+    PQInsert(sx+sy*256,AStarH(sx,sy,tx,ty),0);
 
     while ((xy = PQPeekMin()) != -1)
       {
         int16 PW = PQHeap[0].Weight;
+        int16 PB = PQHeap[0].Breaks;
         PQPopMin();
         x = (int16)(xy % 256);
         y = (int16)(xy / 256);
 
         /* Lazily discard a stale entry: the node was relaxed to a smaller
            distance after this copy was inserted, so this pop is a ghost. */
-        if (PW > Dist[x][y] + AStarH(x,y,tx,ty))
-          continue;
+        { int16 bk = bash ? Brk[x][y] : 0;
+          if (PB > bk || (PB == bk && PW > Dist[x][y] + AStarH(x,y,tx,ty)))
+            continue; }
 
 #ifdef PATH_PROBE
         PP_Pops++;
@@ -368,8 +406,9 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 #ifdef PATH_PROBE
           PP_RunOver++;
 #endif
+          bool isBrk = false;
           int baseCost = RunOver(nx&0xFF,ny&0xFF,memonly,runner,dangerFactor,Incor,Meld,
-                                (nx == (int16)tx && ny == (int16)ty));
+                                (nx == (int16)tx && ny == (int16)ty),&isBrk);
           if (!baseCost)
             {
 #ifdef PATH_PROBE
@@ -393,17 +432,23 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
           if (DirX[i] && DirY[i])
             baseCost = (baseCost * 3) / 2;
 
-          if (Dist[x][y] + baseCost < Dist[nx][ny])
+          int16 nb = bash ? (int16)(Brk[x][y] + (isBrk ? 1 : 0)) : 0;
+          if (bash ? (nb < Brk[nx][ny] ||
+                      (nb == Brk[nx][ny] && Dist[x][y] + baseCost < Dist[nx][ny]))
+                   : (Dist[x][y] + baseCost < Dist[nx][ny]))
             {
               Dist[nx][ny] = min(30000,Dist[x][y] + baseCost);
+              if (bash) Brk[nx][ny] = nb;
               Parent[nx][ny] = x+y*256;
-              PQInsert(nx+ny*256,Dist[nx][ny] + AStarH(nx,ny,tx,ty));
+              PQInsert(nx+ny*256,Dist[nx][ny] + AStarH(nx,ny,tx,ty),nb);
             }
           }
       }
 
 #ifdef PATH_PROBE
     ppCall.FloodEnd(xy != -1);
+    if (bash && Dist[tx][ty] != 30000)
+      { int bk = Brk[tx][ty] > 0; PP_BrkN[bk]++; PP_BrkPops[bk] += ppCall.lastPops; }
     { int nbr = 0, reached = (Dist[tx][ty] != 30000);
       for (i=0;i<8;i++)
         { int16 ax = tx + DirX[i], ay = ty + DirY[i];
@@ -452,7 +497,7 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
             }
         }
       if (++AS_Calls % 1000 == 0) AS_Report(); /* a timed-out run never reaches atexit */
-      if (AS_D[tx][ty] != Dist[tx][ty])
+      if (!bash && AS_D[tx][ty] != Dist[tx][ty])
         { AS_Mismatch++;
           fprintf(stderr, "ASTAR_MISMATCH %d,%d %d,%d astar=%d dijkstra=%d\n",
                   (int)sx,(int)sy,(int)tx,(int)ty,(int)Dist[tx][ty],(int)AS_D[tx][ty]); }
@@ -465,11 +510,11 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
         LS_Refusals++;
         if (Dist[tx][ty] != 30000)
           { LS_Mismatch++;
-            { uint16 l1 = WallLabel[sx][sy], l2 = WallLabel[tx][ty]; uint32 t0 = WallLabelTurn;
-              BuildWallLabels(this,sizeX,sizeY);
+            { uint16 l1 = WallLabel[labelSet][sx][sy], l2 = WallLabel[labelSet][tx][ty]; uint32 t0 = WallLabelTurn[labelSet];
+              BuildWallLabels(this,sizeX,sizeY,labelSet);
               fprintf(stderr, "LABEL_MISMATCH %d,%d %d,%d old=%d/%d@%u now=%d/%d@%u\n",
                     (int)sx,(int)sy,(int)tx,(int)ty,(int)l1,(int)l2,(unsigned)t0,
-                    (int)WallLabel[sx][sy],(int)WallLabel[tx][ty],(unsigned)theGame->Turn); } }
+                    (int)WallLabel[labelSet][sx][sy],(int)WallLabel[labelSet][tx][ty],(unsigned)theGame->Turn); } }
         if (LS_Refusals % 1000 == 0) LS_Report();
         MCCacheOn = false;
         return false;
@@ -563,10 +608,41 @@ static bool RegionTooSmallFor(Map *m, int16 x, int16 y, Creature *c)
   return TREG(r)->Size < c->GetAttr(A_SIZ);
 }
 
-uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
-                  int32 dangerFactor, bool Incor, bool Meld, bool isTarget)
+/* inc-zm6li: what a runner with these flags may do with a closed door:
+   0 refuse it, 1 open it (a hand opens it, no break), 2 break it down.
+   A secret door is never entered. A walker with hands (DF_OPEN_DOORS) opens
+   every door that is not locked and breaks a locked one only with
+   DF_BASH_DOORS; a walker without hands breaks every closed door, again only
+   with DF_BASH_DOORS. A door the runner has failed to break five times
+   (TRIED,2 on the door, per runner) is a wall. */
+static int DoorRule(Door *d, Creature *c, int32 df)
 {
-  if (!Incor && SolidAt(x,y)) {
+  if (d->DoorFlags & DF_SECRET)
+    return 0;
+  if ((df & DF_OPEN_DOORS) && !(d->DoorFlags & DF_LOCKED))
+    return 1;
+  if (!(df & DF_BASH_DOORS))
+    return 0;
+  if (c && d->GetStatiMag(TRIED,2,c) >= 5)
+    return 0;
+  return 2;
+}
+
+uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
+                  int32 dangerFactor, bool Incor, bool Meld, bool isTarget,
+                  bool *breaks)
+{
+  /* inc-pu6v.117: a closed door is solid (F_SOLID), so the solid test below
+     refused it before the door test further down could run. A walker that opens
+     doors (DF_OPEN_DOORS) treats a closed, unlocked, non-secret door as open. */
+  bool openDoor = false;
+  if ((dangerFactor & (DF_OPEN_DOORS | DF_BASH_DOORS)) && SolidAt(x,y)) {
+    Door *od;
+    for (od = FDoorAt(x,y); od; od = NDoorAt(x,y))
+      if (!od->isPassable() && DoorRule(od,c,dangerFactor))
+        openDoor = true;
+  }
+  if (!Incor && !openDoor && SolidAt(x,y)) {
     if (Meld) {
       int i = TTER(PTerrainAt(x,y,c))->Material;
       if (i == MAT_GRANITE || i == MAT_MAGMA || i == MAT_QUARTZ ||
@@ -614,8 +690,20 @@ uint16 Map::RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
          straight through it. Door::isPassable (inc/Feature.h) holds the
          engine's own answer; see the mark there for why it is upstream's, for
          the measurements, and for the other reader this fixed. */
-      if (!dr->isPassable())
+      if (!dr->isPassable()) {
+        /* inc-pu6v.117: a walker that opens doors (DF_OPEN_DOORS) may route
+           through a closed door that is neither locked nor secret; it costs
+           one extra normal step (an ordinary floor returns 2 below).
+           inc-zm6li: DF_BASH_DOORS adds the doors it can only break down,
+           reported through *breaks so the search can count them. */
+        int rule = DoorRule(dr,c,dangerFactor);
+        if (rule) {
+          if (rule == 2 && breaks)
+            *breaks = true;
+          return 4;
+        }
         return 0;
+      }
   }
   rID stickyID = StickyAt(x,y); 
   if (stickyID && 

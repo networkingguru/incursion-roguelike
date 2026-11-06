@@ -9,6 +9,29 @@
 #include <cstdio>
 
 hObj RunToWatched = 0;
+hObj RouteProbeWatched = 0;
+static const char *RouteDoorLast = "none";
+static unsigned RouteDoorOpens = 0, RouteDoorBashes = 0;
+static unsigned RouteDoorPicks = 0, RouteDoorKnocks = 0;
+/* inc-zm6li phase 3: kind 2 is a lock-pick try, kind 3 a Knock use. */
+void RouteDoorNote(Monster *mn, Door *d, int kind) {
+    (void)d;
+    if (mn->myHandle != RouteProbeWatched) return;
+    RouteDoorLast = kind == 2 ? "pick" : "knock";
+    if (kind == 2) RouteDoorPicks++; else RouteDoorKnocks++;
+}
+void RouteDoorBeginTurn() { RouteDoorLast = "movement"; }
+void RouteDoorAction(Monster *mn, Door *d, bool opening) {
+    if (mn->myHandle == RouteProbeWatched) {
+        RouteDoorLast = opening ? "open" : "bash";
+        if (opening) RouteDoorOpens++; else RouteDoorBashes++;
+    }
+#ifdef DOOR_STUCK_PROBE
+    extern void DoorStuckAction(Monster*, Door*, bool);
+    DoorStuckAction(mn, d, opening);
+#endif
+}
+
 
 /* INCURSION_RUNTO_SKILL_ROLL=<1..20> forces the d20 of every skill check;
    0 (unset) leaves the roll alone. Serves inc-vmpk. */
@@ -108,15 +131,47 @@ static void RunToStageM(Map *m, Player *p) {
                (int)(mn->ts.getLeader() == p));
 }
 
+/* Position along the U corridor, counted from the far end (14,10); the door
+   square (12,14) is DOOR_IDX and the player's square (10,10) is 12. */
+#define DOOR_X 12
+#define DOOR_Y 14
+#define DOOR_IDX 6
+static int UIndex(int x, int y) {
+    if (x == 14) return y - 10;
+    if (y == 14) return 4 + (14 - x);
+    if (x == 10) return 8 + (14 - y);
+    return -1;
+}
+
 /* inc-rabe: opt-in route-function scene and rest-by-rest observations.
    INCURSION_ROUTE_PROBE=missing deliberately omits the monster.
-   A U corridor has one first step (south); west is a wall. */
+   A U corridor has one first step (south); west is a wall.
+   inc-zm6li: the door-* values put one closed door on the bottom of the U, at
+   (12,14), and watch a monster (or, door-pet, a companion) for the whole walk:
+     door          a kobold (hands), door unlocked and not secret
+     door-locked   the same door DF_LOCKED, a goblin (no Lockpicking)
+     door-secret   the same door DF_SECRET
+     door-nohands  a giant rat (M_NOHANDS), door unlocked
+     door-locked-alt, door-nohands-alt   the same, plus an open bypass around
+                   the door that is longer than the way through it
+     door-bashcap  the door is a vault door (Break DC 35, out of reach of any
+                   kick), locked, so the monster fails every break
+     door-pick, door-pick-fail   a locked door, a kobold with Lockpicking
+                   (skill roll forced to 20, or to 1: it fails five picks)
+     door-knock-spell, door-knock-wand, door-knock-scroll   a locked door, a
+                   kobold that knows Knock, or holds a wand or scroll of it
+     door-reclose  the door is closed again after the monster has crossed it
+     door-trap     a kobold, a found trap on the door square
+     door-pet      a kobold companion of the player, OPT_MON_DJIKSTRA=2
+     door-missing  no door: the staging deliberately fails */
 static void RouteProbe(Map *m, Player *p) {
     const char *mode = getenv("INCURSION_ROUTE_PROBE");
     if (!mode || !*mode || !m || !p) return;
+    const bool doorMode = !strncmp(mode, "door", 4);
     static bool staged = false;
     static hObj watched = 0;
     static int sample = 0;
+    static bool reclosed = false;
     static uint32 start = 0;
     char path[1024];
     snprintf(path, sizeof(path), "%slogs/routeprobe.log",
@@ -127,6 +182,14 @@ static void RouteProbe(Map *m, Player *p) {
         staged = true;
         rID wall = FIND("Dungeon Wall"), floor_ = FIND("Floor");
         rID region = FIND("Winding Corridor"), rat = FIND("giant rat");
+        if (doorMode && strncmp(mode, "door-nohands", 12))
+            rat = FIND("kobold");
+        /* A kobold has the Lockpicking feat and picks a locked door. These
+           scenarios need a monster with hands and neither Lockpicking nor
+           Knock, so they use a goblin (also small). */
+        if (!strcmp(mode, "door-locked") || !strcmp(mode, "door-bashcap") ||
+            !strncmp(mode, "door-knock", 10))
+            rat = FIND("goblin");
         if (!wall || !floor_ || !region || !rat || !m->InBounds(15, 15)) {
             fprintf(f, "setup missing=1 reason=resources-or-bounds\n");
             fclose(f); return;
@@ -140,10 +203,16 @@ static void RouteProbe(Map *m, Player *p) {
                         (x >= 9 && x <= 15 && y >= 9 && y <= 15)))
                         t->Remove(true);
                 }
+        const bool alt = doorMode && strstr(mode, "-alt");
         for (int x = 9; x <= 15; ++x)
-            for (int y = 9; y <= 15; ++y) {
+            for (int y = 9; y <= (alt ? 16 : 15); ++y) {
                 bool open = ((x == 10 || x == 14) && y >= 10 && y <= 14) ||
                             (y == 14 && x >= 10 && x <= 14);
+                /* bypass: (13,14) -> (13,15) -> (12,16) -> (11,15) -> (11,14),
+                   10 cost units against 6 through the door at (12,14) */
+                if (alt && ((x == 13 && y == 15) || (x == 12 && y == 16) ||
+                            (x == 11 && y == 15)))
+                    open = true;
                 m->WriteTerra(x, y, open ? floor_ : wall);
                 m->SetRegion(Rect(x,y,x,y), region);
                 m->At(x,y).Memory = m->At(x,y).Glyph;
@@ -152,7 +221,7 @@ static void RouteProbe(Map *m, Player *p) {
         p->PlaceAt(m, 10, 10);
         p->RemoveStati(NONDETECTION);
         p->RemoveStati(HIDING);
-        p->Options[OPT_MON_DJIKSTRA] = 1;
+        p->Options[OPT_MON_DJIKSTRA] = !strcmp(mode, "door-pet") ? 2 : 1;
         p->Options[OPT_AUTOMORE] = 1;
         p->cHP = p->mHP = 10000;
         start = theGame->Turn;
@@ -160,35 +229,133 @@ static void RouteProbe(Map *m, Player *p) {
             fprintf(f, "setup missing=1 reason=requested\n");
             fclose(f); return;
         }
+        Door *dr = NULL;
+        Trap *tp = NULL;
+        if (doorMode && strcmp(mode, "door-missing")) {
+            dr = new Door(FIND(!strcmp(mode, "door-bashcap") ? "vault door" : "oak door"));
+            dr->DoorFlags = (!strcmp(mode, "door-locked") || !strcmp(mode, "door-locked-alt") ||
+                             !strcmp(mode, "door-bashcap") || !strncmp(mode, "door-pick", 9) ||
+                             !strncmp(mode, "door-knock", 10)) ? DF_LOCKED :
+                            !strcmp(mode, "door-secret") ? DF_SECRET : 0;
+            dr->PlaceAt(m, DOOR_X, DOOR_Y);
+            dr->SetImage();
+            if (!strcmp(mode, "door-trap")) {
+                tp = new Trap(FIND("trap"), FIND("howling trap"));
+                tp->PlaceAt(m, DOOR_X, DOOR_Y);
+                tp->TrapFlags |= TS_FOUND;
+            }
+            m->At(DOOR_X, DOOR_Y).Memory = m->At(DOOR_X, DOOR_Y).Glyph;
+        }
         Monster *mn = new Monster(rat);
         mn->PlaceAt(m, 14, 10);
         mn->Initialize(true);
+        if (doorMode) mn->cHP = mn->mHP = 10000;
+        if (!strncmp(mode, "door-pick", 9))
+            mn->GainPermStati(SKILL_BONUS, NULL, SS_MISC, SK_LOCKPICKING, 8);
+        if (!strncmp(mode, "door-knock", 10)) {
+            rID kn = FIND("Knock");
+            if (!strcmp(mode, "door-knock-spell")) {
+                mn->GainPermStati(INNATE_SPELL, NULL, SS_MISC, 0, 0, kn);
+            }
+            else {
+                Item *it = Item::Create(FIND(!strcmp(mode, "door-knock-wand") ? "wand" : "scroll"));
+                it->MakeMagical(kn);
+                it->MakeKnown(0xFF);
+                if (it->Type == T_WAND) it->SetCharges(3);
+                mn->GainItem(it, true);
+                mn->GainPermStati(EXTRA_SKILL, NULL, SS_MISC, SK_DECIPHER);
+            }
+            mn->CalcValues();
+        }
         mn->RemoveStati(ASLEEP);
         mn->RemoveStati(SLEEPING);
-        mn->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_TELEPATHY, 30);
-        mn->CalcValues();
-        mn->ts.giveOrder(mn, NULL, OrderDoNotHide);
-        mn->ts.addCreatureTarget(p, TargetEnemy);
-        p->ts.addCreatureTarget(mn, TargetEnemy);
+        if (!strcmp(mode, "door-pet"))
+            mn->MakeCompanion(p, PHD_FREEBIE);
+        else {
+            mn->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_TELEPATHY, 30);
+            mn->CalcValues();
+            mn->ts.giveOrder(mn, NULL, OrderDoNotHide);
+            mn->ts.addCreatureTarget(p, TargetEnemy);
+            p->ts.addCreatureTarget(mn, TargetEnemy);
+        }
         watched = mn->myHandle;
+        RouteProbeWatched = watched;
         int lof = m->LineOfFire(mn->x, mn->y, p->x, p->y, mn);
         int perceives = mn->Perceives(p);
         int hostile = p->isHostileTo(mn) && mn->isHostileTo(p);
         int straight = mn->DirTo(p->x, p->y);
         int expected = mn->DirTo(14, 11);
         int blocked = m->SolidAt(mn->x + DirX[straight], mn->y + DirY[straight]);
-        int dir = mn->SmartDirTo(p->x, p->y);
+        int dir = mn->SmartDirTo(p->x, p->y, !strcmp(mode, "door-pet"));
+        if (doorMode) {
+            Door *fd = m->FDoorAt(DOOR_X, DOOR_Y);
+            fprintf(f, "door exists=%d flags=%d solid=%d trap=%d nohands=%d "
+                    "pet=%d at=%d,%d bypass=%d vault=%d\n", fd != NULL, fd ? (int)fd->DoorFlags : -1,
+                    (int)m->SolidAt(DOOR_X, DOOR_Y), m->FTrapAt(DOOR_X, DOOR_Y) != NULL,
+                    (int)mn->HasMFlag(M_NOHANDS),
+                    (int)(mn->ts.getLeader() == p), DOOR_X, DOOR_Y,
+                    (int)(!m->SolidAt(13,15)) + (int)(!m->SolidAt(12,16)) + (int)(!m->SolidAt(11,15)),
+                    fd ? (int)(fd->fID == FIND("vault door")) : -1);
+            (void)dr; (void)tp;
+        }
         fprintf(f, "setup missing=0 mon=%d,%d player=%d,%d lof=%d perceives=%d "
                 "hostile=%d opt=%d telepathy=%d straight=%d blocked=%d expected=%d "
                 "center=%d dir=%d\n", mn->x, mn->y, p->x, p->y, lof, perceives,
                 hostile, theGame->Opt(OPT_MON_DJIKSTRA), mn->TelepRange,
                 straight, blocked, expected, CENTER, dir);
     }
-    if (watched && isValidHandle(watched)) {
+    if (watched && !isValidHandle(watched) && doorMode) {
+        fprintf(f, "observe rest=%d gone=1\n", sample++);
+    } else if (watched && isValidHandle(watched)) {
         Creature *mn = oCreature(watched);
-        fprintf(f, "observe rest=%d tick=%u mon=%d,%d player=%d,%d adjacent=%d\n",
+        if (doorMode) mn->cHP = mn->mHP;
+        Door *re = m->FDoorAt(DOOR_X, DOOR_Y);
+        if (!strcmp(mode, "door-reclose") && !reclosed && re &&
+            re->isPassable() && UIndex(mn->x,mn->y) >= DOOR_IDX) {
+            mn->PlaceAt(m, 13, 14);
+            re->DoorFlags &= ~DF_OPEN;
+            re->SetImage();
+            reclosed = true;
+            fprintf(f, "reclose moved=monster to=13,14 player=%d,%d flags=%d tried1=%d tried2=%d opens=%u\n",
+                    p->x,p->y,(int)re->DoorFlags,(int)re->HasStati(TRIED,1,mn),
+                    (int)re->GetStatiMag(TRIED,2,mn),RouteDoorOpens);
+        }
+
+        fprintf(f, "observe rest=%d tick=%u mon=%d,%d player=%d,%d adjacent=%d",
                 sample++, (unsigned)(theGame->Turn - start), mn->x, mn->y,
                 p->x, p->y, (int)(mn->m == p->m && dist(mn->x,mn->y,p->x,p->y) == 1));
+        if (doorMode) {
+            p->cHP = p->mHP;   /* the kobold bites; keep the character alive */
+            Door *fd = m->FDoorAt(DOOR_X, DOOR_Y);
+            fprintf(f, " idx=%d dist=%d dooropen=%d doorflags=%d",
+                    UIndex(mn->x, mn->y), (int)dist(mn->x,mn->y,p->x,p->y),
+                    fd ? (int)fd->isPassable() : -1, fd ? (int)fd->DoorFlags : -1);
+        }
+        int kwand = -1, kscroll = 0;
+        {
+            rID kn = FIND("Knock");
+            InvCursorGuard guard;
+            for (Item *it = mn->FirstInv(); it; it = mn->NextInv())
+                if (it->eID == kn) {
+                    if (it->Type == T_WAND) kwand = it->GetCharges();
+                    else if (it->Type == T_SCROLL) kscroll += it->Quantity;
+                }
+        }
+        fprintf(f, " picks=%u knocks=%u kwand=%d kscroll=%d mag3=%d mag4=%d",
+                RouteDoorPicks, RouteDoorKnocks, kwand, kscroll,
+                re ? (int)re->GetStatiMag(TRIED,3,mn) : -1,
+                re ? (int)re->GetStatiMag(TRIED,4,mn) : -1);
+        fprintf(f, " tried1=%d mag1=%d tried2=%d mag2=%d action=%s opens=%u bashes=%u reclosed=%d\n",
+                re ? (int)re->HasStati(TRIED,1,mn) : -1,
+                re ? (int)re->GetStatiMag(TRIED,1,mn) : -1,
+                re ? (int)re->HasStati(TRIED,2,mn) : -1,
+                re ? (int)re->GetStatiMag(TRIED,2,mn) : -1,
+                RouteDoorLast,RouteDoorOpens,RouteDoorBashes,(int)reclosed);
+        /* door-bashcap: ask the route search once more at the end, after the
+           monster has used up its tries. CENTER means it refuses the door. */
+        if (!strcmp(mode, "door-bashcap") && sample == 41)
+            fprintf(f, "final dir=%d center=%d\n",
+                    (int)((Monster*)mn)->SmartDirTo(p->x, p->y, false), (int)CENTER);
     }
     fclose(f);
 }
