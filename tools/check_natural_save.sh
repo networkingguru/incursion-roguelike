@@ -3,191 +3,103 @@
 # A natural 20 on a saving throw must always succeed, and a natural 1 must
 # always fail (SRD 3.5), regardless of Bonus + roll vs DC. (bd inc-e68f)
 #
-# THE DEFECT. Creature::SavingThrow (src/Creature.cpp) rolled 1d20 and then
-# decided success with the bare comparison Bonus + roll >= DC, at four
-# separate sites that all have to agree: the message colour, the message
-# word, the Exercise training gate and the return value. Patching only the
-# return leaves a natural 20 printing "[failure]" while the engine treats it
-# as a success -- worse than the original bug, because the player's own
-# screen would then disagree with what happened.
+# THE DEFECT. Creature::SavingThrow (src/Creature.cpp) decided success with the
+# bare comparison Bonus + roll >= DC, at four sites that must agree: message
+# colour, message word, Exercise training gate and return value.
 #
-# THE ORACLE. The engine already prints every save the player can perceive,
-# "<name>'s <type> Save: 1d20 (roll) ... vs DC <n> [success|failure].", and
-# OPT_STORE_ROLLS (on in tools/gates/Options.Dat) keeps every one of them in
-# the scrolling message log -- no probe, no instrumentation, just reading
-# what an ordinary session already tells the player. This check drives
-# tools/keys/natural-save-tangle.keys across many seeds for VOLUME (DC 15,
-# safe, no damage) and tools/keys/natural-save-runes.keys once, pinned to
-# seed 4, for an EDGE CASE a modest DC can never supply: DC 27 is far enough
-# above a level 1 paladin's +3 base that a natural 20 there only reads
-# "success" because of the special rule, not because Bonus + 20 happens to
-# clear the DC anyway. The runes run PINS that natural 20 with
-# INCURSION_FORCE_SAVE_ROLL=20 (src/Fight.cpp's LOFGetForcedSaveThrowRoll)
-# rather than hoping a seed rolls one; an explicit assertion below requires
-# a roll-20-vs-DC-27 line to be present and [success]. Every harvested line
-# is checked against both halves of the rule.
+# THE ORACLE. The engine prints every save the player can perceive,
+# "<name>'s <type> Save: 1d20 (roll) ... = <total> vs DC <n> [success|failure].",
+# and OPT_STORE_ROLLS (on in tools/gates/Options.Dat) keeps each one in the
+# message log. Two sessions load one frozen paladin and force the die and DC, so
+# no seed decides either case (bd inc-b4l3g.11):
+#   A (runes)  die forced to 20 (INCURSION_FORCE_SAVE_ROLL), guardian runes DC 27.
+#              Bonus + 20 = 23 is below 27, so [success] comes only from the rule.
+#   B (tangle) die forced to 1 and DC forced to 1 (INCURSION_FORCE_SAVE_DC).
+#              Total 4 is at or above DC 1, so [failure] comes only from the rule.
+# A session that prints no matching line is inconclusive (exit 2), never a pass.
 #
-# A run that never rolls a natural 20 (or never rolls a natural 1) has
-# measured nothing -- a d20 is 5% per roll; volume is what makes seeing both
-# a near-certainty across the seeds below -- and this check exits 2, not 0,
-# when that happens.
+# fact: character and save bonuses -- fixture human-paladin-seed4-gate, loaded by INCURSION_LOAD
+# fact: map and player position -- the fixture save; no run changes depth
+# fact: monsters on the level -- wizard switch Freeze Monsters (tools/keys/wizard-switches.keys)
+# fact: the d20 roll -- INCURSION_FORCE_SAVE_ROLL (20 in session A, 1 in session B)
+# fact: session A DC 27 -- guardian runes data in lib/dungeon.irh, no seed involved
+# fact: session B DC -- INCURSION_FORCE_SAVE_DC=1
+# fact: text matched -- game strings only; no seed-decided text is asserted
 #
-# PROVED RED on 2026-09-17 (docs/VERIFICATION.md step 2). The mutation below
-# reverts the fix to the original bare comparison. The guardian-runes
-# session then prints "Will Save: 1d20 (20) +3 base = 23 vs DC 27
-# [failure]." -- a natural 20 the SRD says must succeed -- and this check
-# reports that line as a violation and exits 1.
+# PROVED RED (bd inc-b4l3g.11): removing only `(roll == 20) ? true :` makes
+# session A print [failure] and exit 1; removing only `(roll == 1) ? false :`
+# makes session B print [success] and exit 1.
 #
 # Usage: tools/check_natural_save.sh [--prove-red]   (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/gates/Options.Dat
-
-# Seeds tools/keys/natural-save-tangle.keys has been verified clean on: a
-# clear run of floor at least 5 squares east of chargen-paladin.keys'
-# opening position, on tools/gates/Options.Dat. Seed 12 is left out on
-# purpose -- chargen-paladin.keys' own prompts land differently on it
-# ("Wizard Mode Switches" never appears there), which is a fixture question,
-# not a saving-throw one. A frozen list, not "however many seeds happen to
-# work today", so a bad seed cannot silently make this check measure less
-# than the reader expects.
-TANGLE_SEEDS="1 2 3 4 5 6 7 8 9 10 11 13 14 15"
-RUNES_SEED=4
+FIXTURE=tools/fixtures/chars/human-paladin-seed4-gate.sav
+SEED=4
 
 # The mutation this check defends: the special-cased natural 20/1 verdict,
-# reverted to upstream's bare comparison. Declared before do_check runs so
-# that --prove-red intercepts here, before the (expensive, many-seed) check
-# below ever runs once in this process -- the recursive re-runs inside
-# _check_prove_red do that work instead, once clean and once mutated.
+# reverted to upstream's bare comparison.
 check_mutation src/Creature.cpp \
 '    return (roll == 20) ? true
          : (roll == 1)  ? false
          : (Bonus + roll >= DC);' \
 '    return (Bonus + roll >= DC);'
 
-HARVEST="$(mktemp -t natural_save_harvest)" || _check_die 2 "no temp file"
-RUNES_HARVEST="$(mktemp -t natural_save_runes)" || _check_die 2 "no temp file"
-RESULT="$(mktemp -t natural_save_result)" || _check_die 2 "no temp file"
-trap 'rm -f "$HARVEST" "$RUNES_HARVEST" "$RESULT"' EXIT
+A_LINES="$(mktemp -t natural_save_a)" || _check_die 2 "no temp file"
+B_LINES="$(mktemp -t natural_save_b)" || _check_die 2 "no temp file"
+trap 'rm -f "$A_LINES" "$B_LINES"' EXIT
 
-# Dedupe the CURRENT run's chosen screens before adding them: the tangle
-# script pages the message log top to bottom with deliberately overlapping
-# windows (so nothing between the pages is missed), and that overlap prints
-# the same real roll on more than one page. Two different seeds are never
-# deduped against each other -- an identical line from two different
-# sessions is two different real rolls that happen to read alike.
-harvest_run() {
-    grep -h "Save: 1d20 (" "${CHECK_SCREENS[@]}" 2>/dev/null |
-        sed -E 's/^[[:space:]]*\|[[:space:]]*//; s/[[:space:]]*\|[^|]*$//' |
-        sort -u >> "$HARVEST"
-}
-
-do_check() {
-    local seed
-    : > "$HARVEST"
-    for seed in $TANGLE_SEEDS; do
-        check_run tools/keys/natural-save-tangle.keys "$seed"
-        check_screens '*messages*'
-        harvest_run
-    done
-
-    echo "--- the edge case: DC 27 guardian runes, seed $RUNES_SEED ---"
-    # Pin the roll instead of hoping a seed supplies a natural 20. Exported
-    # for this run only; INCURSION_FORCE_SAVE_ROLL seeds LOFForcedSaveThrowRoll
-    # once in src/Fight.cpp, and the tangle runs above never see it.
-    INCURSION_FORCE_SAVE_ROLL=20 \
-        check_run tools/keys/natural-save-runes.keys "$RUNES_SEED"
+# Run one session and keep its distinct save lines in <outfile>. The log is
+# paged with overlapping windows, so sort -u drops repeats of one real roll.
+session() { # <outfile> <keys> <roll> [dc]
+    local out="$1" keys="$2" roll="$3" dc="${4:-}"
+    if [ -n "$dc" ]; then
+        INCURSION_LOAD="$FIXTURE" INCURSION_FORCE_SAVE_ROLL="$roll" \
+            INCURSION_FORCE_SAVE_DC="$dc" check_run "$keys" "$SEED"
+    else
+        INCURSION_LOAD="$FIXTURE" INCURSION_FORCE_SAVE_ROLL="$roll" \
+            check_run "$keys" "$SEED"
+    fi
     check_screens '*messages*'
-    harvest_run
-    # The runes session's own lines, kept apart so the assertion below can
-    # require a roll-20-vs-DC-27 line from THIS session, not from a tangle
-    # seed that happened to roll one against DC 15.
     grep -h "Save: 1d20 (" "${CHECK_SCREENS[@]}" 2>/dev/null |
         sed -E 's/^[[:space:]]*\|[[:space:]]*//; s/[[:space:]]*\|[^|]*$//' |
-        sort -u > "$RUNES_HARVEST"
-
-    python3 - "$HARVEST" > "$RESULT" <<'PY'
-import re
-import sys
-
-path = sys.argv[1]
-lines = [l for l in open(path, encoding="utf-8").read().splitlines() if l.strip()]
-
-pat = re.compile(r"Save: 1d20 \((\d+)\)[^=]*=\s*-?\d+ vs DC \d+ \[(success|failure)\]")
-
-examined = 0
-nat20 = nat1 = 0
-violations = []
-for line in lines:
-    m = pat.search(line)
-    if not m:
-        continue
-    examined += 1
-    roll, verdict = int(m.group(1)), m.group(2)
-    if roll == 20:
-        nat20 += 1
-        if verdict == "failure":
-            violations.append(line)
-    if roll == 1:
-        nat1 += 1
-        if verdict == "success":
-            violations.append(line)
-
-print(f"EXAMINED {examined}")
-print(f"NAT20 {nat20}")
-print(f"NAT1 {nat1}")
-for v in violations:
-    print("VIOLATION " + v)
-PY
+        sort -u > "$out"
 }
 
-do_check
+echo "--- session A: natural 20 against DC 27 guardian runes ---"
+session "$A_LINES" tools/keys/natural-save-runes.keys 20
+echo "--- session B: natural 1 against forced DC 1 ---"
+session "$B_LINES" tools/keys/natural-save-tangle.keys 1 1
 
-EXAMINED="$(sed -n 's/^EXAMINED //p' "$RESULT")"
-NAT20="$(sed -n 's/^NAT20 //p' "$RESULT")"
-NAT1="$(sed -n 's/^NAT1 //p' "$RESULT")"
-VIOLATIONS="$(sed -n 's/^VIOLATION //p' "$RESULT")"
+A_HITS="$(grep -E "Save: 1d20 \(20\).* vs DC 27 \[" "$A_LINES")"
+B_HITS="$(grep -E "Save: 1d20 \(1\) .*= *[0-9]+ vs DC 1 \[" "$B_LINES")"
+
+[ -n "$A_HITS" ] || _check_die 2 "session A shows no roll-20-vs-DC-27 save line; the forced roll never reached a DC 27 save."
+[ -n "$B_HITS" ] || _check_die 2 "session B shows no roll-1-vs-DC-1 save line; the forced roll or DC never reached a save."
+
+# Session B: the total must reach the DC, or the line cannot tell the rule from a comparison.
+B_BAD_TOTAL="$(printf '%s\n' "$B_HITS" | sed -E 's/.*= *(-?[0-9]+) vs DC ([0-9]+) .*/\1 \2/' | awk '$1 < $2')"
+[ -z "$B_BAD_TOTAL" ] || _check_die 2 "session B has a line whose total is below its DC; it cannot separate the rule from a bare comparison."
 
 echo
-echo "save lines examined: ${EXAMINED:-0}"
-echo "natural 20s seen:    ${NAT20:-0}"
-echo "natural 1s seen:     ${NAT1:-0}"
+echo "session A lines (roll 20, DC 27): $(printf '%s\n' "$A_HITS" | wc -l | tr -d ' ')"
+echo "session B lines (roll 1, DC 1):   $(printf '%s\n' "$B_HITS" | wc -l | tr -d ' ')"
 
-if [ -z "$EXAMINED" ] || [ "$EXAMINED" -eq 0 ]; then
-    _check_die 2 "no save line matched the oracle pattern at all; the harness or the pattern drifted."
-fi
-if [ "${NAT20:-0}" -eq 0 ]; then
-    _check_die 2 "no natural 20 was rolled across the $(echo $TANGLE_SEEDS | wc -w | tr -d ' ') tangle seeds plus the runes seed; this run measured nothing about the rule it exists to check."
-fi
-if [ "${NAT1:-0}" -eq 0 ]; then
-    _check_die 2 "no natural 1 was rolled across the $(echo $TANGLE_SEEDS | wc -w | tr -d ' ') tangle seeds plus the runes seed; this run measured nothing about the rule it exists to check."
-fi
-
-# The pinned edge case: INCURSION_FORCE_SAVE_ROLL=20 was exported for the
-# runes run, so that session MUST show a roll-20-vs-DC-27 save line, and
-# every such line MUST read [success]. A missing line means the forced roll
-# never reached a DC 27 save (the key script or the env hook drifted), which
-# is INCONCLUSIVE, never a pass.
-RUNES_DC27="$(grep -E "Save: 1d20 \(20\).* vs DC 27 \[" "$RUNES_HARVEST" 2>/dev/null)"
-if [ -z "$RUNES_DC27" ]; then
-    _check_die 2 "the runes session (INCURSION_FORCE_SAVE_ROLL=20, seed $RUNES_SEED) shows no roll-20-vs-DC-27 save line, so the pinned edge case measured nothing; the forced roll never reached a DC 27 save."
-fi
-RUNES_DC27_BAD="$(printf '%s\n' "$RUNES_DC27" | grep -v "\[success\]")"
-if [ -n "$RUNES_DC27_BAD" ]; then
+A_BAD="$(printf '%s\n' "$A_HITS" | grep -v "\[success\]")"
+if [ -n "$A_BAD" ]; then
     echo
-    echo "FAIL: a forced natural 20 against DC 27 did not read [success]:"
-    printf '%s\n' "$RUNES_DC27_BAD" | sed 's/^/      /'
+    echo "FAIL: a natural 20 against DC 27 did not read [success]:"
+    printf '%s\n' "$A_BAD" | sed 's/^/      /'
     exit 1
 fi
-
-if [ -n "$VIOLATIONS" ]; then
+B_BAD="$(printf '%s\n' "$B_HITS" | grep -v "\[failure\]")"
+if [ -n "$B_BAD" ]; then
     echo
-    echo "FAIL: a natural 20 or a natural 1 disagreed with SRD 3.5:"
-    echo "$VIOLATIONS" | sed 's/^/      /'
+    echo "FAIL: a natural 1 with total at or above the DC did not read [failure]:"
+    printf '%s\n' "$B_BAD" | sed 's/^/      /'
     exit 1
 fi
 
 echo
-echo "PASS: no natural 20 ended in [failure] and no natural 1 ended in [success]"
-echo "      across $EXAMINED save lines (${NAT20} natural 20s, ${NAT1} natural 1s)."
+echo "PASS: every forced natural 20 read [success] and every forced natural 1 read [failure]."
 exit 0

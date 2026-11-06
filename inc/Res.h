@@ -81,6 +81,7 @@ class VMachine
     public:
       int32 Execute(EventInfo *e, rID xID, hCode CP);
       int32 Execute(Thing*t,rID xID, hCode CP);
+      int32 MapReadProbeRun(int16 varid, hObj h); /* inc-m2c6 */
       int32* getMemorySafe(int32 a);
       int32* getStackSafe(int32 a);
       int32* getRegSafe(int32 n);

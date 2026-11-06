@@ -26,15 +26,7 @@
 # history, so paging from the very top (PGUP*100, clamped at 0) down through
 # a few PGDN steps dumps the whole session's rolls at once.
 
-@include chargen-paladin.keys
-@until "Afoot" ESC
-
-w
-y
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
+@include wizard-switches.keys
 
 w
 @choose "Change terrain type"
@@ -72,24 +64,12 @@ RIGHT
 @while "Confirm" y
 @dump:entry
 
-RIGHT*20
+RIGHT*10
 @while "Confirm" y
-LEFT*20
-@while "Confirm" y
-RIGHT*20
-@while "Confirm" y
-LEFT*20
+LEFT*10
 @while "Confirm" y
 
 v
-@dump:messages-bottom
-PGUP*100
-@dump:messages-top
-PGDN*1
-@dump:messages-mid1
-PGDN*1
-@dump:messages-mid2
-PGDN*1
-@dump:messages-mid3
+@dump:messages
 @while "Messages" ESC
 @quit

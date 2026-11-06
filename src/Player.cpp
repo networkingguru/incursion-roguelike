@@ -459,6 +459,7 @@ void Player::ChooseAction() {
     AoOProbeArrange(this);
     EludeProbeArrange(this);
     { extern void CompanionTrapProbeTick(Player *); CompanionTrapProbeTick(this); }
+    { extern void ChasmSwapProbeTick(Player *); ChasmSwapProbeTick(this); }
 
     //IPrint(Format("Chill Shield: %d/%d %d %d.",
     //  TEFF(FIND("chill shield")) - theGame->Modules[0]->QEff,

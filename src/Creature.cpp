@@ -2307,12 +2307,11 @@ void Creature::GainInherentBonus(int16 at, int16 mag, bool msg)
 
     /* upstream: a tome read at or above the inherent cap is wasted, but the
        base code tested only equality, so an ABOVE-cap total fell through and
-       printed a false gain (inc-bsqm; Observed in play --
-       tools/check_inh_wasteful_play.sh, tools/keys/inh-wasteful-play.keys:
-       polymorphed into a shambling mound, a grid bug's electric bite pushes
-       CON's inherent bonus above the cap, and a second tome prints "You feel
-       a profound sense of wastefulness." fixed, "You feel hardier." before.
-       Probe evidence: tools/check_inh_wasteful.sh). Live route: the
+       printed a false gain (inc-bsqm; Observed in play,
+       commit a05fefd1: polymorphed into a shambling mound, a grid bug's
+       electric bite pushes CON's inherent bonus above the cap, and a second
+       tome prints "You feel a profound sense of wastefulness." fixed, "You feel
+       hardier." before. Probe evidence: tools/check_inh_wasteful.sh). Live route: the
        shambling mound's electricity handler grants an uncapped ADJUST_INH
        A_CON +1d4 (lib/mon3.irh:2102) on top of a tome-filled cap. Pure
        control flow, no typedef/compiler dependence, so Win32 with the
@@ -4018,6 +4017,10 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     fprintf(stderr, "LIGHT_TRAP save type=%s dc=%d rolls_die=%d clock=%ld\n",
         type == FORT ? "FORT" : type == REF ? "REF" : "WILL", (int)DC,
         DC > 0, (long)theGame->Turn);
+  /* inc-b4l3g.11: test-only DC override; unset leaves DC alone. */
+  extern int16 LOFGetForcedSaveDC();
+  { int16 fdc = LOFGetForcedSaveDC();
+    if (fdc) DC = fdc; }
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
   /* inc-1xr3: predicted chance with the same arguments, before any die. */

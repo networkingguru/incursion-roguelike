@@ -1,4 +1,5 @@
 # inc-2jd0: loaded Mage buys an unmemorized spell, then casts without rest.
+@include wizard-switches.keys
 @include inherent-baseline.keys
 @include feat-level3.keys
 @choose "Inherent Spell"

@@ -1,17 +1,33 @@
 # inc-bsqm reproduction: read the over-cap miss in Creature::GainInherentBonus.
 #
-# An orc barbarian's 1st-level EV_ADVANCE calls
-# GainInherentBonus(A_STR,1d2,false) (lib/classes.irh:216) before any tome, so
-# the session needs no equipment at all. With INCURSION_INH_PROBE=1 the probe
-# above GainInherentBonus (src/Creature.cpp) fills that attribute to its cap
-# and adds the shambling mound's uncapped ADJUST_INH grant (lib/mon3.irh:2102)
-# just before the call, then writes the result to logs/inh.log.
+# The run LOADS the frozen orc barbarian (INCURSION_LOAD, set by
+# tools/check_inh_wasteful.sh; fixture orc-barbarian-seed1-opt0818), so no
+# character generation runs. The barbarian's creation already granted STR and
+# CON inherent bonuses; DEX has none, so the probe's arm starts from a clean
+# attribute. The script takes a +5 "Treatise of Efficious Celerity" (the DEX
+# tome, lib/m_items.irh:58) from wizard Item Acquisition and reads it from the
+# pack. That read is the run's FIRST GainInherentBonus call: with
+# INCURSION_INH_PROBE=1 the probe (src/Creature.cpp) arms A_DEX just before it
+# and writes the result to logs/inh.log.
 #
-# The walk is only there so tools/headless.sh sees a completed turn and does
-# not report the run as vacuous; the probe fires during character generation.
-@include chargen.keys
+# @choose needs the "(in pack) " prefix FindMenuEntry draws (src/Wposix.cpp
+# MenuLabel/NameMatches match from the start of the line).
+w
+y
 
-DOWN*4 RIGHT*4 UP*4 LEFT*4
-.*5
+@choose "Item Acquisition"
+@until "]: Tomes" RIGHT
+@until "Treatise of Efficious Celerity" DOWN
+@expect "Treatise of Efficious Celerity"
+DOWN
+ENTER
+"5" ENTER
+@while "Air'" s
+@while "ESC:Done" ESC
+r
+@choose "(in pack) Treatise of Efficious Celerity"
+@while "--More--" ENTER
+@while "ESC:Done" ESC
+
 @dump:probed
 @quit

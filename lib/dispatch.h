@@ -2820,7 +2820,7 @@ void VMachine::GetMemberVar(int16 varid, hObj h, int8 n)
           REGS(n) = (pe->enAlign);
          break;
         case 2:
-          REGS(n) = (oThing(h)->m->myHandle);
+          REGS(n) = (oThing(h)->m) ? (oThing(h)->m->myHandle) : 0;
          break;
         case 3:
           REGS(n) = (oThing(h)->Next);

@@ -1,14 +1,11 @@
 # inc-2jd0: Elemental Covenant is studied; Adventurers' Arts is not.
+@include wizard-switches.keys
 @include feat-level3.keys
 @choose "Lucubration"
 @dump:book-pick
 @expect "[e] spellbook [Elemental Covenant]"
 e
 @until "Things in View" ESC
-w
-@choose "Ascend / Descend Depth"
-"2" ENTER
-@until "HP:" ESC
 w
 @choose "Genocide Everything"
 @until "HP:" ESC

@@ -356,6 +356,11 @@ void Game::Play() {
     extern void DoorPickProbe(Player *pl);
     DoorPickProbe(pp);
 
+    /* inc-m2c6: off unless INCURSION_MAPREAD_PROBE is set. See
+       src/MapReadProbe.cpp and tools/check_script_map_read.sh. */
+    extern void MapReadProbe(Player *pl);
+    MapReadProbe(pp);
+
     /* inc-qaav4: off unless INCURSION_MONWIELD_PROBE is set; needs a live
        player and map. See MonWieldProbe (src/MonWieldProbe.cpp) and
        tools/check_monwield_drain.sh. */
@@ -410,6 +415,11 @@ void Game::Play() {
        MusicAreaProbe (src/MusicAreaProbe.cpp). */
     extern void MusicAreaProbe(Player *pl);
     MusicAreaProbe(pp);
+
+    /* inc-t05z9: off unless INCURSION_BONUS_ORDER_PROBE is set. See
+       BonusOrderProbe (src/BonusOrderProbe.cpp). */
+    extern void BonusOrderProbe(Player *pl);
+    BonusOrderProbe(pp);
 
     /* inc-q33r: off unless INCURSION_STUN_DUR_PROBE is set. See
        StunDurProbe (src/StunDurProbe.cpp). */
@@ -468,6 +478,10 @@ void Game::Play() {
     TrapAttackProbe(pp);
     extern void CompanionTrapProbe(Player *pl);
     CompanionTrapProbe(pp);
+    /* inc-06ndv: off unless INCURSION_CHASM_SWAP_PROBE is set; see
+       tools/check_chasm_swap.sh. */
+    extern void ChasmSwapProbe(Player *pl);
+    ChasmSwapProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
