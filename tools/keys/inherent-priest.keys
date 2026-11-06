@@ -1,4 +1,5 @@
 # inc-2jd0: loaded Priest buys Bless through GainFeat.
+@include wizard-switches.keys
 s
 i
 o
