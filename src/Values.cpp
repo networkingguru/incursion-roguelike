@@ -43,6 +43,10 @@
 
 */
 
+#include <algorithm>
+#include <utility>
+#include <vector>
+
 #include "Incursion.h"
 
 #define A  (*((int16*)a))
@@ -145,6 +149,7 @@ void Creature::AddBonus(int8 btype,int8 attr,int16 bonus) {
     // massive surgery.
     //
     // FIXME. 
+    // (Status rows now reach here in a fixed order: ApplyAdjustRows, inc-t05z9.)
 
     if ((bonus < 0) || btype == BONUS_DODGE || btype == BONUS_CIRC) {
         StackBonus(btype, attr, bonus);
@@ -322,6 +327,9 @@ static void TouchDefProbeNote(Creature *c) {
         max(0,(int)Creature::AttrAdj[A_DEF][BONUS_SHIELD]));
     fflush(f);
 }
+
+static void ApplyAdjustRows(Creature *cr, int16 nature, int8 btype, bool KnownOnly);
+static void BonusOrderProbeNote(Creature *c, bool KnownOnly);
 
 void Creature::CalcValues(bool KnownOnly, Item *thrown) {
     InvCursorGuard invCursorGuard;
@@ -737,36 +745,12 @@ Restart:
     if (HasStati(SINGING))
         AddBonus(BONUS_STATUS,A_HIT,-2);
 
-    StatiIterNature(this,ADJUST)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_ENHANCE,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_SAC)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_SACRED,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_INS)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_INSIGHT,S->Val,S->Mag);
-    StatiIterEnd(this)
-        StatiIterNature(this,ADJUST_COMP)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-    AddBonus(BONUS_COMP,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_ART)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_ARTI,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_DEFL)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_DEFLECT,S->Val,S->Mag);
-    StatiIterEnd(this)
+    ApplyAdjustRows(this,ADJUST,BONUS_ENHANCE,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_SAC,BONUS_SACRED,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_INS,BONUS_INSIGHT,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_COMP,BONUS_COMP,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_ART,BONUS_ARTI,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_DEFL,BONUS_DEFLECT,KnownOnly);
     StatiIterNature(this,ADJUST_DMG)
         if (RedundantFieldGrant(S)) continue;
         KNOWN;
@@ -780,16 +764,8 @@ Restart:
         KNOWN;
         StackBonus(BONUS_INHERANT,S->Val,S->Mag);
     StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_MOR)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_MORALE,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_ARM)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_ARMOUR,S->Val,S->Mag);
-    StatiIterEnd(this)
+    ApplyAdjustRows(this,ADJUST_MOR,BONUS_MORALE,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_ARM,BONUS_ARMOUR,KnownOnly);
     StatiIterNature(this,ADJUST_DODG)
         if (RedundantFieldGrant(S)) continue;
         KNOWN;
@@ -800,31 +776,11 @@ Restart:
         KNOWN;
         StackBonus(BONUS_CIRC,S->Val,S->Mag);
     StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_NAT)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_NATURAL,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_LUCK)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_LUCK,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_RES)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_RESIST,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_PAIN)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_PAIN,S->Val,S->Mag);
-    StatiIterEnd(this)
-    StatiIterNature(this,ADJUST_SIZE)
-        if (RedundantFieldGrant(S)) continue;
-        KNOWN;
-        AddBonus(BONUS_SIZE,S->Val,S->Mag);
-    StatiIterEnd(this)
+    ApplyAdjustRows(this,ADJUST_NAT,BONUS_NATURAL,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_LUCK,BONUS_LUCK,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_RES,BONUS_RESIST,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_PAIN,BONUS_PAIN,KnownOnly);
+    ApplyAdjustRows(this,ADJUST_SIZE,BONUS_SIZE,KnownOnly);
 
     {
 		int16 n_add = 0, n_div = 1;
@@ -1600,6 +1556,7 @@ Restart:
                 (max(0,AttrAdj[A_DEF][BONUS_ARMOUR]) + max(0,AttrAdj[A_DEF][BONUS_SHIELD]));
         }
         TouchDefProbeNote(this);
+        BonusOrderProbeNote(this,KnownOnly);
 
         /* upstream: growth into a bulk with no room deleted the creature in
            PlaceNear (the FI_SIZE branch below) mid-action, and the caller
@@ -1863,6 +1820,70 @@ bool Creature::InherentCreatureReach() {
   else if (Attr[A_SIZ] >= SZ_HUGE)
     return true;
   return false;
+}
+
+/* upstream: a status row grants a non-stacking bonus through AddBonus, whose
+   WESMAX takes the larger positive but adds a penalty to a negative total, so
+   the total depended on the order the rows were read, and StatiSort/qsort
+   leave that order unfixed. +1, +4, -4 of one type to one attribute came out
+   0 or +1 by row order. The invariant: rows of one nature are applied
+   positives largest first, then penalties, with a stable sort, so the total
+   does not depend on stati-list order. Plain control flow, same on Win32 and
+   the original compiler. Tier Observed, tools/check_bonus_order.sh. inc-t05z9.
+   Not sent. INCURSION_BONUS_ORDER_PROBE / _REVERSE: see that check. */
+static bool AdjRowLarger(const std::pair<int16,int16> &a, const std::pair<int16,int16> &b) {
+    return a.second > b.second;
+}
+
+static char BonusOrderRows[256];
+
+static void ApplyAdjustRows(Creature *cr, int16 nature, int8 btype, bool KnownOnly) {
+    std::vector<std::pair<int16,int16> > rows;   /* (Val, Mag) */
+
+    StatiIterNature(cr,nature)
+        if (cr->RedundantFieldGrant(S)) continue;
+        KNOWN;
+        rows.push_back(std::make_pair((int16)S->Val,(int16)S->Mag));
+    StatiIterEnd(cr)
+
+    if (getenv("INCURSION_BONUS_ORDER_REVERSE"))
+        std::reverse(rows.begin(),rows.end());
+    if (nature == ADJUST && !KnownOnly && cr->isPlayer() &&
+        getenv("INCURSION_BONUS_ORDER_PROBE")) {
+        int n = 0;
+        BonusOrderRows[0] = 0;
+        for (size_t k = 0; k < rows.size() && n < 200; k++)
+            if (rows[k].first == A_STR)
+                n += snprintf(BonusOrderRows + n, sizeof(BonusOrderRows) - n,
+                    "%s%d", n ? "," : "", (int)rows[k].second);
+    }
+    std::stable_sort(rows.begin(),rows.end(),AdjRowLarger);
+    for (size_t k = 0; k < rows.size(); k++)
+        cr->AddBonus(btype,(int8)rows[k].first,rows[k].second);
+}
+
+/* inc-t05z9: one line per real CalcValues on the player, in logs/bonusorder.log:
+   the A_STR rows of the ADJUST nature in the order gathered (after the
+   REVERSE control, before the sort) and the final Strength. Off otherwise. */
+static void BonusOrderProbeNote(Creature *c, bool KnownOnly) {
+    static int on = -1;
+    static FILE *f = NULL;
+    char path[1024];
+
+    if (on == -1)
+        on = getenv("INCURSION_BONUS_ORDER_PROBE") ? 1 : 0;
+    if (!on || KnownOnly || !c->isPlayer())
+        return;
+    if (!f) {
+        snprintf(path, sizeof(path), "%slogs/bonusorder.log",
+            (const char*)T1->IncursionDirectory);
+        f = fopen(path, "a");
+        if (!f)
+            return;
+    }
+    fprintf(f, "rows %s enh %d str %d\n", BonusOrderRows,
+        (int)Creature::AttrAdj[A_STR][BONUS_ENHANCE], (int)c->Attr[A_STR]);
+    fflush(f);
 }
 
 void Character::CalcValues(bool KnownOnly, Item *thrown)

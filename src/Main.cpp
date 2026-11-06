@@ -416,6 +416,11 @@ void Game::Play() {
     extern void MusicAreaProbe(Player *pl);
     MusicAreaProbe(pp);
 
+    /* inc-t05z9: off unless INCURSION_BONUS_ORDER_PROBE is set. See
+       BonusOrderProbe (src/BonusOrderProbe.cpp). */
+    extern void BonusOrderProbe(Player *pl);
+    BonusOrderProbe(pp);
+
     /* inc-q33r: off unless INCURSION_STUN_DUR_PROBE is set. See
        StunDurProbe (src/StunDurProbe.cpp). */
     extern void StunDurProbe(Player *pl);
