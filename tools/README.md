@@ -669,8 +669,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_huntsman_live.sh` | Does the Twilight Huntsman reach his own spell list, smite Law rather than Good, and track at the ranger's rate, serving the ranger's opening bonus once rather than twice? | LIVE |
 | `check_illus_refund.sh` | Does the illusory-damage refund still clamp to the maximum, instead of paying above it and stranding a character at 58/56? | LIVE |
 | `check_illusion_flags.sh` | Does an illusion's declared IL_IMPROVED flag decide who pierces it, rather than the parity of its save DC? | LIVE |
-| `check_inh_wasteful.sh` | a tome read over the inherent cap is wasted | LIVE |
-| `check_inh_wasteful_play.sh` | Played, not probed: does an orc barbarian who fills Constitution to the cap with a tome, goes above it the only live way (a shambling mound's electricity handler, reached by polymorphing and taking a lightning bite), and reads a second tome from the pack, see "You feel a profound sense of wastefulness." with his CON unchanged -- rather than the false "You feel hardier." the unfixed `==` test printed? | LIVE |
+| `check_inh_wasteful.sh` | a tome read over the inherent cap is wasted; loads the frozen orc barbarian, reads a wizard-acquired +5 DEX tome, and the probe arms on that read (INCONCLUSIVE, exit 2, when the setup fails) | LIVE |
 | `check_inherent_lucubration.sh` | Do the Inherent Spell and Lucubration feats work in play? Loads `orc-mage-seed1-opt0822.sav`, gains a level through the real level-up path, takes Inherent Spell, picks the unmemorized Mage Armor and casts it with no rest, requiring its effect and a mana drop; then takes Lucubration, picks one book, drops every book and rests, requiring that book's selected spell to be memorized while a spell from an unpicked book is not; then loads `xsummon-priest-seed5-opt0822.sav`, drops the holy symbol, picks Bless as Inherent and casts it, while another divine spell is still refused. Fails on any assertion in a run's error log. Red on master, where the pick menus do not exist (inc-2jd0). | LIVE |
 | `check_inflict_moderate_desc.sh` | Does the Inflict Moderate Wounds description in `lib/pspells.irh` say "maximum 2d8+10", matching its `2d8 + LEVEL_MAX10` value, rather than the old "maximum 1d8+10" (inc-24wm)? | LIVE |
 | `check_intensive_study_play.sh` | Does taking Intensive Study's caster-level study through the ordinary level-up feat menu raise the character sheet's Spell Slots line to the spellcasting chart at the new effective caster level, read off the screen after a real `Player::AdvanceLevel` level-up rather than a probe? | LIVE |
@@ -1310,7 +1309,6 @@ tools/check_hide_dynamic_light.sh   # a dynamic external light breaks hiding, wi
 tools/check_light_averse.sh         # light aversion bites in a dynamically lit cell, not a dim one
 tools/check_shift_opcodes.sh        # a script `<<` shifts left, so a glowing creature's light keeps its colour
 tools/check_inh_wasteful.sh         # a tome read over the inherent cap is wasted
-tools/check_inh_wasteful_play.sh    # played, not probed: the same over-cap tome read, in mound form
 tools/check_intensive_study_play.sh # Intensive Study's caster-level study raises Spell Slots to the chart, read off the sheet after a real level-up
 tools/check_holy_undead.sh          # a Holy weapon smites undead that are not evil
 tools/check_dequ_magic_hardness.sh  # a no-save A_DEQU bypasses a plain weapon's hardness, not a magical one's
