@@ -882,31 +882,36 @@ Repeat:
                 fprintf(fp,"        case %d:\n          REGS(n) = UNCAST_RECT(",b2->varid);
             else
                 fprintf(fp,"        case %d:\n          REGS(n) = ",b2->varid);
+            const char *pfx = "";
             switch(b2->OType)
             { 
-            case T_EVENTINFO: fprintf(fp,"(pe"); break;
-            case T_MAP:       fprintf(fp,"(oMap(h)"); break;
-            case T_OBJECT:    fprintf(fp,"(oObject(h)"); break;
-            case T_THING:     fprintf(fp,"(oThing(h)"); break;
-            case T_PLAYER:    fprintf(fp,"(oPlayer(h)"); break;
-            case T_CREATURE:  fprintf(fp,"(oCreature(h)"); break;
-            case T_CHARACTER: fprintf(fp,"(oCharacter(h)"); break; 
-            case T_MONSTER:   fprintf(fp,"(oMonster(h)"); break; 
-            case T_ITEM:      fprintf(fp,"(oItem(h)"); break;
-            case T_FEATURE:   fprintf(fp,"(oFeature(h)"); break;
-            case T_PORTAL:    fprintf(fp,"(oPortal(h)"); break;
-            case T_DOOR:      fprintf(fp,"(oDoor(h)"); break;                            
-            case T_TRAP:      fprintf(fp,"(oTrap(h)"); break;                            
-            case T_GAME:      fprintf(fp,"(oGame(h)"); break;                            
-            case T_CONTAIN:   fprintf(fp,"(oContain(h)"); break;
-            case T_TERM:      fprintf(fp,"(T1"); break;
+            case T_EVENTINFO: pfx = "(pe"; break;
+            case T_MAP:       pfx = "(oMap(h)"; break;
+            case T_OBJECT:    pfx = "(oObject(h)"; break;
+            case T_THING:     pfx = "(oThing(h)"; break;
+            case T_PLAYER:    pfx = "(oPlayer(h)"; break;
+            case T_CREATURE:  pfx = "(oCreature(h)"; break;
+            case T_CHARACTER: pfx = "(oCharacter(h)"; break; 
+            case T_MONSTER:   pfx = "(oMonster(h)"; break; 
+            case T_ITEM:      pfx = "(oItem(h)"; break;
+            case T_FEATURE:   pfx = "(oFeature(h)"; break;
+            case T_PORTAL:    pfx = "(oPortal(h)"; break;
+            case T_DOOR:      pfx = "(oDoor(h)"; break;                            
+            case T_TRAP:      pfx = "(oTrap(h)"; break;                            
+            case T_GAME:      pfx = "(oGame(h)"; break;                            
+            case T_CONTAIN:   pfx = "(oContain(h)"; break;
+            case T_TERM:      pfx = "(T1"; break;
             }
             if (!strcmp(theSymTab[i],"m"))
-                fprintf (fp, "->%s->myHandle);\n         break;\n",theSymTab[i]);
+                /* upstream: a thing off the map (removed, in a pack, not yet
+                   placed) has m == NULL, and the unguarded read faults on every
+                   platform. Traced on master, Observed on the pantheon branch
+                   under lldb. inc-m2c6. Not sent. */
+                fprintf (fp, "%s->m) ? %s->m->myHandle) : 0;\n         break;\n",pfx,pfx);
             else if (b2->VarType == DT_RECT)
-                fprintf (fp, "->%s));\n         break;\n",theSymTab[i]);
+                fprintf (fp, "%s->%s));\n         break;\n",pfx,theSymTab[i]);
             else 
-                fprintf (fp, "->%s);\n         break;\n",theSymTab[i]);
+                fprintf (fp, "%s->%s);\n         break;\n",pfx,theSymTab[i]);
         }
         rb2 = (BResMem*)theSymTab.GetBinding(i,0,1,RES_MEM);
         if (!rb2)

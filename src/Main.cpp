@@ -356,6 +356,11 @@ void Game::Play() {
     extern void DoorPickProbe(Player *pl);
     DoorPickProbe(pp);
 
+    /* inc-m2c6: off unless INCURSION_MAPREAD_PROBE is set. See
+       src/MapReadProbe.cpp and tools/check_script_map_read.sh. */
+    extern void MapReadProbe(Player *pl);
+    MapReadProbe(pp);
+
     /* inc-qaav4: off unless INCURSION_MONWIELD_PROBE is set; needs a live
        player and map. See MonWieldProbe (src/MonWieldProbe.cpp) and
        tools/check_monwield_drain.sh. */
