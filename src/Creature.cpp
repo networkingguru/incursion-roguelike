@@ -4017,6 +4017,10 @@ inline bool Creature::SavingThrow(int16 type, int16 DC, uint32 Subtype,
     fprintf(stderr, "LIGHT_TRAP save type=%s dc=%d rolls_die=%d clock=%ld\n",
         type == FORT ? "FORT" : type == REF ? "REF" : "WILL", (int)DC,
         DC > 0, (long)theGame->Turn);
+  /* inc-b4l3g.11: test-only DC override; unset leaves DC alone. */
+  extern int16 LOFGetForcedSaveDC();
+  { int16 fdc = LOFGetForcedSaveDC();
+    if (fdc) DC = fdc; }
   int16 Bonus, i;
   static const char *save_name[3] = { "Fortitude", "Reflex", "Will" };
   /* inc-1xr3: predicted chance with the same arguments, before any die. */
