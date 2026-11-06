@@ -429,6 +429,23 @@ int8 LOFGetForcedSaveThrowRoll()
     }
     return LOFForcedSaveThrowRoll;
 }
+/* Test-only control (inc-b4l3g.11): INCURSION_FORCE_SAVE_DC=<n>, n >= 1, sets
+   the DC of every Creature::SavingThrow. Unset or invalid returns 0 (off). */
+int16 LOFGetForcedSaveDC()
+{
+    static bool done = false;
+    static int16 dc = 0;
+    if (!done) {
+        done = true;
+        const char *s = getenv("INCURSION_FORCE_SAVE_DC");
+        if (s && *s) {
+            int v = atoi(s);
+            if (v >= 1 && v <= 1000)
+                dc = (int16)v;
+        }
+    }
+    return dc;
+}
 
 /* Test-only control (inc-b4l3g.30): INCURSION_SNEAK_FORCE_LISTEN=heard|unheard
    decides the Move Silently vs Listen contest in PreStrike. Unset, or any
