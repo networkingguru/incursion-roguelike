@@ -20,15 +20,7 @@
 #
 # Freeze Monsters is on so nothing else moves while this runs.
 
-@include chargen-paladin.keys
-@until "Afoot" ESC
-
-w
-y
-@choose "Wizard Mode Switches"
-DOWN*10
-SPACE
-ESC
+@include wizard-switches.keys
 
 w
 @choose "Change terrain type"

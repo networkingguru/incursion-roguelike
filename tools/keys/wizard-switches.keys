@@ -1,0 +1,19 @@
+# inc-b4l3g.10: enter wizard mode and fix the rolls the inherent/lucubration
+# check would otherwise leave to the seed. Menu order, top to bottom:
+# 0 Cheat Death, 1 Auto-Identify, 2 Free Advancement, 3 Infinite Fatigue,
+# 4 Always Rest Safely, 5 Ignore Spell Failure, ... 10 Freeze Monsters.
+#  Free Advancement   : G on the character sheet gains a level.
+#  Always Rest Safely : rest is safe and instant, so no encounter roll and no
+#                       new monsters; it also lifts the depth-1 rest refusal.
+#  Ignore Spell Failure: the percentile spell success roll always succeeds.
+#  Freeze Monsters    : live monsters on the fixture level never act.
+s
+w y
+@choose "Wizard Mode Switches"
+DOWN*2 SPACE
+DOWN*2 SPACE
+DOWN SPACE
+DOWN*5 SPACE
+@dump:switches
+ESC
+@until "Things in View" ESC
