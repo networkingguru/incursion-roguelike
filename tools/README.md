@@ -481,6 +481,7 @@ A new check adds its row to this table, in alphabetical order.
 | `check_bloodspear_regen.sh` | Does the Bloodspear start regeneration at 20 turns per critical-hit damage and extend it at 5 turns per later hit? | LIVE |
 | `check_bloodspear_regen_duration.sh` | Does a Bloodspear critical grant the orc wielder regeneration for amt*20 turns rather than amt*5? | LIVE |
 | `check_bolas_entangle_expiry.sh` | Does STUCK from a thrown entangling weapon end by itself? A kobold rogue throws bolas at a frozen bugbear; wizard "Examine Nearby Things" must show the bugbear's STUCK with a positive duration that lapses within 150 waits, with no escape-check roll printed. Red before inc-9smo: STUCK [Dur -1] never lapsed. | LIVE |
+| `check_bonus_order.sh` | Does a creature's total for an attribute stay the same whatever order its same-type status bonuses are read in? The opt-in `BonusOrderProbe` gives the frozen lizardfolk monk magic-type Strength rows +1, +4 and -4, read forward and reversed; both sheets must show the baseline Strength, and rows +2, +3 must show baseline +3. Red before inc-t05z9: 14 in one order, 13 in the other. | LIVE |
 | `check_book_notimp_listing.sh` | a spellbook's listing marks an unimplemented spell; an implemented one stays unmarked | LIVE |
 | `check_book_section.sh` | books get their own Books inventory section | LIVE |
 | `check_book_stack.sh` | identical unidentified books stack; a different book does not | LIVE |
