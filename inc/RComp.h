@@ -251,6 +251,7 @@ class VBlock
         return; 
         }
       void ProcessContinues();
+      void AddBreakTarget();
         
   };
 

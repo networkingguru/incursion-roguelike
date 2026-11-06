@@ -1,0 +1,10 @@
+# Joins the test god of tools/repro_inc_b0ii.sh in wizard mode (the frozen druid
+# is already in wizard mode, so `w` opens the menu). The god's EV_BLESSING runs
+# one loop case and prints "B0II ..." lines (bd inc-b0ii).
+@while "-- more --" SPACE
+w
+@choose "Become Divine Champion"
+"Break Continue Test God" ENTER
+@until "HP:" ESC
+@dump:b0ii
+@quit
