@@ -1,0 +1,13 @@
+# inc-06ndv, for tools/check_chasm_swap.sh. INCURSION_CHASM_SWAP_PROBE=1 stages
+# the scene before the first key: a levitating player on a chasm square, a
+# walking ally one square east. RIGHT walks into the ally, which swaps places
+# and pushes the ally onto the chasm square, where it falls.
+# The probe's region description box takes the first key.
+ESC
+RIGHT
+@dump:after-swap
+SPACE*2
+v
+@dump:messages
+@while "Messages" ESC
+@quit

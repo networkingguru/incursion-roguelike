@@ -478,6 +478,10 @@ void Game::Play() {
     TrapAttackProbe(pp);
     extern void CompanionTrapProbe(Player *pl);
     CompanionTrapProbe(pp);
+    /* inc-06ndv: off unless INCURSION_CHASM_SWAP_PROBE is set; see
+       tools/check_chasm_swap.sh. */
+    extern void ChasmSwapProbe(Player *pl);
+    ChasmSwapProbe(pp);
 
     /* inc-tmys: off unless INCURSION_MONINIT_PROBE is set; needs a live map.
        See MonsterInitProbe (src/MonsterInitProbe.cpp) and
