@@ -109,12 +109,19 @@ WALKS=(
   "drow-ranger-twf-s1-kit tools/keys/ranger-twf-gear-save.keys      1  $KIT"
   "human-ranger-s1-kit    tools/keys/kit-ranger.keys                1  $KIT"
   "orc-barbarian-s1-kit   tools/keys/chargen-default-save.keys      1  $KIT"
+  # Phase 6a: prompts. Point buy, the feat menu with its toggle row and a
+  # rejected feat, the skill, exotic-weapon and weapon sub-menus at creation,
+  # and a level-up after creation that takes a feat (outside the window).
+  "human-warrior-feats-s1-o22 tools/keys/p6a-human-warrior-feats.keys 1  $O22"
+  "human-warrior-levelup-s1-o22 tools/keys/p6a-levelup-feat.keys     1  $O22"
 )
 
 fail=0
 for row in "${WALKS[@]}"; do
     set -- $row
     name="$1"; keys="$2"; seed="$3"; opts="$4"
+    # WALK_FILTER=<regex> runs only the walks whose name matches it.
+    if [ -n "${WALK_FILTER:-}" ] && ! [[ "$name" =~ $WALK_FILTER ]]; then continue; fi
     for side in base new; do
         bin="$BASE"; [ "$side" = new ] && bin="$NEW"
         run="$OUT/$name-$side"

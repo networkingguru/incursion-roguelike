@@ -165,8 +165,20 @@ bool isExploreMode(Player *p) {
     return false;
 }
 
+/* The yes/no list every confirmation shares. */
+static const CreationPickList &YesNoList()
+{
+    static CreationPickList list;
+    if (list.names.empty()) {
+        list.Add("no", 0);
+        list.Add("yes", 1);
+    }
+    return list;
+}
+
 bool Player::AbandonCreation() {
-    return yn("Abandon this character and return to the main menu?");
+    return SourcedPick(CK_ABANDON, YesNoList(), [&]() {
+        return yn("Abandon this character and return to the main menu?") ? 1 : 0; }) != 0;
 }
 
 /* INCURSION_KIT_PROBE -- logs where every starting item sits, plus the facts
@@ -2346,6 +2358,7 @@ void Player::RollAttributes() {
     int8 BestStats[7][5], i, j, k, l, c, tot, Points, PCost;
     int8 PointCosts[] = { 0, 0, 0, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 8, 10, 13, 16 };
     PerkSet PerkSets[5];
+    CreationPickList attrCmds;
 
     if (AttributesFromSource(BAttr))
         return;
@@ -2533,21 +2546,33 @@ Reprompt:
             MyTerm->Write(0, 4 + c * linesPerSet, c == sel ? ">" : " ");
 
         do_redraw = false;
-        for (;;) {
-            ch = MyTerm->GetCharRaw();
-            if (ch == KY_UP || ch == KY_DOWN) {
-                MyTerm->Write(0, 4 + sel * linesPerSet, " ");
-                sel = (int16)((ch == KY_UP ? sel + 4 : sel + 1) % 5);
-                MyTerm->Write(0, 4 + sel * linesPerSet, ">");
-                MyTerm->Update();
-                continue;
+        /* The command the player chose on this screen. Redraw and help are
+           not decisions, so they are not on the list and are not recorded. */
+        attrCmds.Clear();
+        attrCmds.Add("a", 'a'); attrCmds.Add("b", 'b'); attrCmds.Add("c", 'c');
+        attrCmds.Add("d", 'd'); attrCmds.Add("e", 'e');
+        attrCmds.Add("point buy", 'p');
+        attrCmds.Add("reroll", 'x');
+        attrCmds.Add("reroll without perks", 'w');
+        ch = (int16)SourcedPick(CK_ATTR_SET, attrCmds, [&]() -> int32 {
+            int16 key;
+            for (;;) {
+                key = MyTerm->GetCharRaw();
+                if (key == KY_UP || key == KY_DOWN) {
+                    MyTerm->Write(0, 4 + sel * linesPerSet, " ");
+                    sel = (int16)((key == KY_UP ? sel + 4 : sel + 1) % 5);
+                    MyTerm->Write(0, 4 + sel * linesPerSet, ">");
+                    MyTerm->Update();
+                    continue;
+                }
+                if (key == KY_ENTER) { key = 'a' + sel; break; }
+                key = tolower(key);
+                if (key == KY_REDRAW || (key >= 'a' && key <= 'e') || key == '?' || key == 'p'
+                    || ((key == 'x' || key == 'w') && Opt(OPT_REROLL)))
+                    break;
             }
-            if (ch == KY_ENTER) { ch = 'a' + sel; break; }
-            ch = tolower(ch);
-            if (ch == KY_REDRAW || (ch >= 'a' && ch <= 'e') || ch == '?' || ch == 'p'
-                || ((ch == 'x' || ch == 'w') && Opt(OPT_REROLL)))
-                break;
-        }
+            return key;
+        });
         PurgeStrings();
         MyTerm->CursorOff();
         if (ch == KY_REDRAW)
@@ -2572,7 +2597,7 @@ Reprompt:
                     "place the game in Explore Mode.");
                 // ww: this 'yn' messes the display up ... 
                 /*
-                if (!yn("Proceed with reroll?"))
+                if (!SourcedPick(CK_REROLL_CONFIRM, YesNoList(), [&]() { return yn("Proceed with reroll?") ? 1 : 0; }))
                 */
                 goto Reprompt;
             }
@@ -2621,6 +2646,9 @@ Reprompt:
         for (i=0;i!=7;i++)
             BAttr[i] = 8;
         c = 0;
+        /* The whole point-buy screen is the decision "are these your final
+           stats"; the attributes it leaves are recorded at Done. */
+        SourcedPick(CK_POINTBUY_CONFIRM, YesNoList(), [&]() -> int32 {
         do {
 RedrawPoints:
             MyTerm->SetWin(WIN_CREATION);
@@ -2681,11 +2709,13 @@ GetNewKey:
             goto GetNewKey;
         }
         if (yn("Are these your final stats?"))
-            goto Done;
+            return 1;
         MyTerm->SetWin(WIN_CREATION);
             }
         }
         while(1);
+        });
+        goto Done;
 
     default:
         goto MethodI;
@@ -4194,15 +4224,17 @@ static int16 WeaponMinStr(rID wID) {
 inline bool CheckWeapon(Player *p, rID wID) {
     /* Inv.cpp refuses to wield a weapon of this size at all (the same test). */
     if (p->GetAttr(A_SIZ) + 1 < TITEM(wID)->Size)
-        if (!p->yn("That weapon is too large for you normally; you will not be able to wield it. Continue?"))
+        if (!SourcedPick(CK_WEAPON_UNFIT_CONFIRM, YesNoList(), [&]() {
+                return p->yn("That weapon is too large for you normally; you will not be able to wield it. Continue?") ? 1 : 0; }, "size"))
             return false;
 
     {
         int16 mstr = WeaponMinStr(wID);
         /* WepSkill returns WS_NOT_PROF here; Values.cpp applies the penalties. */
         if (p->GetAttr(A_STR) < mstr && mstr > 5)
-            if (!p->yn(Format("You lack that weapon's Minimum Strength (%d). You will not be proficient with it: %d to hit and %d to speed. Continue?",
-                    mstr, -NOT_PROF_HIT_PENALTY, -NOT_PROF_SPD_PENALTY)))
+            if (!SourcedPick(CK_WEAPON_UNFIT_CONFIRM, YesNoList(), [&]() {
+                    return p->yn(Format("You lack that weapon's Minimum Strength (%d). You will not be proficient with it: %d to hit and %d to speed. Continue?",
+                        mstr, -NOT_PROF_HIT_PENALTY, -NOT_PROF_SPD_PENALTY)) ? 1 : 0; }, "strength"))
                 return false;
     }
 
@@ -4214,6 +4246,7 @@ void Player::GainFeat(int16 feat, int32 param) {
     int16 i,lv,q,j; int8 Win; int16 ofeat = feat;
     bool OneFeat, Found; rID wID, endID;
     String chooseWeaponStr, name; 
+    CreationPickList pl;
     static bool showAll = false; 
     bool bardic = false; 
     bool focusToggle = false;
@@ -4255,6 +4288,7 @@ Restart:
     }
 
 pick_again: 
+    pl.Clear();
     {
         extern bool FeatUnimplemented(int16 ft);
         extern const char * FeatName(int16 ft);
@@ -4297,7 +4331,7 @@ FoundFeat:
                         FeatName(i)));
                     MyTerm->LOption( name , i, DescribeFeat(i), 2 - (2*prereq));
                 } 
-                if (prereq) OneFeat = true; 
+                if (prereq) { OneFeat = true; pl.Add(FeatName(i), i); } 
             } 
     }
     if (!showAll) 
@@ -4308,7 +4342,9 @@ FoundFeat:
     if (!OneFeat) /* No Feats on list available! */
         return;
 
-    feat = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|(Win == WIN_MENUBOX ? MENU_BORDER : 0),title,Win,"help::feats",focusToggle ? -1 : 0);
+    /* The toggle row (-1) and an unavailable feat are not on the list, so only
+       the feat that is kept is recorded. */
+    feat = (int16)SourcedPick(CK_FEAT, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|(Win == WIN_MENUBOX ? MENU_BORDER : 0),title,Win,"help::feats",focusToggle ? -1 : 0); });
     focusToggle = false;
     if (feat == -1) {
         showAll = !showAll;
@@ -4338,6 +4374,7 @@ SelectedFeat:
             i = (int16)param;
         else {
             Found = false;
+            pl.Clear();
             for(i=1;i!=SK_LAST;i++)
                 if (SkillInfo[i].imp) {
                     bool taken; taken = false;
@@ -4351,6 +4388,7 @@ SelectedFeat:
                         continue;
                     MyTerm->LOption(SkillInfo[i].name,i,
                         DescribeSkill(SkillInfo[i].sk));
+                    pl.Add(SkillInfo[i].name, i);
                     Found = true; 
                 }
                 if (!Found) {
@@ -4360,8 +4398,8 @@ SelectedFeat:
                         feat = FT_FULL_LIST;
                     goto Restart; 
                 }
-                i = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
-                    "Choose a skill:",WIN_MENUBOX,"help::skills");
+                i = (int16)SourcedPick(CK_SKILL_FOCUS, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
+                    "Choose a skill:",WIN_MENUBOX,"help::skills"); });
         }
         GainPermStati(SKILL_BONUS,this,SS_PERM,i,2,0);
         break;
@@ -4370,11 +4408,13 @@ SelectedFeat:
             i = (int16)param;
         else {
             Found = false;
+            pl.Clear();
             for(i=0;i!=SK_LAST;i++)
                 if (!HasSkill(i))                
                     if (SkillInfo[i].name && SkillInfo[i].imp)
                         if (!HasStati(EXTRA_SKILL,i)) {
                             MyTerm->LOption(SkillInfo[i].name,i,DescribeSkill(SkillInfo[i].sk));
+                            pl.Add(SkillInfo[i].name, i);
                             Found = true;
                         }
             if (!Found) {
@@ -4384,7 +4424,7 @@ SelectedFeat:
                     feat = FT_FULL_LIST;
                 goto Restart; 
             }
-            i = (int16)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_BORDER|MENU_DESC,"Choose a skill:",WIN_MENUBOX,"help::skills");
+            i = (int16)SourcedPick(CK_NATURAL_APTITUDE, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_BORDER|MENU_DESC,"Choose a skill:",WIN_MENUBOX,"help::skills"); });
         }
         GainPermStati(EXTRA_SKILL,NULL,SS_CLAS,i,0,0);
         break;
@@ -4400,10 +4440,13 @@ SelectedFeat:
                 choice = STUDY_BAB;
                 goto ChosenStudy;
             }
+            pl.Clear();
             for (i=0;StudyNames[i].Val;i++)
-                if (eli & XBIT(StudyNames[i].Val))
+                if (eli & XBIT(StudyNames[i].Val)) {
                     MyTerm->LOption(StudyNames[i].Text, StudyNames[i].Val);
-            choice = (uint16)MyTerm->LMenu(MENU_SORTED|MENU_BORDER,"Choose an area to improve:",WIN_MENUBOX);
+                    pl.Add(StudyNames[i].Text, StudyNames[i].Val);
+                }
+            choice = (uint16)SourcedPick(CK_STUDY_AREA, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_BORDER,"Choose an area to improve:",WIN_MENUBOX); });
 ChosenStudy:
             IntStudy[choice]++;
             if (choice == STUDY_CASTING)
@@ -4428,29 +4471,48 @@ ChosenStudy:
                identically on Win32 with the original typedefs and compiler.
                Observed, inc-q1ei, not sent. */
             int16 focused; focused = 0;
+            pl.Clear();
             StatiIterNature(this, SCHOOL_FOCUS)
                 focused |= S->Mag;
             StatiIterEnd(this)
-            if (!(focused & SC_ABJ))
+            if (!(focused & SC_ABJ)) {
                 MyTerm->LOption("Abjuration",SC_ABJ);
-            if (!(focused & SC_ARC))
+                pl.Add("Abjuration", SC_ABJ);
+            }
+            if (!(focused & SC_ARC)) {
                 MyTerm->LOption("Arcana",SC_ARC);
-            if (!(focused & SC_DIV))
+                pl.Add("Arcana", SC_ARC);
+            }
+            if (!(focused & SC_DIV)) {
                 MyTerm->LOption("Divination",SC_DIV);
-            if (!(focused & SC_ENC))
+                pl.Add("Divination", SC_DIV);
+            }
+            if (!(focused & SC_ENC)) {
                 MyTerm->LOption("Enchantment",SC_ENC);
-            if (!(focused & SC_EVO))
+                pl.Add("Enchantment", SC_ENC);
+            }
+            if (!(focused & SC_EVO)) {
                 MyTerm->LOption("Evocation",SC_EVO);
-            if (!(focused & SC_ILL))
+                pl.Add("Evocation", SC_EVO);
+            }
+            if (!(focused & SC_ILL)) {
                 MyTerm->LOption("Illusion",SC_ILL);
-            if (!((focused & SC_NEC) || isMType(MA_ELF)))
+                pl.Add("Illusion", SC_ILL);
+            }
+            if (!((focused & SC_NEC) || isMType(MA_ELF))) {
                 MyTerm->LOption("Necromancy",SC_NEC);
-            if (!(focused & SC_THA))
+                pl.Add("Necromancy", SC_NEC);
+            }
+            if (!(focused & SC_THA)) {
                 MyTerm->LOption("Thaumaturgy",SC_THA);
-            if (!(focused & SC_WEA))
+                pl.Add("Thaumaturgy", SC_THA);
+            }
+            if (!(focused & SC_WEA)) {
                 MyTerm->LOption("Weavecraft",SC_WEA);
-            i = (int16)MyTerm->LMenu(MENU_3COLS|MENU_BORDER,"Choose a focus school:",
-                WIN_MENUBOX,"help::magic,SC");
+                pl.Add("Weavecraft", SC_WEA);
+            }
+            i = (int16)SourcedPick(CK_SCHOOL_FOCUS, pl, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS|MENU_BORDER,"Choose a focus school:",
+                WIN_MENUBOX,"help::magic,SC"); });
         }
         GainPermStati(SCHOOL_FOCUS,NULL,SS_MISC,0,i,0);
         break;
@@ -4521,6 +4583,7 @@ ChosenStudy:
         else {
             Found = false;
 ImpCritChoice:
+            pl.Clear();
             for (q=0;q!=MAX_MODULES;q++)
                 if (theGame->Modules[q]) {
                     wID = theGame->Modules[q]->ItemID(0);
@@ -4535,6 +4598,7 @@ ImpCritChoice:
                                 else
                                     name = NAME(wID);
                                 MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
+                                pl.Add(NAME(wID), (int32)wID);
                                 RemoveStatiFrom(w); 
                                 delete i; 
                                 Found = true; 
@@ -4547,8 +4611,8 @@ ImpCritChoice:
                         feat = FT_FULL_LIST;
                     goto Restart; 
                 }
-                wID = MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
-                    "Choose a Weapon for Improved Critical:",WIN_MENUBOX);
+                wID = (rID)SourcedPick(CK_IMPCRIT_WEAPON, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
+                    "Choose a Weapon for Improved Critical:",WIN_MENUBOX); });
                 if (!CheckWeapon(this,wID))
                     goto ImpCritChoice;
         }
@@ -4584,6 +4648,7 @@ ChooseWeapon:
             wID = param;
         else {
             Found = false;
+            pl.Clear();
             for (q=0;q!=MAX_MODULES;q++)
                 if (theGame->Modules[q]) {
                     wID = theGame->Modules[q]->ItemID(0);
@@ -4603,6 +4668,7 @@ ChooseWeapon:
                                     else
                                         name = NAME(wID);
                                     MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
+                                    pl.Add(NAME(wID), (int32)wID);
                                     RemoveStatiFrom(w); 
                                     delete i; 
                                     Found = true; 
@@ -4615,8 +4681,8 @@ ChooseWeapon:
                         feat = FT_FULL_LIST;
                     goto Restart; 
                 }
-                wID = MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
-                    chooseWeaponStr,WIN_MENUBOX);
+                wID = (rID)SourcedPick(CK_FEAT_WEAPON, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC|MENU_BORDER,
+                    chooseWeaponStr,WIN_MENUBOX); });
                 if (!CheckWeapon(this,wID))
                     goto ChooseWeapon;
         }
@@ -4632,6 +4698,7 @@ ChooseWeapon:
         else {
 ChooseExotic:
             Found = false;
+            pl.Clear();
             for (q=0;q!=MAX_MODULES;q++)
                 if (theGame->Modules[q]) {
                     wID = theGame->Modules[q]->ItemID(0);
@@ -4653,6 +4720,7 @@ ChooseExotic:
                                         else
                                             name = NAME(wID);
                                         MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
+                                        pl.Add(NAME(wID), (int32)wID);
                                         RemoveStatiFrom(w); 
                                         delete i; 
                                         Found = true; 
@@ -4666,8 +4734,8 @@ ChooseExotic:
                         feat = FT_FULL_LIST;
                     goto Restart; 
                 }
-                wID = MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC,
-                    "Choose a weapon:",Win);
+                wID = (rID)SourcedPick(CK_EXOTIC_WEAPON, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_3COLS|MENU_DESC,
+                    "Choose a weapon:",Win); });
                 if (!CheckWeapon(this,wID))
                     goto ChooseExotic;
         }
@@ -4724,6 +4792,7 @@ void Character::RaiseSpellSlotsToChart()
 }
 
 void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
+    CreationPickList pl;
     int16 st;
     const char* MTypePrompt;
     /* New spell levels -- the caster level at which a player
@@ -4790,6 +4859,7 @@ void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
             int16 i, j;
             rID tatID;
 
+            pl.Clear();
             for (i = 0;i != theGame->LastSpell(); i++) {
                 tatID = theGame->SpellID(i);
                 if (!TEFF(tatID)->HasSource(AI_TATTOO))
@@ -4801,13 +4871,14 @@ void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
                         goto SkipThisOne;
                 found = true;
                 MyTerm->LOption(NAME(tatID),tatID, TEFF(tatID)->Describe(this));
+                pl.Add(NAME(tatID), (int32)tatID);
 SkipThisOne:;
             }
             if (!found) {
                 IPrint("Unfortunately, there are no remaining tattoos that you are eligable to take, so you do not gain a new tattoo this level.");
                 break;
             }
-            tatID = MyTerm->LMenu(MENU_2COLS|MENU_SORTED|MENU_BORDER|MENU_DESC, "Choose a new Mystic Tattoo:");
+            tatID = (rID)SourcedPick(CK_TATTOO, pl, [&]() { return (int32)MyTerm->LMenu(MENU_2COLS|MENU_SORTED|MENU_BORDER|MENU_DESC, "Choose a new Mystic Tattoo:"); });
             ASSERT(tatID);
             for (j =0 ; j != 10; j++)
                 if (!Tattoos[j]) {
@@ -4856,6 +4927,7 @@ DoCAStati:
         if (pa >= MA_CHOICE1 && pa <= MA_CHOICE5) {
             // ww: let's restructure this a bit, because RangerEnemies
             // falls out of sync with what's really there ...
+            pl.Clear();
             for (i=0; FavEnemies[i]; i++) {
                 /*if (i == MA_MISC_OUTSIDER || 
                 i == MA_NATIVE ||
@@ -4917,9 +4989,10 @@ DoCAStati:
                     continue;
 Found: 
                     MyTerm->LOption(category,FavEnemies[i],desc);
+                    pl.Add((const char*)category, FavEnemies[i]);
                 }
             } 
-            j = (int16)MyTerm->LMenu(MENU_SORTED|MENU_2COLS|MENU_DESC|MENU_BORDER,MTypePrompt);
+            j = (int16)SourcedPick(CK_FAV_ENEMY, pl, [&]() { return (int32)MyTerm->LMenu(MENU_SORTED|MENU_2COLS|MENU_DESC|MENU_BORDER,MTypePrompt); });
 #if 0
             do { 
                 j = MyTerm->MonsterTypePrompt(MTypePrompt,10,50);
@@ -4945,18 +5018,20 @@ Found:
         break;
     case CA_SPECIALIST:
         if (!Abilities[ab]) {
+            pl.Clear();
             for(i=0;i!=9;i++) {
                 if (isMType(MA_ELF) && XBIT(i) == SC_NEC)
                     continue;
                 MyTerm->LOption(Lookup(SchoolNames,XBIT(i)),i,"");
+                pl.Add(Lookup(SchoolNames,XBIT(i)), i);
             }
-            i = (int16)MyTerm->LMenu(MENU_3COLS,
+            i = (int16)SourcedPick(CK_SPECIALIST_SCHOOL, pl, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS,
                 "__As a Wizard, you are entitled to choose "
                 "one of the nine schools of magic to be your special area of "
                 "focus. Every specialty makes for a distinctly different style "
                 "of spellcaster, so choose carefully. Type '?' for a description "
                 "of the various specialties and their impact on spellcasting.",WIN_CREATION,
-                "help::magic,SC");
+                "help::magic,SC"); });
             GainPermStati(SPECIALTY_SCHOOL,NULL,(int8)statiSource,i,0,sourceID);
         }
         Abilities[ab] += (uint8)pa;
@@ -5875,19 +5950,26 @@ void Character::TrainAs(rID cID) {
         if (Type != T_PLAYER)
             return;
         if (Level[2]) {
-            if (!yn(Format("Do you wish to replace your training as a %s? ", NAME(ClassID[1]))))
+            if (!SourcedPick(CK_TRAIN_REPLACE, YesNoList(), [&]() {
+                    return yn(Format("Do you wish to replace your training as a %s? ", NAME(ClassID[1]))) ? 1 : 0; }))
                 return;
             ClassID[1] = cID;
             return;
         } else if (Level[1]) {
-            if (!yn(Format("Do you wish to replace your training as a %s? ", NAME(ClassID[2]))))
+            if (!SourcedPick(CK_TRAIN_REPLACE, YesNoList(), [&]() {
+                    return yn(Format("Do you wish to replace your training as a %s? ", NAME(ClassID[2]))) ? 1 : 0; }))
                 return;
             ClassID[2] = cID;
             return;
         } else {
-            ch = thisp->MyTerm->ChoicePrompt(Format(
-                "Replace your training as a %s [1], a %s [2] or [n]either? ",
-                NAME(ClassID[1]), NAME(ClassID[2])), "12n");
+            CreationPickList which;
+            which.Add(NAME(ClassID[1]), '1');
+            which.Add(NAME(ClassID[2]), '2');
+            which.Add("neither", 'n');
+            ch = (char)SourcedPick(CK_TRAIN_REPLACE, which, [&]() {
+                return (int32)thisp->MyTerm->ChoicePrompt(Format(
+                    "Replace your training as a %s [1], a %s [2] or [n]either? ",
+                    NAME(ClassID[1]), NAME(ClassID[2])), "12n"); });
             if (ch == '1')
                 ClassID[1] = cID;
             if (ch == '2')
@@ -6795,6 +6877,7 @@ bool Player::InherentPickable(int16 sn) {
 }
 
 bool Player::ChooseInherentSpell() {
+    CreationPickList pl;
     int16 sn, L, nSpells, chosen, i;
     uint32 f;
     bool freed, arcane;
@@ -6802,11 +6885,13 @@ bool Player::ChooseInherentSpell() {
 
     for (;;) {
         nSpells = 0;
+        pl.Clear();
         for (sn = 0; sn < (int16)theGame->LastSpell(); sn++)
             if (InherentPickable(sn)) {
                 L = TEFF(theGame->SpellID(sn))->Level;
                 MyTerm->LOption(Format("%s (level %d)", (const char*)NAME(theGame->SpellID(sn)), (int)L),
                     sn + 1);
+                pl.Add(NAME(theGame->SpellID(sn)), sn + 1);
                 nSpells++;
             }
 
@@ -6815,7 +6900,7 @@ bool Player::ChooseInherentSpell() {
             return false;
         }
 
-        chosen = (int16)MyTerm->LMenu(MENU_BORDER, "Choose an inherent spell:", WIN_MENUBOX);
+        chosen = (int16)SourcedPick(CK_INHERENT_SPELL, pl, [&]() { return (int32)MyTerm->LMenu(MENU_BORDER, "Choose an inherent spell:", WIN_MENUBOX); });
         MyTerm->LOptionClear();
 
         if (chosen <= 0)
@@ -6913,6 +6998,7 @@ bool Player::LucubrationPickable(rID bookKind) {
 }
 
 bool Player::ChooseLucubrationBook() {
+    CreationPickList pl;
     rID kinds[64];
     int16 nKinds = 0, chosen, i;
     bool have;
@@ -6941,10 +7027,13 @@ bool Player::ChooseLucubrationBook() {
     }
 
     for (;;) {
-        for (i = 0; i < nKinds; i++)
+        pl.Clear();
+        for (i = 0; i < nKinds; i++) {
             MyTerm->LOption(NAME(kinds[i]), i + 1);
+            pl.Add(NAME(kinds[i]), i + 1);
+        }
 
-        chosen = (int16)MyTerm->LMenu(MENU_BORDER, "Choose a spellbook to study:", WIN_MENUBOX);
+        chosen = (int16)SourcedPick(CK_LUCUBRATION_BOOK, pl, [&]() { return (int32)MyTerm->LMenu(MENU_BORDER, "Choose a spellbook to study:", WIN_MENUBOX); });
         MyTerm->LOptionClear();
 
         if (chosen <= 0)

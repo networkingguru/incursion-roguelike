@@ -82,7 +82,26 @@
     X(BEGINKIT_FOOD,    ROLL) \
     X(MISSILE_QUANTITY, ROLL) \
     X(THROWN_QUANTITY,  ROLL) \
-    X(AMMO_QUANTITY,    ROLL)
+    X(AMMO_QUANTITY,    ROLL) \
+    X(ABANDON,          PICK) \
+    X(ATTR_SET,         PICK) \
+    X(POINTBUY_CONFIRM, PICK) \
+    X(REROLL_CONFIRM,   PICK) \
+    X(FEAT,             PICK) \
+    X(SKILL_FOCUS,      PICK) \
+    X(NATURAL_APTITUDE, PICK) \
+    X(STUDY_AREA,       PICK) \
+    X(SCHOOL_FOCUS,     PICK) \
+    X(IMPCRIT_WEAPON,   PICK) \
+    X(FEAT_WEAPON,      PICK) \
+    X(EXOTIC_WEAPON,    PICK) \
+    X(WEAPON_UNFIT_CONFIRM, PICK) \
+    X(INHERENT_SPELL,   PICK) \
+    X(LUCUBRATION_BOOK, PICK) \
+    X(TATTOO,           PICK) \
+    X(FAV_ENEMY,        PICK) \
+    X(SPECIALIST_SCHOOL, PICK) \
+    X(TRAIN_REPLACE,    PICK)
 
 enum CreationKey {
 #define X(n,k) CK_##n,
