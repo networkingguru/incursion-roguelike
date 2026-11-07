@@ -96,8 +96,14 @@ for case in [16,17,18,19,22,23,24,29]:
         edit(sb,'races.irh','oracleB = 67890;','')
     compile(sb)
     rc,rows,text=dump(sb,save)
-    if case in [22,23,24]:
-        good=rc!=0 and all(word in text for word in ['owner','ordinal','recorded','found'])
+    if case in [19,22,23,24]:
+        # inc-cjos0: values land BY NAME; a renamed or removed name is dropped.
+        byname={(k[0],v[0]):v[1:3] for k,v in rows.items()}
+        gone={19:'oracleA',22:None,23:None,24:'oracleB'}[case]
+        good=rc==0 and all(byname.get((k[0],v[0]))==v[1:3] for k,v in original.items() if v[0]!=gone)
+        good=good and all(v[2]==0 for k,v in rows.items() if (k[0],v[0]) not in {(o[0],x[0]) for o,x in original.items()})
+        if case==19: good=good and f'variable owner' in text and "'oracleA' no longer exists" in text
+        if case==22: good=good and byname[('Orc;race','oracleInserted')][1]==0 and byname[('Orc;race','oracleA')][1]==12345 and byname[('Orc;race','oracleB')][1]==67890
     else:
         good=rc==0 and all(k in rows and rows[k][1:3]==v[1:3] for k,v in original.items())
         good=good and all(v[2]==0 for k,v in rows.items() if k not in original)

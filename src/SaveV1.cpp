@@ -2290,7 +2290,9 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     sp->sizeTarget = &g.MDataSegSize[slot];
   }
 
-/* Values use converted owner/ordinal keys; names only detect drift. */
+/* A value lands in the loaded variable of its converted owner with the same
+   name; a name the owner lost is dropped, one the file lacks keeps its
+   default (inc-cjos0). */
 static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
   {
     std::vector<DebugInfo*> table = v1VariableTable(mod);
@@ -2309,26 +2311,31 @@ static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
     for (uint32 k = 0; k < sp->variableCount; ++k)
       {
         V1Variable *var = &sp->variables[k];
-        uint32 ordinal = 0;
+        DebugInfo *match = NULL;
+        bool duplicate = false;
         for (uint32 j = 0; j < k; ++j)
-          if (sp->variables[j].owner == var->owner) ++ordinal;
-        std::vector<DebugInfo*> loaded;
+          if (sp->variables[j].owner == var->owner &&
+              !strcmp(sp->variables[j].name, var->name)) duplicate = true;
         if (valid[k])
           for (size_t j = 0; j < table.size(); ++j)
-            if (v1VariableOwner(table[j]) == owners[k]) loaded.push_back(table[j]);
-        const char *found = ordinal < loaded.size() ? loaded[ordinal]->Ident : "<missing>";
+            if (v1VariableOwner(table[j]) == owners[k] &&
+                !strcmp(var->name, table[j]->Ident)) { match = table[j]; break; }
         const char *reason = NULL;
         if (!valid[k]) reason = "owner conversion failed";
         else if (!v1VariableType(var->type)) reason = "unsupported recorded type";
-        else if (ordinal >= loaded.size()) reason = "owner list shrank";
+        else if (duplicate) reason = "name appears twice for one owner";
+        else if (!match)
+          {
+            fprintf(stderr, "incursion: variable owner %u '%s' no longer exists; value dropped\n",
+                    var->owner, var->name);
+            continue;
+          }
         else
           {
-            for (size_t j = 0; j < loaded.size(); ++j)
-              if (j != ordinal && !strcmp(var->name, loaded[j]->Ident))
-                reason = "name moved to another ordinal";
-            if (!v1VariableType(loaded[ordinal]->DataType)) reason = "unsupported loaded type";
-            if (loaded[ordinal]->Address < 0 ||
-                (size_t)loaded[ordinal]->Address >= table.size()) reason = "slot outside variable table";
+            if (!v1VariableType(match->DataType)) reason = "unsupported loaded type";
+            else if (match->DataType != var->type) reason = "recorded type differs from loaded type";
+            if (match->Address < 0 ||
+                (size_t)match->Address >= table.size()) reason = "slot outside variable table";
           }
         int32 value = var->value;
         if (!reason && var->type == DT_RID && value)
@@ -2350,19 +2357,19 @@ static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
         if (reason)
           {
             ++failures;
-            fprintf(stderr, "incursion: variable owner %u ordinal %u recorded '%s' found '%.*s': %s\n",
-                    var->owner, ordinal, var->name, 31, found, reason);
+            fprintf(stderr, "incursion: variable owner %u '%s': %s\n",
+                    var->owner, var->name, reason);
             continue;
           }
         if (var->type == DT_HTEXT) value = 0;
-        memcpy(seg + loaded[ordinal]->Address * 4, &value, 4);
+        memcpy(seg + match->Address * 4, &value, 4);
       }
     return failures;
   }
 
 #include "SaveV1PrefixVars.inc"
 
-/* The frozen owner positions select slots; names detect variable drift. */
+/* The frozen owner positions select owners; names select slots (inc-cjos0). */
 static long v1RecoverVariables(Module *mod, char *seg, const uint8 image[400], bool raw)
   {
     V1Variable vars[97] = {};
