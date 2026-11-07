@@ -187,12 +187,9 @@ fixed, as B2 says, and a branch moves.
   that holds a stored family (`inc/Target.h`, `inc/RComp.h` included). A
   family with no class refuses, so a new family must be classified the first
   time it appears.
-- A sentinel that sizes a stored array is a stored value of its family
-  (`ATTR_LAST`, `SK_LASTSKILL`, `MA_LAST_REAL`, `MAX_GODS`, `MAX_SPELLS`,
-  `MAX_DUNGEONS`; the reader checks the count exactly,
-  `src/SaveV1.cpp:2750`), so changing it on master refuses. A sentinel that
-  sizes memory only (`LAST_STATI`, `inc/Map.h:867`) is marked
-  `sentinel <NAME>` and is exempt from the check.
+- A limit that sizes a saved array may grow and must not shrink (section
+  6.1). A sentinel that sizes memory only (`LAST_STATI`, `inc/Map.h:867`) is
+  marked `sentinel <NAME>` and is exempt from the check.
 - `tools/check_stored_values.py`, a gate check. It evaluates every name of
   every stored family on master and on the tree under test (the phase 0
   compiler path of `tools/check_number_values.sh` part 2). It refuses: a
@@ -217,6 +214,58 @@ fixed, as B2 says, and a branch moves.
 - Option numbers in `Options.Dat` are the `opt` family, stored. The options
   generation (`OPT_GEN_*`) stays as it is (ruling 2026-11-07, no forcing
   rule).
+
+### 6.1 Limits that size a saved array (ruling 2026-11-07)
+
+A limit that sizes a saved array may grow, on master or on a branch, and
+must never shrink. The list is every named constant or literal that sets
+the length of a saved array: `FT_LAST` (through the `Feats` bit array),
+`SK_LASTSKILL`, `ATTR_LAST`, `CA_LAST`, `STUDY_LAST`, `MAX_SPELLS`,
+`MAX_GODS`, `MAX_DUNGEONS`, `MA_LAST_REAL`, `OPT_LAST`, `NUM_SLOTS`,
+`MAX_MODULES`, `MAX_OVERLAY_GLYPHS`, `MAX_CHAR_LEVEL`, `MAX_SAC_CATS`, and
+the literal lengths. `logs/phase7f/survey.md` lists each array.
+
+- The reader (`Registry::V1Array`, `src/SaveV1.cpp:3198`, and
+  `V1ArrayWiden16`) accepts a saved array shorter than the current one and
+  leaves the rest as the zeroed object holds it. A saved array longer than
+  the current one still refuses, because that is a shrink.
+- An array of rows (`hpRolls`, `manaRolls`: rows of `MAX_CHAR_LEVEL`;
+  `SacVals`: rows of `MAX_SAC_CATS + 2`; `GainAttr`) records its row length
+  in the file, and the reader copies row by row, so a longer row loses
+  nothing and shifts nothing. In `SacVals` the last two columns of a row
+  are the total and the maximum (`src/Prayer.cpp:600-603,655`); the reader
+  copies them to the last two columns of the current row, not by position.
+  A file with no row length (written before this change) uses today's row
+  length.
+- An array saved one tag per element (`Name#i`) already loads a shorter
+  array. Its shrink already refuses (`v1PopFrame`).
+- Each such limit is marked `grows` in its family mark.
+  `tools/check_stored_values.py` refuses a `grows` limit whose tree value is
+  below master's, and accepts one above it. `tools/move_branch_values.py`
+  raises the limit when it moves a value past it.
+- Raising `MAX_CHAR_LEVEL` past 25 needs content (`ExperienceChart`, the
+  `NotifiedLevel` clamp); that is its own bead. This change makes the save
+  survive the raise; it does not raise it.
+
+### 6.2 Skill and feat numbers (ruling 2026-11-07)
+
+Skills and feats share one number space below 1000: scripts encode a feat
+as 2000 + n and a skill as 3000 + n (`FEAT_VAL`, `SKILL_VAL`,
+`inc/Defines.h:2345-2355`). Today feats start at `SK_LAST + 1`, so a new
+skill moves every feat number.
+
+- Every feat number and `FT_FIRST` become literals (today 50-363). Feats may
+  use numbers up to 799.
+- Skills keep 1-48. A new skill takes the next number from 800 up to 999.
+- `IsSkill(n)` and `SkillIndex(n)` replace every range test and every
+  direct index by skill number (about 30 sites, `logs/phase7f/survey.md`
+  part 3). `SkillIndex` maps 1-48 to themselves and 800+ to 49+, so
+  `SkillRanks[]` and `SkillInfo[]` grow at their end.
+- `Character::Feats` holds one bit per number for skills and feats alike
+  (`src/Create.cpp:3989-3993`), so its length covers 999.
+- Every place that stores a skill number in a type narrower than 999
+  widens: `TClass::Skills`, `TRace::Skills`, `SkillInfoStruct::sk`,
+  `UseSkill`, `SkillBreakdown`, and the `sk` family mark's width.
 
 ## 7. Script variables
 
@@ -248,9 +297,6 @@ not needed for numbers and is dropped from this design.
   already names the limit.
 - `gallery.dat` layout: no version and no guard; its own bead.
 - Widening stati and other stored widths: inc-xm3nq.
-- Moving skills past the feats (`FT_FIRST (SK_LAST + 1)`): adding a skill
-  changes every feat value, so `check_stored_values.py` refuses it on master,
-  as it should.
 - Reading master's retired tags on the epic so a master save loads there:
   the epic's own work under the 2026-10-31 master-saves-survive ruling.
 - Raw byte fields: they hold no tags.
