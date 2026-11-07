@@ -833,6 +833,7 @@ static void ArrangeStartingKit(Player *p)
 }
 
 bool Player::Create(bool reincarnate) {
+    CensusWindow censusWindow("Create");
     rID xID, endID; int16 i, q, rv; char ch;
     static rID Choices[32]; bool b;
 
@@ -3795,6 +3796,7 @@ int16 TotalClassLevels(rID clID) {
 }
 
 void Player::AdvanceLevel() {
+    CensusWindow censusWindow("AdvanceLevel");
     int16 c,i, j; TClass *tc;
     if (TotalLevel() >= MAX_CHAR_LEVEL) {
         IPrint(Format("The maximum character level in this version of Incursion is %d.",MAX_CHAR_LEVEL));

@@ -41,6 +41,22 @@ inline int16 random(int16 mx)
     return (int16)(genrand_int32() % mx);
   }
 
+/* Draw census (bead inc-10v7f): log-only, active only under
+   INCURSION_DRAW_CENSUS. Source: src/DrawCensus.cpp. It never changes a draw. */
+extern bool g_censusActive;
+void census_log_random(const char *f, int l, const char *fn);
+void census_log_srand(const char *f, int l, const char *fn);
+struct CensusWindow { bool on; CensusWindow(const char *n); ~CensusWindow(); };
+struct CensusEvent  { bool on; CensusEvent(int ev, const char *res); ~CensusEvent(); };
+struct CensusDice   { bool on; CensusDice(void *ra); ~CensusDice(); };
+inline int16 census_random(int16 mx, const char *f, int l, const char *fn)
+  {
+    int16 r = (random)(mx);
+    if (g_censusActive) census_log_random(f,l,fn);
+    return r;
+  }
+#define random(mx) census_random((mx),__FILE__,__LINE__,__func__)
+
 /* A draw for the screen and nothing else -- a colour, a shade, a glyph. It
    comes off a stream of its own, so however many of these a frame makes, the
    gameplay stream is where it was and the seed still means the same game. Use
@@ -57,7 +73,7 @@ inline int16 cosmetic_random(int16 mx)
    SeedCosmeticStream (src/Main.cpp), and these mid-game re-seeds must not disturb it:
    they exist to make a store's stock or a spell formula reproducible, which
    says nothing about what colour a blast should be. */
-#define srand(n) init_genrand(n)
+#define srand(n) (census_log_srand(__FILE__,__LINE__,__func__), init_genrand(n))
 
 
 

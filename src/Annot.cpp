@@ -1133,6 +1133,7 @@ EvReturn Resource::Event(EventInfo &e, rID xID, int16 Event)
               ExecutionScope(rID id) : previous(executingResource) { executingResource = id; }
               ~ExecutionScope() { executingResource = previous; }
             } executionScope(xID);
+            CensusEvent censusEvent(e.Event,theGame->Modules[ModNum]->QTextSeg + Name);
             res = theGame->VM.Execute(&e, xID, a->u.ev[I(i,5)].MsgOrCode);
             /*if (res == ERROR) 
               Error("Event %s returned ERROR in VCode routine "

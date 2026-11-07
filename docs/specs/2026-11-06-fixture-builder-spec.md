@@ -376,3 +376,106 @@ bead notes). Each amendment below overrides the section it names.
   by (resource, event, ordinal); C7 `check_player_fields.sh` lists every
   serialized Player field as stated, derived or excluded, and fails on an
   unlisted one; C4 also proves a module slide rebuilds exactly once.
+
+## 12. Version 4 amendments (third review, 2026-11-06)
+
+A fourth reviewer (Fable) checked v3 and the plan against the code on both
+branches (findings in the bead notes). Each amendment below overrides the
+section or amendment it names.
+
+- B1 (C1, overrides A9's srand clause). A draw after an `srand` does NOT
+  count as stated, whatever fed the `srand`. T2 stays armed after every
+  `srand` inside its window. Under `File`, the `srand(NextSeed() % 100)` in
+  `GrantGear` (`src/Annot.cpp:584-591`) is skipped, and each draw after it
+  is answered by its A4 key. The Multitude domain pick (`src/Create.cpp:2686`,
+  `srand(formulaSeed)` then `possDom[random(max)]`) is answered by eight
+  `domain_pool: <domain>` lines, by name. `formulaSeed` stays a stated value
+  for what reads it after creation. C2 adds mutation (e): a draw inserted
+  after a re-seed.
+- B2 (M1, extends A4). A `GrantGear` call of `Item::GenItem` (`src/Annot.cpp:719-738`,
+  gear "of random N to M", for example `lib/races.irh:61-65`) is ONE decision.
+  The stated kit entry answers it in full through `GenItemForced`
+  (`src/Encounter.cpp:3199-3237`), extended to set qualities. Kit entries
+  gain `charges:`, which answers the charge and quantity draws of
+  `Item::Create` (`src/Item.cpp:92-94, 131-167`). T2 never runs inside
+  `GenItem` under `File`.
+- B3 (M3, overrides A3 and A13 in part). The module-slide "rebuild once"
+  path is removed: the module is in the cache key, so a slide is always a
+  miss. C4 drops the tag-move case and the slide case. C4 proves a miss by
+  editing the `.char`, by editing the options file, and by substituting a
+  different file as the binary; it keeps the truncated-`.sav` exit 8 and the
+  concurrency case. The epic tag move is proved by AC6.
+- B4 (M4, overrides the K-M4 clause of section 3). A repeated identical
+  request fails with "stated value rejected by the game" only when that
+  key's queue is empty. The epic god loop (epic `src/Create.cpp:1185-1203`)
+  states the god once per request, in order.
+- B5 (m1, section 1). Recording is opt-in: `INCURSION_RECORD_CHAR=<path>`.
+  With it unset, normal play writes no file.
+- B6 (m2, extends A2). The (resource, event, ordinal) key also covers
+  `EV_PREREQ` (`src/Create.cpp:935, 992`), `EV_ISTARGET` (`:1101`) and
+  `EV_STARTING_ITEM` (`:1371-1373`). Plan step 0 censuses all of them.
+- B7 (m3, section 10). The early proof moves forward: phase 7's
+  verification builds one hand-written `.char` of a fixture common to both
+  branches and compares its dump with the old `.sav`'s dump.
+- B8 (m4, A10). The base of `tools/finish_bead.sh`'s changed-fixture report
+  is the `INCURSION_FIXTURE_PIN` record. The `docs/VERIFICATION.md` controls
+  catalog row for `INCURSION_LOAD` is updated with AC7.
+- B9 (m5, C2). C2's header names inc-10v7f on its seed control, and its
+  walks select every menu entry by name with `@choose`.
+- B10 (m6, A7). If the dump commit does not apply at d71c1823, the dump
+  extension is ported by hand in the scratch worktree, and the two-loads
+  test re-checks it there.
+- B11 (m7, section 2). Under `File`, the `OptionManager(OPC_CHARGEN)` yn is
+  answered "no" and creation options come from `options:`. A recorded walk
+  that changed options writes the changed options file beside the `.char`.
+- B12 (m8, section 2). `PickName`'s two draws for races with surnames
+  (`src/Create.cpp:1031-1036`) are keyed `name` and `surname`.
+- B13. Rejected: replacing section 4's moved bodies with key-script lines
+  run through the menus (finding M2). Owner's ruling, 2026-11-06: it ties
+  every fixture to the menu layout, and a menu change would need a hand edit
+  of each fixture, which G3 forbids. Section 4 stands.
+
+## 13. Version 5 amendments (draw census, 2026-11-06)
+
+Plan step 0 walked 99 characters (every race by class pair, rerolls, the
+Multitude god, level-ups, default options) and logged every draw; results in
+the bead notes. B14-B17 close what it found. B18 is the owner's ruling
+(2026-11-06): new decision kinds will keep arriving, so adding one MUST be a
+small, mechanical step, not a redesign.
+
+- B14. Craft formulas: `Character::RecalcCraftFormulas` (`src/Skills.cpp:4108`)
+  runs in `Create` and in every `AdvanceLevel`; it seeds from `formulaSeed`,
+  picks formulas by list position and sets `SP_CREATE` (saved). Each pick is
+  a sourced pick answered by spell name (B18).
+- B15. An item that a script or event generates inside the T2 window
+  (`EV_GENITEM`, `EV_BIRTH` scripts; `src/Encounter.cpp` `GenItem`,
+  `NumQualities :3078`, `MakeMagicWeaponArmour :3149`) is ONE decision,
+  answered by a complete stated item exactly as B2.
+- B16. Plan step 1 classifies every `Magic::CalcEffect` and `TEffect::Power`
+  draw in the window: one that decides a saved character fact is sourced;
+  any other goes in the `unstatedDraw` baseline with its reason.
+- B17. C2's gate set includes walks with rolled hit points and mana, random
+  gender and the Beginner's Kit on, under an options file committed for it
+  (`options-2026-08-22.dat` turns all four off).
+- B18. Room for new decisions. Overrides every per-site key and field list in
+  sections 2-3, A2, A4, B1, B2, B12, B14 and B15, which become instances:
+  - Every decision goes through one of three primitives: `SourcedRoll(key,
+    ...)` for a number, `SourcedPick(key, candidates)` for a choice among
+    resources, answered by name, and `SourcedItem(key, ...)` for a generated
+    item, answered by a complete stated item. A prompt is a `SourcedPick`
+    over its labels. No other decision type exists.
+  - A key is an enum name plus an automatic context: the resource whose
+    script or event is running, any event (not a fixed list), and the
+    ordinal within that context. A new event or a new script draw needs no
+    code change.
+  - The `.char` grammar is generic: `<key> [context]: <value>`. The parser,
+    the recorder, `tools/fill_chars.sh`, `tools/char_rekey.sh` and C2's
+    coverage list read the enum and the three primitives, so none has a
+    per-key branch. A check fails on any per-key branch in them.
+  - Adding a decision is: wrap the draw or prompt in a primitive with a new
+    enum name and a default; run `tools/fill_chars.sh`; commit both. T1 or T2
+    names the site when this is forgotten. `tools/fixtures/README.md` states
+    this procedure.
+  - `tools/census_creation_draws.sh` stays, run by the nightly harness; it
+    reports any draw in the window that is neither sourced nor in the
+    baseline, before a fixture build meets it.

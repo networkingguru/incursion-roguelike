@@ -759,6 +759,7 @@ template class Array<DebugInfo,1000,1000>;   /* Module::DI */
 
 int16 Dice::Roll()
 	{
+		CensusDice cd(__builtin_return_address(0));
 		int i,n;
 		n=0;
     if (Sides < 0)
@@ -779,6 +780,7 @@ int16 Dice::Roll()
 
 int16 Dice::Roll(int8 Number, int8 Sides, int8 Bonus,int8 e)
 	{
+		CensusDice cd(__builtin_return_address(0));
 		int i,n;
 		n=0;
     if (Number < 0 || Sides < 0)
