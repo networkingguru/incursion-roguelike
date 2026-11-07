@@ -809,6 +809,7 @@ class Character: public Creature
     friend class Player;
     friend void MusicChoirProbe(Player *caster);
     friend void BlasphemyProbe(Player *caster);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
@@ -1422,6 +1423,7 @@ class Player: public Character
     friend bool Game::LoadNamedGame(const char *savefile);
     friend void HelpCustom(String &helpText, Player *p);
     friend class TextTerm; 
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     private:
 	 	  /* Parser Par; */
       /* History Hist; */

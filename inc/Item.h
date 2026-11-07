@@ -17,6 +17,7 @@ class Item: public Thing, public Magic
     friend Item* Character::GetInv(bool first);
     friend class TextTerm;
     friend void Player::JournalNoteItem(Item *i);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     ARCHIVE_CLASS(Item,Thing,r)
       FIELD_U16(32, Known);
       FIELD_I8 (33, Plus);
@@ -236,6 +237,7 @@ class Item: public Thing, public Magic
 class QItem: public Item
   {
     friend void Player::UseItemMenu(const char*, const char*, int16);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     friend Item* Item::GenItem(uint16 Flags, rID xID, int16 Depth, int8 Luck, ItemGen *Gen);
     public:
       QItem(rID _iID, int16 _Type) : Item(_iID,_Type) {}
@@ -294,6 +296,7 @@ class QItem: public Item
 
 class Food : public QItem {
     friend String & Item::Name(int16 Flags);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
 protected:
     //  Counter in Thing represents age, higher is newer, when it reaches 0, destroy object.
     int16 Eaten;
@@ -390,6 +393,7 @@ class Container: public QItem
 
 class Weapon: public QItem
 	{
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
 		public:
 			Weapon(rID iID,int16 _Type = T_WEAPON) :
         QItem(iID,_Type) { }
