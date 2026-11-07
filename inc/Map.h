@@ -849,6 +849,7 @@ typedef struct StatiCollection {
        Thing::_FixupStati (src/Status.cpp:304-321); S is saved already
        sorted, so no qsort is needed. Embedded tag scopes start at 1. */
     void FieldsV1(Registry &r) {
+      r.V1ProbeScope("StatiCollection");   /* inc-cjos0 tag probe */
       int32 i;
       if (r.Saving())
         ASSERT(Added == NULL);

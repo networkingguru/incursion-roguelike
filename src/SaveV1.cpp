@@ -144,6 +144,24 @@ static void v1PutU8(V1Buf *b, uint8 v)   { v1Put(b, &v, 1); }
 static void v1PutU16(V1Buf *b, uint16 v) { v1Put(b, &v, 2); }
 static void v1PutU32(V1Buf *b, uint32 v) { v1Put(b, &v, 4); }
 
+/* inc-cjos0: INCURSION_TAG_PROBE=<file> appends "<scope> <tag> <file:line>" for every
+   field tag the save writer emits; tools/check_number_values.sh reads it. Off
+   (one cached getenv) when unset. Scope = nearest enclosing ARCHIVE_CLASS or
+   FieldsV1 owner, restored at V1EmbedEnd. */
+static const char *v1ProbeScope = "-";
+static const char *v1ProbeStack[V1_MAX_DEPTH + 1];
+static int v1ProbeDepth = 0;
+static void v1TagProbe(uint16 tag, const char *file, int line)
+  {
+    static FILE *f = NULL;
+    static bool init = false;
+    if (!init)
+      { init = true; const char *p = getenv("INCURSION_TAG_PROBE"); if (p) f = fopen(p, "a"); }
+    if (f)
+      { fprintf(f, "%s %u %s:%d\n", v1ProbeScope, (unsigned)tag, file, line); fflush(f); }
+  }
+void Registry::V1ProbeScope(const char *name) { v1ProbeScope = name; }
+
 static void v1Patch32(V1Buf *b, size_t off, uint32 v)
   { memcpy(b->p + off, &v, 4); }
 
@@ -1409,7 +1427,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved, bool quiet = false
 /*             the resource memory segment record (phase 4)                 */
 /* ------------------------------------------------------------------------ */
 
-static const V1Ent* v1Find(uint16 tag);   /* reader primitive, below */
+static const V1Ent* v1Find(uint16 tag, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* reader primitive, below; inc-cjos0 scan site */
 
 /* Row kind -> wire pool byte, memory row stride, and packed payload size.
    Indexed by the row's kind byte (0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem).
@@ -2476,7 +2494,20 @@ static void v1PopFrame(void)
       }
   }
 
-static const V1Ent* v1Find(uint16 tag)
+/* inc-cjos0: INCURSION_TAG_SCAN=<file> appends "<scope> <tag> <kind> <file:line>" for
+   every tag a LOADED save holds that a field list asked for; tools/check_number_values.sh
+   part 4 maps each to a dump row. Off (one cached getenv) when unset. */
+static void v1ScanProbe(uint16 tag, uint8 kind, const char *file, int line)
+  {
+    static FILE *f = NULL;
+    static bool init = false;
+    if (!init)
+      { init = true; const char *p = getenv("INCURSION_TAG_SCAN"); if (p) f = fopen(p, "a"); }
+    if (f)
+      { fprintf(f, "%s %u %u %s:%d\n", v1ProbeScope, (unsigned)tag, (unsigned)kind, file, line); fflush(f); }
+  }
+
+static const V1Ent* v1Find(uint16 tag, int v1Line, const char *v1File)
   {
     if (v1FrameDepth == 0)
       return NULL;
@@ -2485,6 +2516,7 @@ static const V1Ent* v1Find(uint16 tag)
       if (f->ents[i].tag == tag)
         {
           f->ents[i].used = 1;   /* asked for, so not unknown */
+          v1ScanProbe(tag, f->ents[i].kind, v1File, v1Line);
           return &f->ents[i];
         }
     return NULL;
@@ -2497,7 +2529,7 @@ static const V1Ent* v1Find(uint16 tag)
 bool Registry::V1Active()
   { return v1.mode != V1_OFF; }
 
-void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size)
+void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* v0: the raw dump already carries scalars */
@@ -2505,12 +2537,13 @@ void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size)
     if (v1.mode == V1_SAVE)
       {
         v1CovMark(p, size);
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, kind);
         v1Put(&v1Out, p, size);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       return;   /* absent field: the constructed (zero) default stands */
     if (e->kind != kind)
@@ -2518,7 +2551,7 @@ void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size)
     memcpy(p, e->pay, size);
   }
 
-void Registry::V1Str(uint16 tag, String &s)
+void Registry::V1Str(uint16 tag, String &s, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* unreached: FIELD_STR takes the legacy branch in v0 */
@@ -2527,6 +2560,7 @@ void Registry::V1Str(uint16 tag, String &s)
         v1CovMark(&s, sizeof(String));
         const char *data = s.GetData();
         uint32 len = data ? (uint32)s.GetLength() : 0;
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_STR);
         v1PutU32(&v1Out, len);
@@ -2534,7 +2568,7 @@ void Registry::V1Str(uint16 tag, String &s)
           v1Put(&v1Out, data, len);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_STR)
@@ -2550,7 +2584,7 @@ void Registry::V1Str(uint16 tag, String &s)
     free(tmp);
   }
 
-void Registry::V1Blob(uint16 tag, void **p, size_t sz)
+void Registry::V1Blob(uint16 tag, void **p, size_t sz, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* unreached: FIELD_BLOB takes the legacy branch in v0 */
@@ -2558,6 +2592,7 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz)
       {
         v1CovMark(p, sizeof(void*));
         uint32 len = *p ? (uint32)sz : 0;
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_BLOB);
         v1PutU32(&v1Out, len);
@@ -2565,7 +2600,7 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz)
           v1Put(&v1Out, *p, len);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_BLOB)
@@ -2601,19 +2636,20 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz)
     *p = blk;
   }
 
-void Registry::V1Rid(uint16 tag, rID &m)
+void Registry::V1Rid(uint16 tag, rID &m, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* v0: the raw dump already carries the rID */
     if (v1.mode == V1_SAVE)
       {
         v1CovMark(&m, sizeof(rID));
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)m);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       { m = 0; return; }
     if (e->kind != K_RID)
@@ -2640,19 +2676,20 @@ void Registry::V1Rid(uint16 tag, rID &m)
    rID&, and a stack temporary cannot be queued (it dies before the deferred
    resolve runs). So the Status itself -- heap-stable inside its collection's
    S array -- is queued, and the index parks in the eID bitfield. */
-void Registry::V1RidStatus(uint16 tag, Status &s)
+void Registry::V1RidStatus(uint16 tag, Status &s, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;
     if (v1.mode == V1_SAVE)
       {
         rID e = (rID)s.eID;
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)e);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       { s.eID = 0; return; }
     if (e->kind != K_RID)
@@ -2674,7 +2711,7 @@ void Registry::V1RidStatus(uint16 tag, Status &s)
     v1.statQ[v1.statQCount++] = &s;
   }
 
-void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
+void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       /* REACHED, and it must stay a no-op return. FIELD_ARRAY sits in an
@@ -2690,6 +2727,7 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
            Attr[ATTR_LAST] -- read as 82 uncovered bytes and no pin row could
            honestly account for them. */
         v1CovMark(p, (size_t)count * elemSize);
+        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_ARRAY);
         v1PutU32(&v1Out, count);
@@ -2698,7 +2736,7 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
           v1Put(&v1Out, p, (size_t)count * elemSize);
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_ARRAY)
@@ -2722,11 +2760,11 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count)
    shape must be exactly a uint16 array of `count` elements. If newTag is also
    in the frame, the new form is the truth: consume oldTag but copy nothing. */
 void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
-                              uint32 count)
+                              uint32 count, int v1Line, const char *v1File)
   {
     if (v1.mode != V1_LOAD)
       return;
-    const V1Ent *e = v1Find(oldTag);
+    const V1Ent *e = v1Find(oldTag, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_ARRAY)
@@ -2736,7 +2774,7 @@ void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
     memcpy(&es, e->pay + 4, 4);
     if (c != count || es != 2)
       throw ECORRUPT;
-    if (v1Find(newTag))
+    if (v1Find(newTag, v1Line, v1File))
       return;   /* the widened form supersedes the old one */
     for (uint32 i = 0; i != count; i++)
       {
@@ -2746,13 +2784,15 @@ void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
       }
   }
 
-void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size)
+void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;
     if (v1.mode == V1_SAVE)
       {
         v1CovOpenEmbed(member, size);
+        v1TagProbe(tag, v1File, v1Line);
+        if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_EMBED);
         if (v1.wEmbedDepth == V1_MAX_DEPTH)
@@ -2761,7 +2801,8 @@ void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size)
         v1PutU32(&v1Out, 0);   /* length placeholder */
         return;
       }
-    const V1Ent *e = v1Find(tag);
+    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;   /* inc-cjos0 */
     if (!e)
       { v1PushFrame(NULL, 0); return; }   /* absent: defaults stand */
     if (e->kind != K_EMBED)
@@ -2778,12 +2819,14 @@ void Registry::V1EmbedEnd()
     if (v1.mode == V1_SAVE)
       {
         v1PutU16(&v1Out, 0);   /* the nested scope's terminator */
+        if (v1ProbeDepth > 0) v1ProbeScope = v1ProbeStack[--v1ProbeDepth];
         ASSERT(v1.wEmbedDepth > 0);
         size_t patch = v1.wEmbedPatch[--v1.wEmbedDepth];
         v1Patch32(&v1Out, patch, (uint32)(v1Out.len - (patch + 4)));
         v1CovCloseEmbed();
         return;
       }
+    if (v1ProbeDepth > 0) v1ProbeScope = v1ProbeStack[--v1ProbeDepth];   /* inc-cjos0 */
     v1PopFrame();
   }
 
@@ -2806,6 +2849,7 @@ void Registry::V1Cover(const void *p, size_t size)
 
 void Field::FieldsV1(Registry &r)
   {
+    r.V1ProbeScope("Field");
     FIELD_RID(1, eID);
     FIELD_U32(2, FType);
     FIELD_U32(3, Image);          /* Glyph */
@@ -2820,6 +2864,7 @@ void Field::FieldsV1(Registry &r)
 
 void TerraRecord::FieldsV1(Registry &r)
   {
+    r.V1ProbeScope("TerraRecord");
     FIELD_I16(1, key);
     FIELD_I16(2, Duration);
     FIELD_I8 (3, SaveDC);
@@ -2833,6 +2878,7 @@ void TerraRecord::FieldsV1(Registry &r)
 
 void LimboEntry::FieldsV1(Registry &r)
   {
+    r.V1ProbeScope("LimboEntry");
     FIELD_H  (1, h);
     FIELD_H  (2, Target);
     FIELD_U8 (3, x);
@@ -2850,6 +2896,7 @@ void LimboEntry::FieldsV1(Registry &r)
 
 void ModuleRecord::FieldsV1(Registry &r)
   {
+    r.V1ProbeScope("ModuleRecord");
     FIELD_U8 (1, Slot);
     FIELD_H  (2, hMod);
     FIELD_ARRAY(3, FName, 1, 1024);
@@ -2970,6 +3017,7 @@ static void v1GridProbe(void)
    reject any lie about their lengths -- nothing is re-truncated here. */
 void Map::GridFieldsV1(Registry &r)
   {
+    r.V1ProbeScope("Map");
     size_t n = (size_t)sizeX * (size_t)sizeY;
     int16 gx = 0, gy = 0;
     uint8 elem = 0;
@@ -3071,6 +3119,7 @@ void Map::GridFieldsV1(Registry &r)
 #define V1_ELEM_ARRAY_FIELDS(S)                                           \
     {                                                                     \
       uint32 i;                                                           \
+      r.V1ProbeScope("Array");   /* inc-cjos0 tag probe */                  \
       FIELD_U32(1, Count);                                                \
       if (r.Loading())                                                    \
         {                                                                 \

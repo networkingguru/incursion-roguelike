@@ -704,6 +704,7 @@ void Array<S,Initial,Delta>::Serialize(Registry &r)
 template<class S,int32 Initial,int32 Delta>
 void Array<S,Initial,Delta>::FieldsV1(Registry &r)
   {
+    r.V1ProbeScope("Array");
     FIELD_U32(1, Count);
     if (r.Loading())
       {

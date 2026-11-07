@@ -1501,6 +1501,7 @@ void TargetSystem::Serialize(Registry &r)
    FIELD_RID for the resource members. */
 void TargetSystem::FieldsV1(Registry &r)
 {
+  r.V1ProbeScope("TargetSystem");
   static_assert(sizeof(bool) == 1, "shouldRetarget travels as K_U8");
   static_assert(sizeof(TargetType) == 4, "Target::type travels as K_I32");
   static_assert(sizeof(TargetWhyType) == 4, "TargetWhy::type travels as K_I32");

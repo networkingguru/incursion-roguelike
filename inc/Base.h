@@ -806,7 +806,7 @@ enum {
   ClassName(Registry*r) : Base(r) {}                            \
   virtual size_t ObjectSize() { return sizeof(ClassName); }     \
   virtual void Serialize(Registry &r, bool isSave) {            \
-  Base::Serialize(r,isSave);
+  Base::Serialize(r,isSave); r.V1ProbeScope(#ClassName);
 
 #define END_ARCHIVE }
    
@@ -898,22 +898,25 @@ class Registry
        to SaveLayoutDigest() (src/AbiCheck.cpp), so a data member added here
        orphans every v0 save. All v1 state lives in file-scope context objects
        in src/SaveV1.cpp. */
+    /* inc-cjos0: the default arguments carry the caller's file and line to
+       the INCURSION_TAG_PROBE hook (src/SaveV1.cpp); they change no layout. */
     bool V1Active();
-    void V1Field(uint16 tag, uint8 kind, void *p, size_t size);
-    void V1Str(uint16 tag, String &s);
-    void V1Blob(uint16 tag, void **p, size_t sz);
-    void V1Rid(uint16 tag, rID &m);
+    void V1ProbeScope(const char *name);   /* inc-cjos0 tag probe */
+    void V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Str(uint16 tag, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Blob(uint16 tag, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Rid(uint16 tag, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     /* Status's members are bitfields, so FIELD_RID/FIELD_H cannot take their
        address; this stages Status::eID through the name table itself. */
-    void V1RidStatus(uint16 tag, Status &s);
-    void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count);
+    void V1RidStatus(uint16 tag, Status &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     /* The widening read for a fixed array whose element type grew. newTag is
        what this build writes; oldTag is a retired tag holding the same array
        with a narrower element. V1_OFF and V1_SAVE write nothing; a load reads
        oldTag, requires K_ARRAY / count / 2-byte elements, and widens each
        element into p[]. If newTag is also present it wins. See inc-vqla. */
-    void V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p, uint32 count);
-    void V1EmbedBegin(uint16 tag, void *member, size_t size);
+    void V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* inc-cjos0: caller site for INCURSION_TAG_SCAN */
+    void V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1EmbedEnd();
     void V1Cover(const void *p, size_t size);
     int16 SaveGroupV1(Term &t, hObj hGroup);
