@@ -220,22 +220,10 @@ static void v1PutU16(V1Buf *b, int v) { uint16 w = (uint16)v; v1Put(b, &w, 2); }
 static void v1PutU16(V1Buf *b, const char *name);   /* a field id, by name; defined with the writer's name table */
 static void v1PutU32(V1Buf *b, uint32 v) { v1Put(b, &v, 4); }
 
-/* inc-cjos0: INCURSION_TAG_PROBE=<file> appends "<scope> <tag> <file:line>" for every
-   field tag the save writer emits; tools/check_number_values.sh reads it. Off
-   (one cached getenv) when unset. Scope = nearest enclosing ARCHIVE_CLASS or
-   FieldsV1 owner, restored at V1EmbedEnd. */
+/* inc-cjos0: the owner scope; INCURSION_TAG_SCAN logs the full path (v1Path). Restored at V1EmbedEnd. */
 static const char *v1ProbeScope = "-";
 static const char *v1ProbeStack[V1_MAX_DEPTH + 1];
 static int v1ProbeDepth = 0;
-static void v1TagProbe(uint16 tag, const char *file, int line)
-  {
-    static FILE *f = NULL;
-    static bool init = false;
-    if (!init)
-      { init = true; const char *p = getenv("INCURSION_TAG_PROBE"); if (p) f = fopen(p, "a"); }
-    if (f)
-      { fprintf(f, "%s %u %s:%d\n", v1ProbeScope, (unsigned)tag, file, line); fflush(f); }
-  }
 static std::string v1Path = "-";   /* inc-cjos0: the scope of the next field: owner, then each open embed */
 static std::string v1PathStack[V1_MAX_DEPTH + 1];
 static int v1PathDepth = 0;
@@ -2900,7 +2888,7 @@ static void v1PopFrame(void)
       }
   }
 
-/* inc-cjos0: INCURSION_TAG_SCAN=<file> appends "<scope> <tag> <kind> <file:line>" for
+/* inc-cjos0: INCURSION_TAG_SCAN=<file> appends "<scope path: owner, then each open embed> <tag> <kind> <file:line>" for
    every tag a LOADED save holds that a field list asked for; tools/check_number_values.sh
    part 4 maps each to a dump row. Off (one cached getenv) when unset. */
 static void v1ScanProbe(uint16 tag, uint8 kind, const char *file, int line)
@@ -2910,7 +2898,7 @@ static void v1ScanProbe(uint16 tag, uint8 kind, const char *file, int line)
     if (!init)
       { init = true; const char *p = getenv("INCURSION_TAG_SCAN"); if (p) f = fopen(p, "a"); }
     if (f)
-      { fprintf(f, "%s %u %u %s:%d\n", v1ProbeScope, (unsigned)tag, (unsigned)kind, file, line); fflush(f); }
+      { fprintf(f, "%s %u %u %s:%d\n", v1Path.c_str(), (unsigned)tag, (unsigned)kind, file, line); fflush(f); }
   }
 
 static const V1Ent* v1Find(const char *name, int v1Line, const char *v1File)
@@ -2947,7 +2935,6 @@ void Registry::V1Field(const char *name, uint8 kind, void *p, size_t size, int v
       {
         v1CovMark(p, size);
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, kind);
         v1Put(&v1Out, p, size);
@@ -2971,7 +2958,6 @@ void Registry::V1Str(const char *name, String &s, int v1Line, const char *v1File
         const char *data = s.GetData();
         uint32 len = data ? (uint32)s.GetLength() : 0;
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_STR);
         v1PutU32(&v1Out, len);
@@ -3004,7 +2990,6 @@ void Registry::V1Blob(const char *name, void **p, size_t sz, int v1Line, const c
         v1CovMark(p, sizeof(void*));
         uint32 len = *p ? (uint32)sz : 0;
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_BLOB);
         v1PutU32(&v1Out, len);
@@ -3056,7 +3041,6 @@ void Registry::V1Rid(const char *name, rID &m, int v1Line, const char *v1File)
       {
         v1CovMark(&m, sizeof(rID));
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)m);
@@ -3097,7 +3081,6 @@ void Registry::V1RidStatus(const char *name, Status &s, int v1Line, const char *
       {
         rID e = (rID)s.eID;
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)e);
@@ -3142,7 +3125,6 @@ void Registry::V1Array(const char *name, void *p, size_t elemSize, uint32 count,
            honestly account for them. */
         v1CovMark(p, (size_t)count * elemSize);
         uint16 tag = v1WNameId(name);
-        v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_ARRAY);
         v1PutU32(&v1Out, count);
@@ -3207,7 +3189,6 @@ static void v1EmbedBegin(const char *base, const char *idname, void *member, siz
       {
         v1CovOpenEmbed(member, size);
         uint16 tag = v1WNameId(idname);   /* in the parent frame, under the parent scope */
-        v1TagProbe(tag, v1File, v1Line);
         if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_EMBED);

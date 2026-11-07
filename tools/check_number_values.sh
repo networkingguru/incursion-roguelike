@@ -2,11 +2,12 @@
 # gate: none heavy; needs clang and a posix build (BACKEND=posix ./build_macos.sh); run by hand
 # fact: source tree -- the working tree this script runs in; the dump and the compiler both read it, nothing else
 # fact: compiler flags -- the posix flags of build_macos.sh (-DDEBUG -DPOSIX_TERM -Iinc -Ilib -Icompat -std=c++17 -fpermissive), copied here, plus three alternate configs only to explain names
-# fact: character and world -- fixture options tools/fixtures/options-2026-08-22.dat; key script tools/keys/smoke.keys; seed 1 pinned for the runtime tag probe (inc-cjos0). The seed only decides which records get written, and the check asserts a subset (runtime tags in dump), which holds for any seed
-# fact: saved files scanned by part 4 -- the committed fixtures tools/fixtures/chars/*.sav (frozen bytes), docs/evidence/inc-upw.13 and inc-x1f3 (frozen bytes), plus fresh saves from the key scripts in SCAN_GEN at the seeds named there, all run with options tools/fixtures/options-2026-08-22.dat; the assertion is "every tag in a loaded file has a dump row", which holds for any seed, while the coverage count (reported, never asserted) depends on them
+# fact: saved files scanned by part 4 -- the committed fixtures tools/fixtures/chars/*.sav (frozen bytes), docs/evidence/inc-upw.13 and inc-x1f3 (frozen bytes), plus fresh saves from the key scripts in SCAN_GEN at the seeds named there, all run with options tools/fixtures/options-2026-08-22.dat; the assertions are "every save of a format the reader reads loads" and "the log holds fields", which hold for any seed, while the coverage count (reported, never asserted) depends on them
+# fact: the TerraRecord save -- tools/keys/terra-save.keys loads tools/fixtures/chars/elf-mage-illusions-seed1.sav (INCURSION_LOAD, frozen bytes; it fixes character and map) with the options above; its header lists the other facts (Freeze Monsters, Wall of Fire learned, Ignore Spell Failure, Infinite Mana); the assertion is "some scan holds scope TerraRecord", which holds at any seed
+# fact: saves the v1 reader never reads -- the two paths in KNOWN_UNREAD, frozen bytes, each named with the stamp in its own header (0.6.9Y19, SF0F7B6EDC)
 # fact: reader behavior on an unknown tag -- Registry::LoadGroupV1 refuses a tag no field list asks for (v1PopFrame, ECORRUPT); the planted-tag selftest proves it on this build
 # fact: save revision -- the build under test (incursion-headless built from this tree)
-# fact: legacy tag table -- inc/SaveLegacyTags.h, committed and frozen (generated once from master by tools/gen_legacy_tags.py); part 5 reads it and nothing else of the tag numbers
+# fact: legacy tag table -- inc/SaveLegacyTags.h, committed and frozen (generated once from master by tools/gen_legacy_tags.py); part 5 reads it and nothing else of the tag numbers; it matches a logged (owner, tag) by revision, not by the reading line, because the lines move with every edit of src/SaveV1.cpp
 # fact: revision of a scanned file -- the IS1.<n> stamp in the file's own header bytes; fixtures and evidence are frozen bytes, generated saves carry this build's SCHEMA_REV
 #
 # Cross-checks tools/number_values.py (the "dump") by methods that share no
@@ -14,11 +15,12 @@
 #   1. NAMES   the real preprocessor (clang -E -dD) vs the dump's define names
 #   2. VALUES  a generated C++ file, compiled and run, prints every dumped
 #              define and enum member; compared with the dump
-#   3. TAGS    INCURSION_TAG_PROBE=<file> in the save writer lists every
-#              (scope, tag) a real session writes; each must be in the dump
-#   4. SAVES   every tag in a real save file traces to a dump row
-#   5. LEGACY  every tag in those saves maps to exactly one name through the frozen
-#              table inc/SaveLegacyTags.h, by the save's own revision (inc-cjos0 phase 1)
+#   3. (retired: the source holds no tag numbers, so the dump holds no tag rows)
+#   4. SAVES   every real save loads (two named formats the v1 reader never reads
+#              excepted); the reader's scan log holds the fields it asked for; the
+#              TerraRecord save shows that record's fields (inc-cjos0 phase 6)
+#   5. LEGACY  every (owner, tag) in a revision 3-6 save has a row in the frozen
+#              table inc/SaveLegacyTags.h for that revision (inc-cjos0 phase 1)
 #
 # Usage: tools/check_number_values.sh [--dump FILE] [--keep]   (exit 0 pass, 1 fail)
 #        tools/check_number_values.sh --selftest                (proves each part goes red)
@@ -367,123 +369,21 @@ print("PASS part 2 (values)")
 PY
 }
 
-# ------------------------------------------------------------------ collect 3
-collect_tags() {
-    [ -x ./incursion-headless ] || { echo "FAIL: ./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"; return 1; }
-    : > "$W/probe.txt"
-    INCURSION_TAG_PROBE="$W/probe.txt" INCURSION_RUN_DIR="$W/run1" \
-        INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-        ./tools/headless.sh tools/keys/smoke.keys 1 > "$W/s1.log" 2>&1 < /dev/null \
-        || { tail -10 "$W/s1.log"; echo "FAIL: session 1 exited non-zero"; return 1; }
-    local sv; sv="$(ls "$W"/run1/save/*.sav 2>/dev/null | head -1)"
-    [ -n "$sv" ] || { echo "FAIL: session 1 wrote no save"; return 1; }
-    mkdir -p "$W/run2/save"; cp "$sv" "$W/run2/save/"
-    INCURSION_TAG_PROBE="$W/probe.txt" INCURSION_RUN_DIR="$W/run2" \
-        INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-        ./tools/headless.sh tools/keys/loadsave.keys 1 > "$W/s2.log" 2>&1 < /dev/null \
-        || { tail -10 "$W/s2.log"; echo "FAIL: load-and-save session exited non-zero"; return 1; }
-    [ -s "$W/probe.txt" ] || { echo "FAIL: the tag probe wrote nothing (is incursion-headless built from this tree?)"; return 1; }
-}
-
-# ------------------------------------------------------------------ compare 3
-compare_tags() { # <dump>
-    python3 - "$1" "$W/probe.txt" "$ROOT" <<'PY'
-import collections, re, sys
-dump, probe, root = sys.argv[1:4]
-# Runtime scope = nearest enclosing ARCHIVE_CLASS / FieldsV1 owner, set by the
-# probe; dump scope = nearest earlier ARCHIVE_CLASS(Name) or Name::FieldsV1 in
-# the file. Template Array<S>::FieldsV1 has no class name in the dump: "?".
-MAP = {"Array": "?"}
-drows = collections.defaultdict(list)   # (file, value) -> [(line, scope, identity)]
-dscopes = collections.Counter()
-for ln in open(dump):
-    p = ln.rstrip("\n").split("\t")
-    if ln.startswith("#") or len(p) < 4 or p[0] != "tag": continue
-    f, l = p[3].rsplit(":", 1)
-    drows[(f, int(p[2]))].append((int(l), p[1].split(".", 1)[0], p[1]))
-ndump = sum(len(v) for v in drows.values())
-sites = collections.defaultdict(lambda: collections.defaultdict(set))   # (file,line) -> tag -> scopes
-nwrites = 0
-for ln in open(probe):
-    s, t, fl = ln.split()
-    f, l = fl.rsplit(":", 1)
-    sites[(f, int(l))][int(t)].add(s); nwrites += 1
-srccache = {}
-def stmt_text(f, l):
-    if f not in srccache:
-        try: srccache[f] = open(root + "/" + f, errors="replace").read().split("\n")
-        except OSError: srccache[f] = []
-    L = srccache[f]
-    lo = l - 1
-    while lo > 0 and l - lo < 4 and not re.search(r"[;{}]\s*$", L[lo - 1]):
-        lo -= 1
-    return " ".join(L[max(lo - 1, 0):l])
-IDX = re.compile(r"(V1\w+|FIELD_\w+)\s*\(\s*\(\s*uint16\s*\)")
-# An index tag written through a macro: the write site is a macro invocation.
-# Read that macro's #define body from the source (not the dump); the tag is an
-# index tag only if the body has a (uint16)(k + i) tag with k <= the tag value.
-IDXBASE = re.compile(r"(?:V1\w+|FIELD_\w+)\s*\(\s*\(\s*uint16\s*\)\s*\(\s*(\d+)\s*\+")
-srcfiles = None
-macro_cache = {}
-def macro_bases(name):
-    global srcfiles
-    if name in macro_cache: return macro_cache[name]
-    if srcfiles is None:
-        import glob
-        srcfiles = glob.glob(root + "/inc/*.h") + glob.glob(root + "/src/*.cpp") + glob.glob(root + "/src/*.c")
-    out = []
-    rx = re.compile(r"^[ \t]*#[ \t]*define[ \t]+" + re.escape(name) + r"\b((?:\\\n|[^\n])*)", re.M)
-    for f in srcfiles:
-        for m in rx.finditer(open(f, errors="replace").read()):
-            out += [int(b) for b in IDXBASE.findall(m.group(1).replace("\\\n", " "))]
-    macro_cache[name] = out
-    return out
-def macro_index_tag(text, t):
-    return any(b <= t for n in re.findall(r"\b([A-Za-z_]\w*)\s*\(", text) for b in macro_bases(n))
-seen = set(); matched = 0; indexed = []; missing = []
-scope_ok = scope_diff = 0; pairs = collections.Counter()
-for (f, l), tags in sorted(sites.items()):
-    for t, scopes in sorted(tags.items()):
-        hit = [r for r in drows.get((f, t), []) if 0 <= l - r[0] <= 3]
-        if hit:
-            matched += 1
-            for r in hit: seen.add((f, t, r[0]))
-            ds = {r[1] for r in hit}
-            for sc in scopes:
-                if MAP.get(sc, sc) in ds or (sc == "Map" and "MapGrid" in ds): scope_ok += 1
-                else: scope_diff += 1; pairs[(sc, "/".join(sorted(ds)))] += 1
-        elif IDX.search(stmt_text(f, l)) or macro_index_tag(stmt_text(f, l), t):
-            indexed.append((f, l, t))
-        else:
-            missing.append((f, l, t, sorted(scopes)))
-unseen = [(f, t, l, sc, i) for (f, t), rs in drows.items() for (l, sc, i) in rs if (f, t, l) not in seen]
-by = collections.Counter(u[3] for u in unseen)
-nsites = len(sites)
-print("part 3 tags: %d write sites (file:line) seen at runtime, %d writes; dump holds %d tag rows" % (nsites, nwrites, ndump))
-print("  runtime (site, tag) matched to a dump row by file, value and line: %d" % matched)
-print("  runtime tags whose call has a (uint16)(...) index expression as its tag (no literal to list): %d tags at %d sites"
-      % (len(indexed), len({(f, l) for f, l, t in indexed})))
-print("  scope check on matched tags: runtime scope agrees with dump scope %d, differs %d" % (scope_ok, scope_diff))
-for (a, b), c in pairs.most_common(5): print("    scope differs: runtime %s, dump %s: %d" % (a, b, c))
-print("  dump tags never seen at runtime: %d (read-only migration tags and unreached records); largest scopes: %s"
-      % (len(unseen), ", ".join("%s=%d" % kv for kv in by.most_common(5))))
-for f, l, t, sc in missing[:40]: print("  MISSING from dump: %s:%d tag %d (runtime scope %s)" % (f, l, t, "/".join(sc)))
-print("  runtime tags missing from dump: %d" % len(missing) if missing else "  runtime tags missing from dump: none")
-print("problems: %d" % len(missing))
-if missing: print("FAIL part 3 (tags)"); sys.exit(1)
-print("PASS part 3 (tags)")
-PY
-}
-
 # ------------------------------------------------------------------ collect 4
 # Part 4, the backward direction (inc-cjos0): start from real save files and
-# prove every tag in them traces to a dump row. Each save is loaded by the
-# game's own reader through tools/dump_save.sh (-dump). With INCURSION_TAG_SCAN
-# set, the reader (src/SaveV1.cpp v1Find) logs "<owner scope> <tag> <kind>
-# <file:line of the field list that asked for it>" for every tag the file holds.
-# The reader already refuses a tag no field list asks for (ECORRUPT), so a
-# successful load means every tag in the file was asked for by some line.
-SCAN_GEN="smoke:1 dive:1 dive-depth-10:2 dive12:1 explore-mage:1 explore-rogue:1 explore-priest:1 stair-cycle:1 spook-ally-save:1 chargen-default-store-save:1 chargen-mage-save:1 marathon:1 followers:3362"
+# prove the reader takes every one. Each save is loaded by the game's own reader
+# through tools/dump_save.sh (-dump). With INCURSION_TAG_SCAN set, the reader
+# (src/SaveV1.cpp v1Find) logs "<owner scope> <tag> <kind> <file:line of the
+# field list that asked for it>" for every field the file holds that a field
+# list asked for. The reader refuses a field no list asks for (ECORRUPT, the
+# "carries field" message), so a successful load means every field in the file
+# is one this build asks for. For a revision 7 file the tag is a number local to
+# that file's own name table; only revisions 3-6 use the numbers of
+# inc/SaveLegacyTags.h, and part 5 maps those.
+# An SCAN_GEN entry is <key script>:<seed> or <key script>:<seed>:<fixture to load>.
+SCAN_GEN="smoke:1 dive:1 dive-depth-10:2 dive12:1 explore-mage:1 explore-rogue:1 explore-priest:1 stair-cycle:1 spook-ally-save:1 chargen-default-store-save:1 chargen-mage-save:1 marathon:1 followers:3362 terra-save:1:tools/fixtures/chars/elf-mage-illusions-seed1.sav"
+# Saves of a format the v1 reader never reads (path:stamp in the file's own header).
+KNOWN_UNREAD="docs/evidence/inc-upw.13/Furious_Fox.sav:SF0F7B6EDC docs/evidence/inc-upw.13/Jaoin.sav:0.6.9Y19"
 save_stamp() { dd if="$1" bs=1 skip=4 count=12 2>/dev/null | tr -d '\0'; }
 scan_one() { # <label> <sav> : appends a manifest row
     local label="$1" sav="$2" n; n="$(wc -l < "$W/scan/manifest.tsv" | tr -d ' ')"
@@ -500,11 +400,18 @@ collect_scan() {
     for f in tools/fixtures/chars/*.sav docs/evidence/inc-upw.13/*.sav docs/evidence/inc-x1f3/*.sav; do
         scan_one "file:$f" "$f"
     done
-    local item k seed d
+    local item k seed d rest fix
     for item in $SCAN_GEN; do
-        k="${item%%:*}"; seed="${item##*:}"; d="$W/gen/$k-$seed"
-        INCURSION_RUN_DIR="$d" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-            ./tools/headless.sh "tools/keys/$k.keys" "$seed" > "$W/gen-$k-$seed.log" 2>&1 < /dev/null
+        k="${item%%:*}"; rest="${item#*:}"; seed="${rest%%:*}"; fix=""
+        [ "$rest" != "$seed" ] && fix="${rest#*:}"
+        d="$W/gen/$k-$seed"
+        if [ -n "$fix" ]; then
+            INCURSION_LOAD="$fix" INCURSION_RUN_DIR="$d" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+                ./tools/headless.sh "tools/keys/$k.keys" "$seed" > "$W/gen-$k-$seed.log" 2>&1 < /dev/null
+        else
+            INCURSION_RUN_DIR="$d" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+                ./tools/headless.sh "tools/keys/$k.keys" "$seed" > "$W/gen-$k-$seed.log" 2>&1 < /dev/null
+        fi
         f="$(ls "$d"/save/*.sav 2>/dev/null | head -1)"
         if [ -z "$f" ]; then echo "FAIL: key script $k seed $seed wrote no save"; return 1; fi
         scan_one "gen:$k:$seed" "$f"
@@ -512,108 +419,66 @@ collect_scan() {
 }
 
 # ------------------------------------------------------------------ compare 4
-compare_scan() { # <dump> [manifest]
-    python3 - "$1" "${2:-$W/scan/manifest.tsv}" "$ROOT" <<'PY'
-import collections, re, sys
-dump, manifest, root = sys.argv[1:4]
-drows = collections.defaultdict(list)   # (file, value) -> [(line, scope, identity)]
-for ln in open(dump):
-    p = ln.rstrip("\n").split("\t")
-    if ln.startswith("#") or len(p) < 4 or p[0] != "tag": continue
-    f, l = p[3].rsplit(":", 1)
-    drows[(f, int(p[2]))].append((int(l), p[1].split(".", 1)[0], p[1]))
-ndump = sum(len(v) for v in drows.values())
-srccache = {}
-def stmt_text(f, l):
-    if f not in srccache:
-        try: srccache[f] = open(root + "/" + f, errors="replace").read().split("\n")
-        except OSError: srccache[f] = []
-    L = srccache[f]; lo = l - 1
-    while lo > 0 and l - lo < 4 and not re.search(r"[;{}]\s*$", L[lo - 1]):
-        lo -= 1
-    return " ".join(L[max(lo - 1, 0):l])
-IDX = re.compile(r"(V1\w+|FIELD_\w+)\s*\(\s*\(\s*uint16\s*\)")
-IDXBASE = re.compile(r"(?:V1\w+|FIELD_\w+)\s*\(\s*\(\s*uint16\s*\)\s*\(\s*(\d+)\s*\+")
-srcfiles = None; macro_cache = {}
-def macro_bases(name):
-    global srcfiles
-    if name in macro_cache: return macro_cache[name]
-    if srcfiles is None:
-        import glob
-        srcfiles = glob.glob(root + "/inc/*.h") + glob.glob(root + "/src/*.cpp") + glob.glob(root + "/src/*.c")
-    out = []
-    rx = re.compile(r"^[ \t]*#[ \t]*define[ \t]+" + re.escape(name) + r"\b((?:\\\n|[^\n])*)", re.M)
-    for f in srcfiles:
-        for m in rx.finditer(open(f, errors="replace").read()):
-            out += [int(b) for b in IDXBASE.findall(m.group(1).replace("\\\n", " "))]
-    macro_cache[name] = out
-    return out
-def is_index(f, l, t):
-    text = stmt_text(f, l)
-    return bool(IDX.search(text)) or any(b <= t for n in re.findall(r"\b([A-Za-z_]\w*)\s*\(", text) for b in macro_bases(n))
-WILD = {"?"}            # dump scope of a template (Array<S>) or a hand-written reader line
+compare_scan() { # [manifest] [need: 1 = the full manifest, so the named-unread saves and the TerraRecord save must be in it]
+    python3 - "${1:-$W/scan/manifest.tsv}" "${2:-1}" "$ROOT" "$KNOWN_UNREAD" <<'PY'
+import collections, os, sys
+manifest, need, root, known = sys.argv[1], sys.argv[2] == "1", sys.argv[3], sys.argv[4].split()
+unread = dict(k.rsplit(":", 1) for k in known)       # path -> stamp
+nlines = {}
+def src_lines(f):
+    if f not in nlines:
+        try: nlines[f] = len(open(os.path.join(root, f), errors="replace").read().split("\n"))
+        except OSError: nlines[f] = 0
+    return nlines[f]
 problems = 0
-fmt = collections.Counter(); bysrc = collections.Counter()
-seen_rows = set(); first = {}            # (scope, tag, file, line) -> first save label
-nfiles = 0; allscans = set()
+fmt = collections.Counter(); loaded = 0; nfields = 0
+sites = set(); terra = set(); unread_seen = set()
 for ln in open(manifest):
     label, sav, stamp, rc, scanf, errf = ln.rstrip("\n").split("\t")
     src = "evidence" if label.startswith("file:docs/") else ("fixture" if label.startswith("file:") else "generated")
     fmt[(src, stamp)] += 1
+    path = label[5:] if label.startswith("file:") else None
     if not stamp.startswith("IS1."):
-        # v0 memory image or an unstamped file: it holds no tags, so there is nothing to trace
+        # a v0 memory image or an unstamped file: the v1 reader never reads it; it must be named
+        if path in unread and unread[path] == stamp:
+            unread_seen.add(path)
+        else:
+            print("  FAIL unread format: %s has stamp %r and is not named in KNOWN_UNREAD" % (label, stamp)); problems += 1
         continue
-    nfiles += 1
+    if path in unread:
+        print("  FAIL KNOWN_UNREAD names %s, but its stamp is now %s: remove it from the list" % (path, stamp)); problems += 1
     if rc != "0":
         err = open(errf, errors="replace").read().strip().split("\n")
         print("  FAIL load: %s (%s) was refused, exit %s: %s" % (label, stamp, rc, " | ".join(err[-2:])))
         problems += 1
         continue
+    loaded += 1
+    n = 0
     for sl in open(scanf):
-        s, t, k, fl = sl.split()
-        allscans.add((s, int(t), fl, label))
-agg = {}
-for s, t, fl, label in allscans:
-    key = (s, t, fl)
-    if key not in agg: agg[key] = label
-    elif label < agg[key]: agg[key] = label
-matched = idx = wild = 0; scope_bad = []; missing = []
-hits_rows = set()
-for (s, t, fl), label in sorted(agg.items()):
-    f, l = fl.rsplit(":", 1); l = int(l)
-    rows = [r for r in drows.get((f, t), []) if 0 <= l - r[0] <= 3]
-    if rows:
-        ok = [r for r in rows if r[1] == s or (s == "Map" and r[1] == "MapGrid")]   # runtime scope of GridFieldsV1 is still Map until inc-cjos0 phase 2
-        if not ok: ok = [r for r in rows if r[1] in WILD or s == "Array"]; wild += bool(ok)
-        if ok:
-            matched += 1
-            for r in ok: hits_rows.add((f, t, r[0], r[1]))
-        else:
-            scope_bad.append((s, t, fl, label, "/".join(sorted({r[1] for r in rows}))))
-    elif is_index(f, l, t):
-        idx += 1
-    else:
-        missing.append((s, t, fl, label))
-print("part 4 tags: %d v1 saves loaded (%s)" % (nfiles, ", ".join("%s %s=%d" % (a, b, c) for (a, b), c in sorted(fmt.items()) if c)))
-print("  distinct (owner, tag, reading line) in those saves: %d" % len(agg))
-print("  matched to a dump row by file, value, line and owner: %d (of which %d through a '?' wildcard owner: Array<T> or hand-written reader)" % (matched, wild))
-print("  index tags traced to a (uint16)(k+i) loop site: %d" % idx)
-for s, t, fl, label, ds in scope_bad[:40]:
-    print("  OWNER DIFFERS: %s tag %d read at %s (first in %s): dump owner %s" % (s, t, fl, label, ds))
-for s, t, fl, label in missing[:40]:
-    print("  NO SOURCE ROW: owner %s tag %d read at %s, first in %s" % (s, t, fl, label))
-problems += len(scope_bad) + len(missing)
-# coverage: dump tag rows (literal tags) that appear in at least one save
-allrows = {(f, v, l, sc): ident for (f, v), rs in drows.items() for (l, sc, ident) in rs}
-unseen = [(ident, f, v, l) for (f, v, l, sc), ident in allrows.items() if (f, v, l, sc) not in hits_rows]
-print("  coverage: %d of %d dump tag rows appear in at least one save; %d appear in none" % (len(allrows) - len(unseen), len(allrows), len(unseen)))
-by = collections.defaultdict(list)
-for ident, f, v, l in unseen: by[ident.split(".", 1)[0]].append("%s=%d" % (ident.split(".", 1)[1], v))
-for sc, items in sorted(by.items(), key=lambda kv: -len(kv[1])):
-    print("    never seen, owner %s (%d): %s" % (sc, len(items), " ".join(sorted(items)[:60]) + (" ..." if len(items) > 60 else "")))
+        p = sl.split()
+        if len(p) != 4 or not p[1].isdigit() or not p[2].isdigit() or ":" not in p[3]:
+            print("  FAIL scan line of %s is not '<scope> <tag> <kind> <file:line>': %r" % (label, sl.strip()[:80])); problems += 1; continue
+        s, t, k, fl = p
+        f, l = fl.rsplit(":", 1)
+        if not l.isdigit() or not (1 <= int(l) <= src_lines(f)):
+            print("  FAIL scan line of %s names %s, which is not a line of the source" % (label, fl)); problems += 1; continue
+        n += 1; sites.add((s, fl))
+        if s == "TerraRecord" and label.startswith("gen:terra-save"): terra.add(int(t))
+    nfields += n
+    if n == 0:
+        print("  FAIL scan log of %s (%s) is empty: a loaded save holds fields" % (label, stamp)); problems += 1
+if need:
+    for path in sorted(set(unread) - unread_seen):
+        print("  FAIL KNOWN_UNREAD names %s, which is not in the scanned saves" % path); problems += 1
+    if not terra:
+        print("  FAIL the TerraRecord save (gen:terra-save) logged no TerraRecord field"); problems += 1
+print("part 4 saves: %d loaded (%s); %d of a format the v1 reader never reads, named in KNOWN_UNREAD" % (
+    loaded, ", ".join("%s %s=%d" % (a, b, c) for (a, b), c in sorted(fmt.items()) if b.startswith("IS1.")), len(unread_seen)))
+print("  fields logged: %d, at %d distinct (owner, reading line) sites" % (nfields, len(sites)))
+print("  TerraRecord seen: %s" % ("yes, %d fields (tags %s)" % (len(terra), ",".join(map(str, sorted(terra)))) if terra else "no"))
 print("problems: %d" % problems)
-if problems: print("FAIL part 4 (backward tag scan)"); sys.exit(1)
-print("PASS part 4 (backward tag scan)")
+if problems: print("FAIL part 4 (saves)"); sys.exit(1)
+print("PASS part 4 (saves)")
 PY
 }
 
@@ -662,15 +527,14 @@ if [ "$MODE" = check ]; then
     FAILED=0
     collect_names; compare_names "$DUMP" || FAILED=1
     collect_values "$DUMP" || FAILED=1; compare_values "$DUMP" || FAILED=1
-    if collect_tags; then compare_tags "$DUMP" || FAILED=1; else FAILED=1; fi
-    if collect_scan; then compare_scan "$DUMP" || FAILED=1; compare_legacy || FAILED=1; else FAILED=1; fi
+    if collect_scan; then compare_scan || FAILED=1; compare_legacy || FAILED=1; else FAILED=1; fi
     [ "$FAILED" = 0 ] && echo "PASS all parts" || echo "FAIL"
     exit "$FAILED"
 fi
 
 # ---- selftest: every part must pass on the real dump, then go red on a damaged copy
 echo "selftest: collecting on the real dump"
-collect_names; collect_values "$DUMP"; collect_tags || exit 1
+collect_names; collect_values "$DUMP"
 collect_scan || exit 1
 ST=0
 problems() { "$@" 2>&1 | sed -n 's/^problems: //p'; }
@@ -684,7 +548,8 @@ redcheck() { # <label> <fn> <dump-real> <dump-damaged>
     fi
 }
 echo "real-dump results (a nonzero problem count here is a finding about the dump, not a selftest failure):"
-for f in compare_names compare_values compare_tags compare_scan; do echo "  $f: problems $(problems $f "$DUMP")"; done
+for f in compare_names compare_values; do echo "  $f: problems $(problems $f "$DUMP")"; done
+echo "  compare_scan: problems $(problems compare_scan)"
 echo "  compare_legacy: problems $(problems compare_legacy)"
 VICTIM="$(awk -F'\t' '$1=="define" && $4 ~ /^inc\/Defines\.h/ {print $2; exit}' "$DUMP")"
 [ -n "$VICTIM" ] || { echo "SELFTEST FAIL: no define from inc/Defines.h in the dump"; exit 1; }
@@ -694,13 +559,6 @@ redcheck "part 1 with define $VICTIM hidden from the dump" compare_names "$DUMP"
 # part 2: change one value
 awk -F'\t' -v OFS='\t' -v v="$VICTIM" '$1=="define" && $2==v {$3=$3+7} {print}' "$DUMP" > "$W/dump-changed.txt"
 redcheck "part 2 with the value of $VICTIM changed in the dump" compare_values "$DUMP" "$W/dump-changed.txt"
-# part 3: drop one tag (all Item tags with that value, so no other row covers the runtime write)
-TN="$(awk -F'\t' '$1=="tag" && $2 ~ /^Item\./ {print $3; exit}' "$DUMP")"
-awk -F'\t' -v n="$TN" '!($1=="tag" && $2 ~ /^Item\./ && $3==n)' "$DUMP" > "$W/dump-notag.txt"
-redcheck "part 3 with Item tag $TN dropped from the dump" compare_tags "$DUMP" "$W/dump-notag.txt"
-# part 3, macro body: drop the literal Count tag the macro V1_ELEM_ARRAY_FIELDS expands to
-awk -F'\t' '!($1=="tag" && $2=="?.Count" && $4 ~ /^src\/SaveV1\.cpp:/)' "$DUMP" > "$W/dump-nomacrotag.txt"
-redcheck "part 3 with the literal Count tag of the V1_ELEM_ARRAY_FIELDS expansions dropped from the dump" compare_tags "$DUMP" "$W/dump-nomacrotag.txt"
 # part 4, planted tag: a copy of one generated save with tag 60000 added to its first record must go red
 PSRC="$(ls "$W"/gen/smoke-1/save/*.sav | head -1)"
 plant_tag "$PSRC" "$W/planted.sav" || { echo "SELFTEST FAIL: could not plant a tag"; ST=1; }
@@ -709,15 +567,54 @@ printf 'clean\t%s\t%s\t0\t%s\t%s\n' "$PSRC" "$(save_stamp "$PSRC")" "$W/scan/cle
 printf 'planted\t%s\t%s\t' "$W/planted.sav" "$(save_stamp "$W/planted.sav")" > "$W/scan/m-planted.tsv"
 : > "$W/scan/planted.txt"; INCURSION_TAG_SCAN="$W/scan/planted.txt" ./tools/dump_save.sh "$W/planted.sav" >/dev/null 2> "$W/scan/planted.err"; PRC=$?
 printf '%s\t%s\t%s\n' "$PRC" "$W/scan/planted.txt" "$W/scan/planted.err" >> "$W/scan/m-planted.tsv"
-base="$(problems compare_scan "$DUMP" "$W/scan/m-clean.tsv")"; dmg="$(problems compare_scan "$DUMP" "$W/scan/m-planted.tsv")"
+base="$(problems compare_scan "$W/scan/m-clean.tsv" 0)"; dmg="$(problems compare_scan "$W/scan/m-planted.tsv" 0)"
 if [ "$base" = 0 ] && [ -n "$dmg" ] && [ "$dmg" -gt 0 ]; then
-    echo "ok: part 4 with tag 60000 planted in a copy of a save goes red (problems $base on the clean copy, $dmg on the planted copy; $(compare_scan "$DUMP" "$W/scan/m-planted.tsv" 2>&1 | grep -m1 'FAIL load' | cut -c1-200))"
+    echo "ok: part 4 with tag 60000 planted in a copy of a save goes red (problems $base on the clean copy, $dmg on the planted copy; $(compare_scan "$W/scan/m-planted.tsv" 0 2>&1 | grep -m1 'FAIL load' | cut -c1-200))"
 else
     echo "SELFTEST FAIL: part 4 planted tag (problems $base clean, $dmg planted; wanted 0 and > 0)"; ST=1
 fi
-# part 4, dump side: drop every Item tag with one value; the real saves hold an Item with that tag
-awk -F'\t' -v n="$TN" '!($1=="tag" && $2 ~ /^Item\./ && $3==n)' "$DUMP" > "$W/dump-notag4.txt"
-redcheck "part 4 with Item tag $TN dropped from the dump" compare_scan "$DUMP" "$W/dump-notag4.txt"
+# part 4, load refused: the same clean row with a nonzero load result
+sed 's/\t0\t/\t1\t/' "$W/scan/m-clean.tsv" > "$W/scan/m-refused.tsv"
+base="$(problems compare_scan "$W/scan/m-clean.tsv" 0)"; dmg="$(problems compare_scan "$W/scan/m-refused.tsv" 0)"
+if [ "$base" = 0 ] && [ -n "$dmg" ] && [ "$dmg" -gt 0 ]; then echo "ok: part 4 with a save whose load exit is 1 goes red (problems $base clean, $dmg refused)"
+else echo "SELFTEST FAIL: part 4 refused load (problems $base clean, $dmg refused; wanted 0 and > 0)"; ST=1; fi
+# part 4, empty scan log: a loaded save logs fields
+: > "$W/scan/empty.txt"; sed "s|$W/scan/clean.txt|$W/scan/empty.txt|" "$W/scan/m-clean.tsv" > "$W/scan/m-empty.tsv"
+dmg="$(problems compare_scan "$W/scan/m-empty.tsv" 0)"
+if [ -n "$dmg" ] && [ "$dmg" -gt 0 ]; then echo "ok: part 4 with an empty scan log goes red (problems $dmg)"
+else echo "SELFTEST FAIL: part 4 empty scan log (problems $dmg; wanted > 0)"; ST=1; fi
+# part 4, an unnamed unread format: the stamp of the clean row changed to one nobody named
+sed 's/\tIS1\.[0-9]*\t/\tSFDEADBEEF\t/' "$W/scan/m-clean.tsv" > "$W/scan/m-unnamed.tsv"
+dmg="$(problems compare_scan "$W/scan/m-unnamed.tsv" 0)"
+if [ -n "$dmg" ] && [ "$dmg" -gt 0 ]; then echo "ok: part 4 with a save of an unnamed unread format goes red (problems $dmg)"
+else echo "SELFTEST FAIL: part 4 unnamed format (problems $dmg; wanted > 0)"; ST=1; fi
+# part 4, TerraRecord: the real manifest with the terra save's scan stripped of its TerraRecord lines
+TROW="$(grep -n 'gen:terra-save' "$W/scan/manifest.tsv" | head -1 | cut -d: -f1)"
+[ -n "$TROW" ] || { echo "SELFTEST FAIL: no terra-save row in the manifest"; ST=1; TROW=1; }
+TSCAN="$(sed -n "${TROW}p" "$W/scan/manifest.tsv" | cut -f5)"
+grep -v '^TerraRecord ' "$TSCAN" > "$W/scan/terra-stripped.txt"
+sed "${TROW}s|$TSCAN|$W/scan/terra-stripped.txt|" "$W/scan/manifest.tsv" > "$W/scan/m-noterra.tsv"
+redcheck "part 4 with the TerraRecord fields stripped from the terra-save scan" compare_scan "$W/scan/manifest.tsv" "$W/scan/m-noterra.tsv"
+# part 5: pick an Item tag that a revision 3-6 save holds and one fixed header row names
+TN="$(python3 - "$W/scan/manifest.tsv" inc/SaveLegacyTags.h <<'PY'
+import re, sys
+held = set()
+for ln in open(sys.argv[1]):
+    label, sav, stamp, rc, scanf, errf = ln.rstrip("\n").split("\t")
+    m = re.fullmatch(r"IS1\.(\d+)", stamp)
+    if rc != "0" or not m or int(m.group(1)) > 6: continue
+    for sl in open(scanf):
+        s, t = sl.split()[:2]
+        if s == "Item": held.add(int(t))
+txt = open(sys.argv[2]).read()
+rng = [(int(a), int(b)) for a, b in re.findall(r'^\s*\{ "Item[^"]*", (\d+), (\d+), "', txt, re.M)]
+fixed = [int(x) for x in re.findall(r'^\s*\{ "Item[^"]*", (\d+), "[^"]*", \d+, \d+ \}', txt, re.M)]
+for t in sorted(held):
+    if fixed.count(t) == 1 and not any(a <= t < a + c for a, c in rng):
+        print(t); break
+PY
+)"
+[ -n "$TN" ] || { echo "SELFTEST FAIL: no Item tag is both held by a revision 3-6 save and named by one fixed row"; ST=1; TN=0; }
 # part 5: drop the legacy row of one Item tag the saves hold; the real header must name every tag, the damaged copy must not
 grep -v "^  { \"Item\", $TN, " inc/SaveLegacyTags.h > "$W/legacy-dropped.h"
 if cmp -s inc/SaveLegacyTags.h "$W/legacy-dropped.h"; then echo "SELFTEST FAIL: part 5 found no Item row $TN in the header to drop"; ST=1

@@ -236,6 +236,40 @@ obliged to update stops being true: on 2026-09-11 the hand-written list ran 18 o
 `flickerscan_selftest.py`. Run it when you change the checker. A check that has
 quietly stopped checking anything looks exactly like a check that passes.
 
+## Numbers and names that two branches can both take
+
+Two branches can each take the same next number, and git merges both with no
+conflict. On 2026-11-05 master and the epic `inc-pu6v` both took Character save
+tags 449-451, and 17 of 88 fixtures then failed to load (bead inc-cjos0). The
+inventory of every such shared space is section 4 of
+`docs/superpowers/specs/2026-11-07-names-in-the-file-design.md`. Each space has
+one of two protections:
+
+- **A name, not a number.** A saved field (`docs/SAVE-SCHEMA-SPEC.md`, "Field
+  names and class layout"), a script variable (loaded by owner and name), and a
+  save migration (applied by name) carry a name in the file. Two branches choose
+  two names, so nothing collides.
+- **A value frozen on master.** A `#define` family or an enum whose value a
+  save, `Options.Dat` or another file stores carries a mark,
+  `// family: <name> stored <ordinal|bits|enum> <u8|i8|u16|i16|u32|i32>`, or
+  `// family: <name> internal` when no file stores it.
+  `tools/check_stored_values.py` (cheap tier) refuses a master value that
+  changed or vanished, a branch value that a master or retired value
+  (`tools/retired_values.txt`) already holds, and a value wider than its
+  storage. Off master, `tools/move_branch_values.py` moves the branch's own
+  colliding value to a free one; `tools/finish_bead.sh` runs it on a landing
+  into the epic, and the master-into-epic merge bead runs it after the merge.
+  Nobody edits a stored number by hand.
+
+A new shared space MUST get one of these two protections in the commit that
+creates it. A new `#define` family or enum with no `// family:` class fails
+`tools/check_define_dups.py`; a new field call that passes a number fails to
+compile. Any other new space (a new kind of file, a new numbered list a save
+holds) MUST be added to the inventory and to a check in that commit.
+`tools/check_number_values.sh` proves the direction backward: every field in
+every committed fixture and in fresh saves from its key scripts loads in this
+build.
+
 ## Which random stream a new draw belongs in
 
 **A draw that only reaches the screen MUST use `cosmetic_random()`. Everything

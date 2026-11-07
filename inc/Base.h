@@ -903,7 +903,7 @@ class Registry
        orphans every v0 save. All v1 state lives in file-scope context objects
        in src/SaveV1.cpp. */
     /* inc-cjos0: the default arguments carry the caller's file and line to
-       the INCURSION_TAG_PROBE hook (src/SaveV1.cpp); they change no layout. */
+       the INCURSION_TAG_SCAN hook (src/SaveV1.cpp); they change no layout. */
     bool V1Active();
     void V1ProbeScope(const char *name);   /* inc-cjos0 tag probe */
     void V1Field(const char *name, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());

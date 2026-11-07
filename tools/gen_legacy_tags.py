@@ -28,9 +28,13 @@ overlapping revisions, a (scope, name) with two tags in overlapping revisions, a
 range overlapping a range or a fixed row in one scope, a call row without a name,
 a dump scope "?" without a scope override, an embed without a name.
 
---verify-scan: every (runtime scope, tag, reading line) that a loaded save holds
+--verify-scan: every (scope path, tag) that a loaded revision 3-6 save holds
 (the manifest of tools/check_number_values.sh part 4) must map to exactly one row
-of the header, using the save's own revision stamp.  Prints "problems: N".
+of the header for the save's own revision stamp.  The scope path is the one the
+reader looks the field up by: the owner, then "." and the name of each open embed.
+The reading line is not part of the key: the rows' source lines are master's,
+frozen, and the reader's lines move with every edit.  A revision 7 save numbers
+its fields in its own name table, so it is not read here.  Prints "problems: N".
 """
 import collections
 import os
@@ -347,49 +351,48 @@ def verify_scan(header, manifest):
             nskip += 1      # part 4 reports the refused load
             continue
         rev = int(m.group(1))
+        if rev > REV_HI:
+            nskip += 1      # revision 7 numbers its own fields; the legacy table does not apply
+            continue
         nsaves += 1
         revs[rev] += 1
         for sl in open(scanf):
             s, t, k, fl = sl.split()
-            f, l = fl.rsplit(":", 1)
-            key = (s, int(t), f, int(l), rev)
+            key = (s, int(t), rev)
             if key not in items or label < items[key]:
                 items[key] = label
     bad = []
     nfix = nrng = 0
-    def dist(sites, f, l):
-        d = [l - int(x.rsplit(":", 1)[1]) for x in sites if x.rsplit(":", 1)[0] == f]
-        d = [x for x in d if 0 <= x <= 3]
-        return min(d) if d else None
-
-    for (s, t, f, l, rev), label in sorted(items.items()):
-        cand = []    # (distance from the writing line, scope, name, kind)
+    for (s, t, rev), label in sorted(items.items()):
+        cand = set()
         for sc, tag, name, lo, hi, sites in fixed:
-            if tag == t and lo <= rev <= hi and owner_ok(sc, s):
-                d = dist(sites, f, l)
-                if d is not None:
-                    cand.append((d, sc, name, "fixed"))
+            if tag == t and lo <= rev <= hi and scope_ok(sc, s):
+                cand.add((sc, name, "fixed"))
         for sc, base, count, name, sites in ranges:
-            if base <= t < base + count and owner_ok(sc, s):
-                d = dist(sites, f, l)
-                if d is not None:
-                    cand.append((d, sc, "%s#%d" % (name, t - base), "range"))
-        best = [c for c in cand if c[0] == min(x[0] for x in cand)] if cand else []
-        if len({(c[1], c[2]) for c in best}) == 1:
-            if best[0][3] == "fixed": nfix += 1
+            if base <= t < base + count and scope_ok(sc, s):
+                cand.add((sc, "%s#%d" % (name, t - base), "range"))
+        if len(cand) == 1:
+            if next(iter(cand))[2] == "fixed": nfix += 1
             else: nrng += 1
         else:
-            bad.append((s, t, "%s:%d" % (f, l), rev, label, sorted({(c[1], c[2]) for c in best})))
-    print("part 5 legacy table: %d saves read (%s), %d without tags or refused (see part 4)"
+            bad.append((s, t, rev, label, sorted(cand)))
+    print("part 5 legacy table: %d saves read (%s), %d not read here (revision 7, no tags, or refused: see part 4)"
           % (nsaves, ", ".join("revision %d=%d" % kv for kv in sorted(revs.items())), nskip))
-    print("  distinct (owner, tag, reading line, revision) in those saves: %d" % len(items))
-    print("  mapped to exactly one name by a fixed row: %d; by a range row: %d" % (nfix, nrng))
-    for s, t, fl, rev, label, cand in bad[:40]:
-        print("  %s: owner %s tag %d read at %s (revision %d, first in %s): %s" % (
-            "NO NAME" if not cand else "AMBIGUOUS", s, t, fl, rev, label,
-            "no row of the header" if not cand else " | ".join("%s %s" % c for c in cand)))
+    print("  distinct (scope path, tag, revision) in those saves: %d" % len(items))
+    print("  named by exactly one fixed row: %d; by exactly one range row: %d" % (nfix, nrng))
+    for s, t, rev, label, cand in bad[:40]:
+        print("  %s: scope %s tag %d (revision %d, first in %s): %s" % (
+            "NO NAME" if not cand else "AMBIGUOUS", s, t, rev, label,
+            "no row of the header" if not cand else " | ".join("%s %s" % (c[0], c[1]) for c in cand)))
     print("problems: %d" % (problems + len(bad)))
     return 1 if (problems or bad) else 0
+
+
+def scope_ok(hscope, runtime):
+    """hscope is a header scope; runtime is the reader's scope path."""
+    top, _, rest = hscope.partition(".")
+    rtop, _, rrest = runtime.partition(".")
+    return rest == rrest and (top == rtop or (rtop == "Map" and top == "MapGrid"))
 
 
 def owner_ok(hscope, runtime):
@@ -497,6 +500,12 @@ def selftest():
         with contextlib.redirect_stdout(buf):
             rc2 = verify_scan(d + "/h2.h", d + "/man.tsv")
         check(rc2 == 1 and "NO NAME" in buf.getvalue(), "verify-scan: a dropped row goes red")
+        # an ambiguous row: a second name for (Owner, 1) in the same revisions
+        open(d + "/h3.h", "w").write("".join(l + (l.replace('"top"', '"dup"') if '{ "Owner", 1, "top"' in l else "") for l in open(d + "/h.h")))
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc3 = verify_scan(d + "/h3.h", d + "/man.tsv")
+        check(rc3 == 1 and "AMBIGUOUS" in buf.getvalue(), "verify-scan: a (scope, tag) with two names goes red")
     print("SELFTEST PASS")
 
 

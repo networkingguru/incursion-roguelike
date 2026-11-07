@@ -157,15 +157,22 @@ save loads under a newer binary. **A tag it does not know MUST refuse the load**
 naming the tag: a field it cannot interpret means the file was written by
 something newer than itself.
 
-### Field numbers and class layout: the two rules
+### Field names and class layout: the two rules
 
-Each class owns a range of tag numbers. Within that range:
+From revision 7, a field is named by a string, not a number
+(`FIELD_U16("weight", Weight)`). Each name is unique in its scope: the nearest
+`ARCHIVE_CLASS` or `FieldsV1` owner, plus the name of each embed opened inside
+it. The writer gives each name a number for that one file and writes the
+name table into the file, so two branches that add fields to one class choose
+two names and never collide. A revision 3-6 save carries numbers only; the
+reader maps them to names through the frozen table `inc/SaveLegacyTags.h`.
 
-- A new field MUST take the next unused number.
-- A retired field's number MUST NOT be reused, ever.
-- A field's number MUST NOT change, ever.
+- A new field MUST take a name unique in its scope. A numeric tag fails to compile.
+- A retired field's name goes on `tools/retired_field_names.txt` and in its engine copy `inc/SaveRetiredNames.h` (`tools/check_field_names.sh` keeps the two equal). It MUST NOT be reused, ever.
+- A field's name SHOULD NOT change. A renamed field MUST get a `rename <scope> <old> <new>` line in `tools/retired_field_names.txt`; the reader then matches either name.
+- `inc/SaveLegacyTags.h` MUST NOT change: it describes files already written.
 
-That is the first rule. The second rule concerns the byte layout of the class.
+That is the first rule. Design: `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md`. The second rule concerns the byte layout of the class.
 
 `src/SaveV1.cpp` holds one pad row per saved class (`CreaturePads`,
 `MonsterPads` and the others in `SchemaPins[]`). A pad row lists every byte of

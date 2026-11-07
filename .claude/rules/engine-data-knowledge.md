@@ -23,3 +23,8 @@ History: docs/rules-history/engine-data-knowledge.md#save-schema-append-only-sup
 A character in this game can sell NOTHING except gems. NEVER raise loot resale, selling gear, or a sell-for-gold loop as a design risk, an exploit, or a question, in god design or anywhere else. An item still has a gold value (`SacrificeValue()`); only selling does not exist.
 Why: the owner ruled that selling is not a mechanic, and raising it wastes his time.
 History: docs/rules-history/engine-data-knowledge.md#nothing-is-sellable-except-gems. Bead inc-vpf9.
+
+## shared-numbers-take-a-name-or-a-frozen-value
+A number that two branches can each take (a save field tag, a stored `#define` or enum value, a script variable slot, a migration) MUST NOT be allocated as "the next free number". A new save field MUST take a name unique in its scope (`FIELD_U16("weight", Weight)`); a numeric tag fails to compile. A retired or renamed field goes in `tools/retired_field_names.txt` and `inc/SaveRetiredNames.h`. A new `#define` family or enum MUST carry `// family: <name> internal` or `// family: <name> stored <ordinal|bits|enum> <u8|i8|u16|i16|u32|i32>` (`tools/check_define_dups.py` refuses an unclassified one). A stored value on master MUST NOT change (`tools/check_stored_values.py`). Off master, clear a collision with `python3 tools/move_branch_values.py`; NEVER edit a stored number by hand. A new shared space of any other kind MUST be added to the inventory (`docs/VERIFICATION.md`, "Numbers and names that two branches can both take") and to a check in the commit that creates it.
+Why: two branches took the same save tags and git merged both with no conflict, which broke 17 of 88 fixtures.
+History: new rule, no prior narrative to archive. Bead inc-cjos0.
