@@ -1,3 +1,5 @@
+**SUPERSEDED 2026-11-07** by `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md` and its plan (Brian chose names in the file). Not built past phase 0.
+
 # Numbers land on master: implementation brief
 
 Bead: inc-cjos0. Sized: Large. Spec (read it first, it is the authority):

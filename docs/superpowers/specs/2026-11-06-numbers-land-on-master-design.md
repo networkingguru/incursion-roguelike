@@ -1,3 +1,5 @@
+**SUPERSEDED 2026-11-07** by `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md` and its plan (Brian chose names in the file). Not built past phase 0.
+
 # Numbers land on master — design (inc-cjos0)
 
 Status: spec, revision 3. Revision 2 had two adversarial reviews (engine and
