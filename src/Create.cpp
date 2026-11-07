@@ -58,6 +58,54 @@ s_armour, s_comp, s_circ, s_inh, s_size, s_ins, s_kit, s_focus;
 ReincarnationInfo RInf;
 
 String & DescribeSkill(int16 sk);
+
+/* The skill ranks and the attribute set are screens that return many numbers
+   at once. Each number is one SourcedRoll key (the skill's name, or its
+   attribute key); a source that holds them answers all of them. */
+static const char *SkillSubName(int16 sk)
+{
+    static char buf[48];
+    if (SkillInfo[sk].name)
+        snprintf(buf, sizeof buf, "%s", SkillInfo[sk].name);
+    else
+        snprintf(buf, sizeof buf, "skill %d", (int)sk);
+    return buf;
+}
+
+static bool SkillRanksFromSource(int8 *ranks)
+{
+    int32 v[SK_LASTSKILL];
+    for (int16 i = 0; i != SK_LASTSKILL; i++)
+        if (!CreationAnswerRoll(CK_SKILL_RANKS, SkillSubName(i), v[i]))
+            return false;
+    for (int16 i = 0; i != SK_LASTSKILL; i++)
+        ranks[i] = (int8)v[i];
+    return true;
+}
+
+static void NoteSkillRanks(const int8 *ranks)
+{
+    for (int16 i = 0; i != SK_LASTSKILL; i++)
+        CreationNoteRoll(CK_SKILL_RANKS, SkillSubName(i), ranks[i]);
+}
+
+static bool AttributesFromSource(int16 *attr)
+{
+    int32 v[7];
+    for (int16 i = 0; i != 7; i++)
+        if (!CreationAnswerRoll((CreationKey)(CK_ATTR_STR + i), NULL, v[i]))
+            return false;
+    for (int16 i = 0; i != 7; i++)
+        attr[i] = (int16)v[i];
+    return true;
+}
+
+static void NoteAttributes(const int16 *attr)
+{
+    for (int16 i = 0; i != 7; i++)
+        CreationNoteRoll((CreationKey)(CK_ATTR_STR + i), NULL, attr[i]);
+}
+
 static void GrantPerks(PerkSet& p, Player *target);
 static Item *BuildPerkItem(Perk &pk, Perk &qsrc);
 static void PerkCurseProbe(Player *p);
@@ -69,7 +117,12 @@ static bool perkQualityCapture = false;
 static bool perkQualityGot = false;
 static int16 perkQualityGen[8];
 
-String & PickName(const char*NameList) {
+static void NoteSkillRanks(const int8 *ranks);
+static bool SkillRanksFromSource(int8 *ranks);
+static bool AttributesFromSource(int16 *attr);
+static void NoteAttributes(const int16 *attr);
+
+String & PickName(const char*NameList, CreationKey key) {
     int16 i, NamePos[128], n;
     String Name;
     if (!NameList)
@@ -80,7 +133,18 @@ String & PickName(const char*NameList) {
         if (NameList[i] == '/')
             NamePos[n++] = i+1;
 
-    n = random(n);
+    /* The pick is among the names in the list, answered by name (spec B12). */
+    {
+        CreationPickList names;
+        for (int16 q=0;q!=n;q++) {
+            String one;
+            for (int16 j=NamePos[q];NameList[j] && NameList[j]!='/';j++)
+                one += NameList[j];
+            names.Add((const char*)one.Trim());
+        }
+        int16 count = n;
+        n = (int16)SourcedPick(key, names, [&]() { return (int32)random(count); });
+    }
     for(i=NamePos[n];NameList[i] && NameList[i]!='/';i++)
         Name += NameList[i];
 
@@ -832,8 +896,11 @@ static void ArrangeStartingKit(Player *p)
             KitToPack(p,p->InSlot(i));
 }
 
-bool Player::Create(bool reincarnate) {
+bool Player::Create(bool) {
     CensusWindow censusWindow("Create");
+    CreationWindow creationWindow;
+    CreationSource *src = CreationSourceNow();
+    CreationPickList raceList, subraceList, classList, alignList;
     rID xID, endID; int16 i, q, rv; char ch;
     static rID Choices[32]; bool b;
 
@@ -860,8 +927,13 @@ bool Player::Create(bool reincarnate) {
         SkillRanks[i] = 0;
 
     MyTerm->SetMode(MO_PLAY);
-    if (!reincarnate) {
-        if (yn("Alter the character generation options?")) {
+    {
+        /* The yes/no list both questions share. */
+        CreationPickList yesNo;
+        yesNo.Add("no", 0);
+        yesNo.Add("yes", 1);
+        if (SourcedPick(CK_ALTER_OPTIONS, yesNo,
+                [&]() { return yn("Alter the character generation options?") ? 1 : 0; })) {
 RedoOptions:
             MyTerm->SetMode(MO_SPLASH);
             MyTerm->OptionManager(OPC_CHARGEN);
@@ -870,7 +942,8 @@ RedoOptions:
             MyTerm->SetMode(MO_CREATE);
         }
         if (isExploreMode(this))
-            if (!yn("Your options will place the game in Explore Mode. Continue?"))
+            if (!SourcedPick(CK_EXPLORE_CONTINUE, yesNo,
+                    [&]() { return yn("Your options will place the game in Explore Mode. Continue?") ? 1 : 0; }))
                 goto RedoOptions;
     }
 
@@ -880,15 +953,9 @@ RedoOptions:
     for(i=0;i!=CA_LAST;i++)
         Abilities[i] = 0;
 
-    if (reincarnate == false) {
-        MyTerm->SetMode(MO_CREATE);
-        memset(&RInf,0,sizeof(ReincarnationInfo));
-        formulaSeed = RInf.formulaSeed = (int32)NextSeed();
-    } else {
-        MyTerm->SetMode(MO_RECREATE);
-        formulaSeed = RInf.formulaSeed;
-        memcpy(&(Options[OPC_CHARGEN]),RInf.CharGenOpts,sizeof(int8)*100);
-    }
+    MyTerm->SetMode(src->TermMode());
+    src->BeginState(this);
+    formulaSeed = SourcedRoll(CK_FORMULA_SEED, []() { return (int32)NextSeed(); });
 
     if (Opt(OPT_ATTR_FIRST)) {
         RollAttributes();
@@ -898,27 +965,35 @@ RedoOptions:
     }
 
     switch (Opt(OPT_GENDER)) {
-    case 0:
+    case 0: {
+        CreationPickList sexes;
+        sexes.Add("male", 'm');
+        sexes.Add("female", 'f');
         do
-            ch = MyTerm->ChoicePrompt("Is this character male or female?", "mf");
+            ch = (char)SourcedPick(CK_GENDER, sexes,
+                [&]() { return (int32)MyTerm->ChoicePrompt("Is this character male or female?", "mf"); });
         while(ch == -1);
         if (ch == 'f')
             StateFlags |= MS_FEMALE;
         else
             StateFlags &= ~MS_FEMALE;
-        break;
+        } break;
     case 1:
         StateFlags |= MS_FEMALE;
         break;
     case 2:
         StateFlags &= ~MS_FEMALE;
         break;
-    case 3: // random, please!
-        if (random(100) < 50)
+    case 3: { // random, please!
+        CreationPickList sexes;
+        sexes.Add("male", 'm');
+        sexes.Add("female", 'f');
+        if (SourcedPick(CK_GENDER, sexes,
+                [&]() { return random(100) < 50 ? (int32)'f' : (int32)'m'; }) == 'f')
             StateFlags |= MS_FEMALE;
         else 
             StateFlags &= ~MS_FEMALE;
-        break;
+        } break;
     }
 
 RepeatRace:
@@ -927,6 +1002,7 @@ RepeatRace:
     MyTerm->SetWin(WIN_CREATION);
 
     i = 0;
+    raceList.Clear();
     for (q=0;q!=MAX_MODULES;q++)
         if (theGame->Modules[q]) {
             xID = xID=theGame->Modules[q]->RaceID(0);
@@ -942,12 +1018,13 @@ RepeatRace:
                 Choices[i] = xID;
                 MyTerm->LOption(NAME(xID),i,DESC(xID) ? 
                     DESC(xID) : "Description not found.");
+                raceList.Add(NAME(xID), i);
                 i++;
             }
         }
     if (!i)
         Fatal("No core races to choose from among the loaded resources!");
-    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
+    i = (int16)SourcedPick(CK_RACE, raceList, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
         "<15>  Your race grants you a number of special abilities in the game, "
         "including modifiers to your Attributes, additional skills and "
         "often potent supernatural powers. Newer players are recommended "
@@ -959,12 +1036,11 @@ RepeatRace:
         "player, but halflings start with items allowing safe rest, which "
         "can be valuable to a new player learning about the game. You can "
         "scroll through the descriptions of races using [PGUP] and [PGDN].",
-        WIN_CREATION,"help::chargen,R");
-    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        WIN_CREATION,"help::chargen,R"); });
+    if (i == -1 && src->CanBackUp()) {
         if (AbandonCreation())
             return false;
-        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
-            RInf.nRsp--;
+        src->PopResponse(this);
         goto RepeatRace;
     }
     RaceID = Choices[i];
@@ -981,6 +1057,8 @@ RepeatSubrace:
     MyTerm->LOptionClear();
     MyTerm->LOption(Format("%s (Standard)",NAME(RaceID)), 0,
         DESC(RaceID) ? DESC(RaceID) : "Description Not Found.");
+    subraceList.Clear();
+    subraceList.Add(NAME(RaceID), 0);
     for (q=0;q!=MAX_MODULES;q++)
         if (theGame->Modules[q]) {
             xID = xID=theGame->Modules[q]->RaceID(0);
@@ -996,6 +1074,7 @@ RepeatSubrace:
                 Choices[i] = xID;
                 MyTerm->LOption(NAME(xID),i,DESC(xID) ? 
                     DESC(xID) : "Description not found.");
+                subraceList.Add(NAME(xID), i);
                 i++;
             }
         }
@@ -1003,18 +1082,17 @@ RepeatSubrace:
         MyTerm->LOptionClear();
         goto SkipSubraces;
     }
-    i = (int16)MyTerm->LMenu(MENU_2COLS | MENU_DESC | MENU_ESC,
+    i = (int16)SourcedPick(CK_SUBRACE, subraceList, [&]() { return (int32)MyTerm->LMenu(MENU_2COLS | MENU_DESC | MENU_ESC,
         "<15>__Subraces provide additional permutations of the existing "
         "set of races, opening new challenges and play styles for advanced "
         "players. The race you have chosen has one or more available subraces "
         "as shown in the list below. Unless otherwise noted, a subrace shares "
         "all traits with its base race. You can scroll through the descriptions "
-        "of races using [PGUP] and [PGDN].", WIN_CREATION,"help::chargen,R");
-    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        "of races using [PGUP] and [PGDN].", WIN_CREATION,"help::chargen,R"); });
+    if (i == -1 && src->CanBackUp()) {
         if (AbandonCreation())
             return false;
-        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
-            RInf.nRsp--;
+        src->PopResponse(this);
         goto RepeatSubrace;
     }
     RaceID = Choices[i];
@@ -1029,12 +1107,12 @@ SkipSubraces:
         resChance = 100;
 
     if (StateFlags & MS_FEMALE)
-        Named = PickName(theGame->GetText(RaceID,TRACE(RaceID)->FNames));
+        Named = PickName(theGame->GetText(RaceID,TRACE(RaceID)->FNames),CK_NAME);
     else
-        Named = PickName(theGame->GetText(RaceID,TRACE(RaceID)->MNames));
+        Named = PickName(theGame->GetText(RaceID,TRACE(RaceID)->MNames),CK_NAME);
 
     if (TRACE(RaceID)->SNames)
-        Named += SC(" ") + PickName(theGame->GetText(RaceID,TRACE(RaceID)->SNames));
+        Named += SC(" ") + PickName(theGame->GetText(RaceID,TRACE(RaceID)->SNames),CK_SURNAME);
 
     for(i=0;i!=12;i++)
         if (TRACE(RaceID)->Skills[i] == SK_ANY) {
@@ -1051,6 +1129,7 @@ SkipSubraces:
 
 RepeatClass:
     i = 0;
+    classList.Clear();
     for (q=0;q!=MAX_MODULES;q++)
         if (theGame->Modules[q]) {
             xID = xID=theGame->Modules[q]->ClassID(0);
@@ -1064,12 +1143,13 @@ RepeatClass:
                 Choices[i] = xID;
                 MyTerm->LOption(NAME(xID),i,DESC(xID) ? 
                     DESC(xID) : "Description not found.");
+                classList.Add(NAME(xID), i);
                 i++;
             }
         }
     if (!i)
         Fatal("No classes to choose from among the loaded resources!");
-    i = (int16)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
+    i = (int16)SourcedPick(CK_CLASS, classList, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS | MENU_DESC | MENU_ESC,
         "<15>  Your class describes the fundamental abilities your character "
         "possesses, and will determine your overall strategy in the game. "
         "Incursion characters can become multi-classed later in the game, "
@@ -1085,12 +1165,11 @@ RepeatClass:
         "In Incursion, every race/class combination is intended "
         "to be viable, though some may be less optimal. You can scroll the "
         "class descriptions using [PGUP] and [PGDN].", 
-        WIN_CREATION, "help::chargen,C");
-    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        WIN_CREATION, "help::chargen,C"); });
+    if (i == -1 && src->CanBackUp()) {
         if (AbandonCreation())
             return false;
-        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
-            RInf.nRsp--;
+        src->PopResponse(this);
         goto RepeatClass;
     }
     ClassID[0] = Choices[i];
@@ -1120,12 +1199,16 @@ RepeatClass:
         MyTerm->SetWin(WIN_CREATION);
     }
 
-    if (RInf.usedPerks)
-        GrantPerks(RInf.Perks,this);
+    {
+        PerkSet retained;
+        if (src->AnswerPerks(retained))
+            GrantPerks(retained,this);
+    }
 
     Level[0] = 0;
 
 RepeatAlignment:
+    alignList.Clear();
     for (i=0;i<9;i++) {
         if (TCLASS(ClassID[0])->HasFlag(CF_LAWFUL) &&
             !(AlignmentInfo[i].align & AL_LAWFUL)) 
@@ -1180,9 +1263,10 @@ RepeatAlignment:
             continue;            
 
         MyTerm->LOption(AlignmentInfo[i].name,i,AlignmentInfo[i].desc);
+        alignList.Add(AlignmentInfo[i].name, i);
     } 
 
-    i = (int16)MyTerm->LMenu(MENU_3COLS|MENU_DESC|MENU_ESC,"__Alignment determines a character's "
+    i = (int16)SourcedPick(CK_ALIGNMENT, alignList, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS|MENU_DESC|MENU_ESC,"__Alignment determines a character's "
         "moral and ethical outlook on the world. In the game, many different "
         "actions influence alignment, and alignment in turn impacts how gods "
         "react to your character, the prerequisites or certain classes, feats "
@@ -1196,12 +1280,11 @@ RepeatAlignment:
         "characters until they have a firm grasp on what things good and lawful "
         "characters are proscribed from doing. Press '?' to view the manual "
         "section on alignments for more information.",
-        WIN_CREATION,"help::adventuring,AC");
-    if (i == -1 && MyTerm->GetMode() != MO_RECREATE) {
+        WIN_CREATION,"help::adventuring,AC"); });
+    if (i == -1 && src->CanBackUp()) {
         if (AbandonCreation())
             return false;
-        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
-            RInf.nRsp--;
+        src->PopResponse(this);
         goto RepeatAlignment;
     }
     GainPermStati(ALIGNMENT,this,SS_PERM,AlignmentInfo[i].align);
@@ -1221,10 +1304,9 @@ RepeatAlignment:
     MyTerm->ShowTraits(); MyTerm->ShowStatus();
     MyTerm->SetWin(WIN_CREATION);
 
-    if (!reincarnate)
+    if (!SkillRanksFromSource(SkillRanks))
         MyTerm->SkillManager(true);
     else {
-        memcpy(SkillRanks,RInf.SkillRanks,sizeof(int8)*(SK_LASTSKILL));
         CalcSP();
         SpentSP[0] = TotalSP[0];
         SpentSP[1] = TotalSP[1];
@@ -1392,14 +1474,17 @@ SkipThisFocus:;
        gear, skills and spells granted. Personality is also the one answer
        that changes nothing: src/Sheet.cpp:25 prints it on the sheet banner
        and no other code reads it. inc-gd3c. */
-    for(i=0;PersonalityNames[i];i++)
+    CreationPickList personalities;
+    for(i=0;PersonalityNames[i];i++) {
         MyTerm->LOption(PersonalityNames[i],i);
-    Personality = MyTerm->LMenu(MENU_2COLS,
+        personalities.Add(PersonalityNames[i], i);
+    }
+    Personality = SourcedPick(CK_PERSONALITY, personalities, [&]() { return (int32)MyTerm->LMenu(MENU_2COLS,
         "<15>__Your personality archetype has little direct influence on "
         "gameplay and is largely a 'colour' choice. In later releases, it "
         "will strongly colour how NPCs relate to you, as well as affecting "
         "psionic combat, the Greater Soulblade feat and follower loyalty.",
-        WIN_CREATION,"help::chargen,P");
+        WIN_CREATION,"help::chargen,P"); });
 
     /* ww: unlikely, but it could happen ... */
     if (isMType(MA_DEMON) || isMType(MA_LYCANTHROPE) || isMType(MA_DEVIL) || isMType(MA_UNDEAD))
@@ -1452,78 +1537,38 @@ SkipThisFocus:;
     /* Hist.Create(this,MyTerm); */
     MyTerm->SetMode(MO_PLAY);
 
-    storeSeed = (int32)NextSeed();
-
-    if (reincarnate) {
-        Named = RInf.Name;
-        WizardMode = RInf.WizMode;
-        ExploreMode = RInf.ExpMode;
-        storeSeed = RInf.storeSeed;
-        rerolledPerks = RInf.rerolledPerks;
-        rerollCount = RInf.rerollCount;
-        statMethod = (int16)RInf.statMethod;
-        MyTerm->ShowStatus();
-        MyTerm->ShowTraits();
-    } else {
-        ReincarnationInfo *ri;
-        size_t sz; 
-        RInf.RaceID = RaceID;
-        RInf.ClassID = ClassID[0];
-        RInf.storeSeed = storeSeed;
-        RInf.WizMode = WizardMode;
-        RInf.ExpMode = ExploreMode;
-        memcpy(RInf.SkillRanks,SkillRanks,sizeof(int8)*SK_LASTSKILL);
-        memcpy(RInf.CharGenOpts,&(Options[OPC_CHARGEN]),sizeof(int8)*100);
-
-        strncpy(RInf.Name,Named,31);
-        for(i=0;i!=7;i++)
-            RInf.Attr[i] = (int8)BAttr[i];
-        time(&RInf.Touched);
-        time(&RInf.Created);
-        MyTerm->ChangeDirectory(
-            MyTerm->SaveSubDir());
-        if (MyTerm->Exists("gallery.dat")) {
-            MyTerm->OpenRead("gallery.dat");
-            MyTerm->Seek(0,SEEK_END);
-            sz = MyTerm->Tell() / sizeof(ReincarnationInfo);
-            ASSERT(sz);
-            ri = new ReincarnationInfo[sz + 1]; 
-            MyTerm->Seek(0,SEEK_SET);   
-            MyTerm->FRead(ri,sz * sizeof(ReincarnationInfo));
-            MyTerm->Close();
-
-            if (sz >= MAX_GALLERY_SIZE) {
-                int16 o_index; time_t oldest;
-                /* Find the oldest, or any disabled */
-                time(&oldest);
-                for (i=0;i!=sz;i++) {
-                    if (difftime(oldest,ri[i].Touched) >= 1)
-                    { oldest = ri[i].Touched; o_index = i; }
-                    if (ri[i].Disabled)
-                        o_index = i;
-                }
-
-                /* Overwrite the Oldest */
-                memcpy(&ri[o_index],&RInf,sizeof(ReincarnationInfo));
-                GallerySlot = o_index;
-            } else {
-                memcpy(&ri[sz],&RInf,sizeof(ReincarnationInfo));
-                GallerySlot = sz;
-                sz++;
-            }
-        } else {
-            ri = new ReincarnationInfo[1];
-            memcpy(&ri[0],&RInf,sizeof(ReincarnationInfo));
-            sz = 1;
-            GallerySlot = 0;
-        }
-        MyTerm->OpenWrite("gallery.dat");
-        MyTerm->FWrite(ri,sz * sizeof(ReincarnationInfo));
-        MyTerm->Close();
-        delete[] ri;
+    /* NextSeed is a tick counter: it ticks whether or not a stored seed
+       answers (spec A9). The decision is the seed the character keeps. */
+    {
+        int32 tick = (int32)NextSeed();
+        storeSeed = SourcedRoll(CK_STORE_SEED, [&]() { return tick; });
+    }
+    {
+        /* The name is the value after the race and class scripts have run
+           (a Monk's birth script sets it), so it is its own decision. */
+        CreationPickList mine;
+        int32 v; std::string text; bool inList;
+        mine.Add((const char*)Named, 0);
+        if (CreationAnswerPick(CK_CHARACTER_NAME, NULL, mine, v, text, inList))
+            Named = text.c_str();
+        else
+            CreationNotePick(CK_CHARACTER_NAME, NULL, (const char*)Named);
+    }
+    WizardMode = SourcedRoll(CK_WIZARD_MODE, [&]() { return (int32)WizardMode; }) != 0;
+    ExploreMode = SourcedRoll(CK_EXPLORE_MODE, [&]() { return (int32)ExploreMode; }) != 0;
+    rerolledPerks = SourcedRoll(CK_REROLLED_PERKS, [&]() { return (int32)rerolledPerks; }) != 0;
+    rerollCount = SourcedRoll(CK_REROLLS, [&]() { return (int32)rerollCount; });
+    statMethod = (int16)SourcedRoll(CK_STAT_METHOD, [&]() { return (int32)statMethod; });
+    NoteSkillRanks(SkillRanks);
+    {
+        int16 slot = -2;
+        src->Finish(this, &slot);
+        if (slot != -2)
+            GallerySlot = slot;
     }
     /* inc-4999: a fresh character can be probed without a save. */
     SpellFlagProbe(false);
+    creationWindow.done = true;
     return true;
 }
 
@@ -1628,7 +1673,13 @@ bool Player::Reincarnate()
 
 
     GallerySlot = i;
-    Create(true);
+    {
+        /* The gallery entry answers what it holds; every other decision is
+           made as in normal play (spec A6). */
+        CreationSource *playing = SetCreationSource(&CreationReplaySource());
+        Create(true);
+        SetCreationSource(playing);
+    }
 
     Named += " ";
     Named += RomanNumerals[min(10,RInf.Count+2)];
@@ -2285,11 +2336,8 @@ void Player::RollAttributes() {
     int8 PointCosts[] = { 0, 0, 0, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 8, 10, 13, 16 };
     PerkSet PerkSets[5];
 
-    if (MyTerm->GetMode() == MO_RECREATE) {
-        for (i = 0; i != 7; i++)
-            BAttr[i] = RInf.Attr[i];
+    if (AttributesFromSource(BAttr))
         return;
-    }
 
     MyTerm->SetMode(MO_ROLLING);
 
@@ -2547,8 +2595,7 @@ Reprompt:
                     for (int k=0;k<NUM_PERKS_PER_SET;k++)
                         PerkSets[I(j,5)].elt[I(k,3)].type = PERK_NONE;
 
-            memcpy(&(RInf.Perks),&(PerkSets[I(i,5)]),sizeof(RInf.Perks));
-            RInf.usedPerks = true;   
+            CreationNotePerks(PerkSets[I(i,5)]);
         }
 
         break;
@@ -2636,11 +2683,7 @@ Done:
     MyTerm->SetWin(WIN_CREATION);
     MyTerm->Clear();
 
-    for (i=0;i!=7;i++)
-        RInf.Attr[i] = (int8)BAttr[i];
-    RInf.rerollCount = rerollCount;
-    RInf.rerolledPerks = rerolledPerks;
-    RInf.statMethod = statMethod;
+    NoteAttributes(BAttr);
 
     MyTerm->SetMode(MO_CREATE);
 
@@ -2685,20 +2728,34 @@ void Player::ChooseDomains()
             god->Domains[0] = FIND("Evil"); 
             god->Domains[1] = FIND("Good"); 
             srand(formulaSeed);
+            CreationPickList domainPool;
+            for (int d=0;d!=max;d++)
+                domainPool.Add(NAME(possDom[d]), d);
             for (i=2;i<2+8;) {
-                rID choice = possDom[random(max)]; 
+                /* A draw that repeats a domain is thrown away, so only a
+                   draw the god keeps is a decision (spec B1: eight lines). */
+                int32 pooled; std::string pooledName; bool pooledInList;
+                bool stated = CreationAnswerPick(CK_DOMAIN_POOL, NULL, domainPool,
+                    pooled, pooledName, pooledInList) && pooledInList;
+                if (!stated)
+                    pooled = (int32)random(max);
+                rID choice = possDom[pooled];
                 bool already = false; 
                 for (j=0;j<i;j++)
                     if (god->Domains[j] == choice)
                         already = true;
-                if (!already) 
+                if (!already) {
                     god->Domains[i++] = choice;
+                    if (!stated)
+                        CreationNotePick(CK_DOMAIN_POOL, NULL, NAME(choice));
+                }
             } 
             god->Domains[0] = god->Domains[1] = 0; 
     } 
 
     // For almost everyone, choices=3. The Multitude offers more. 
     for (i=0;i!=choices;i++) {
+        CreationPickList domains;
         for (j=0;j!=12;j++)
             if (TGOD(GodID)->Domains[j])
                 if (!HasEffStati(HAS_DOMAIN,god->Domains[j])) {
@@ -2708,9 +2765,10 @@ void Player::ChooseDomains()
                     name = NAME(god->Domains[j]);
                     desc = TDOM(god->Domains[j])->Describe(true);
                     MyTerm->LOption(name,j,desc);
+                    domains.Add(NAME(god->Domains[j]), j);
                 }
 
-        n = (int16)MyTerm->LMenu(MENU_3COLS|MENU_DESC,"Choose a Domain:",WIN_CREATION,"help::domains");
+        n = (int16)SourcedPick(CK_DOMAIN, domains, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS|MENU_DESC,"Choose a Domain:",WIN_CREATION,"help::domains"); });
         GainPermStati(HAS_DOMAIN,this,SS_CLAS,0,0,god->Domains[n]);
     }
 }
@@ -3745,6 +3803,7 @@ bool Player::ChooseGod(bool required) {
     }
 
 RepeatGod:
+    CreationPickList godPicks;
     for (i = 0; GodList[i]; i++) {
         xID = GodList[i];
 
@@ -3762,21 +3821,21 @@ RepeatGod:
                 TDOM(TGOD(xID)->Domains[d])->Describe());
         }
         MyTerm->LOption(NAME(xID), i, desc);
+        godPicks.Add(NAME(xID), i);
     }
 
     if (!i)
         Fatal("No suitable God to choose from among the loaded resources!");
 
     int flags = MENU_3COLS | MENU_DESC | MENU_ESC;
-    i = MyTerm->LMenu(flags, "<15>Choose a God:",
+    i = (int)SourcedPick(CK_GOD, godPicks, [&]() { return (int32)MyTerm->LMenu(flags, "<15>Choose a God:",
         thisp->MyTerm->GetMode() == MO_CREATE ? WIN_CREATION :
-        WIN_SCREEN, "help::domains");
+        WIN_SCREEN, "help::domains"); });
 
-    if (i == -1 && required && MyTerm->GetMode() != MO_RECREATE) {
+    if (i == -1 && required && CreationSourceNow()->CanBackUp()) {
         if (AbandonCreation())
             return false;
-        if (MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
-            RInf.nRsp--;
+        CreationSourceNow()->PopResponse(this);
         goto RepeatGod;
     }
 
@@ -3804,13 +3863,18 @@ void Player::AdvanceLevel() {
     }
 
     if (ClassID[1] && Level[0]) {
+        CreationPickList advClasses;
         MyTerm->LOption(NAME(ClassID[0]),0);
+        advClasses.Add(NAME(ClassID[0]), 0);
         MyTerm->LOption(NAME(ClassID[1]),1);
-        if(ClassID[2])
+        advClasses.Add(NAME(ClassID[1]), 1);
+        if(ClassID[2]) {
             MyTerm->LOption(NAME(ClassID[2]),2);
+            advClasses.Add(NAME(ClassID[2]), 2);
+        }
 
-        c = (int16)MyTerm->LMenu(MENU_3COLS | (TotalLevel() ? MENU_ESC : 0) | MENU_BORDER,
-            "Which class do you wish to advance in?",WIN_MENUBOX,"help::chargen,C");
+        c = (int16)SourcedPick(CK_LEVEL_CLASS, advClasses, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS | (TotalLevel() ? MENU_ESC : 0) | MENU_BORDER,
+            "Which class do you wish to advance in?",WIN_MENUBOX,"help::chargen,C"); });
         if (c == -1)
             return; 
     } else
@@ -3881,16 +3945,18 @@ GodIsOkay:;
         ((TotalLevel() % 4 == 0) && (TotalLevel() >= 4))) {
             int16 MaxBonus, CurrBonus, foundOne = 0;
             static const char*AttrNames[] = { "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma", "Luck" };
+            CreationPickList bonusAttrs;
             MaxBonus = 5 + AbilityLevel(CA_INHERANT_POTENTIAL);
             for (i=A_STR; i<= A_LUC; i++) {
                 CurrBonus = SumStatiMag(ADJUST_INH,i);
                 if (CurrBonus < MaxBonus) {
                     MyTerm->LOption(AttrNames[i],i);
+                    bonusAttrs.Add(AttrNames[i], i);
                     foundOne = 1; 
                 } 
             } 
             if (foundOne) {
-                i = (int16)MyTerm->LMenu(MENU_2COLS,"-- Gain A Bonus To Which Attribute --");
+                i = (int16)SourcedPick(CK_LEVEL_ATTR, bonusAttrs, [&]() { return (int32)MyTerm->LMenu(MENU_2COLS,"-- Gain A Bonus To Which Attribute --"); });
                 GainInherentBonus(i,1,true); 
                 CalcValues(); 
             }
@@ -4007,19 +4073,25 @@ GodIsOkay:;
     if (HasEffStati(SPECIALTY_SCHOOL,ClassID[c],7/*SC_THA*/))
         HD = 8;
 
-    switch (Opt(OPT_MAX_HP)) {
-      case 1: /* half */ hpRolls[c][Level[c]-1] = (int8)(HD / 2); break; 
-      case 2: /* full */ hpRolls[c][Level[c]-1] = (int8)HD ; break; 
-      default: /* no */
-          hpRolls[c][Level[c]-1] = max(random(HD)+1,(HD/2));
-    }
+    /* The value each level keeps, whether the option fixed it or the die
+       rolled it, is the decision; the clamp stays in the roll. */
+    hpRolls[c][Level[c]-1] = (int8)SourcedRoll(CK_HP_ROLL, [&]() -> int32 {
+        switch (Opt(OPT_MAX_HP)) {
+          case 1: /* half */ return (int8)(HD / 2);
+          case 2: /* full */ return (int8)HD;
+          default: /* no */
+              return (int8)max(random(HD)+1,(HD/2));
+        }
+    }, NAME(ClassID[c]));
 
-    switch (Opt(OPT_MAX_MANA)) {
-      case 1: /* half */ manaRolls[c][Level[c]-1] = tc->ManaDie / 2; break;
-      case 2: /* full */ manaRolls[c][Level[c]-1] = tc->ManaDie; break;
-      default: /* no */
-          manaRolls[c][Level[c]-1] = max(random(tc->ManaDie)+1,(tc->ManaDie/2));
-    } 
+    manaRolls[c][Level[c]-1] = (int8)SourcedRoll(CK_MANA_ROLL, [&]() -> int32 {
+        switch (Opt(OPT_MAX_MANA)) {
+          case 1: /* half */ return tc->ManaDie / 2;
+          case 2: /* full */ return tc->ManaDie;
+          default: /* no */
+              return max(random(tc->ManaDie)+1,(tc->ManaDie/2));
+        }
+    }, NAME(ClassID[c]));
 
     for (i=0;GodIDList[i];i++)
         if (j = (int16)TGOD(GodIDList[i])->GetConst(LEVEL_BLEEDOFF))

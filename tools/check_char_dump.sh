@@ -85,6 +85,14 @@ for fx in lizardfolk-monk-seed1 elf-mage-illusions-seed1; do
         bad "$fx: the canonical dump prints a handle, a bare rID or a pointer:"
         grep -En "$HANDLE_RE" "$a" | head -6
     fi
+    # 3b. no wall-clock column: the Level Statistics Secs column holds real
+    #     elapsed seconds, so two runs of one binary differ in it (inc-10v7f).
+    if grep -Eq '\| *Secs *\|' "$a"; then
+        bad "$fx: the canonical dump prints the wall-clock Secs column:"
+        grep -En '\| *Secs *\|' "$a" | head -3
+    fi
+    { cat "$a"; echo "Lvl | Act | Key | Turns | Secs |  XP | Explored"; } > "$WORK/secs.inject"
+    grep -Eq '\| *Secs *\|' "$WORK/secs.inject" || bad "$fx: the Secs detector did not flag an injected Secs header"
     # 4. the detector bites on this dump
     detector_bites "$a" || bad "$fx: the handle detector did not flag an injected handle"
 

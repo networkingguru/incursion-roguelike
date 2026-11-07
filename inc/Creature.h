@@ -810,6 +810,7 @@ class Character: public Creature
     friend void MusicChoirProbe(Player *caster);
     friend void BlasphemyProbe(Player *caster);
     friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
+    friend struct CreationAccess; /* src/CreationSource.cpp: the gallery entry, inc-10v7f */
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
