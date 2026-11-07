@@ -766,38 +766,38 @@ enum {
   SP_TEM = 17, SP_FLA = 18, SP_BEV = 19, SP_ENC = 20
 };
 
-/* v1 tag ranges. Within a range: a new field takes the next unused number, a
-   retired number is never reused, a number never changes. Tags are unique
-   within a class CHAIN, so a chain crossing two ranges never collides.
-     Thing      1-31        Item      32-63
-     QItem     64-79        Food      80-95      Corpse    96-111
-     Container 112-127      Weapon   128-143     Coin     144-159
-     Armour   160-175       Feature  176-191     Door     192-207
-     Trap     208-223       Portal   224-239     Creature 256-383
-     Character 384-511      Player   512-639     Monster  640-671
-     Map      672-767       Module   768-799     Game     800-899 */
+/* v1 field names. Every saved field is named by a string, unique within its
+   scope (the nearest ARCHIVE_CLASS or FieldsV1 owner, plus the name of each
+   embed opened inside it). A new field takes a new name; a retired name is
+   never reused (tools/retired_field_names.txt). A numeric tag fails to
+   compile. Specification: docs/superpowers/specs/2026-11-07-names-in-the-file-design.md */
 
 /* One declaration serves four duties: the v0 save/load path (where the raw
    dump already carries scalars, so scalar macros are no-ops there and the
    STR/BLOB/OBJ macros perform exactly the legacy Serialize/Block calls they
    replace), the v1 write, the v1 read, and the DEBUG coverage map. */
-#define FIELD_U8(tag,m)   r.V1Field((tag), K_U8,  &(m), sizeof(m))
-#define FIELD_I8(tag,m)   r.V1Field((tag), K_I8,  &(m), sizeof(m))
-#define FIELD_U16(tag,m)  r.V1Field((tag), K_U16, &(m), sizeof(m))
-#define FIELD_I16(tag,m)  r.V1Field((tag), K_I16, &(m), sizeof(m))
-#define FIELD_U32(tag,m)  r.V1Field((tag), K_U32, &(m), sizeof(m))
-#define FIELD_I32(tag,m)  r.V1Field((tag), K_I32, &(m), sizeof(m))
-#define FIELD_H(tag,m)    r.V1Field((tag), K_H,   &(m), sizeof(m))
-#define FIELD_RID(tag,m)  r.V1Rid((tag), (m))
-#define FIELD_STR(tag,m)  do { if (r.V1Active()) r.V1Str((tag),(m)); \
+#define FIELD_U8(name,m)   r.V1Field((name), K_U8,  &(m), sizeof(m))
+#define FIELD_I8(name,m)   r.V1Field((name), K_I8,  &(m), sizeof(m))
+#define FIELD_U16(name,m)  r.V1Field((name), K_U16, &(m), sizeof(m))
+#define FIELD_I16(name,m)  r.V1Field((name), K_I16, &(m), sizeof(m))
+#define FIELD_U32(name,m)  r.V1Field((name), K_U32, &(m), sizeof(m))
+#define FIELD_I32(name,m)  r.V1Field((name), K_I32, &(m), sizeof(m))
+#define FIELD_H(name,m)    r.V1Field((name), K_H,   &(m), sizeof(m))
+#define FIELD_RID(name,m)  r.V1Rid((name), (m))
+#define FIELD_RID_AT(name,i,m)  r.V1Rid_AT((name), (i), (m))
+#define FIELD_STR(name,m)  do { if (r.V1Active()) r.V1Str((name),(m)); \
                                else (m).Serialize(r); } while (0)
-#define FIELD_BLOB(tag,p,sz) do { if (r.V1Active()) r.V1Blob((tag),(void**)&(p),(sz)); \
+#define FIELD_BLOB(name,p,sz) do { if (r.V1Active()) r.V1Blob((name),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_ARRAY(tag,p,elem,count) r.V1Array((tag),(p),(elem),(count))
-#define FIELD_OBJ(tag,m)  do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+#define FIELD_BLOB_AT(name,i,p,sz) do { if (r.V1Active()) r.V1Blob_AT((name),(i),(void**)&(p),(sz)); \
+                                  else r.Block((void**)&(p),(sz)); } while (0)
+#define FIELD_ARRAY(name,p,elem,count) r.V1Array((name),(p),(elem),(count))
+#define FIELD_OBJ(name,m)  do { if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
                                (m).FieldsV1(r); r.V1EmbedEnd(); } \
                                else (m).Serialize(r); } while (0)
-#define FIELD_EMBED(tag,m) do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+#define FIELD_EMBED(name,m) do { if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
+                                (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
+#define FIELD_EMBED_AT(name,i,m) do { if (r.V1Active()) { r.V1EmbedBegin_AT((name),(i),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
 #define FIELD_SKIP(m)     r.V1Cover(&(m), sizeof(m))
 
@@ -902,21 +902,25 @@ class Registry
        the INCURSION_TAG_PROBE hook (src/SaveV1.cpp); they change no layout. */
     bool V1Active();
     void V1ProbeScope(const char *name);   /* inc-cjos0 tag probe */
-    void V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
-    void V1Str(uint16 tag, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
-    void V1Blob(uint16 tag, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
-    void V1Rid(uint16 tag, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Field(const char *name, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Str(const char *name, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Str_AT(const char *name, uint32 idx, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Blob(const char *name, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Blob_AT(const char *name, uint32 idx, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Rid(const char *name, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Rid_AT(const char *name, uint32 idx, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     /* Status's members are bitfields, so FIELD_RID/FIELD_H cannot take their
        address; this stages Status::eID through the name table itself. */
-    void V1RidStatus(uint16 tag, Status &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
-    void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
-    /* The widening read for a fixed array whose element type grew. newTag is
-       what this build writes; oldTag is a retired tag holding the same array
+    void V1RidStatus(const char *name, Status &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Array(const char *name, void *p, size_t elemSize, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    /* The widening read for a fixed array whose element type grew. newName is
+       what this build writes; oldName is a retired name holding the same array
        with a narrower element. V1_OFF and V1_SAVE write nothing; a load reads
-       oldTag, requires K_ARRAY / count / 2-byte elements, and widens each
-       element into p[]. If newTag is also present it wins. See inc-vqla. */
-    void V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* inc-cjos0: caller site for INCURSION_TAG_SCAN */
-    void V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+       oldName, requires K_ARRAY / count / 2-byte elements, and widens each
+       element into p[]. If newName is also present it wins. See inc-vqla. */
+    void V1ArrayWiden16(const char *newName, const char *oldName, uint32 *p, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* inc-cjos0: caller site for INCURSION_TAG_SCAN */
+    void V1EmbedBegin(const char *name, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1EmbedBegin_AT(const char *name, uint32 idx, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1EmbedEnd();
     void V1Cover(const void *p, size_t size);
     int16 SaveGroupV1(Term &t, hObj hGroup);

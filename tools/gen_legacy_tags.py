@@ -19,7 +19,7 @@ Rows
                                                reads as name "<name>#i", i < count
 A scope is the runtime owner (the string V1ProbeScope receives: Player, Map,
 MapGrid, Array, ...) plus, for fields written inside a V1EmbedBegin ... V1EmbedEnd
-pair, "/" and the embed's name: "Player/QuickKeys/QuickKey".  Embed scopes exist
+pair, "." and the embed's name: "Player.QuickKeys.QuickKey".  Embed scopes exist
 because inner tags restart at 1 in every embed, so (owner, tag) alone is not unique.
 
 Input: the dump's tag rows, plus tools/legacy_tag_overrides.txt for what the dump
@@ -258,12 +258,12 @@ def build(dump, ov, src):
         path = owner
         st = stack_at(f, l, label.startswith("V1EmbedBegin#"))
         if st:
-            path += "/" + "/".join(st)
+            path += "." + ".".join(st)
         lo, hi = ov["rev"].get(ident, (REV_LO, REV_HI))
         t.add_fixed(path, val, name, lo, hi, ["%s:%d" % (f, l)])
     for owner, b, c, name, f, l, embed in ranges:
         st = stack_at(f, l, embed)
-        path = owner + ("/" + "/".join(st) if st else "")
+        path = owner + ("." + ".".join(st) if st else "")
         sites = ["%s:%d" % (f, x) for x in src.expansion_lines(f, l)]
         t.add_range(path, b, c, name, sites)
     validate(t)
@@ -283,7 +283,7 @@ def render(t, commit):
     w("// a field added after it has no row, because no revision 3-6 file can hold it.")
     w("//")
     w("// It maps the tag numbers of a revision 3-6 save to field names, so the revision 7 reader can build")
-    w("// the name table of an old file. Scope = the runtime owner, plus \"/\" and the embed's name for a field")
+    w("// the name table of an old file. Scope = the runtime owner, plus \".\" and the embed's name for a field")
     w("// written inside a V1EmbedBegin pair. A range row maps tag baseTag+i (i < count) to \"<name>#<i>\".")
     w("// The trailing comment of a row lists the source lines (file:line) that wrote and read it.")
     w("#ifndef SAVELEGACYTAGS_H")
@@ -393,7 +393,7 @@ def verify_scan(header, manifest):
 
 
 def owner_ok(hscope, runtime):
-    top = hscope.split("/", 1)[0]
+    top = hscope.split(".", 1)[0]
     return top == runtime or (runtime == "Map" and top == "MapGrid") or runtime == "Array" and top == "Array"
 
 
@@ -459,9 +459,9 @@ def selftest():
                                          "tag\tOwner.inner\t9\tinc/e.h:5\ntag\tOwner.after\t2\tinc/e.h:9\n## unevaluated\n")
         open(d + "/ov.txt", "w").write("name Owner.V1EmbedBegin#1 emb\nrange Owner 1 3 Lst inc/e.h:7\n")
         hdr = generate(d + "/dump.txt", d + "/ov.txt", d, "selftest")
-        check('{ "Owner", 1, "top", 3, 6 }' in hdr and '{ "Owner/emb", 9, "inner", 3, 6 }' in hdr
-              and '{ "Owner", 2, "after", 3, 6 }' in hdr and '{ "Owner/emb", 1, 3, "Lst" }' in hdr,
-              "embed nesting: an inner field gets scope Owner/emb, fields outside it stay in Owner, the run lands in the embed")
+        check('{ "Owner", 1, "top", 3, 6 }' in hdr and '{ "Owner.emb", 9, "inner", 3, 6 }' in hdr
+              and '{ "Owner", 2, "after", 3, 6 }' in hdr and '{ "Owner.emb", 1, 3, "Lst" }' in hdr,
+              "embed nesting: an inner field gets scope Owner.emb, fields outside it stay in Owner, the run lands in the embed")
         open(d + "/h.h", "w").write(hdr)
         open(d + "/tu.cpp", "w").write('#include "h.h"\nint main() { return (int)(LEGACY_TAG_ROW_COUNT + LEGACY_TAG_RANGE_COUNT); }\n')
         r = subprocess.run(["clang++", "-std=c++17", "-fsyntax-only", d + "/tu.cpp"], capture_output=True, text=True)

@@ -77,6 +77,9 @@ FIELD_CALL_PATTERNS = [
     (re.compile(r"FIELD_BLOB\b\s*\("), 1),
     (re.compile(r"FIELD_OBJ\b\s*\("), 1),
     (re.compile(r"FIELD_EMBED\b\s*\("), 1),
+    # _AT forms carry an element index after the name: member is arg 2.
+    (re.compile(r"FIELD_(?:RID|BLOB|EMBED)_AT\b\s*\("), 2),
+    (re.compile(r"r\.V1(?:Str|Blob|Rid|EmbedBegin)_AT\b\s*\("), 2),
     (re.compile(r"FIELD_SKIP\b\s*\("), 0),
     (re.compile(r"r\.V1Cover\b\s*\("), 0),
     (re.compile(r"r\.V1EmbedBegin\b\s*\("), 1),

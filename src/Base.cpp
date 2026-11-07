@@ -705,7 +705,7 @@ template<class S,int32 Initial,int32 Delta>
 void Array<S,Initial,Delta>::FieldsV1(Registry &r)
   {
     r.V1ProbeScope("Array");
-    FIELD_U32(1, Count);
+    FIELD_U32("Count", Count);
     if (r.Loading())
       {
         /* Count just came off the file; bound it before it reaches malloc.
@@ -723,7 +723,7 @@ void Array<S,Initial,Delta>::FieldsV1(Registry &r)
             memset(Items,0,sizeof(S)*Size);
           }
       }
-    FIELD_ARRAY(2, Items, sizeof(S), Count);
+    FIELD_ARRAY("Items", Items, sizeof(S), Count);
   }
 
 /* Four element types cannot travel as raw POD -- Field, TerraRecord and

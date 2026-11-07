@@ -1,0 +1,6 @@
+# Saved field names that master stopped reading, and renamed fields (inc-cjos0).
+# Format:  <scope> <name>              a retired field; the reader ignores it
+#          rename <scope> <old> <new>  the reader matches either name
+# inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+# A retired name is never reused.
+Character SpellsU16

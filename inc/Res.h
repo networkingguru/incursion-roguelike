@@ -845,22 +845,22 @@ class Module : public Object
           *(((char*)QTextSeg)+i) = ~(*(QTextSeg+i));
       FIELD_SKIP(GetResourceCache);   /* rebuilt by the memsets above */
       FIELD_SKIP(GetResourceIndex);
-      FIELD_I32(793, Name);           /* hText: an offset into QTextSeg */
-      FIELD_I32(794, FName);
-      FIELD_I16(795, Slot);
-      r.V1EmbedBegin(796, &szMon, sizeof(int16)*21);
-      FIELD_I32(1, szTextSeg);
-      FIELD_I32(2, szDataSeg);
-      FIELD_I32(3, szCodeSeg);
-      FIELD_I16(4,  szMon);  FIELD_I16(5,  szItm);  FIELD_I16(6,  szFea);
-      FIELD_I16(7,  szEff);  FIELD_I16(8,  szArt);  FIELD_I16(9,  szQue);
-      FIELD_I16(10, szDgn);  FIELD_I16(11, szRou);  FIELD_I16(12, szNPC);
-      FIELD_I16(13, szCla);  FIELD_I16(14, szRac);  FIELD_I16(15, szDom);
-      FIELD_I16(16, szGod);  FIELD_I16(17, szReg);  FIELD_I16(18, szTer);
-      FIELD_I16(19, szTxt);  FIELD_I16(20, szVar);  FIELD_I16(21, szTem);
-      FIELD_I16(22, szFla);  FIELD_I16(23, szBev);  FIELD_I16(24, szEnc);
+      FIELD_I32("Name", Name);           /* hText: an offset into QTextSeg */
+      FIELD_I32("FName", FName);
+      FIELD_I16("Slot", Slot);
+      r.V1EmbedBegin("Sizes", &szMon, sizeof(int16)*21);
+      FIELD_I32("szTextSeg", szTextSeg);
+      FIELD_I32("szDataSeg", szDataSeg);
+      FIELD_I32("szCodeSeg", szCodeSeg);
+      FIELD_I16("szMon",  szMon);  FIELD_I16("szItm",  szItm);  FIELD_I16("szFea",  szFea);
+      FIELD_I16("szEff",  szEff);  FIELD_I16("szArt",  szArt);  FIELD_I16("szQue",  szQue);
+      FIELD_I16("szDgn", szDgn);  FIELD_I16("szRou", szRou);  FIELD_I16("szNPC", szNPC);
+      FIELD_I16("szCla", szCla);  FIELD_I16("szRac", szRac);  FIELD_I16("szDom", szDom);
+      FIELD_I16("szGod", szGod);  FIELD_I16("szReg", szReg);  FIELD_I16("szTer", szTer);
+      FIELD_I16("szTxt", szTxt);  FIELD_I16("szVar", szVar);  FIELD_I16("szTem", szTem);
+      FIELD_I16("szFla", szFla);  FIELD_I16("szBev", szBev);  FIELD_I16("szEnc", szEnc);
       r.V1EmbedEnd();
-      FIELD_I32(797, TurnLastUsed);
+      FIELD_I32("TurnLastUsed", TurnLastUsed);
       /* Bounds before the allocation-sizing uses below: every count just
          came off the file, and a negative one turns its blob's size
          expression into a huge size_t (file-fed impossible value: ECORRUPT,
@@ -872,31 +872,31 @@ class Module : public Object
             szTxt < 0 || szVar < 0 || szTem < 0 || szFla < 0 || szBev < 0 ||
             szEnc < 0 || szTextSeg < 0 || szDataSeg < 0 || szCodeSeg < 0)
           throw ECORRUPT;
-      FIELD_BLOB(768, QMon, sizeof(TMonster)  *szMon);
-      FIELD_BLOB(769, QItm, sizeof(TItem)     *szItm);
-      FIELD_BLOB(770, QFea, sizeof(TFeature)  *szFea);
-      FIELD_BLOB(771, QEff, sizeof(TEffect)   *szEff);
-      FIELD_BLOB(772, QArt, sizeof(TArtifact) *szArt);
-      FIELD_BLOB(773, QQue, sizeof(TQuest)    *szQue);
-      FIELD_BLOB(774, QDgn, sizeof(TDungeon)  *szDgn);
-      FIELD_BLOB(775, QRou, sizeof(TRoutine)  *szRou);
-      FIELD_BLOB(776, QNPC, sizeof(TNPC)      *szNPC);
-      FIELD_BLOB(777, QCla, sizeof(TClass)    *szCla);
-      FIELD_BLOB(778, QRac, sizeof(TRace)     *szRac);
-      FIELD_BLOB(779, QDom, sizeof(TDomain)   *szDom);
-      FIELD_BLOB(780, QGod, sizeof(TGod)      *szGod);
-      FIELD_BLOB(781, QReg, sizeof(TRegion)   *szReg);
-      FIELD_BLOB(782, QTer, sizeof(TTerrain)  *szTer);
-      FIELD_BLOB(783, QTxt, sizeof(TText)     *szTxt);
-      FIELD_BLOB(784, QVar, sizeof(TVariable) *szVar);
-      FIELD_BLOB(785, QTem, sizeof(TTemplate) *szTem);
-      FIELD_BLOB(786, QFla, sizeof(TFlavor)   *szFla);
-      FIELD_BLOB(787, QBev, sizeof(TBehaviour)*szBev);
-      FIELD_BLOB(788, QEnc, sizeof(TEncounter)*szEnc);
-      FIELD_OBJ(791, Annotations);
-      FIELD_OBJ(792, Symbols);
-      FIELD_BLOB(789, QTextSeg, szTextSeg);
-      FIELD_BLOB(790, QCodeSeg, szCodeSeg * sizeof(VCode));
+      FIELD_BLOB("QMon", QMon, sizeof(TMonster)  *szMon);
+      FIELD_BLOB("QItm", QItm, sizeof(TItem)     *szItm);
+      FIELD_BLOB("QFea", QFea, sizeof(TFeature)  *szFea);
+      FIELD_BLOB("QEff", QEff, sizeof(TEffect)   *szEff);
+      FIELD_BLOB("QArt", QArt, sizeof(TArtifact) *szArt);
+      FIELD_BLOB("QQue", QQue, sizeof(TQuest)    *szQue);
+      FIELD_BLOB("QDgn", QDgn, sizeof(TDungeon)  *szDgn);
+      FIELD_BLOB("QRou", QRou, sizeof(TRoutine)  *szRou);
+      FIELD_BLOB("QNPC", QNPC, sizeof(TNPC)      *szNPC);
+      FIELD_BLOB("QCla", QCla, sizeof(TClass)    *szCla);
+      FIELD_BLOB("QRac", QRac, sizeof(TRace)     *szRac);
+      FIELD_BLOB("QDom", QDom, sizeof(TDomain)   *szDom);
+      FIELD_BLOB("QGod", QGod, sizeof(TGod)      *szGod);
+      FIELD_BLOB("QReg", QReg, sizeof(TRegion)   *szReg);
+      FIELD_BLOB("QTer", QTer, sizeof(TTerrain)  *szTer);
+      FIELD_BLOB("QTxt", QTxt, sizeof(TText)     *szTxt);
+      FIELD_BLOB("QVar", QVar, sizeof(TVariable) *szVar);
+      FIELD_BLOB("QTem", QTem, sizeof(TTemplate) *szTem);
+      FIELD_BLOB("QFla", QFla, sizeof(TFlavor)   *szFla);
+      FIELD_BLOB("QBev", QBev, sizeof(TBehaviour)*szBev);
+      FIELD_BLOB("QEnc", QEnc, sizeof(TEncounter)*szEnc);
+      FIELD_OBJ("Annotations", Annotations);
+      FIELD_OBJ("Symbols", Symbols);
+      FIELD_BLOB("QTextSeg", QTextSeg, szTextSeg);
+      FIELD_BLOB("QCodeSeg", QCodeSeg, szCodeSeg * sizeof(VCode));
       /* A v1 file that declares a non-empty segment must deliver it: the
          inversion loop below (and every later GetText/Execute) would
          dereference the NULL that Registry::V1Blob leaves for an absent
@@ -1175,27 +1175,27 @@ class Game : public Object
                     "Game's coverage pin row pads assume this");
       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
       int16 i;
-      FIELD_I32(800, ccHasEffStati);
-      FIELD_I32(801, ccHasValStati);
-      FIELD_I32(802, ccHasNatStati);
-      FIELD_I32(803, ccHasStatiTrue);
-      FIELD_I32(804, ccHasStatiFalse);
-      FIELD_I32(805, ccHSPerceive);
-      FIELD_I32(806, ccHSMonAI);
-      FIELD_I32(807, ccHSCalcVal);
-      FIELD_I32(808, inPerceive);
-      FIELD_I32(809, inChooseAct);
-      FIELD_I32(810, inCalcVal);
-      FIELD_ARRAY(811, ccStatiNat, sizeof(int32), 256);
-      FIELD_ARRAY(812, ccStatiVal, sizeof(int32), 256);
-      FIELD_I16(813, Day);
-      FIELD_U32(814, Turn);
-      FIELD_ARRAY(817, MDataSegSize, sizeof(uint32), MAX_MODULES);
-      FIELD_H  (818, m[0]);  FIELD_H  (819, m[1]);
-      FIELD_H  (820, m[2]);  FIELD_H  (821, m[3]);
-      FIELD_H  (822, p[0]);  FIELD_H  (823, p[1]);
-      FIELD_H  (824, p[2]);  FIELD_H  (825, p[3]);
-      FIELD_H  (826, Timestopper);
+      FIELD_I32("ccHasEffStati", ccHasEffStati);
+      FIELD_I32("ccHasValStati", ccHasValStati);
+      FIELD_I32("ccHasNatStati", ccHasNatStati);
+      FIELD_I32("ccHasStatiTrue", ccHasStatiTrue);
+      FIELD_I32("ccHasStatiFalse", ccHasStatiFalse);
+      FIELD_I32("ccHSPerceive", ccHSPerceive);
+      FIELD_I32("ccHSMonAI", ccHSMonAI);
+      FIELD_I32("ccHSCalcVal", ccHSCalcVal);
+      FIELD_I32("inPerceive", inPerceive);
+      FIELD_I32("inChooseAct", inChooseAct);
+      FIELD_I32("inCalcVal", inCalcVal);
+      FIELD_ARRAY("ccStatiNat", ccStatiNat, sizeof(int32), 256);
+      FIELD_ARRAY("ccStatiVal", ccStatiVal, sizeof(int32), 256);
+      FIELD_I16("Day", Day);
+      FIELD_U32("Turn", Turn);
+      FIELD_ARRAY("MDataSegSize", MDataSegSize, sizeof(uint32), MAX_MODULES);
+      FIELD_H  ("m#0", m[0]);  FIELD_H  ("m#1", m[1]);
+      FIELD_H  ("m#2", m[2]);  FIELD_H  ("m#3", m[3]);
+      FIELD_H  ("p#0", p[0]);  FIELD_H  ("p#1", p[1]);
+      FIELD_H  ("p#2", p[2]);  FIELD_H  ("p#3", p[3]);
+      FIELD_H  ("Timestopper", Timestopper);
       /* Bools staged through uint8s, as Character::isFallenPaladin is
          (inc/Creature.h). */
       uint8 bPlay = 0, bSave = 0, bLoad = 0, bAuto = 0, bQuit = 0;
@@ -1207,20 +1207,20 @@ class Game : public Object
           bAuto = doAutoSave ? 1 : 0;
           bQuit = doQuit ? 1 : 0;
         }
-      FIELD_U8 (827, bPlay);   FIELD_SKIP(PlayMode);
-      FIELD_U8 (828, bSave);   FIELD_SKIP(doSave);
-      FIELD_U8 (829, bLoad);   FIELD_SKIP(doLoad);
-      FIELD_U8 (830, bAuto);   FIELD_SKIP(doAutoSave);
-      FIELD_U8 (831, bQuit);   FIELD_SKIP(doQuit);
-      FIELD_I8 (832, Difficulty);
+      FIELD_U8 ("bPlay", bPlay);   FIELD_SKIP(PlayMode);
+      FIELD_U8 ("bSave", bSave);   FIELD_SKIP(doSave);
+      FIELD_U8 ("bLoad", bLoad);   FIELD_SKIP(doLoad);
+      FIELD_U8 ("bAuto", bAuto);   FIELD_SKIP(doAutoSave);
+      FIELD_U8 ("bQuit", bQuit);   FIELD_SKIP(doQuit);
+      FIELD_I8 ("Difficulty", Difficulty);
       /* An rID array: per-element FIELD_RID inside an embed, never
          FIELD_ARRAY -- dungeon ids are resources and were among the
          renumbering victims the name table exists for. */
-      r.V1EmbedBegin(833, DungeonID, sizeof(DungeonID));
+      r.V1EmbedBegin("DungeonID", DungeonID, sizeof(DungeonID));
       for (i = 0; i != MAX_DUNGEONS; i++)
-        FIELD_RID((uint16)(1 + i), DungeonID[i]);
+        FIELD_RID_AT("DungeonID", i, DungeonID[i]);
       r.V1EmbedEnd();
-      FIELD_ARRAY(834, DungeonSize, sizeof(int16), MAX_DUNGEONS);
+      FIELD_ARRAY("DungeonSize", DungeonSize, sizeof(int16), MAX_DUNGEONS);
       /* The caches are rebuilt by use; the VM's five members are transient
          execution scratch that VMachine::Execute re-establishes at entry
          (src/VMachine.cpp:461-474: xID, mn, isTracing, pe) -- pe and
@@ -1230,8 +1230,8 @@ class Game : public Object
       FIELD_SKIP(FindCache);
       FIELD_SKIP(szFindCache);
       FIELD_SKIP(VM);
-      FIELD_I16(869, ItemGenNum);
-      FIELD_I16(870, BarrierCount);
+      FIELD_I16("ItemGenNum", ItemGenNum);
+      FIELD_I16("BarrierCount", BarrierCount);
       /* Bounds before the allocation-sizing uses below: every DungeonSize
          just came off the file, and a negative one turns its blob's size
          expression into nonsense (file-fed impossible value: ECORRUPT,
@@ -1242,7 +1242,7 @@ class Game : public Object
             throw ECORRUPT;
       for(i=0;i!=MAX_DUNGEONS;i++)
         if (DungeonLevels[i] || r.V1Active())
-          FIELD_BLOB((uint16)(835+i), DungeonLevels[i],
+          FIELD_BLOB_AT("DungeonLevels", i, DungeonLevels[i],
                      sizeof(hObj)*(DungeonSize[i]+1));
       /* The per-module resource memory. v1 (IS1.2, SCHEMA_REV 1 -> 2): one
          K_EMBED segment record per slot inside the tag-816 scope -- the
@@ -1255,11 +1255,11 @@ class Game : public Object
          and fills MDataSeg[i] from the LOADED module's geometry after the
          module reload -- Game::Modules is stale or zeroed while this body
          runs. v0 keeps its raw block dump untouched. */
-      r.V1EmbedBegin(816, MDataSeg, sizeof(MDataSeg));
+      r.V1EmbedBegin("MDataSeg", MDataSeg, sizeof(MDataSeg));
       for(i=0;i!=MAX_MODULES;i++)
         if (r.V1Active())
           {
-            r.V1EmbedBegin((uint16)(1+i), &(MDataSeg[i]),
+            r.V1EmbedBegin_AT("Segment", i, &(MDataSeg[i]),
                            sizeof(MDataSeg[i]));
             SaveV1_SegmentFields(r, *this, i);
             r.V1EmbedEnd();
@@ -1267,9 +1267,9 @@ class Game : public Object
         else if (MDataSeg[i])
           r.Block((void**)&(MDataSeg[i]), MDataSegSize[i]);
       r.V1EmbedEnd();
-      FIELD_OBJ(867, Limbo);
-      FIELD_OBJ(868, ModFiles);
-      FIELD_STR(815, SaveFile);
+      FIELD_OBJ("Limbo", Limbo);
+      FIELD_OBJ("ModFiles", ModFiles);
+      FIELD_STR("SaveFile", SaveFile);
       /* Load-direction fixups, below every field they read. V1Active()
          guards them because this body also runs on the v0 path. */
       if (!isSave && r.V1Active())

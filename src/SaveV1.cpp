@@ -31,6 +31,8 @@
 #include <vector>
 #include <map>
 #include "Incursion.h"
+#include "SaveLegacyTags.h"
+#include "SaveRetiredNames.h"
 #include <zlib.h>   /* IS1.x compressed payloads are zlib-6; libz was
                        already a link dependency (CFile's LZ path) */
 
@@ -56,8 +58,12 @@ extern size_t typeSize(int8 Type);
    and SP_GRANTED (0x2000) now exist, so a file written before revision 5
    needs its spell flags migrated on load (bead inc-j5yo).
    5 -> 6, a Player spell flag's kind bit means the source the spell is held
-   from, and pending is per source (bead inc-4999). */
-#define SCHEMA_REV 6
+   from, and pending is per source (bead inc-4999).
+   6 -> 7, a field is named by a string, not a number: each group ends with
+   a name-table record (V1_REC_NAMES) and every field carries the id of its
+   row in that table (bead inc-cjos0). Revisions 3 to 6 carry the old tag
+   numbers; the reader maps them to names through inc/SaveLegacyTags.h. */
+#define SCHEMA_REV 7
 static uint32 v1FileRevision = 0;
 
 /* The OLDEST revision this binary can still read. A file older than this is
@@ -142,6 +148,8 @@ static void v1Put(V1Buf *b, const void *src, size_t n)
 
 static void v1PutU8(V1Buf *b, uint8 v)   { v1Put(b, &v, 1); }
 static void v1PutU16(V1Buf *b, uint16 v) { v1Put(b, &v, 2); }
+static void v1PutU16(V1Buf *b, int v) { uint16 w = (uint16)v; v1Put(b, &w, 2); }   /* the literal 0 terminators */
+static void v1PutU16(V1Buf *b, const char *name);   /* a field id, by name; defined with the writer's name table */
 static void v1PutU32(V1Buf *b, uint32 v) { v1Put(b, &v, 4); }
 
 /* inc-cjos0: INCURSION_TAG_PROBE=<file> appends "<scope> <tag> <file:line>" for every
@@ -160,7 +168,20 @@ static void v1TagProbe(uint16 tag, const char *file, int line)
     if (f)
       { fprintf(f, "%s %u %s:%d\n", v1ProbeScope, (unsigned)tag, file, line); fflush(f); }
   }
-void Registry::V1ProbeScope(const char *name) { v1ProbeScope = name; }
+static std::string v1Path = "-";   /* inc-cjos0: the scope of the next field: owner, then each open embed */
+static std::string v1PathStack[V1_MAX_DEPTH + 1];
+static int v1PathDepth = 0;
+void Registry::V1ProbeScope(const char *name) { v1ProbeScope = name; v1Path = name; }
+static void v1PathReset(void) { v1Path = "-"; v1PathDepth = 0; }
+static void v1PathPush(const char *base)
+  {
+    if (v1PathDepth <= V1_MAX_DEPTH)
+      v1PathStack[v1PathDepth++] = v1Path;
+    v1Path += '.';
+    v1Path += base;
+  }
+static void v1PathPop(void)
+  { if (v1PathDepth > 0) v1Path = v1PathStack[--v1PathDepth]; }
 
 static void v1Patch32(V1Buf *b, size_t off, uint32 v)
   { memcpy(b->p + off, &v, 4); }
@@ -199,6 +220,308 @@ struct V1Frame {
 
 static V1Frame v1Frames[V1_MAX_DEPTH];
 static int v1FrameDepth;
+
+/* -- field names (inc-cjos0, spec 5) ------------------------------------------
+   A field travels as (id, kind, payload). The id is a row of the group's name
+   table: (scope, name), numbered from 1 in the order the writer first needs
+   it, written as one V1_REC_NAMES record at the end of the group. A scope is
+   the owner (the last V1ProbeScope) plus "." and the name of each embed opened
+   since. An indexed name is "<name>#<i>". */
+
+#define V1_REC_NAMES 200   /* record type byte of the name table; no T_ value is this large */
+
+struct V1NameRow { std::string scope, name; };
+
+static std::string v1NameKey(const std::string &scope, const char *name)
+  { std::string k = scope; k += '\1'; k += name; return k; }
+
+/* writer */
+static std::map<std::string, uint16> v1WIds;
+static std::vector<V1NameRow> v1WNames;
+static std::vector<uint32> v1WSeen[V1_MAX_DEPTH + 1];   /* per frame depth: stamp of the frame that last wrote each id */
+static uint32 v1WStamp[V1_MAX_DEPTH + 1];
+static uint32 v1WStampCtr;
+static uint32 v1WCalls;
+
+/* reader */
+static std::map<std::string, uint16> v1RIds;    /* key -> id (revision 7: the file's table; 3-6: LEGACY_TAG_ROWS in range) */
+static std::map<uint16, V1NameRow> v1RById;     /* revision 7 only */
+static bool v1RLegacy;
+static uint32 v1RRev;
+
+static void v1NamesReset(void)
+  {
+    v1WIds.clear();
+    v1WNames.clear();
+    for (int i = 0; i != V1_MAX_DEPTH + 1; i++)
+      { v1WSeen[i].clear(); v1WStamp[i] = 0; }
+    v1WStampCtr = 0;
+    v1WCalls = 0;
+    v1RIds.clear();
+    v1RById.clear();
+    v1RLegacy = false;
+    v1RRev = 0;
+  }
+
+static void v1WFrameOpen(int depth)
+  { v1WStamp[depth] = ++v1WStampCtr; }
+
+/* One name, once, per frame (spec 5.3). A frame is one record's top level or
+   one embed instance; sibling embeds repeat names legitimately. Two branches
+   that chose one name for two meanings in one scope meet here. */
+static void v1WSeenCheck(uint16 id)
+  {
+    int d = v1.wEmbedDepth;
+    std::vector<uint32> &seen = v1WSeen[d];
+    if (seen.size() <= (size_t)id)
+      seen.resize((size_t)id + 256, 0);
+    bool dup = seen[id] == v1WStamp[d];
+    ASSERT(!dup);
+    if (dup)
+      {
+        fprintf(stderr,
+            "incursion: refusing to write a save: field \"%s\" in scope \"%s\" "
+            "is written twice in one frame\n",
+            v1WNames[id - 1].name.c_str(), v1WNames[id - 1].scope.c_str());
+        throw ECORRUPT;
+      }
+    seen[id] = v1WStamp[d];
+  }
+
+static uint16 v1WNameId(const char *name)
+  {
+    std::string key = v1NameKey(v1Path, name);
+    uint16 id;
+    std::map<std::string, uint16>::iterator it = v1WIds.find(key);
+    if (it != v1WIds.end())
+      id = it->second;
+    else
+      {
+        if (v1WNames.size() >= 0xFFFF)
+          { Error("SaveV1: more than 65535 distinct field names in one group"); throw ECORRUPT; }
+        id = (uint16)(v1WNames.size() + 1);
+        V1NameRow row; row.scope = v1Path; row.name = name;
+        v1WNames.push_back(row);
+        v1WIds[key] = id;
+      }
+    v1WSeenCheck(id);
+#ifdef DEBUG
+    /* inc-cjos0: INCURSION_NAMES_PLANT=dup writes the third name of a group
+       twice, so tools/check_field_names.sh can watch the refusal fire. */
+    static const char *plant = getenv("INCURSION_NAMES_PLANT");
+    if (plant && !strcmp(plant, "dup") && ++v1WCalls == 3)
+      v1WSeenCheck(id);
+#endif
+    return id;
+  }
+
+static void v1PutU16(V1Buf *b, const char *name)
+  {
+    ASSERT(b == &v1Out);
+    v1PutU16(b, v1WNameId(name));
+  }
+
+/* The name table, as one record at the end of the group:
+   u8 V1_REC_NAMES, u32 0 (handle), u32 length, then per name
+   u16 id, u16 scopeLen, scope, u16 nameLen, name. */
+static void v1WriteNameTable(void)
+  {
+    V1Buf t = {};
+    try
+      {
+        for (size_t i = 0; i != v1WNames.size(); i++)
+          {
+            const V1NameRow &row = v1WNames[i];
+            if (row.scope.size() > 0xFFFF || row.name.size() > 0xFFFF)
+              throw ECORRUPT;
+            v1PutU16(&t, (uint16)(i + 1));
+            v1PutU16(&t, (uint16)row.scope.size());
+            v1Put(&t, row.scope.data(), row.scope.size());
+            v1PutU16(&t, (uint16)row.name.size());
+            v1Put(&t, row.name.data(), row.name.size());
+          }
+        v1PutU8(&v1Out, V1_REC_NAMES);
+        v1PutU32(&v1Out, 0);
+        v1PutU32(&v1Out, (uint32)t.len);
+        if (t.len)
+          v1Put(&v1Out, t.p, t.len);
+      }
+    catch (...) { v1BufFree(&t); throw; }
+    v1BufFree(&t);
+  }
+
+/* -- retired and renamed names (inc/SaveRetiredNames.h) -------------------- */
+
+static bool v1NameRetired(const std::string &scope, const std::string &name)
+  {
+    for (const RetiredFieldName *r = RETIRED_FIELD_NAMES; r->scope; r++)
+      if (scope == r->scope && name == r->name)
+        return true;
+#ifdef DEBUG
+    /* inc-cjos0: INCURSION_RETIRED_EXTRA="scope:name,scope:name" retires more
+       names for one run, so tools/check_field_names.sh can watch a retired
+       name pass. */
+    const char *x = getenv("INCURSION_RETIRED_EXTRA");
+    if (x)
+      {
+        std::string list = x, item;
+        size_t a = 0;
+        while (a <= list.size())
+          {
+            size_t b = list.find(',', a);
+            if (b == std::string::npos) b = list.size();
+            item = list.substr(a, b - a);
+            if (item == scope + ":" + name)
+              return true;
+            a = b + 1;
+          }
+      }
+#endif
+    return false;
+  }
+
+/* -- the reader's name table -----------------------------------------------*/
+
+static bool v1RFindDirect(const std::string &scope, const char *name, uint16 *id)
+  {
+    std::map<std::string, uint16>::iterator it = v1RIds.find(v1NameKey(scope, name));
+    if (it != v1RIds.end())
+      { *id = it->second; return true; }
+    if (!v1RLegacy)
+      return false;
+    /* A computed run of a revision 3-6 file: tag base+i is "<name>#<i>". */
+    const char *h = strrchr(name, '#');
+    if (!h || h == name || !h[1])
+      return false;
+    unsigned long idx = 0;
+    for (const char *c = h + 1; *c; c++)
+      {
+        if (*c < '0' || *c > '9' || idx > 0xFFFFUL)
+          return false;
+        idx = idx * 10 + (unsigned long)(*c - '0');
+      }
+    size_t blen = (size_t)(h - name);
+    for (size_t i = 0; i != LEGACY_TAG_RANGE_COUNT; i++)
+      {
+        const LegacyTagRange &r = LEGACY_TAG_RANGES[i];
+        if (scope == r.scope && strlen(r.name) == blen && !strncmp(r.name, name, blen) &&
+            idx < r.count && r.baseTag + idx <= 0xFFFFUL)
+          { *id = (uint16)(r.baseTag + idx); return true; }
+      }
+    return false;
+  }
+
+static bool v1RFind(const std::string &scope, const char *name, uint16 *id)
+  {
+    if (v1RFindDirect(scope, name, id))
+      return true;
+    for (const RenamedFieldName *rn = RENAMED_FIELD_NAMES; rn->scope; rn++)
+      if (scope == rn->scope)
+        {
+          if (!strcmp(name, rn->newName) && v1RFindDirect(scope, rn->oldName, id))
+            return true;
+          if (!strcmp(name, rn->oldName) && v1RFindDirect(scope, rn->newName, id))
+            return true;
+        }
+    return false;
+  }
+
+/* May the reader ignore an entry no field list asked for? */
+static bool v1RIgnorable(uint16 id)
+  {
+    if (!v1RLegacy)
+      {
+        std::map<uint16, V1NameRow>::iterator it = v1RById.find(id);
+        return it != v1RById.end() && v1NameRetired(it->second.scope, it->second.name);
+      }
+    for (size_t i = 0; i != LEGACY_TAG_ROW_COUNT; i++)
+      {
+        const LegacyTagRow &r = LEGACY_TAG_ROWS[i];
+        if (r.tag == id && v1RRev >= r.revLo && v1RRev <= r.revHi && v1NameRetired(r.scope, r.name))
+          return true;
+      }
+    return false;
+  }
+
+static void v1RDescribe(uint16 id, char *out, size_t n)
+  {
+    std::map<uint16, V1NameRow>::iterator it = v1RLegacy ? v1RById.end() : v1RById.find(id);
+    if (it != v1RById.end())
+      snprintf(out, n, "\"%s\" in scope \"%s\"", it->second.name.c_str(), it->second.scope.c_str());
+    else
+      snprintf(out, n, "id %u", (unsigned)id);
+  }
+
+static bool v1ReadStr(const uint8 *p, size_t len, size_t *pos, std::string *out)
+  {
+    uint16 l;
+    if (*pos + 2 > len)
+      return false;
+    memcpy(&l, p + *pos, 2); *pos += 2;
+    if (l > len - *pos)
+      return false;
+    out->assign((const char*)(p + *pos), l); *pos += l;
+    return true;
+  }
+
+/* Build the reader's table for one group: from the group's own name-table
+   record (revision 7), or from the frozen legacy table (revisions 3-6). The
+   records are walked by length alone, before any field is read. */
+static void v1BuildReaderNames(const uint8 *buf, size_t len, int32 objCount, uint32 rev)
+  {
+    v1RIds.clear();
+    v1RById.clear();
+    v1RRev = rev;
+    v1RLegacy = rev < 7;
+    if (v1RLegacy)
+      {
+        for (size_t i = 0; i != LEGACY_TAG_ROW_COUNT; i++)
+          {
+            const LegacyTagRow &r = LEGACY_TAG_ROWS[i];
+            if (rev >= r.revLo && rev <= r.revHi)
+              v1RIds[v1NameKey(r.scope, r.name)] = (uint16)r.tag;
+          }
+        return;
+      }
+    size_t pos = 0;
+    bool found = false;
+    for (int32 i = 0; i != objCount; i++)
+      {
+        uint32 recLen;
+        if (pos + 9 > len)
+          throw ECORRUPT;
+        memcpy(&recLen, buf + pos + 5, 4);
+        uint8 type = buf[pos];
+        pos += 9;
+        if (recLen > len - pos)
+          throw ECORRUPT;
+        if (type == V1_REC_NAMES)
+          {
+            if (found)
+              throw ECORRUPT;   /* two name tables */
+            found = true;
+            size_t q = 0;
+            while (q != recLen)
+              {
+                uint16 id;
+                V1NameRow row;
+                if (q + 2 > recLen)
+                  throw ECORRUPT;
+                memcpy(&id, buf + pos + q, 2); q += 2;
+                if (!id || !v1ReadStr(buf + pos, recLen, &q, &row.scope) ||
+                    !v1ReadStr(buf + pos, recLen, &q, &row.name) || row.name.empty())
+                  throw ECORRUPT;
+                if (v1RById.count(id) || v1RIds.count(v1NameKey(row.scope, row.name.c_str())))
+                  throw ECORRUPT;   /* an id or a (scope, name) twice */
+                v1RById[id] = row;
+                v1RIds[v1NameKey(row.scope, row.name.c_str())] = id;
+              }
+          }
+        pos += recLen;
+      }
+    if (!found)
+      throw ECORRUPT;   /* a revision 7 group always ends with its name table */
+  }
 
 /* -- the pending resource memory segment (phase 4) ------------------------*/
 
@@ -825,6 +1148,8 @@ static void v1WriterTeardown(void)
     v1.mode = V1_OFF;
     v1.wEmbedDepth = 0;
     v1BufFree(&v1Out);
+    v1NamesReset();
+    v1PathReset();
 #ifdef DEBUG
     free(v1Cov.map);
     v1Cov.map = NULL;
@@ -835,6 +1160,8 @@ static void v1ReaderTeardown(void)
   {
     v1.mode = V1_OFF;
     v1FramesFree();
+    v1NamesReset();
+    v1PathReset();
   }
 
 static void v1SegFree(void)
@@ -1031,10 +1358,10 @@ static void v1WriteVariables(Module *mod, const char *seg)
             v1Put(&records, d->Ident, len);
             v1PutU32(&records, (uint32)value);
           }
-        v1PutU16(&v1Out, 6);
+        v1PutU16(&v1Out, "VariableCount");
         v1PutU8(&v1Out, K_U32);
         v1PutU32(&v1Out, (uint32)table.size());
-        v1PutU16(&v1Out, 7);
+        v1PutU16(&v1Out, "Variables");
         v1PutU8(&v1Out, K_BLOB);
         v1PutU32(&v1Out, (uint32)records.len);
         if (records.len) v1Put(&v1Out, records.p, records.len);
@@ -1113,7 +1440,7 @@ static void v1WriteModuleManifest(Module *mod)
       }
     v1AssertPoolOrder(mod, pools);
 
-    v1PutU16(&v1Out, 4);
+    v1PutU16(&v1Out, "PoolLengths");
     v1PutU8(&v1Out, K_ARRAY);
     v1PutU32(&v1Out, 21);
     v1PutU32(&v1Out, sizeof(uint32));
@@ -1140,7 +1467,7 @@ static void v1WriteModuleManifest(Module *mod)
             }
         if (names.len > 0xFFFFFFFFu)
           throw ECORRUPT;
-        v1PutU16(&v1Out, 5);
+        v1PutU16(&v1Out, "PoolNames");
         v1PutU8(&v1Out, K_BLOB);
         v1PutU32(&v1Out, (uint32)names.len);
         if (names.len)
@@ -1427,7 +1754,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved, bool quiet = false
 /*             the resource memory segment record (phase 4)                 */
 /* ------------------------------------------------------------------------ */
 
-static const V1Ent* v1Find(uint16 tag, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* reader primitive, below; inc-cjos0 scan site */
+static const V1Ent* v1Find(const char *name, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* reader primitive, below; inc-cjos0 scan site */
 
 /* Row kind -> wire pool byte, memory row stride, and packed payload size.
    Indexed by the row's kind byte (0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem).
@@ -1704,10 +2031,10 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
                   }
               }
             /* 2: rowCount.  3: the packed rows. */
-            v1PutU16(&v1Out, 2);
+            v1PutU16(&v1Out, "RowCount");
             v1PutU8(&v1Out, K_U32);
             v1PutU32(&v1Out, rowCount);
-            v1PutU16(&v1Out, 3);
+            v1PutU16(&v1Out, "Rows");
             v1PutU8(&v1Out, K_BLOB);
             v1PutU32(&v1Out, (uint32)rows.len);
             if (rows.len)
@@ -1727,13 +2054,13 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
 
     /* Record read, phase 1: parse into the file-scope context ONLY. */
     v1SegSawGame = true;
-    const V1Ent *eScript = v1Find(1);
-    const V1Ent *eCount  = v1Find(2);
-    const V1Ent *eRows   = v1Find(3);
-    const V1Ent *eLengths = v1Find(4);
-    const V1Ent *eNames   = v1Find(5);
-    const V1Ent *eVarCount = v1Find(6);
-    const V1Ent *eVariables = v1Find(7);
+    const V1Ent *eScript = v1Find("ScriptSegment");
+    const V1Ent *eCount  = v1Find("RowCount");
+    const V1Ent *eRows   = v1Find("Rows");
+    const V1Ent *eLengths = v1Find("PoolLengths");
+    const V1Ent *eNames   = v1Find("PoolNames");
+    const V1Ent *eVarCount = v1Find("VariableCount");
+    const V1Ent *eVariables = v1Find("Variables");
 
     /* The writer emits a manifest even when this slot has no memory
        segment, so this must precede the empty-embed return below. */
@@ -2472,7 +2799,7 @@ static void v1PopFrame(void)
     uint16 orphan = 0;
     bool   found  = false;
     for (int i = 0; i != f->count; i++)
-      if (!f->ents[i].used)
+      if (!f->ents[i].used && !v1RIgnorable(f->ents[i].tag))
         { orphan = f->ents[i].tag; found = true; break; }
 
     free(f->ents);
@@ -2486,10 +2813,12 @@ static void v1PopFrame(void)
            and stdout is where the field dump goes, so a refusal printed
            there would be indistinguishable from a load that worked. The
            revision gate above prints the same way, for the same reason. */
+        char what[300];
+        v1RDescribe(orphan, what, sizeof(what));
         fprintf(stderr,
-            "incursion: this file carries field tag %u, which is not one "
+            "incursion: this file carries field %s, which is not one "
             "this binary reads; it was written by a build that knows "
-            "something this one does not\n", (unsigned)orphan);
+            "something this one does not\n", what);
         throw ECORRUPT;
       }
   }
@@ -2507,10 +2836,13 @@ static void v1ScanProbe(uint16 tag, uint8 kind, const char *file, int line)
       { fprintf(f, "%s %u %u %s:%d\n", v1ProbeScope, (unsigned)tag, (unsigned)kind, file, line); fflush(f); }
   }
 
-static const V1Ent* v1Find(uint16 tag, int v1Line, const char *v1File)
+static const V1Ent* v1Find(const char *name, int v1Line, const char *v1File)
   {
     if (v1FrameDepth == 0)
       return NULL;
+    uint16 tag;
+    if (!v1RFind(v1Path, name, &tag))
+      return NULL;   /* the file has no such name: the constructed default stands */
     V1Frame *f = &v1Frames[v1FrameDepth - 1];
     for (int i = 0; i != f->count; i++)
       if (f->ents[i].tag == tag)
@@ -2529,7 +2861,7 @@ static const V1Ent* v1Find(uint16 tag, int v1Line, const char *v1File)
 bool Registry::V1Active()
   { return v1.mode != V1_OFF; }
 
-void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line, const char *v1File)
+void Registry::V1Field(const char *name, uint8 kind, void *p, size_t size, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* v0: the raw dump already carries scalars */
@@ -2537,13 +2869,14 @@ void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line,
     if (v1.mode == V1_SAVE)
       {
         v1CovMark(p, size);
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, kind);
         v1Put(&v1Out, p, size);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       return;   /* absent field: the constructed (zero) default stands */
     if (e->kind != kind)
@@ -2551,7 +2884,7 @@ void Registry::V1Field(uint16 tag, uint8 kind, void *p, size_t size, int v1Line,
     memcpy(p, e->pay, size);
   }
 
-void Registry::V1Str(uint16 tag, String &s, int v1Line, const char *v1File)
+void Registry::V1Str(const char *name, String &s, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* unreached: FIELD_STR takes the legacy branch in v0 */
@@ -2560,6 +2893,7 @@ void Registry::V1Str(uint16 tag, String &s, int v1Line, const char *v1File)
         v1CovMark(&s, sizeof(String));
         const char *data = s.GetData();
         uint32 len = data ? (uint32)s.GetLength() : 0;
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_STR);
@@ -2568,7 +2902,7 @@ void Registry::V1Str(uint16 tag, String &s, int v1Line, const char *v1File)
           v1Put(&v1Out, data, len);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_STR)
@@ -2584,7 +2918,7 @@ void Registry::V1Str(uint16 tag, String &s, int v1Line, const char *v1File)
     free(tmp);
   }
 
-void Registry::V1Blob(uint16 tag, void **p, size_t sz, int v1Line, const char *v1File)
+void Registry::V1Blob(const char *name, void **p, size_t sz, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* unreached: FIELD_BLOB takes the legacy branch in v0 */
@@ -2592,6 +2926,7 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz, int v1Line, const char *v
       {
         v1CovMark(p, sizeof(void*));
         uint32 len = *p ? (uint32)sz : 0;
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_BLOB);
@@ -2600,7 +2935,7 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz, int v1Line, const char *v
           v1Put(&v1Out, *p, len);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_BLOB)
@@ -2636,20 +2971,21 @@ void Registry::V1Blob(uint16 tag, void **p, size_t sz, int v1Line, const char *v
     *p = blk;
   }
 
-void Registry::V1Rid(uint16 tag, rID &m, int v1Line, const char *v1File)
+void Registry::V1Rid(const char *name, rID &m, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;   /* v0: the raw dump already carries the rID */
     if (v1.mode == V1_SAVE)
       {
         v1CovMark(&m, sizeof(rID));
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)m);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       { m = 0; return; }
     if (e->kind != K_RID)
@@ -2676,20 +3012,21 @@ void Registry::V1Rid(uint16 tag, rID &m, int v1Line, const char *v1File)
    rID&, and a stack temporary cannot be queued (it dies before the deferred
    resolve runs). So the Status itself -- heap-stable inside its collection's
    S array -- is queued, and the index parks in the eID bitfield. */
-void Registry::V1RidStatus(uint16 tag, Status &s, int v1Line, const char *v1File)
+void Registry::V1RidStatus(const char *name, Status &s, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;
     if (v1.mode == V1_SAVE)
       {
         rID e = (rID)s.eID;
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_RID);
         v1PutU32(&v1Out, (uint32)e);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       { s.eID = 0; return; }
     if (e->kind != K_RID)
@@ -2711,7 +3048,7 @@ void Registry::V1RidStatus(uint16 tag, Status &s, int v1Line, const char *v1File
     v1.statQ[v1.statQCount++] = &s;
   }
 
-void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v1Line, const char *v1File)
+void Registry::V1Array(const char *name, void *p, size_t elemSize, uint32 count, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       /* REACHED, and it must stay a no-op return. FIELD_ARRAY sits in an
@@ -2727,6 +3064,7 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v
            Attr[ATTR_LAST] -- read as 82 uncovered bytes and no pin row could
            honestly account for them. */
         v1CovMark(p, (size_t)count * elemSize);
+        uint16 tag = v1WNameId(name);
         v1TagProbe(tag, v1File, v1Line);
         v1PutU16(&v1Out, tag);
         v1PutU8(&v1Out, K_ARRAY);
@@ -2736,7 +3074,7 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v
           v1Put(&v1Out, p, (size_t)count * elemSize);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(name, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_ARRAY)
@@ -2759,12 +3097,12 @@ void Registry::V1Array(uint16 tag, void *p, size_t elemSize, uint32 count, int v
    load, v1Find marks oldTag used so v1PopFrame does not refuse the frame; the
    shape must be exactly a uint16 array of `count` elements. If newTag is also
    in the frame, the new form is the truth: consume oldTag but copy nothing. */
-void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
+void Registry::V1ArrayWiden16(const char *newName, const char *oldName, uint32 *p,
                               uint32 count, int v1Line, const char *v1File)
   {
     if (v1.mode != V1_LOAD)
       return;
-    const V1Ent *e = v1Find(oldTag, v1Line, v1File);
+    const V1Ent *e = v1Find(oldName, v1Line, v1File);
     if (!e)
       return;
     if (e->kind != K_ARRAY)
@@ -2774,7 +3112,7 @@ void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
     memcpy(&es, e->pay + 4, 4);
     if (c != count || es != 2)
       throw ECORRUPT;
-    if (v1Find(newTag, v1Line, v1File))
+    if (v1Find(newName, v1Line, v1File))
       return;   /* the widened form supersedes the old one */
     for (uint32 i = 0; i != count; i++)
       {
@@ -2784,13 +3122,14 @@ void Registry::V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p,
       }
   }
 
-void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line, const char *v1File)
+static void v1EmbedBegin(const char *base, const char *idname, void *member, size_t size, int v1Line, const char *v1File)
   {
     if (v1.mode == V1_OFF)
       return;
     if (v1.mode == V1_SAVE)
       {
         v1CovOpenEmbed(member, size);
+        uint16 tag = v1WNameId(idname);   /* in the parent frame, under the parent scope */
         v1TagProbe(tag, v1File, v1Line);
         if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;
         v1PutU16(&v1Out, tag);
@@ -2799,10 +3138,13 @@ void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line, c
           { Error("SaveV1: embed nesting too deep"); throw ECORRUPT; }
         v1.wEmbedPatch[v1.wEmbedDepth++] = v1Out.len;
         v1PutU32(&v1Out, 0);   /* length placeholder */
+        v1PathPush(base);
+        v1WFrameOpen(v1.wEmbedDepth);
         return;
       }
-    const V1Ent *e = v1Find(tag, v1Line, v1File);
+    const V1Ent *e = v1Find(idname, v1Line, v1File);
     if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;   /* inc-cjos0 */
+    v1PathPush(base);
     if (!e)
       { v1PushFrame(NULL, 0); return; }   /* absent: defaults stand */
     if (e->kind != K_EMBED)
@@ -2812,6 +3154,24 @@ void Registry::V1EmbedBegin(uint16 tag, void *member, size_t size, int v1Line, c
     v1PushFrame(ents, count);
   }
 
+void Registry::V1EmbedBegin(const char *name, void *member, size_t size, int v1Line, const char *v1File)
+  { v1EmbedBegin(name, name, member, size, v1Line, v1File); }
+
+/* "<name>#<i>" for the i-th element of a run. */
+#define V1_IDX_NAME(buf, name, idx) char buf[160]; snprintf(buf, sizeof(buf), "%s#%u", (name), (unsigned)(idx))
+
+void Registry::V1EmbedBegin_AT(const char *name, uint32 idx, void *member, size_t size, int v1Line, const char *v1File)
+  { V1_IDX_NAME(n, name, idx); v1EmbedBegin(name, n, member, size, v1Line, v1File); }
+
+void Registry::V1Str_AT(const char *name, uint32 idx, String &s, int v1Line, const char *v1File)
+  { V1_IDX_NAME(n, name, idx); V1Str(n, s, v1Line, v1File); }
+
+void Registry::V1Blob_AT(const char *name, uint32 idx, void **p, size_t sz, int v1Line, const char *v1File)
+  { V1_IDX_NAME(n, name, idx); V1Blob(n, p, sz, v1Line, v1File); }
+
+void Registry::V1Rid_AT(const char *name, uint32 idx, rID &m, int v1Line, const char *v1File)
+  { V1_IDX_NAME(n, name, idx); V1Rid(n, m, v1Line, v1File); }
+
 void Registry::V1EmbedEnd()
   {
     if (v1.mode == V1_OFF)
@@ -2820,6 +3180,7 @@ void Registry::V1EmbedEnd()
       {
         v1PutU16(&v1Out, 0);   /* the nested scope's terminator */
         if (v1ProbeDepth > 0) v1ProbeScope = v1ProbeStack[--v1ProbeDepth];
+        v1PathPop();
         ASSERT(v1.wEmbedDepth > 0);
         size_t patch = v1.wEmbedPatch[--v1.wEmbedDepth];
         v1Patch32(&v1Out, patch, (uint32)(v1Out.len - (patch + 4)));
@@ -2827,6 +3188,7 @@ void Registry::V1EmbedEnd()
         return;
       }
     if (v1ProbeDepth > 0) v1ProbeScope = v1ProbeStack[--v1ProbeDepth];   /* inc-cjos0 */
+    v1PathPop();
     v1PopFrame();
   }
 
@@ -2850,56 +3212,56 @@ void Registry::V1Cover(const void *p, size_t size)
 void Field::FieldsV1(Registry &r)
   {
     r.V1ProbeScope("Field");
-    FIELD_RID(1, eID);
-    FIELD_U32(2, FType);
-    FIELD_U32(3, Image);          /* Glyph */
-    FIELD_U8 (4, cx);
-    FIELD_U8 (5, cy);
-    FIELD_U8 (6, rad);
-    FIELD_I16(7, Dur);
-    FIELD_H  (8, Creator);
-    FIELD_H  (9, Next);
-    FIELD_I8 (10, Color);
+    FIELD_RID("eID", eID);
+    FIELD_U32("FType", FType);
+    FIELD_U32("Image", Image);          /* Glyph */
+    FIELD_U8 ("cx", cx);
+    FIELD_U8 ("cy", cy);
+    FIELD_U8 ("rad", rad);
+    FIELD_I16("Dur", Dur);
+    FIELD_H  ("Creator", Creator);
+    FIELD_H  ("Next", Next);
+    FIELD_I8 ("Color", Color);
   }
 
 void TerraRecord::FieldsV1(Registry &r)
   {
     r.V1ProbeScope("TerraRecord");
-    FIELD_I16(1, key);
-    FIELD_I16(2, Duration);
-    FIELD_I8 (3, SaveDC);
-    FIELD_I8 (4, DType);
-    FIELD_I8 (5, pval.Number);
-    FIELD_I8 (6, pval.Sides);
-    FIELD_I8 (7, pval.Bonus);
-    FIELD_RID(8, eID);
-    FIELD_H  (9, Creator);
+    FIELD_I16("key", key);
+    FIELD_I16("Duration", Duration);
+    FIELD_I8 ("SaveDC", SaveDC);
+    FIELD_I8 ("DType", DType);
+    FIELD_I8 ("pval_Number", pval.Number);
+    FIELD_I8 ("pval_Sides", pval.Sides);
+    FIELD_I8 ("pval_Bonus", pval.Bonus);
+    FIELD_RID("eID", eID);
+    FIELD_H  ("Creator", Creator);
   }
 
 void LimboEntry::FieldsV1(Registry &r)
   {
     r.V1ProbeScope("LimboEntry");
-    FIELD_H  (1, h);
-    FIELD_H  (2, Target);
-    FIELD_U8 (3, x);
-    FIELD_U8 (4, y);
-    FIELD_RID(5, mID);
-    FIELD_I8 (6, Depth);
-    FIELD_I8 (7, OldDepth);
-    FIELD_U32(8, Arrival);
+    FIELD_H  ("h", h);
+    FIELD_H  ("Target", Target);
+    FIELD_U8 ("x", x);
+    FIELD_U8 ("y", y);
+    FIELD_RID("mID", mID);
+    FIELD_I8 ("Depth", Depth);
+    FIELD_I8 ("OldDepth", OldDepth);
+    FIELD_U32("Arrival", Arrival);
     /* v0 raw-dumped the String struct itself, restoring a Buffer pointer
        into the writing process's dead heap; v1 stores the text. A zeroed
        String (the load side's memset below) is a valid empty one -- Buffer
        NULL, Length 0, Canary 0 -- so plain assignment works. */
-    FIELD_STR(9, Message);
+    FIELD_STR("Message", Message);
   }
 
 void ModuleRecord::FieldsV1(Registry &r)
   {
     r.V1ProbeScope("ModuleRecord");
-    FIELD_U8 (1, Slot);
-    FIELD_H  (2, hMod);
-    FIELD_ARRAY(3, FName, 1, 1024);
+    FIELD_U8 ("Slot", Slot);
+    FIELD_H  ("hMod", hMod);
+    FIELD_ARRAY("FName", FName, 1, 1024);
   }
 
 /* ------------------------------------------------------------------------ */
@@ -3017,7 +3379,7 @@ static void v1GridProbe(void)
    reject any lie about their lengths -- nothing is re-truncated here. */
 void Map::GridFieldsV1(Registry &r)
   {
-    r.V1ProbeScope("Map");
+    r.V1ProbeScope("MapGrid");   /* its own scope: gx and gy are not Map's sizeX and sizeY (spec 5.1) */
     size_t n = (size_t)sizeX * (size_t)sizeY;
     int16 gx = 0, gy = 0;
     uint8 elem = 0;
@@ -3055,9 +3417,9 @@ void Map::GridFieldsV1(Registry &r)
 
     try
       {
-        FIELD_I16(1, gx);
-        FIELD_I16(2, gy);
-        FIELD_U8 (3, elem);
+        FIELD_I16("gx", gx);
+        FIELD_I16("gy", gy);
+        FIELD_U8 ("elem", elem);
         if (r.Loading())
           if (gx != sizeX || gy != sizeY || elem != 8)
             {
@@ -3067,10 +3429,10 @@ void Map::GridFieldsV1(Registry &r)
                   (int)gx, (int)gy, (int)elem, (int)sizeX, (int)sizeY);
               throw ECORRUPT;
             }
-        r.V1Blob(4, (void**)&packed, n * 8);
-        r.V1Blob(5, (void**)&glyphs, n * 4);
-        r.V1Blob(6, (void**)&memw,   n * 4);
-        r.V1Blob(7, (void**)&conts,  n * 4);
+        r.V1Blob("packed", (void**)&packed, n * 8);
+        r.V1Blob("glyphs", (void**)&glyphs, n * 4);
+        r.V1Blob("memw", (void**)&memw,   n * 4);
+        r.V1Blob("conts", (void**)&conts,  n * 4);
         if (r.Loading())
           {
             Grid = NULL;
@@ -3120,7 +3482,7 @@ void Map::GridFieldsV1(Registry &r)
     {                                                                     \
       uint32 i;                                                           \
       r.V1ProbeScope("Array");   /* inc-cjos0 tag probe */                  \
-      FIELD_U32(1, Count);                                                \
+      FIELD_U32("Count", Count);                                                \
       if (r.Loading())                                                    \
         {                                                                 \
           if (Count > 0xFFF0 ||                                           \
@@ -3138,7 +3500,7 @@ void Map::GridFieldsV1(Registry &r)
             }                                                             \
         }                                                                 \
       for (i = 0; i != Count; i++)                                        \
-        FIELD_EMBED((uint16)(3+i), Items[i]);                             \
+        FIELD_EMBED_AT("Element", i, Items[i]);                             \
     }
 
 template<> void Array<Field,10,5>::FieldsV1(Registry &r)
@@ -3199,6 +3561,8 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
               gh.objCount++;
               SaveFailProbe(false, gh.objCount);
 
+              v1PathReset();
+              v1WFrameOpen(0);
               v1CovBegin(o);
               /* The envelope carries Type and myHandle; no FIELD_ line
                  does, and they must not be absorbed into pad rows. */
@@ -3220,6 +3584,10 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
               r = r->Next;
             }
         }
+
+    /* The name table is the group's last record. */
+    v1WriteNameTable();
+    gh.objCount++;
 
 #ifdef DEBUG
     /* Constraint 8: the coverage check is non-optional, and a finding on the
@@ -3465,6 +3833,10 @@ foundGroup:
 
         LastUsedHandle = max(LastUsedHandle, gh.LastHandle);
 
+        /* The names first (spec 5.2): found by skipping records by length,
+           or built from the frozen legacy table for a revision 3-6 file. */
+        v1BuildReaderNames(buf, (size_t)gh.groupSize, gh.objCount, fileRev);
+
         /* TWO PASSES, for the same reason v0's LoadGroup ends with a
            whole-group Serialize loop over LoadedObjects
            (src/Registry.cpp:1050-1054): a body's load fixup can look
@@ -3585,6 +3957,7 @@ foundGroup:
           {
             Object *o = loaded[i].o;
             hCurrent = o->myHandle;
+            v1PathReset();
             v1PushFrame(loaded[i].ents, loaded[i].count);
             loaded[i].ents = NULL;   /* the frame owns (and frees) it now */
             o->Serialize(*this, false);

@@ -12,7 +12,7 @@
 #                                     a computed run (uint16)(base+i), i < count: tag base+i is
 #                                     "<name>#i". count is a number or a define in the dump.
 #                                     "embed": the call opens a V1EmbedBegin (its fields get the
-#                                     scope <owner>/.../<name>).
+#                                     scope <owner>.<embed>...<name>).
 
 # ---- embeds and calls with a fixed tag
 name Character.V1EmbedBegin#1 ClassID
@@ -45,7 +45,7 @@ name TargetSystem.V1EmbedBegin#2 why
 # Written by raw v1PutU16 (src/SaveV1.cpp:1034,1037,1116,1143,1707,1710), read by v1Find(1..7)
 # (src/SaveV1.cpp:1730-1736). Revision 3 holds tags 1-5 (tag 1 an empty script segment, no variables);
 # revision 4 on holds 2-7 and forbids tag 1 (src/SaveV1.cpp:1846-1859).
-scope src/SaveV1.cpp 1730 1736 Game/MDataSeg/Segment
+scope src/SaveV1.cpp 1730 1736 Game.MDataSeg.Segment
 name ?.v1Find#1 ScriptSegment
 name ?.v1Find#2 RowCount
 name ?.v1Find#3 Rows

@@ -1,3 +1,4 @@
+<!-- citations: this-port -->
 **SUPERSEDED 2026-11-07** by `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md` and its plan (Brian chose names in the file). Not built past phase 0.
 
 # Numbers land on master — design (inc-cjos0)
@@ -323,7 +324,7 @@ its merge, unless `git merge-base --is-ancestor master <bead>` holds, so the
 merged tree is the gated tree. A refusal exits; the trap restores the bead
 (4.7), and the next `finish_bead.sh` run merges the new master at STEP 3.
 STEP 5's merge itself is unchanged. The nightly harness's master merge
-(`~/Scripts/nightly-harness/bin/nightly.sh:529`) MUST take the same lock.
+(line 529 of `~/Scripts/nightly-harness/bin/nightly.sh`, outside this repository) MUST take the same lock.
 
 ### 4.10 Per-owner script variables (B7)
 

@@ -3,7 +3,7 @@
 // a field added after it has no row, because no revision 3-6 file can hold it.
 //
 // It maps the tag numbers of a revision 3-6 save to field names, so the revision 7 reader can build
-// the name table of an old file. Scope = the runtime owner, plus "/" and the embed's name for a field
+// the name table of an old file. Scope = the runtime owner, plus "." and the embed's name for a field
 // written inside a V1EmbedBegin pair. A range row maps tag baseTag+i (i < count) to "<name>#<i>".
 // The trailing comment of a row lists the source lines (file:line) that wrote and read it.
 #ifndef SAVELEGACYTAGS_H
@@ -175,13 +175,13 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
   { "Game", 868, "ModFiles", 3, 6 },  /* inc/Res.h:1271 */
   { "Game", 869, "ItemGenNum", 3, 6 },  /* inc/Res.h:1233 */
   { "Game", 870, "BarrierCount", 3, 6 },  /* inc/Res.h:1234 */
-  { "Game/MDataSeg/Segment", 1, "ScriptSegment", 3, 3 },  /* src/SaveV1.cpp:1730 */
-  { "Game/MDataSeg/Segment", 2, "RowCount", 3, 6 },  /* src/SaveV1.cpp:1731 */
-  { "Game/MDataSeg/Segment", 3, "Rows", 3, 6 },  /* src/SaveV1.cpp:1732 */
-  { "Game/MDataSeg/Segment", 4, "PoolLengths", 3, 6 },  /* src/SaveV1.cpp:1733 */
-  { "Game/MDataSeg/Segment", 5, "PoolNames", 3, 6 },  /* src/SaveV1.cpp:1734 */
-  { "Game/MDataSeg/Segment", 6, "VariableCount", 4, 6 },  /* src/SaveV1.cpp:1735 */
-  { "Game/MDataSeg/Segment", 7, "Variables", 4, 6 },  /* src/SaveV1.cpp:1736 */
+  { "Game.MDataSeg.Segment", 1, "ScriptSegment", 3, 3 },  /* src/SaveV1.cpp:1730 */
+  { "Game.MDataSeg.Segment", 2, "RowCount", 3, 6 },  /* src/SaveV1.cpp:1731 */
+  { "Game.MDataSeg.Segment", 3, "Rows", 3, 6 },  /* src/SaveV1.cpp:1732 */
+  { "Game.MDataSeg.Segment", 4, "PoolLengths", 3, 6 },  /* src/SaveV1.cpp:1733 */
+  { "Game.MDataSeg.Segment", 5, "PoolNames", 3, 6 },  /* src/SaveV1.cpp:1734 */
+  { "Game.MDataSeg.Segment", 6, "VariableCount", 4, 6 },  /* src/SaveV1.cpp:1735 */
+  { "Game.MDataSeg.Segment", 7, "Variables", 4, 6 },  /* src/SaveV1.cpp:1736 */
   { "Item", 32, "Known", 3, 6 },  /* inc/Item.h:21 */
   { "Item", 33, "Plus", 3, 6 },  /* inc/Item.h:22 */
   { "Item", 34, "Charges", 3, 6 },  /* inc/Item.h:23 */
@@ -242,12 +242,12 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
   { "Map", 703, "PlayerCount", 3, 6 },  /* inc/Map.h:661 */
   { "Map", 704, "BreedCount", 3, 6 },  /* inc/Map.h:662 */
   { "Map", 705, "PreviousAuguries", 3, 6 },  /* inc/Map.h:663 */
-  { "Map/ov", 1, "ov_GlyphX", 3, 6 },  /* inc/Map.h:649 */
-  { "Map/ov", 2, "ov_GlyphY", 3, 6 },  /* inc/Map.h:650 */
-  { "Map/ov", 3, "ov_GlyphImage", 3, 6 },  /* inc/Map.h:651 */
-  { "Map/ov", 4, "ov_GlyphCount", 3, 6 },  /* inc/Map.h:652 */
-  { "Map/ov", 5, "ov_m", 3, 6 },  /* inc/Map.h:653 */
-  { "Map/ov", 6, "bOvActive", 3, 6 },  /* inc/Map.h:654 */
+  { "Map.ov", 1, "ov_GlyphX", 3, 6 },  /* inc/Map.h:649 */
+  { "Map.ov", 2, "ov_GlyphY", 3, 6 },  /* inc/Map.h:650 */
+  { "Map.ov", 3, "ov_GlyphImage", 3, 6 },  /* inc/Map.h:651 */
+  { "Map.ov", 4, "ov_GlyphCount", 3, 6 },  /* inc/Map.h:652 */
+  { "Map.ov", 5, "ov_m", 3, 6 },  /* inc/Map.h:653 */
+  { "Map.ov", 6, "bOvActive", 3, 6 },  /* inc/Map.h:654 */
   { "MapGrid", 1, "gx", 3, 6 },  /* src/SaveV1.cpp:3058 */
   { "MapGrid", 2, "gy", 3, 6 },  /* src/SaveV1.cpp:3059 */
   { "MapGrid", 3, "elem", 3, 6 },  /* src/SaveV1.cpp:3060 */
@@ -285,30 +285,30 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
   { "Module", 795, "Slot", 3, 6 },  /* inc/Res.h:850 */
   { "Module", 796, "Sizes", 3, 6 },  /* inc/Res.h:851 */
   { "Module", 797, "TurnLastUsed", 3, 6 },  /* inc/Res.h:863 */
-  { "Module/Sizes", 1, "szTextSeg", 3, 6 },  /* inc/Res.h:852 */
-  { "Module/Sizes", 2, "szDataSeg", 3, 6 },  /* inc/Res.h:853 */
-  { "Module/Sizes", 3, "szCodeSeg", 3, 6 },  /* inc/Res.h:854 */
-  { "Module/Sizes", 4, "szMon", 3, 6 },  /* inc/Res.h:855 */
-  { "Module/Sizes", 5, "szItm", 3, 6 },  /* inc/Res.h:855 */
-  { "Module/Sizes", 6, "szFea", 3, 6 },  /* inc/Res.h:855 */
-  { "Module/Sizes", 7, "szEff", 3, 6 },  /* inc/Res.h:856 */
-  { "Module/Sizes", 8, "szArt", 3, 6 },  /* inc/Res.h:856 */
-  { "Module/Sizes", 9, "szQue", 3, 6 },  /* inc/Res.h:856 */
-  { "Module/Sizes", 10, "szDgn", 3, 6 },  /* inc/Res.h:857 */
-  { "Module/Sizes", 11, "szRou", 3, 6 },  /* inc/Res.h:857 */
-  { "Module/Sizes", 12, "szNPC", 3, 6 },  /* inc/Res.h:857 */
-  { "Module/Sizes", 13, "szCla", 3, 6 },  /* inc/Res.h:858 */
-  { "Module/Sizes", 14, "szRac", 3, 6 },  /* inc/Res.h:858 */
-  { "Module/Sizes", 15, "szDom", 3, 6 },  /* inc/Res.h:858 */
-  { "Module/Sizes", 16, "szGod", 3, 6 },  /* inc/Res.h:859 */
-  { "Module/Sizes", 17, "szReg", 3, 6 },  /* inc/Res.h:859 */
-  { "Module/Sizes", 18, "szTer", 3, 6 },  /* inc/Res.h:859 */
-  { "Module/Sizes", 19, "szTxt", 3, 6 },  /* inc/Res.h:860 */
-  { "Module/Sizes", 20, "szVar", 3, 6 },  /* inc/Res.h:860 */
-  { "Module/Sizes", 21, "szTem", 3, 6 },  /* inc/Res.h:860 */
-  { "Module/Sizes", 22, "szFla", 3, 6 },  /* inc/Res.h:861 */
-  { "Module/Sizes", 23, "szBev", 3, 6 },  /* inc/Res.h:861 */
-  { "Module/Sizes", 24, "szEnc", 3, 6 },  /* inc/Res.h:861 */
+  { "Module.Sizes", 1, "szTextSeg", 3, 6 },  /* inc/Res.h:852 */
+  { "Module.Sizes", 2, "szDataSeg", 3, 6 },  /* inc/Res.h:853 */
+  { "Module.Sizes", 3, "szCodeSeg", 3, 6 },  /* inc/Res.h:854 */
+  { "Module.Sizes", 4, "szMon", 3, 6 },  /* inc/Res.h:855 */
+  { "Module.Sizes", 5, "szItm", 3, 6 },  /* inc/Res.h:855 */
+  { "Module.Sizes", 6, "szFea", 3, 6 },  /* inc/Res.h:855 */
+  { "Module.Sizes", 7, "szEff", 3, 6 },  /* inc/Res.h:856 */
+  { "Module.Sizes", 8, "szArt", 3, 6 },  /* inc/Res.h:856 */
+  { "Module.Sizes", 9, "szQue", 3, 6 },  /* inc/Res.h:856 */
+  { "Module.Sizes", 10, "szDgn", 3, 6 },  /* inc/Res.h:857 */
+  { "Module.Sizes", 11, "szRou", 3, 6 },  /* inc/Res.h:857 */
+  { "Module.Sizes", 12, "szNPC", 3, 6 },  /* inc/Res.h:857 */
+  { "Module.Sizes", 13, "szCla", 3, 6 },  /* inc/Res.h:858 */
+  { "Module.Sizes", 14, "szRac", 3, 6 },  /* inc/Res.h:858 */
+  { "Module.Sizes", 15, "szDom", 3, 6 },  /* inc/Res.h:858 */
+  { "Module.Sizes", 16, "szGod", 3, 6 },  /* inc/Res.h:859 */
+  { "Module.Sizes", 17, "szReg", 3, 6 },  /* inc/Res.h:859 */
+  { "Module.Sizes", 18, "szTer", 3, 6 },  /* inc/Res.h:859 */
+  { "Module.Sizes", 19, "szTxt", 3, 6 },  /* inc/Res.h:860 */
+  { "Module.Sizes", 20, "szVar", 3, 6 },  /* inc/Res.h:860 */
+  { "Module.Sizes", 21, "szTem", 3, 6 },  /* inc/Res.h:860 */
+  { "Module.Sizes", 22, "szFla", 3, 6 },  /* inc/Res.h:861 */
+  { "Module.Sizes", 23, "szBev", 3, 6 },  /* inc/Res.h:861 */
+  { "Module.Sizes", 24, "szEnc", 3, 6 },  /* inc/Res.h:861 */
   { "ModuleRecord", 1, "Slot", 3, 6 },  /* src/SaveV1.cpp:2900 */
   { "ModuleRecord", 2, "hMod", 3, 6 },  /* src/SaveV1.cpp:2901 */
   { "ModuleRecord", 3, "FName", 3, 6 },  /* src/SaveV1.cpp:2902 */
@@ -348,47 +348,47 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
   { "Player", 541, "deathCount", 3, 6 },  /* inc/Creature.h:1728 */
   { "Player", 542, "rerollCount", 3, 6 },  /* inc/Creature.h:1729 */
   { "Player", 543, "statMethod", 3, 6 },  /* inc/Creature.h:1730 */
-  { "Player/GameTimeInfo", 1, "GameTimeInfo_LTI", 3, 6 },  /* inc/Creature.h:1689 */
-  { "Player/GameTimeInfo", 2, "GameTimeInfo_start_turn", 3, 6 },  /* inc/Creature.h:1690 */
-  { "Player/GameTimeInfo", 3, "GameTimeInfo_actions", 3, 6 },  /* inc/Creature.h:1691 */
-  { "Player/GameTimeInfo", 4, "GameTimeInfo_keystrokes", 3, 6 },  /* inc/Creature.h:1692 */
-  { "Player/GameTimeInfo", 5, "GameTimeInfo_start_second", 3, 6 },  /* inc/Creature.h:1695 */
-  { "Player/GameTimeInfo", 6, "GameTimeInfo_start_xp", 3, 6 },  /* inc/Creature.h:1696 */
-  { "Player/JournalInfo", 1, "JournalInfo_bestItem", 3, 6 },  /* inc/Creature.h:1677 */
-  { "Player/JournalInfo", 2, "JournalInfo_bestMonster", 3, 6 },  /* inc/Creature.h:1678 */
-  { "Player/JournalInfo", 3, "JournalInfo_bestMonsterVal", 3, 6 },  /* inc/Creature.h:1679 */
-  { "Player/JournalInfo", 4, "JournalInfo_bestItemVal", 3, 6 },  /* inc/Creature.h:1680 */
-  { "Player/JournalInfo", 5, "JournalInfo_numMonSeen", 3, 6 },  /* inc/Creature.h:1681 */
-  { "Player/JournalInfo", 6, "JournalInfo_numMonOfType", 3, 6 },  /* inc/Creature.h:1682 */
-  { "Player/QuickKeys/QuickKey", 1, "QuickKeys_Value", 3, 6 },  /* inc/Creature.h:1649 */
-  { "Player/QuickKeys/QuickKey", 2, "QuickKeys_Type", 3, 6 },  /* inc/Creature.h:1650 */
-  { "Player/QuickKeys/QuickKey", 3, "QuickKeys_hItem", 3, 6 },  /* inc/Creature.h:1651 */
-  { "Player/QuickKeys/QuickKey", 4, "QuickKeys_MM", 3, 6 },  /* inc/Creature.h:1652 */
+  { "Player.GameTimeInfo", 1, "GameTimeInfo_LTI", 3, 6 },  /* inc/Creature.h:1689 */
+  { "Player.GameTimeInfo", 2, "GameTimeInfo_start_turn", 3, 6 },  /* inc/Creature.h:1690 */
+  { "Player.GameTimeInfo", 3, "GameTimeInfo_actions", 3, 6 },  /* inc/Creature.h:1691 */
+  { "Player.GameTimeInfo", 4, "GameTimeInfo_keystrokes", 3, 6 },  /* inc/Creature.h:1692 */
+  { "Player.GameTimeInfo", 5, "GameTimeInfo_start_second", 3, 6 },  /* inc/Creature.h:1695 */
+  { "Player.GameTimeInfo", 6, "GameTimeInfo_start_xp", 3, 6 },  /* inc/Creature.h:1696 */
+  { "Player.JournalInfo", 1, "JournalInfo_bestItem", 3, 6 },  /* inc/Creature.h:1677 */
+  { "Player.JournalInfo", 2, "JournalInfo_bestMonster", 3, 6 },  /* inc/Creature.h:1678 */
+  { "Player.JournalInfo", 3, "JournalInfo_bestMonsterVal", 3, 6 },  /* inc/Creature.h:1679 */
+  { "Player.JournalInfo", 4, "JournalInfo_bestItemVal", 3, 6 },  /* inc/Creature.h:1680 */
+  { "Player.JournalInfo", 5, "JournalInfo_numMonSeen", 3, 6 },  /* inc/Creature.h:1681 */
+  { "Player.JournalInfo", 6, "JournalInfo_numMonOfType", 3, 6 },  /* inc/Creature.h:1682 */
+  { "Player.QuickKeys.QuickKey", 1, "QuickKeys_Value", 3, 6 },  /* inc/Creature.h:1649 */
+  { "Player.QuickKeys.QuickKey", 2, "QuickKeys_Type", 3, 6 },  /* inc/Creature.h:1650 */
+  { "Player.QuickKeys.QuickKey", 3, "QuickKeys_hItem", 3, 6 },  /* inc/Creature.h:1651 */
+  { "Player.QuickKeys.QuickKey", 4, "QuickKeys_MM", 3, 6 },  /* inc/Creature.h:1652 */
   { "QItem", 64, "Qualities", 3, 6 },  /* inc/Item.h:290 */
   { "QItem", 65, "KnownQualities", 3, 6 },  /* inc/Item.h:291 */
   { "StatiCollection", 1, "Last", 3, 6 },  /* inc/Map.h:856 */
   { "StatiCollection", 2, "Allocated", 3, 6 },  /* inc/Map.h:857 */
-  { "StatiCollection/Status", 1, "nature", 3, 6 },  /* inc/Map.h:886 */
-  { "StatiCollection/Status", 2, "val", 3, 6 },  /* inc/Map.h:887 */
-  { "StatiCollection/Status", 3, "mag", 3, 6 },  /* inc/Map.h:888 */
-  { "StatiCollection/Status", 4, "dur", 3, 6 },  /* inc/Map.h:889 */
-  { "StatiCollection/Status", 5, "src", 3, 6 },  /* inc/Map.h:890 */
-  { "StatiCollection/Status", 6, "clev", 3, 6 },  /* inc/Map.h:891 */
-  { "StatiCollection/Status", 7, "dis", 3, 6 },  /* inc/Map.h:892 */
-  { "StatiCollection/Status", 8, "once", 3, 6 },  /* inc/Map.h:893 */
-  { "StatiCollection/Status", 9, "StatusRids", 3, 6 },  /* inc/Map.h:894 */
-  { "StatiCollection/Status", 10, "sh", 3, 6 },  /* inc/Map.h:895 */
+  { "StatiCollection.Status", 1, "nature", 3, 6 },  /* inc/Map.h:886 */
+  { "StatiCollection.Status", 2, "val", 3, 6 },  /* inc/Map.h:887 */
+  { "StatiCollection.Status", 3, "mag", 3, 6 },  /* inc/Map.h:888 */
+  { "StatiCollection.Status", 4, "dur", 3, 6 },  /* inc/Map.h:889 */
+  { "StatiCollection.Status", 5, "src", 3, 6 },  /* inc/Map.h:890 */
+  { "StatiCollection.Status", 6, "clev", 3, 6 },  /* inc/Map.h:891 */
+  { "StatiCollection.Status", 7, "dis", 3, 6 },  /* inc/Map.h:892 */
+  { "StatiCollection.Status", 8, "once", 3, 6 },  /* inc/Map.h:893 */
+  { "StatiCollection.Status", 9, "StatusRids", 3, 6 },  /* inc/Map.h:894 */
+  { "StatiCollection.Status", 10, "sh", 3, 6 },  /* inc/Map.h:895 */
   { "TargetSystem", 1, "tCount", 3, 6 },  /* src/Target.cpp:1517 */
   { "TargetSystem", 2, "retarget", 3, 6 },  /* src/Target.cpp:1521 */
-  { "TargetSystem/t", 1, "t_type", 3, 6 },  /* src/Target.cpp:1554 */
-  { "TargetSystem/t", 2, "t_priority", 3, 6 },  /* src/Target.cpp:1555 */
-  { "TargetSystem/t", 3, "t_vis", 3, 6 },  /* src/Target.cpp:1556 */
-  { "TargetSystem/t", 4, "why", 3, 6 },  /* src/Target.cpp:1560 */
-  { "TargetSystem/t", 5, "w0", 3, 6 },  /* src/Target.cpp:1565 */
-  { "TargetSystem/t", 6, "w1", 3, 6 },  /* src/Target.cpp:1566 */
-  { "TargetSystem/t/why", 1, "t_why_type", 3, 6 },  /* src/Target.cpp:1561 */
-  { "TargetSystem/t/why", 2, "t_why_turnOfBirth", 3, 6 },  /* src/Target.cpp:1562 */
-  { "TargetSystem/t/why", 3, "t_why_data", 3, 6 },  /* src/Target.cpp:1563 */
+  { "TargetSystem.t", 1, "t_type", 3, 6 },  /* src/Target.cpp:1554 */
+  { "TargetSystem.t", 2, "t_priority", 3, 6 },  /* src/Target.cpp:1555 */
+  { "TargetSystem.t", 3, "t_vis", 3, 6 },  /* src/Target.cpp:1556 */
+  { "TargetSystem.t", 4, "why", 3, 6 },  /* src/Target.cpp:1560 */
+  { "TargetSystem.t", 5, "w0", 3, 6 },  /* src/Target.cpp:1565 */
+  { "TargetSystem.t", 6, "w1", 3, 6 },  /* src/Target.cpp:1566 */
+  { "TargetSystem.t.why", 1, "t_why_type", 3, 6 },  /* src/Target.cpp:1561 */
+  { "TargetSystem.t.why", 2, "t_why_turnOfBirth", 3, 6 },  /* src/Target.cpp:1562 */
+  { "TargetSystem.t.why", 3, "t_why_data", 3, 6 },  /* src/Target.cpp:1563 */
   { "TerraRecord", 1, "key", 3, 6 },  /* src/SaveV1.cpp:2868 */
   { "TerraRecord", 2, "Duration", 3, 6 },  /* src/SaveV1.cpp:2869 */
   { "TerraRecord", 3, "SaveDC", 3, 6 },  /* src/SaveV1.cpp:2870 */
@@ -416,16 +416,16 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
 
 static const LegacyTagRange LEGACY_TAG_RANGES[] = {
   { "Array", 3, 65520, "Element" },  /* src/SaveV1.cpp:3145,src/SaveV1.cpp:3148,src/SaveV1.cpp:3151,src/SaveV1.cpp:3154 */
-  { "Character/ClassID", 1, 6, "ClassID" },  /* inc/Creature.h:1185 */
-  { "Character/Tattoos", 1, 10, "Tattoos" },  /* inc/Creature.h:1204 */
+  { "Character.ClassID", 1, 6, "ClassID" },  /* inc/Creature.h:1185 */
+  { "Character.Tattoos", 1, 10, "Tattoos" },  /* inc/Creature.h:1204 */
   { "Game", 835, 32, "DungeonLevels" },  /* inc/Res.h:1245 */
-  { "Game/DungeonID", 1, 32, "DungeonID" },  /* inc/Res.h:1221 */
-  { "Game/MDataSeg", 1, 126, "Segment" },  /* inc/Res.h:1262 */
-  { "Map/RegionList", 1, 256, "RegionList" },  /* inc/Map.h:625 */
-  { "Map/TerrainList", 1, 256, "TerrainList" },  /* inc/Map.h:630 */
-  { "Player/Macros", 1, 12, "Macros" },  /* inc/Creature.h:1640 */
-  { "Player/MessageQueue", 1, 8, "MessageQueue" },  /* inc/Creature.h:1667 */
-  { "Player/QuickKeys", 1, 40, "QuickKey" },  /* inc/Creature.h:1648 */
+  { "Game.DungeonID", 1, 32, "DungeonID" },  /* inc/Res.h:1221 */
+  { "Game.MDataSeg", 1, 126, "Segment" },  /* inc/Res.h:1262 */
+  { "Map.RegionList", 1, 256, "RegionList" },  /* inc/Map.h:625 */
+  { "Map.TerrainList", 1, 256, "TerrainList" },  /* inc/Map.h:630 */
+  { "Player.Macros", 1, 12, "Macros" },  /* inc/Creature.h:1640 */
+  { "Player.MessageQueue", 1, 8, "MessageQueue" },  /* inc/Creature.h:1667 */
+  { "Player.QuickKeys", 1, 40, "QuickKey" },  /* inc/Creature.h:1648 */
   { "StatiCollection", 3, 256, "Status" },  /* inc/Map.h:876 */
   { "TargetSystem", 3, 32, "t" },  /* src/Target.cpp:1553 */
 };

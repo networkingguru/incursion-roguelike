@@ -24,6 +24,16 @@
 # SaveV1_SegmentFields sees the entry. Those branches guard against a save
 # crafted to stay self-consistent, which this check does not build.
 #
+# FIELDS ARE FOUND BY NAME (inc-cjos0). A revision 7 save numbers its fields by
+# row of its own name table, so the mutation reads that table (the group's
+# type-200 record) and looks up "PoolLengths" and "PoolNames" in scope
+# "Game.MDataSeg.Segment". A save without those two rows fails the mutation
+# with "no manifest ... in the save", never passes it.
+#
+# fact: the saved character, world and module -- not read: only the manifest fields found by name are mutated and the loader's refusal text is asserted, and no seed decides either
+# fact: the manifest field ids -- read from the save's own name table, never a number
+# fact: the clean save loads -- the control step in this check (a save that is refused fails it)
+#
 # Usage: tools/check_v1_manifest_parse.sh   (exits 0 on pass, 1 on fail)
 set -uo pipefail
 
@@ -80,12 +90,33 @@ import sys, struct
 path, mut = sys.argv[1], sys.argv[2]
 b = bytearray(open(path, 'rb').read())
 
-# Tag 4 of a module slot's scope: u16 tag, u8 K_ARRAY(11), u32 count 21,
+# The group's name table (record type 200): u16 id, u16 scopeLen, scope,
+# u16 nameLen, name. Records start at 124 (96-byte file header, 28-byte group
+# header); each is u8 type, u32 handle, u32 length, body.
+ids = {}
+pos = 124
+for _ in range(struct.unpack_from('<i', b, 124 - 12)[0]):
+    typ = b[pos]
+    ln, = struct.unpack_from('<I', b, pos + 5)
+    if typ == 200:
+        body, q = bytes(b[pos + 9:pos + 9 + ln]), 0
+        while q != len(body):
+            nid, sl = struct.unpack_from('<HH', body, q); q += 4
+            scope = body[q:q + sl].decode(); q += sl
+            nl, = struct.unpack_from('<H', body, q); q += 2
+            ids[(scope, body[q:q + nl].decode())] = nid; q += nl
+    pos += 9 + ln
+SEG = 'Game.MDataSeg.Segment'
+lens_id, names_id = ids.get((SEG, 'PoolLengths')), ids.get((SEG, 'PoolNames'))
+if lens_id is None or names_id is None:
+    sys.exit("no manifest PoolLengths/PoolNames name is in the save's name table")
+
+# PoolLengths of a module slot's scope: u16 id, u8 K_ARRAY(11), u32 count 21,
 # u32 elemSize 4, then 21 uint32 lengths (inc/Base.h:723-732).
-pat = struct.pack('<HBII', 4, 11, 21, 4)
+pat = struct.pack('<HBII', lens_id, 11, 21, 4)
 i = b.find(pat)
 if i < 0:
-    sys.exit("no manifest tag-4 record is in the save")
+    sys.exit("no manifest PoolLengths record is in the save")
 
 if mut == 'length':
     # One array longer than the format can address. An rID carries the
@@ -98,11 +129,12 @@ elif mut == 'sum':
     for k in range(21):
         struct.pack_into('<I', b, i + 11 + 4 * k, 0x100000)
 elif mut == 'namelen':
-    # Tag 5 follows tag 4 exactly: 11 header bytes plus 21*4 payload bytes.
+    # PoolNames follows PoolLengths exactly: 11 header bytes plus 21*4 payload
+    # bytes.
     j = i + 11 + 84
     tag, kind = struct.unpack_from('<HB', b, j)
-    if (tag, kind) != (5, 8):          # K_BLOB is 8
-        sys.exit("tag 5 is not where the writer puts it: got tag %d kind %d"
+    if (tag, kind) != (names_id, 8):   # K_BLOB is 8
+        sys.exit("PoolNames is not where the writer puts it: got id %d kind %d"
                  % (tag, kind))
     n0 = struct.unpack_from('<H', b, j + 7)[0]
     # Grow name 0 by one byte. Every later name then misparses, and the blob
