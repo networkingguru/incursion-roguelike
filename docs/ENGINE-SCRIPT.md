@@ -31,12 +31,12 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 
 ## What ships and what does not
 
-`src/RComp.cpp` is a single `#ifdef DEBUG` block, line 1 to line 1522. So is
+`src/RComp.cpp` is a single `#ifdef DEBUG` block, line 1 to line 1590. So is
 `src/Art.cpp`, line 1 to 1534 -- the ACCENT runtime that defines `yyparse`
 (`:1480`), and which its own header calls GPLv2 code that "cannot be compiled
 into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
 carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
-`AllocRegister()` unconditionally (`:7857`, `:8554`). Both functions live
+`AllocRegister()` unconditionally (`:7868`, `:8604`). Both functions live
 inside the guarded block (`src/RComp.cpp:1563`, `src/RComp.cpp:1545`), so dropping `DEBUG`
 alone fails the link. Each build answers that by excluding whole files.
 **The macOS build takes a `COMPILER` switch** (`build_macos.sh:167`).
@@ -106,7 +106,7 @@ Text 61; `Effect`+`Disease`+`Poison`+`Spell` all feed one array
 ## How to check this page
 
 Each count carries its command beside it; run them from the repository root.
-Structural claims are read, not counted: `sed -n '1p;1522p' src/RComp.cpp` and
+Structural claims are read, not counted: `sed -n '1p;1590p' src/RComp.cpp` and
 `sed -n '1p;1534p' src/Art.cpp` show the `#ifdef DEBUG` / `#endif` pairs that
 bracket whole files; `grep -n DEBUG build_macos.sh build.bat` shows the split.
 No claim here needed a binary run.
