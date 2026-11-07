@@ -36,12 +36,14 @@ What it handles
   * enum members, implicit values counted the C way (previous + 1, first 0).
   * tag: literal integer first argument of FIELD_* (not FIELD_SKIP, which has
     none).  Label = second argument, normalized: identifiers in order, "&" "*"
-    and [index] dropped, joined "_".
+    and a non-literal [index] dropped, a literal [index] kept as "#N" (m[0] is
+    "m#0"), joined "_".
     Scope = the innermost enclosing brace block that is (a) a class/struct/
     union body, giving its name (an inline method belongs to the class whose
     body holds it, e.g. the FieldsV1 inside "typedef struct StatiCollection {"
     is StatiCollection), or (b) a function body written Name::fn(...) {...},
-    giving Name (Map::GridFieldsV1 is Map); a template-id qualifier such as
+    giving Name (Map::FieldsV1 is Map), except Name::GridFieldsV1, which is its
+    own scope NameGrid (Map::GridFieldsV1 is MapGrid, inc-cjos0 5.1); a template-id qualifier such as
     Array<S,N,D>::FieldsV1 names no single class: "?".  Any other block
     inherits.  Outside every such block: "?".  Preprocessor lines are blanked
     before the braces are read, and #if conditions are not evaluated.
@@ -437,17 +439,24 @@ def balanced(text, open_pos):
 
 
 def normalize_label(expr):
-    e = expr
-    # drop index expressions (balanced [...])
-    out, depth = [], 0
-    for ch in e:
+    """Identifiers in order, joined "_". "&", "*" and a non-literal [index] are
+    dropped; a literal [index] keeps its number: m[0] -> "m#0" (inc-cjos0 5.1)."""
+    out, depth, cur = [], 0, []
+    for ch in expr:
         if ch == "[":
             depth += 1
         elif ch == "]":
             depth = max(0, depth - 1)
+            if depth == 0:
+                inner = "".join(cur).strip()
+                cur = []
+                if re.fullmatch(r"0[xX][0-9a-fA-F]+|\d+", inner):
+                    out.append("#%d" % int(inner, 0))
         elif depth == 0:
             out.append(ch)
-    return "_".join(re.findall(r"[A-Za-z_]\w*", "".join(out)))
+        else:
+            cur.append(ch)
+    return "_".join(re.findall(r"[A-Za-z_]\w*(?:#\d+)?", "".join(out)))
 
 
 FIELD = re.compile(r"\bFIELD_(?!SKIP\b)[A-Z0-9_]+\s*\(")
@@ -456,7 +465,7 @@ RAWPUT = re.compile(r"\bv1PutU16\s*\(")
 RAW_PUTU16 = 0
 LOGICAL_PP = re.compile(r"^[ \t]*#(?:\\\n|[^\n])*", re.M)
 CLASS_HEAD = re.compile(r"\b(?:class|struct|union)\s+(\w+)\s*(?:final\s*)?(?::(?!:)|$)")
-FUNC_HEAD = re.compile(r"(\w+(?:<[^;{}]*?>)?)\s*::\s*~?\w+\s*\(")
+FUNC_HEAD = re.compile(r"(\w+(?:<[^;{}]*?>)?)\s*::\s*(~?\w+)\s*\(")
 
 
 def blank_lines(text, ranges):
@@ -496,6 +505,8 @@ def scope_intervals(text):
                     m = FUNC_HEAD.search(h)
                     if m:
                         sc = "?" if m.group(1).endswith(">") else m.group(1)
+                        if m.group(2) == "GridFieldsV1" and sc != "?":
+                            sc += "Grid"   # the map grid embed is its own scope
             stack.append((i, sc))
             last = i + 1
         elif ch == "}":
@@ -793,8 +804,8 @@ void freefn(Registry &r) { FIELD_U8(6, f); }
         out = dump(d)
         got = {r.split("\t")[1]: r.split("\t")[2] for r in out.splitlines()
                if r.startswith("tag\t") and "src/s.cpp" in r}
-        check(got == {"Thing2.a": "1", "Coll.inl": "2", "Other.o": "3", "Map2.g": "4", "?.t": "5", "?.f": "6"},
-              "scope: class body, inline method of a struct, Name::fn body, nested block, template-id and free function (%r)" % got)
+        check(got == {"Thing2.a": "1", "Coll.inl": "2", "Other.o": "3", "Map2Grid.g": "4", "?.t": "5", "?.f": "6"},
+              "scope: class body, inline method of a struct, Name::fn body, Name::GridFieldsV1 as NameGrid, nested block, template-id and free function (%r)" % got)
 
 
 def selftest():
@@ -852,6 +863,8 @@ class Foo {
         # (4) label normalization
         check(normalize_label("&t[i].why.data") == "t_why_data", "label &t[i].why.data -> t_why_data")
         check(normalize_label("Items[i]") == "Items", "label Items[i] -> Items")
+        check(normalize_label("m[0]") == "m#0" and normalize_label("&pl[3].x[i]") == "pl#3_x" and normalize_label("a[0x10]") == "a#16",
+              "literal index keeps its number: m[0] -> m#0, pl[3].x[i] -> pl#3_x, a[0x10] -> a#16")
         check(("tag", "Foo.t_why_data", "7") in rows and ("tag", "Foo.Items", "8") in rows and
               ("tag", "Foo.x", "9") in rows and ("tag", "Bar.eID", "1") in rows and
               ("tag", "Bar.ptr", "32") in rows, "tags found with scope and normalized label")

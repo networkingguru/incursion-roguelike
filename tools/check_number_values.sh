@@ -6,6 +6,8 @@
 # fact: saved files scanned by part 4 -- the committed fixtures tools/fixtures/chars/*.sav (frozen bytes), docs/evidence/inc-upw.13 and inc-x1f3 (frozen bytes), plus fresh saves from the key scripts in SCAN_GEN at the seeds named there, all run with options tools/fixtures/options-2026-08-22.dat; the assertion is "every tag in a loaded file has a dump row", which holds for any seed, while the coverage count (reported, never asserted) depends on them
 # fact: reader behavior on an unknown tag -- Registry::LoadGroupV1 refuses a tag no field list asks for (v1PopFrame, ECORRUPT); the planted-tag selftest proves it on this build
 # fact: save revision -- the build under test (incursion-headless built from this tree)
+# fact: legacy tag table -- inc/SaveLegacyTags.h, committed and frozen (generated once from master by tools/gen_legacy_tags.py); part 5 reads it and nothing else of the tag numbers
+# fact: revision of a scanned file -- the IS1.<n> stamp in the file's own header bytes; fixtures and evidence are frozen bytes, generated saves carry this build's SCHEMA_REV
 #
 # Cross-checks tools/number_values.py (the "dump") by methods that share no
 # parsing code with it (inc-cjos0):
@@ -14,6 +16,9 @@
 #              define and enum member; compared with the dump
 #   3. TAGS    INCURSION_TAG_PROBE=<file> in the save writer lists every
 #              (scope, tag) a real session writes; each must be in the dump
+#   4. SAVES   every tag in a real save file traces to a dump row
+#   5. LEGACY  every tag in those saves maps to exactly one name through the frozen
+#              table inc/SaveLegacyTags.h, by the save's own revision (inc-cjos0 phase 1)
 #
 # Usage: tools/check_number_values.sh [--dump FILE] [--keep]   (exit 0 pass, 1 fail)
 #        tools/check_number_values.sh --selftest                (proves each part goes red)
@@ -445,7 +450,7 @@ for (f, l), tags in sorted(sites.items()):
             for r in hit: seen.add((f, t, r[0]))
             ds = {r[1] for r in hit}
             for sc in scopes:
-                if MAP.get(sc, sc) in ds: scope_ok += 1
+                if MAP.get(sc, sc) in ds or (sc == "Map" and "MapGrid" in ds): scope_ok += 1
                 else: scope_diff += 1; pairs[(sc, "/".join(sorted(ds)))] += 1
         elif IDX.search(stmt_text(f, l)) or macro_index_tag(stmt_text(f, l), t):
             indexed.append((f, l, t))
@@ -578,7 +583,7 @@ for (s, t, fl), label in sorted(agg.items()):
     f, l = fl.rsplit(":", 1); l = int(l)
     rows = [r for r in drows.get((f, t), []) if 0 <= l - r[0] <= 3]
     if rows:
-        ok = [r for r in rows if r[1] == s]
+        ok = [r for r in rows if r[1] == s or (s == "Map" and r[1] == "MapGrid")]   # runtime scope of GridFieldsV1 is still Map until inc-cjos0 phase 2
         if not ok: ok = [r for r in rows if r[1] in WILD or s == "Array"]; wild += bool(ok)
         if ok:
             matched += 1
@@ -612,6 +617,23 @@ print("PASS part 4 (backward tag scan)")
 PY
 }
 
+# ------------------------------------------------------------------ compare 5
+# Part 5 (inc-cjos0 phase 1): the frozen legacy table inc/SaveLegacyTags.h names every
+# tag the scanned saves hold. tools/gen_legacy_tags.py --verify-scan reads the part 4
+# manifest; the header must also compile.
+compare_legacy() { # [header] [manifest]
+    local hdr="${1:-inc/SaveLegacyTags.h}" mf="${2:-$W/scan/manifest.tsv}" rc=0
+    local abs="$hdr"; case "$hdr" in /*) ;; *) abs="$ROOT/$hdr" ;; esac
+    mkdir -p "$W/legacy"
+    printf '#include "%s"\nint main() { return (int)(LEGACY_TAG_ROW_COUNT + LEGACY_TAG_RANGE_COUNT); }\n' "$abs" > "$W/legacy/tu.cpp"
+    if ! "$CXX" -std=c++17 -fsyntax-only "$W/legacy/tu.cpp" 2> "$W/legacy/cc.err"; then
+        head -5 "$W/legacy/cc.err"; echo "  the header does not compile"; echo "problems: 1"; echo "FAIL part 5 (legacy table)"; return 1
+    fi
+    python3 tools/gen_legacy_tags.py --verify-scan "$hdr" "$mf" || rc=1
+    [ "$rc" = 0 ] && echo "PASS part 5 (legacy table)" || echo "FAIL part 5 (legacy table)"
+    return "$rc"
+}
+
 # Plant one extra tag (60000, K_U8) at the head of the first record of a v1 save,
 # for the selftest. Pure stdlib: it follows the container in docs/ENGINE-SERIALISATION.md.
 plant_tag() { # <in.sav> <out.sav>
@@ -641,7 +663,7 @@ if [ "$MODE" = check ]; then
     collect_names; compare_names "$DUMP" || FAILED=1
     collect_values "$DUMP" || FAILED=1; compare_values "$DUMP" || FAILED=1
     if collect_tags; then compare_tags "$DUMP" || FAILED=1; else FAILED=1; fi
-    if collect_scan; then compare_scan "$DUMP" || FAILED=1; else FAILED=1; fi
+    if collect_scan; then compare_scan "$DUMP" || FAILED=1; compare_legacy || FAILED=1; else FAILED=1; fi
     [ "$FAILED" = 0 ] && echo "PASS all parts" || echo "FAIL"
     exit "$FAILED"
 fi
@@ -663,6 +685,7 @@ redcheck() { # <label> <fn> <dump-real> <dump-damaged>
 }
 echo "real-dump results (a nonzero problem count here is a finding about the dump, not a selftest failure):"
 for f in compare_names compare_values compare_tags compare_scan; do echo "  $f: problems $(problems $f "$DUMP")"; done
+echo "  compare_legacy: problems $(problems compare_legacy)"
 VICTIM="$(awk -F'\t' '$1=="define" && $4 ~ /^inc\/Defines\.h/ {print $2; exit}' "$DUMP")"
 [ -n "$VICTIM" ] || { echo "SELFTEST FAIL: no define from inc/Defines.h in the dump"; exit 1; }
 # part 1: hide one define the compiler has
@@ -695,5 +718,14 @@ fi
 # part 4, dump side: drop every Item tag with one value; the real saves hold an Item with that tag
 awk -F'\t' -v n="$TN" '!($1=="tag" && $2 ~ /^Item\./ && $3==n)' "$DUMP" > "$W/dump-notag4.txt"
 redcheck "part 4 with Item tag $TN dropped from the dump" compare_scan "$DUMP" "$W/dump-notag4.txt"
+# part 5: drop the legacy row of one Item tag the saves hold; the real header must name every tag, the damaged copy must not
+grep -v "^  { \"Item\", $TN, " inc/SaveLegacyTags.h > "$W/legacy-dropped.h"
+if cmp -s inc/SaveLegacyTags.h "$W/legacy-dropped.h"; then echo "SELFTEST FAIL: part 5 found no Item row $TN in the header to drop"; ST=1
+else
+    mkdir -p "$W/legacy"; cp "$W/legacy-dropped.h" "$W/legacy/dropped.h"
+    redcheck "part 5 with the legacy row of Item tag $TN dropped from the header" compare_legacy inc/SaveLegacyTags.h "$W/legacy/dropped.h"
+fi
+python3 tools/gen_legacy_tags.py --selftest > "$W/legacy-selftest.log" 2>&1 && echo "ok: tools/gen_legacy_tags.py --selftest passes (each refusal goes red on a damaged table)" \
+    || { tail -3 "$W/legacy-selftest.log"; echo "SELFTEST FAIL: tools/gen_legacy_tags.py --selftest"; ST=1; }
 [ "$ST" = 0 ] && echo "SELFTEST PASS" || echo "SELFTEST FAIL"
 exit "$ST"

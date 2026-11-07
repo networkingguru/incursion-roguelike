@@ -1,0 +1,79 @@
+# Overrides for tools/gen_legacy_tags.py (inc-cjos0 phase 1, spec 5.4).
+# Input of the one-time generation of inc/SaveLegacyTags.h from master. The header is
+# frozen after it lands, so this file is a record, not a living input.
+#
+#   name  <dump identity> <name>      the name of a dump row that is not a member field:
+#                                     a call (V1EmbedBegin#n, V1Blob#n, V1RidStatus#n,
+#                                     V1ArrayWiden16#n[.arg2], v1Find#n) takes the member
+#                                     or variable it stores. Every V1EmbedBegin row MUST have one.
+#   rev   <dump identity> <lo> <hi>   revisions a row exists in (default 3 6)
+#   scope <file> <first> <last> <owner>   dump scope "?" in that line range is this owner
+#   range <owner> <base> <count> <name> <file:line> [embed]
+#                                     a computed run (uint16)(base+i), i < count: tag base+i is
+#                                     "<name>#i". count is a number or a define in the dump.
+#                                     "embed": the call opens a V1EmbedBegin (its fields get the
+#                                     scope <owner>/.../<name>).
+
+# ---- embeds and calls with a fixed tag
+name Character.V1EmbedBegin#1 ClassID
+name Character.V1EmbedBegin#2 Tattoos
+# tag 448 is the widened Spells array (FIELD_ARRAY(448, Spells) says so as well); tag 434 is the
+# retired uint16 Spells array that V1ArrayWiden16 still reads from an older save (inc-vqla e72bfa34).
+name Character.V1ArrayWiden16#1 Spells
+name Character.V1ArrayWiden16#1.arg2 SpellsU16
+name Game.V1EmbedBegin#1 DungeonID
+name Game.V1EmbedBegin#2 MDataSeg
+name Map.V1EmbedBegin#1 RegionList
+name Map.V1EmbedBegin#2 TerrainList
+name Map.V1EmbedBegin#3 ov
+name Map.V1EmbedBegin#4 Grid
+name MapGrid.V1Blob#1 packed
+name MapGrid.V1Blob#2 glyphs
+name MapGrid.V1Blob#3 memw
+name MapGrid.V1Blob#4 conts
+name Module.V1EmbedBegin#1 Sizes
+name Player.V1EmbedBegin#1 Macros
+name Player.V1EmbedBegin#2 QuickKeys
+name Player.V1EmbedBegin#4 MessageQueue
+name Player.V1EmbedBegin#5 JournalInfo
+name Player.V1EmbedBegin#6 GameTimeInfo
+name Player.V1Str#2 GraveText
+name StatiCollection.V1RidStatus#1 StatusRids
+name TargetSystem.V1EmbedBegin#2 why
+
+# ---- the module-slot segment record (Game tag 816, element embed 1+slot)
+# Written by raw v1PutU16 (src/SaveV1.cpp:1034,1037,1116,1143,1707,1710), read by v1Find(1..7)
+# (src/SaveV1.cpp:1730-1736). Revision 3 holds tags 1-5 (tag 1 an empty script segment, no variables);
+# revision 4 on holds 2-7 and forbids tag 1 (src/SaveV1.cpp:1846-1859).
+scope src/SaveV1.cpp 1730 1736 Game/MDataSeg/Segment
+name ?.v1Find#1 ScriptSegment
+name ?.v1Find#2 RowCount
+name ?.v1Find#3 Rows
+name ?.v1Find#4 PoolLengths
+name ?.v1Find#5 PoolNames
+name ?.v1Find#6 VariableCount
+name ?.v1Find#7 Variables
+rev ?.v1Find#1 3 3
+rev ?.v1Find#6 4 6
+rev ?.v1Find#7 4 6
+
+# ---- the generic and element Array<S>::FieldsV1 (dump scope "?": a template-id qualifier)
+scope src/Base.cpp 700 730 Array
+scope src/SaveV1.cpp 3140 3160 Array
+
+# ---- computed runs (uint16)(base+i)
+range Character 1 6 ClassID inc/Creature.h:1185
+range Character 1 10 Tattoos inc/Creature.h:1204
+range Player 1 MAX_MACROS Macros inc/Creature.h:1640
+range Player 1 MAX_QKEYS QuickKey inc/Creature.h:1648 embed
+range Player 1 8 MessageQueue inc/Creature.h:1667
+range Map 1 256 RegionList inc/Map.h:625
+range Map 1 256 TerrainList inc/Map.h:630
+# the Status elements of a StatiCollection; Allocated is at most 256 (inc/Map.h:864)
+range StatiCollection 3 256 Status inc/Map.h:876 embed
+range Game 1 MAX_DUNGEONS DungeonID inc/Res.h:1221
+range Game 835 MAX_DUNGEONS DungeonLevels inc/Res.h:1245
+range Game 1 MAX_MODULES Segment inc/Res.h:1262 embed
+# the element embeds of the four Array specialisations; Count is at most 0xFFF0 (src/SaveV1.cpp:3103)
+range Array 3 0xFFF0 Element src/SaveV1.cpp:3141
+range TargetSystem 3 NUM_TARGETS t src/Target.cpp:1553 embed
