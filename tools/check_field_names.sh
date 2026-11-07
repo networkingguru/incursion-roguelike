@@ -4,6 +4,7 @@
 # fact: planted duplicate name -- INCURSION_NAMES_PLANT=dup, a DEBUG-build hook in src/SaveV1.cpp that makes the writer register its third name of a group twice through the real per-frame check (v1WSeenCheck); same on every run
 # fact: planted unknown name -- this script flips the first letter of the first row of the file's own name table, in a scratch copy; the file is the schematest file above
 # fact: retired name -- INCURSION_RETIRED_EXTRA=<scope>:<name>, a DEBUG-build hook in src/SaveV1.cpp that retires one more name for one run; the engine's real list is inc/SaveRetiredNames.h
+# fact: the field names in the source -- tools/check_save_names.py reads them as text (static part); the first name row of the schematest file stands for "a name a field list asks for"
 # fact: retired list copies -- tools/retired_field_names.txt and inc/SaveRetiredNames.h, read as text
 # fact: save revision -- the build under test (SCHEMA_REV in src/SaveV1.cpp)
 #
@@ -35,8 +36,8 @@ make_files() { # <dir> [plant]
 
 # Flip the first letter of the first row of the file's name table.
 # prints the new name, "scope:name" form, on stdout.
-craft_unknown() { # <in.sav> <out.sav>
-    python3 - "$1" "$2" <<'PY'
+craft_unknown() { # <in.sav> <out.sav> [asis]
+    python3 - "$1" "$2" ${3:+asis} <<'PY'
 import struct, sys
 d = bytearray(open(sys.argv[1], "rb").read())
 comp, = struct.unpack_from("<h", d, 90)
@@ -55,6 +56,9 @@ for _ in range(objc):
         scope = bytes(d[body + 4:body + 4 + sl]).decode()
         at = body + 6 + sl
         name = bytes(d[at:at + nl]).decode()
+        if len(sys.argv) > 3:   # "asis": name the first row, change nothing
+            print("%s:%s" % (scope, name))
+            sys.exit(0)
         d[at] = ord("Z") if name[0] != "Z" else ord("Y")
         open(sys.argv[2], "wb").write(d)
         print("%s:%s" % (scope, bytes(d[at:at + nl]).decode()))
@@ -84,6 +88,24 @@ reader_refuses() { # <file> <extra-retired|"">
 reader_loads() { # <file> <extra-retired|"">
     INCURSION_RETIRED_EXTRA="${2:-}" "$BIN" -schemaload "$1" -timeout 60 < /dev/null > "$W/load.out" 2> "$W/load.err"
 }
+
+# 3b. The writer and the reader refuse an ACTIVE request for a retired name.   -> 0 when it refused
+# (a name a macro argument carries is invisible to tools/check_save_names.py; the engine is the net)
+writer_refuses_retired() { # <dir> <scope:name>
+    mkdir -p "$1"
+    INCURSION_RETIRED_EXTRA="$2" INCURSION_V1_RAW=1 "$BIN" -schematest "$1" -timeout 120 \
+        < /dev/null > "$1/schematest.log" 2> "$1/schematest.err"
+    local rc=$?
+    [ "$rc" != 0 ] && grep -q "is a retired name, or the old name of a rename" "$1/schematest.err"
+}
+reader_refuses_retired() { # <file> <scope:name>
+    INCURSION_RETIRED_EXTRA="$2" "$BIN" -schemaload "$1" -timeout 60 < /dev/null > "$W/load.out" 2> "$W/load.err"
+    local rc=$?
+    [ "$rc" != 0 ] && grep -q "is a retired name, or the old name of a rename" "$W/load.err"
+}
+
+# 5. The static check of tools/check_save_names.py passes on this tree.
+static_passes() { python3 tools/check_save_names.py > "$W/static.out" 2>&1; }
 
 # 4. The two lists are the same.   -> 0 when equal
 lists_agree() { # <txt> <header>
@@ -121,6 +143,12 @@ if [ "$MODE" = check ]; then
         || fail "the reader did not refuse the unknown name $NEW"
     reader_loads "$W/unknown.sav" "$NEW" && ok "the reader ignores the retired name $NEW" \
         || fail "the reader refused the retired name $NEW: $(tail -1 "$W/load.err")"
+    FIRST="$(craft_unknown "$SAV" "$W/x.sav" asis)" || fail "could not name the first field"
+    reader_refuses_retired "$SAV" "$FIRST" && ok "the reader refuses an active request for the retired name $FIRST" \
+        || fail "the reader answered an active request for the retired name $FIRST"
+    writer_refuses_retired "$W/retw" "$FIRST" && ok "the writer refuses an active write of the retired name $FIRST" \
+        || fail "the writer wrote the retired name $FIRST"
+    static_passes && ok "$(cat "$W/static.out")" || fail "tools/check_save_names.py: $(cat "$W/static.out")"
     lists_agree tools/retired_field_names.txt inc/SaveRetiredNames.h && ok "tools/retired_field_names.txt and inc/SaveRetiredNames.h agree" \
         || fail "the two retired lists differ"
     [ "$FAILED" = 0 ] && echo "PASS" || echo "FAILED"
@@ -140,7 +168,11 @@ NEW="$(craft_unknown "$SAV" "$W/unknown.sav")"
 red "reader_refuses on the clean file" reader_refuses "$SAV" ""
 red "reader_refuses when the name is retired" reader_refuses "$W/unknown.sav" "$NEW"
 red "reader_loads on the unknown name" reader_loads "$W/unknown.sav" ""
+FIRST="$(craft_unknown "$SAV" "$W/x.sav" asis)"
+red "reader_refuses_retired when nothing is retired" reader_refuses_retired "$SAV" ""
+red "writer_refuses_retired when nothing is retired" writer_refuses_retired "$W/retw" ""
 sed 's/^Character SpellsU16$/Character SpellsU16x/' tools/retired_field_names.txt > "$W/wrong.txt"
 red "lists_agree on a changed txt" lists_agree "$W/wrong.txt" inc/SaveRetiredNames.h
+python3 tools/check_save_names.py --selftest > "$W/st.out" 2>&1 && ok "tools/check_save_names.py --selftest" || { cat "$W/st.out"; ST=1; }
 [ "$ST" = 0 ] && echo "SELFTEST PASS" || echo "SELFTEST FAILED"
 exit "$ST"

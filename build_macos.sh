@@ -20,6 +20,30 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
+# Refuse to compile a tree whose stored values or saved names collide (inc-cjos0
+# phase 7e, F10: a hand merge of two branches runs no hook and no gate, so this is
+# the one step every build passes). Exit 2 means "could not measure" (no master
+# ref, no python3): it warns and the build goes on. Any other failure stops the
+# build before a binary is written.
+PRECHECK_START=$SECONDS
+for chk in tools/check_define_dups.py tools/check_stored_values.py tools/check_save_names.py; do
+    if [ ! -f "$chk" ] || ! command -v python3 >/dev/null 2>&1; then
+        echo "build: WARNING $chk not run (missing file or python3); the build goes on"
+        continue
+    fi
+    rc=0
+    out="$(python3 "$chk" 2>&1)" || rc=$?
+    if [ "$rc" = 2 ]; then
+        echo "build: WARNING $chk could not measure (exit 2); the build goes on:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -3 | sed 's/^/    /'
+    elif [ "$rc" != 0 ]; then
+        echo "build: STOPPED by $chk (exit $rc); no binary was built:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -20 | sed 's/^/    /'
+        exit 1
+    fi
+done
+echo "build: stored values and saved names checked ($((SECONDS - PRECHECK_START))s)"
+
 # A diagnostic build gets its own binary and its own object directory, so it
 # never leaves half-instrumented objects behind for the next ordinary build:
 #     EXTRA_CXXFLAGS=-DPATH_PROBE OUT=incursion-path ./build_macos.sh

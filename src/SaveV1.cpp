@@ -114,8 +114,28 @@ static const V1Migration v1Migrations[] = {
 static std::string v1FileMigrations;   /* the loaded file's Migrations field */
 static std::string v1RanMigrations;    /* what the last load ran */
 
+/* Two rows under one name write the name twice and one recorded occurrence
+   satisfies both rows. Refuse at first use; tools/check_save_names.py refuses the
+   same table at build time. inc-cjos0 phase 7e (F11). */
+static void v1CheckMigrationNames(void)
+  {
+    static bool checked = false;
+    if (checked)
+      return;
+    for (size_t i = 0; i != V1_NMIGRATIONS; i++)
+      for (size_t j = i + 1; j != V1_NMIGRATIONS; j++)
+        if (!strcmp(v1Migrations[i].name, v1Migrations[j].name))
+          {
+            fprintf(stderr, "incursion: migration \"%s\" is registered twice "
+                    "(v1Migrations in src/SaveV1.cpp)\n", v1Migrations[i].name);
+            throw ECORRUPT;
+          }
+    checked = true;
+  }
+
 const char* SaveV1_MigrationList()
   {
+    v1CheckMigrationNames();
     static std::string all;
     all.clear();
     for (size_t i = 0; i != V1_NMIGRATIONS; i++)
@@ -135,6 +155,7 @@ const char* SaveV1_RanMigrations()
 /* Run every migration the file lacks; true when any ran. */
 bool SaveV1_RunMigrations(Player *pl)
   {
+    v1CheckMigrationNames();
     std::string have = "," + v1FileMigrations + ",";
     v1RanMigrations.clear();
     size_t pos = 0;
@@ -346,8 +367,35 @@ static void v1WSeenCheck(uint16 id)
     seen[id] = v1WStamp[d];
   }
 
+static bool v1NameRetired(const std::string &scope, const std::string &name);
+
+/* A retired name, or the old side of a rename, is never asked for again: a branch
+   that adds a field of that name would read (or write) the retired field's
+   bytes. tools/check_save_names.py refuses the literal case at build time; this
+   catches a name a macro argument carries. inc-cjos0 phase 7e (F01, F02). */
+static bool v1NameBarred(const std::string &scope, const std::string &name)
+  {
+    if (v1NameRetired(scope, name))
+      return true;
+    for (const RenamedFieldName *rn = RENAMED_FIELD_NAMES; rn->scope; rn++)
+      if (scope == rn->scope && name == rn->oldName)
+        return true;
+    return false;
+  }
+
+static void v1RefuseBarred(const char *what, const char *name)
+  {
+    fprintf(stderr,
+        "incursion: refusing to %s: field \"%s\" in scope \"%s\" is a retired "
+        "name, or the old name of a rename (tools/retired_field_names.txt)\n",
+        what, name, v1Path.c_str());
+    throw ECORRUPT;
+  }
+
 static uint16 v1WNameId(const char *name)
   {
+    if (v1NameBarred(v1Path, name))
+      v1RefuseBarred("write a save", name);
     std::string key = v1NameKey(v1Path, name);
     uint16 id;
     std::map<std::string, uint16>::iterator it = v1WIds.find(key);
@@ -1812,7 +1860,7 @@ static bool v1ConvertManifestRid(uint32 saved, rID *resolved, bool quiet = false
 /*             the resource memory segment record (phase 4)                 */
 /* ------------------------------------------------------------------------ */
 
-static const V1Ent* v1Find(const char *name, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* reader primitive, below; inc-cjos0 scan site */
+static const V1Ent* v1Find(const char *name, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE(), bool legacyRead = false);   /* reader primitive, below; inc-cjos0 scan site */
 
 /* Row kind -> wire pool byte, memory row stride, and packed payload size.
    Indexed by the row's kind byte (0 MonMem, 1 ItemMem, 2 EffMem, 3 RegMem).
@@ -2901,8 +2949,11 @@ static void v1ScanProbe(uint16 tag, uint8 kind, const char *file, int line)
       { fprintf(f, "%s %u %u %s:%d\n", v1Path.c_str(), (unsigned)tag, (unsigned)kind, file, line); fflush(f); }
   }
 
-static const V1Ent* v1Find(const char *name, int v1Line, const char *v1File)
+/* legacyRead: V1ArrayWiden16 reads a retired name on purpose; no other request may. */
+static const V1Ent* v1Find(const char *name, int v1Line, const char *v1File, bool legacyRead)
   {
+    if (!legacyRead && v1NameBarred(v1Path, name))
+      v1RefuseBarred("read a save", name);
     if (v1FrameDepth == 0)
       return NULL;
     uint16 tag;
@@ -3161,7 +3212,7 @@ void Registry::V1ArrayWiden16(const char *newName, const char *oldName, uint32 *
   {
     if (v1.mode != V1_LOAD)
       return;
-    const V1Ent *e = v1Find(oldName, v1Line, v1File);
+    const V1Ent *e = v1Find(oldName, v1Line, v1File, true);
     if (!e)
       return;
     if (e->kind != K_ARRAY)
