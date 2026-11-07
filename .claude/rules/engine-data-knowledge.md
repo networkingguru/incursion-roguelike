@@ -25,6 +25,6 @@ Why: the owner ruled that selling is not a mechanic, and raising it wastes his t
 History: docs/rules-history/engine-data-knowledge.md#nothing-is-sellable-except-gems. Bead inc-vpf9.
 
 ## epic-saves-are-disposable
-Only saves from master matter: the other players build from master. A save written by an epic build (such as `inc-pu6v`) is a playtest save and is disposable, Brian's own play saves in `~/Games/Incursion/save` included. A change MAY break an epic save. MUST NOT add a converter, choose a tag or resource position, keep a fixture, or ask Brian anything to keep an epic save loading. When an epic and master collide on a save number or resource position, the epic moves (see `inc-cjos0`).
+Only saves from master matter: the other players build from master. A save written by an epic build (such as `inc-pu6v`) is a playtest save and is disposable, Brian's own play saves in `~/Games/Incursion/save` included. A change MAY break an epic save. When a change breaks Brian's epic play saves, delete them from `~/Games/Incursion/save` at once, without asking; this overrides `brian-plays-from-his-own-folder` for that deletion only. MUST NOT add a converter, choose a tag or resource position, keep a fixture, or ask Brian anything to keep an epic save loading. When an epic and master collide on a save number or resource position, the epic moves (see `inc-cjos0`).
 Why: the owner playtests the epic only, and protecting its saves costs work and his time for nothing.
 History: docs/rules-history/engine-data-knowledge.md#epic-saves-are-disposable. Bead inc-1macr.
