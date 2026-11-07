@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # gate: cheap
 #
-# Does src/Create.cpp still branch on MO_RECREATE or on `reincarnate`?
+# Does src/Create.cpp still branch on MO_RECREATE or on `reincarnate`, and does
+# Resource::GrantGear in src/Annot.cpp still branch on MO_RECREATE?
 #
 # WHAT IS BEING PROVED. Every character-creation decision goes through the
 # creation source (inc/CreationSource.h, src/CreationSource.cpp): a site calls
@@ -21,11 +22,12 @@
 # R) are not branches and are not flagged.
 #
 # fact: the text of src/Create.cpp -- read from the working tree by grep; no game run, no seed, no map
+# fact: the text of Resource::GrantGear in src/Annot.cpp -- read from the working tree by awk and grep; no game run, no seed, no map
 # fact: which tokens count as a branch -- the two patterns above, fixed in this file
 #
 # Usage: tools/check_creation_source_sites.sh [--selftest]
-#        --selftest copies src/Create.cpp, adds one branch of each kind, and
-#        proves this script goes red on each copy.
+#        --selftest copies src/Create.cpp and src/Annot.cpp, adds one branch of
+#        each kind, and proves this script goes red on each copy.
 # Exit: 0 no branch; 1 a branch is present; 2 could not measure.
 set -uo pipefail
 
@@ -33,6 +35,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
 FILE="${CREATION_SOURCE_SITES_FILE:-src/Create.cpp}"
+GEAR_FILE="${CREATION_SOURCE_SITES_GEAR_FILE:-src/Annot.cpp}"
 
 scan() {
     local f="$1"
@@ -57,6 +60,24 @@ scan() {
     return $bad
 }
 
+# MO_RECREATE inside the body of Resource::GrantGear: from its definition at
+# column 0 to the first line that is exactly two spaces and a closing brace.
+scan_gear() {
+    local f="$1"
+    [ -f "$f" ] || { echo "INCONCLUSIVE: $f is not there"; return 2; }
+    local body
+    body="$(awk '/^void Resource::GrantGear\(/ {on=1} on {print NR ": " $0} on && /^  }[[:space:]]*$/ {exit}' "$f")"
+    [ -n "$body" ] || { echo "INCONCLUSIVE: Resource::GrantGear is not in $f"; return 2; }
+    local hits
+    hits="$(printf '%s\n' "$body" | grep -E 'MO_RECREATE')" || true
+    if [ -n "$hits" ]; then
+        echo "FAIL: MO_RECREATE in Resource::GrantGear in $f (use the creation source):"
+        printf '%s\n' "$hits" | sed 's/^/  /'
+        return 1
+    fi
+    return 0
+}
+
 if [ "${1:-}" = "--selftest" ]; then
     tmp="$(mktemp -d)"
     trap 'rm -rf "$tmp"' EXIT
@@ -70,13 +91,22 @@ if [ "${1:-}" = "--selftest" ]; then
             echo "selftest: mutation $c was NOT caught"; fail=1
         fi
     done
-    [ $fail -eq 0 ] && echo "selftest: all 3 mutations caught"
+    scan_gear "$GEAR_FILE" > /dev/null || { echo "selftest: the real GrantGear already fails"; exit 1; }
+    sed '/t = (time_t)NextSeed();/a\
+    if (T1->GetMode() == MO_RECREATE) { }' "$GEAR_FILE" > "$tmp/d.cpp"
+    if scan_gear "$tmp/d.cpp" > /dev/null; then
+        echo "selftest: mutation d (MO_RECREATE in GrantGear) was NOT caught"; fail=1
+    fi
+    [ $fail -eq 0 ] && echo "selftest: all 4 mutations caught"
     exit $fail
 fi
 
 out="$(scan "$FILE")"; rc=$?
 [ -n "$out" ] && echo "$out"
+gout="$(scan_gear "$GEAR_FILE")"; grc=$?
+[ -n "$gout" ] && echo "$gout"
+[ $grc -gt $rc ] && rc=$grc
 if [ $rc -eq 0 ]; then
-    echo "PASS: no MO_RECREATE or reincarnate branch in $FILE"
+    echo "PASS: no MO_RECREATE or reincarnate branch in $FILE, none in GrantGear in $GEAR_FILE"
 fi
 exit $rc

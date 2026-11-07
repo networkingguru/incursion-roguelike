@@ -52,6 +52,7 @@ struct CreationBinding {
     int off, width, stride, count;
     bool isText;
     const char *constText;
+    bool equip;   /* one shared cursor over RInf.EquipRolls (GrantGear) */
 };
 static CreationBinding bindings[CK_COUNT];
 static bool bindingsReady = false;
@@ -71,6 +72,7 @@ static void InitBindings()
         bindings[k].off = -1; bindings[k].width = 0;
         bindings[k].stride = 0; bindings[k].count = 0;
         bindings[k].isText = false; bindings[k].constText = NULL;
+        bindings[k].equip = false;
     }
     Bind(CK_FORMULA_SEED, (int)offsetof(ReincarnationInfo, formulaSeed), 4);
     Bind(CK_STORE_SEED,   (int)offsetof(ReincarnationInfo, storeSeed), 4);
@@ -83,6 +85,10 @@ static void InitBindings()
     for (int i = 0; i != 7; i++)
         Bind((CreationKey)(CK_ATTR_STR + i),
              (int)offsetof(ReincarnationInfo, Attr) + i, 1);
+    /* GrantGear's stream seed and its NN% rolls share RInf.EquipRolls, in the
+       order the draws are made: one cursor, not one array per key. */
+    bindings[CK_GEAR_STREAM].equip = true;
+    bindings[CK_GEAR_CHANCE].equip = true;
     Bind(CK_CHARACTER_NAME, (int)offsetof(ReincarnationInfo, Name), 32);
     bindings[CK_CHARACTER_NAME].isText = true;
     /* A reincarnation never opens the option screen and never asks the
@@ -94,6 +100,11 @@ static void InitBindings()
 static bool ReadBinding(CreationKey k, int ordinal, int32 &v)
 {
     const CreationBinding &b = bindings[k];
+    if (b.equip) {
+        v = RInf.EquipRolls[RInf.nEquipRolls++];
+        ASSERT(RInf.nEquipRolls < 256);
+        return true;
+    }
     if (b.off < 0 || b.isText || ordinal < 0 || ordinal >= b.count)
         return false;
     const char *src = (const char*)&RInf + b.off + ordinal * b.stride;
@@ -107,6 +118,11 @@ static bool ReadBinding(CreationKey k, int ordinal, int32 &v)
 static void WriteBinding(CreationKey k, int ordinal, int32 v)
 {
     const CreationBinding &b = bindings[k];
+    if (b.equip) {
+        RInf.EquipRolls[RInf.cEquipRolls++] = (int8)v;
+        ASSERT(RInf.cEquipRolls < 256);
+        return;
+    }
     if (b.off < 0 || b.isText || ordinal < 0 || ordinal >= b.count)
         return;
     char *dst = (char*)&RInf + b.off + ordinal * b.stride;
@@ -177,6 +193,29 @@ static void Emit(CreationKey k, const CreationContext &c, const std::string &tex
     recorded.push_back(d);
 }
 
+/* The engine's own table choice (Debug.cpp quality entry, Dump.cpp): armor and
+   shields use AQ, weapons, missiles and bows use WQ, then IQ for the rest. */
+static const char *FindName(TextVal *list, int q)
+{
+    for (; list->Text; list++)
+        if (list->Val == q)
+            return list->Text;
+    return NULL;
+}
+
+static std::string QualityName(rID iID, int q)
+{
+    const char *n = NULL;
+    int t = iID ? TITEM(iID)->IType : 0;
+    if (t == T_ARMOUR || t == T_SHIELD)
+        n = FindName(AQ_CONSTNAMES, q);
+    else if (t == T_WEAPON || t == T_MISSILE || t == T_BOW)
+        n = FindName(WQ_CONSTNAMES, q);
+    if (!n)
+        n = FindName(IQ_CONSTNAMES, q);
+    return n ? std::string(n) : std::string((const char*)Format("%d", q));
+}
+
 static std::string ItemText(const CreationItem &it)
 {
     std::string s = it.iID ? NAME(it.iID) : "none";
@@ -184,9 +223,16 @@ static std::string ItemText(const CreationItem &it)
     if (it.plus) s += Format(", plus %d", (int)it.plus);
     if (it.bane) s += Format(", bane %d", (int)it.bane);
     for (int i = 0; i != 8; i++)
-        if (it.q[i]) s += Format(", quality %d", (int)it.q[i]);
+        if (it.q[i]) s += ", quality " + QualityName(it.iID, it.q[i]);
     if (it.quantity) s += Format(", quantity %d", (int)it.quantity);
     if (it.charges) s += Format(", charges %d", (int)it.charges);
+    for (size_t i = 0; i != it.stati.size(); i++) {
+        const CreationStati &st = it.stati[i];
+        const char *nm = Lookup(STATI_CONSTNAMES, st.nature);
+        s += Format(", stati %s val %d mag %d duration %d",
+            nm ? nm : "?", (int)st.val, (int)st.mag, (int)st.duration);
+        if (st.eID) s += std::string(" effect ") + NAME(st.eID);
+    }
     return s;
 }
 
@@ -470,11 +516,35 @@ CreationWindow::~CreationWindow()
 
 bool CreationWindowOpen() { return windowOpen; }
 
+static int itemDepth = 0;
+CreationItemDepth::CreationItemDepth() { itemDepth++; }
+CreationItemDepth::~CreationItemDepth() { itemDepth--; }
+bool CreationInsideItem() { return itemDepth > 0; }
+
+void CreationDescribeItem(CreationItem &io, Item *it)
+{
+    if (!windowOpen || !it)
+        return;
+    io.iID = it->iID; io.eID = it->eID;
+    io.plus = it->GetInherentPlus();
+    io.bane = it->GetBane();
+    for (int i = 0; i != 8; i++) io.q[i] = it->GetQuality(i);
+    io.quantity = (int32)it->GetQuantity();
+    io.charges = it->GetCharges();
+    io.stati.clear();
+    StatiIter(it)
+        CreationStati st;
+        st.nature = S->Nature; st.val = S->Val; st.mag = S->Mag;
+        st.duration = S->Duration; st.eID = S->eID;
+        io.stati.push_back(st);
+    StatiIterEnd(it)
+}
+
 /* ---- the primitive halves -------------------------------------------------- */
 
 bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return false;
     CreationContext c = MakeContext(k, sub);
     if (!activeSource->AnswerRoll(k, c, v))
@@ -485,7 +555,7 @@ bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v)
 
 void CreationNoteRoll(CreationKey k, const char *sub, int32 v)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return;
     CreationContext c = MakeContext(k, sub);
     activeSource->NoteRoll(k, c, v);
@@ -495,7 +565,7 @@ void CreationNoteRoll(CreationKey k, const char *sub, int32 v)
 bool CreationAnswerPick(CreationKey k, const char *sub, const CreationPickList &list,
     int32 &value, std::string &text, bool &inList)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return false;
     CreationContext c = MakeContext(k, sub);
     if (!activeSource->AnswerPick(k, c, list, value, text, inList))
@@ -506,7 +576,7 @@ bool CreationAnswerPick(CreationKey k, const char *sub, const CreationPickList &
 
 void CreationNotePick(CreationKey k, const char *sub, const std::string &text)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return;
     CreationContext c = MakeContext(k, sub);
     activeSource->NotePick(k, c, text);
@@ -515,7 +585,7 @@ void CreationNotePick(CreationKey k, const char *sub, const std::string &text)
 
 bool CreationAnswerItem(CreationKey k, const char *sub, CreationItem &it)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return false;
     CreationContext c = MakeContext(k, sub);
     if (!activeSource->AnswerItem(k, c, it))
@@ -526,7 +596,7 @@ bool CreationAnswerItem(CreationKey k, const char *sub, CreationItem &it)
 
 void CreationNoteItem(CreationKey k, const char *sub, const CreationItem &it)
 {
-    if (!windowOpen)
+    if (!windowOpen || itemDepth > 0)
         return;
     CreationContext c = MakeContext(k, sub);
     activeSource->NoteItem(k, c, it);

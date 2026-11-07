@@ -82,6 +82,7 @@ if [ "$REINC" -eq 1 ]; then
 fi
 O18=tools/fixtures/options-2026-08-18.dat
 GATE=tools/gates/Options.Dat
+KIT=tools/fixtures/options-2026-08-22-kit.dat   # OPT_BEGINKIT on (spec B17)
 
 WALKS=(
   "orc-barbarian-s1-o22   tools/keys/chargen-default-save.keys      1  $O22"
@@ -98,6 +99,16 @@ WALKS=(
   "earthsinger-s3-o22     tools/keys/prestige-earthsinger-save.keys 3  $O22"
   "orc-mage-s4-gate       tools/keys/chargen-mage-save.keys         4  $GATE"
   "orc-barbarian-s3-gate  tools/keys/chargen-default-save.keys      3  $GATE"
+  # Phase 5: gear, kit and missile counts. The Drow ranger reaches the
+  # "of random 3 to 4" weapon (lib/races.irh:61-65) and NN% gear lines; the
+  # three -kit walks run with the Beginner's Kit on.
+  "drow-ranger-twf-s1-o22 tools/keys/ranger-twf-gear-save.keys      1  $O22"
+  "drow-priest-s1-o22     tools/keys/command-pools.keys             1  $O22"
+  "drow-mage-hunger-s4-o22 tools/keys/hunger-walk.keys              4  $O22"
+  "human-ranger-s1-o22    tools/keys/kit-ranger.keys                1  $O22"
+  "drow-ranger-twf-s1-kit tools/keys/ranger-twf-gear-save.keys      1  $KIT"
+  "human-ranger-s1-kit    tools/keys/kit-ranger.keys                1  $KIT"
+  "orc-barbarian-s1-kit   tools/keys/chargen-default-save.keys      1  $KIT"
 )
 
 fail=0

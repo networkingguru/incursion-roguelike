@@ -74,7 +74,15 @@
     X(EXPLORE_MODE,     ROLL) \
     X(REROLLS,          ROLL) \
     X(REROLLED_PERKS,   ROLL) \
-    X(STAT_METHOD,      ROLL)
+    X(STAT_METHOD,      ROLL) \
+    X(GEAR_STREAM,      ROLL) \
+    X(GEAR_CHANCE,      ROLL) \
+    X(KIT_ITEM,         ITEM) \
+    X(BEGINKIT_ITEM,    ITEM) \
+    X(BEGINKIT_FOOD,    ROLL) \
+    X(MISSILE_QUANTITY, ROLL) \
+    X(THROWN_QUANTITY,  ROLL) \
+    X(AMMO_QUANTITY,    ROLL)
 
 enum CreationKey {
 #define X(n,k) CK_##n,
@@ -114,12 +122,21 @@ struct CreationPickList {
     void Clear() { names.clear(); values.clear(); }
 };
 
+/* One status a script set on a generated item (spec section 7 gap 4: the
+   poison duration of a vial). */
+struct CreationStati {
+    int16 nature;
+    int32 val, mag, duration;
+    rID   eID;
+};
+
 /* A generated item, described completely (spec B2, B15). */
 struct CreationItem {
     rID   iID, eID;
     int16 plus, bane;
     int16 q[8];
     int32 quantity, charges;
+    std::vector<CreationStati> stati;
     CreationItem() : iID(0), eID(0), plus(0), bane(0), quantity(0), charges(0)
         { for (int i = 0; i != 8; i++) q[i] = 0; }
 };
@@ -171,6 +188,19 @@ struct CreationWindow {
     ~CreationWindow();
 };
 bool CreationWindowOpen();
+/* Fill `io` from a generated item: item, effect, plus, bane, qualities,
+   quantity, charges and every status on it. Does nothing outside the window
+   or for a NULL item, so a site calls it without a guard. */
+void CreationDescribeItem(CreationItem &io, Item *it);
+
+/* While a SourcedItem's `live` runs, the item is the one decision: a primitive
+   called inside it acts Live and records nothing (spec B2). SourcedItem sets
+   this depth; the halves below read it. */
+struct CreationItemDepth {
+    CreationItemDepth();
+    ~CreationItemDepth();
+};
+bool CreationInsideItem();
 
 /* The halves the primitives are built from. Answer returns false for
    NOT_RECORDED; a successful Answer or a Note advances the ordinal. */
@@ -220,7 +250,10 @@ void SourcedItem(CreationKey k, CreationItem &io, Live live, const char *sub = N
 {
     if (CreationAnswerItem(k, sub, io))
         return;
-    live(io);
+    {
+        CreationItemDepth inside;
+        live(io);
+    }
     CreationNoteItem(k, sub, io);
 }
 

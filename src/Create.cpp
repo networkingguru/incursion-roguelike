@@ -646,18 +646,26 @@ static void GrantBeginnerKit(Player *p)
                     n = 1;
                 }
             }
-            Item *it = Item::Create(iID);
+            Item *it = NULL;
+            CreationItem made;
+            SourcedItem(CK_BEGINKIT_ITEM, made, [&](CreationItem &io) {
+                it = Item::Create(iID);
+                if (!it)
+                    return;
+                it->MakeMagical(eID, it->GetInherentPlus());
+                it->SetQuantity(n);
+                it->IFlags &= (IF_CURSED | IF_BLESSED);
+                CreationDescribeItem(io, it);
+            });
             if (!it)
                 continue;
-            it->MakeMagical(eID, it->GetInherentPlus());
-            it->SetQuantity(n);
-            it->IFlags &= (IF_CURSED | IF_BLESSED);
             p->GainItem(it, true);
         }
     Item *food = Item::Create(FIND("food ration"));
     if (food)
     {
-        food->SetQuantity(Dice::Roll(3, 2, 4));
+        food->SetQuantity(SourcedRoll(CK_BEGINKIT_FOOD,
+            []() { return (int32)Dice::Roll(3, 2, 4); }));
         p->GainItem(food, true);
     }
 }
@@ -1361,9 +1369,11 @@ RepeatAlignment:
             /* ww: halflings focus with the 'rock' which counts as a missile.
             * But having just one rock isn't that exciting. */
             if (item->isType(T_MISSILE))
-                item->SetQuantity(80 + random(20));
+                item->SetQuantity(SourcedRoll(CK_MISSILE_QUANTITY,
+                    []() { return (int32)(80 + random(20)); }));
             else if (item->isGroup(WG_THROWN))
-                item->SetQuantity(4 + random(4));
+                item->SetQuantity(SourcedRoll(CK_THROWN_QUANTITY,
+                    []() { return (int32)(4 + random(4)); }));
             GainItem(item,true);
 SkipThisFocus:;
         }
@@ -1391,7 +1401,8 @@ SkipThisFocus:;
         * and 180 arrows equals out to a lifetime supply of poison! Bad for
         * balance. Fourty arrows seems roughly like a sensible "full quiver"
         * anyway. */
-        ammo->SetQuantity(30 + random(11));
+        ammo->SetQuantity(SourcedRoll(CK_AMMO_QUANTITY,
+            []() { return (int32)(30 + random(11)); }));
         ammo->MakeKnown(-1);
         GainItem(ammo,true);
     }
