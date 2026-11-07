@@ -418,8 +418,8 @@ Repaired on load, and nothing else is:
 | pointer to an owned heap block | src/Registry.cpp:376, via the 7 direct `r.Block` sites plus every `FIELD_BLOB`/`FIELD_OBJ` line's v0 branch (inc/Base.h:794-799) |
 | `Thing::m` from `Thing::hm` | inc/Map.h:981 |
 | `Player::MyTerm = T1` | inc/Creature.h:1584 |
-| `Module` resource caches zeroed | inc/Res.h:840-841, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:806), so the zeroing in `Module()` (inc/Res.h:923-924) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
-| module text segment un-inverted | inc/Res.h:912-916 |
+| `Module` resource caches zeroed | inc/Res.h:841-842, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:806), so the zeroing in `Module()` (inc/Res.h:924-925) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
+| module text segment un-inverted | inc/Res.h:913-917 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1583 |
 
 NOT repaired on the v0 path, whose only validation is the group-header
@@ -427,7 +427,7 @@ range check at src/Registry.cpp:912-922:
 
 - **Every `hObj` and `rID` field.** `Thing::Next`, `Thing::hm`
   (inc/Map.h:985), `Item::Parent` (inc/Item.h:44), `Container::Contents`
-  (inc/Item.h:359), `Game::m[]`, `Game::p[]` (inc/Res.h:1308),
+  (inc/Item.h:359), `Game::m[]`, `Game::p[]` (inc/Res.h:1309),
   `TargetSystem`'s per-target `data` (inc/Target.h:169-187). These are
   plain numbers and the v0 loader reproduces them byte for byte. **A handle
   that was wrong when the file was written stays wrong after every future
@@ -463,7 +463,7 @@ range check at src/Registry.cpp:912-922:
    FIXPOINT by tools/check_v1_full_roundtrip.sh, field-aware, with a
    documented allowlist of clock/profiling fields.)
 3. **Resource tables carry no code pointers.** `Resource` has no virtual
-   function (the sole candidate is commented out at inc/Res.h:296), so a
+   function (the sole candidate is commented out at inc/Res.h:297), so a
    module data block holds no vptr for the loader to fail to repair.
 4. **Saving allocates handles.** `RegisterBlock` takes `LastUsedHandle++`
    per block (src/Registry.cpp:555) and the new value is written to `gh.LastHandle`
@@ -547,7 +547,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
 7. **Fixed.** `CFile::Seek` now tests `realloc`'s return value and throws
    `EMEMORY` (src/Term.cpp:3718-3729). It still has no caller in
    src/Registry.cpp, so it is unreached today.
-8. inc/Res.h:842-844 vs :912-916 — `SaveModule` inverts `QTextSeg` in
+8. inc/Res.h:843-845 vs :912-916 — `SaveModule` inverts `QTextSeg` in
    place on the save pass, but the restore pass runs with `saveMode` and
    `loadMode` both false (`SaveFixupScope::Restore`,
    src/Registry.cpp:194-200), so neither branch runs and the segment stays

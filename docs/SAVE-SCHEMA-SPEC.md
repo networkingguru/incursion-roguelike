@@ -257,7 +257,7 @@ save was written. It is a record of the modules **as they were at save time**,
 written once per file, not once per reference.
 
 **How the reader finds a slot's entry.** By tag number. The manifest lives
-inside the existing per-module scope, tag 816 (`inc/Res.h:1257`), where module
+inside the existing per-module scope, tag 816 (`inc/Res.h:1258`), where module
 slot `i` is already written as inner tag `1+i`. The slot number is the
 addressing and it comes from the top 8 bits of the `rID` itself: to convert a
 reference in slot 3, the reader reads inner tag 4. There is no name lookup and
@@ -274,7 +274,7 @@ alongside the segment record already there:
 
 **The module's identity is not in the manifest and MUST NOT be copied into it.**
 It is already recorded in `ModFiles`, tag 868, whose `ModuleRecord`
-(`inc/Res.h:1112`) holds `Slot`, `hMod` and `FName[1024]`. Duplicating it would
+(`inc/Res.h:1113`) holds `Slot`, `hMod` and `FName[1024]`. Duplicating it would
 create a second copy to disagree with the first. The manifest's names are a
 stronger identity check than a filename anyway: a file renamed on disk changes
 nothing the format cares about, and a file with the same name but different
@@ -365,11 +365,11 @@ diff.
 ### The resource memory segment
 
 `Game::Serialize` writes each module's `MDataSeg` as one raw block
-(`inc/Res.h:1266-1267`). The block is the module's script data segment followed
+(`inc/Res.h:1267-1268`). The block is the module's script data segment followed
 by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
 `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
 position (`Module::GetMemoryPtr`, `src/Res.cpp:754`). `EffMem`
-(`inc/Res.h:1449`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
+(`inc/Res.h:1450`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
 assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:343`).
 This is the identification state: which potion looks like what, and what the
 player has tried and knows.
@@ -670,7 +670,7 @@ be converted.
    one. Tags and kinds cost about 3 bytes per field on top.
 7. **No runtime check that `mod/Incursion.Mod` was built by the running
    binary.** There is a file signature and range sanity checks
-   (`inc/Res.h:872`), but no ABI digest. A stale module with a new binary is
+   (`inc/Res.h:873`), but no ABI digest. A stale module with a new binary is
    undefined behaviour rather than a refusal. Out of scope here; tracked
    separately.
 

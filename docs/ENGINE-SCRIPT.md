@@ -37,7 +37,7 @@ configuration (`build.bat:67-74`) and by `build.sh:125-129`. Stage 3 has no
 into any distributed binaries" (`:3`). `src/Tokens.cpp` and `src/yygram.cpp`
 carry no such guard, and `src/yygram.cpp` calls `AllocString()` and
 `AllocRegister()` unconditionally (`:7857`, `:8554`). Both functions live
-inside the guarded block (`src/RComp.cpp:1529`, `src/RComp.cpp:1511`), so dropping `DEBUG`
+inside the guarded block (`src/RComp.cpp:1563`, `src/RComp.cpp:1545`), so dropping `DEBUG`
 alone fails the link. Each build answers that by excluding whole files.
 **The macOS build takes a `COMPILER` switch** (`build_macos.sh:167`).
 `COMPILER=yes`, the default, defines `DEBUG` and compiles every source
@@ -58,18 +58,18 @@ only works in debug builds" -- holds for Windows Release and for
    `.gitignore` lists `lib/program.i` (`.gitignore:24`) and `mod/*.Mod` (`.gitignore:28`), not it.
    `-compile` edits a source the *next* C++ build consumes.
 2. **Function IDs are positional.** `MemFuncID` and `MemVarID` are counters
-   bumped in declaration order (`lang/Grammar.acc:1262`, `:1270`, `:1291`,
-   `:1312`), reset per run (`lang/Grammar.acc:190`). Reordering `inc/Api.h` renumbers every ID,
+   bumped in declaration order (`lang/Grammar.acc:1271`, `:1270`, `:1291`,
+   `:1312`), reset per run (`lang/Grammar.acc:199`). Reordering `inc/Api.h` renumbers every ID,
    as its own warning at `inc/Api.h:6-12` says.
 3. **`rID` is the module slot in the top byte, a flat index below.** `Game::Get`
    takes the slot as `(xID >> 24) - 1`, range-checks it, then calls
    `Modules[slot]->GetResource(xID)` (`src/Res.cpp:348-354`); `__GetResource`
    masks with `0x00FFFFFF` and walks the 21 arrays in the fixed order at
-   `inc/Res.h:945-965` (`src/Res.cpp:110`).
+   `inc/Res.h:946-966` (`src/Res.cpp:110`).
 4. **The module is raw struct bytes.** `SaveGroup` writes `typeSize(Type)` bytes
    straight out of the object (`src/Registry.cpp:768`); `Module::ARCHIVE_CLASS`
    hands each resource array over as one block of `sizeof(TMonster)*szMon` and
-   so on (`inc/Res.h:874-894`). Rebuild per platform, per ABI. `src/AbiCheck.cpp`
+   so on (`inc/Res.h:875-895`). Rebuild per platform, per ABI. `src/AbiCheck.cpp`
    pins the widths and five bitfield structs, and says plainly it does not make
    the format portable (`:21-24`).
 5. **The only gate on the file is a layout digest**: `LoadGroup` throws
@@ -80,7 +80,7 @@ only works in debug builds" -- holds for Windows Release and for
    `"0.6.9Y19"` (`inc/Defines.h:23`), is refused since inc-vqla
    (`src/Registry.cpp:66`).
    The text segment is also stored bitwise-inverted, negated on save and again
-   on load (`inc/Res.h:844`, `inc/Res.h:916`), so `strings` on the file shows nothing.
+   on load (`inc/Res.h:845`, `inc/Res.h:917`), so `strings` on the file shows nothing.
 
 ## Counts
 
@@ -122,6 +122,6 @@ No claim here needed a binary run.
    defines empty `CallMemberFunc`, `GetMemberVar` and `SetMemberVar` when
    `DISPATCH` is undefined -- no warning, scripts just stop having effects.
 3. **`GenerateDispatch` checks the `fopen` and nothing after it**
-   (`src/RComp.cpp:623-624`, `fclose` at `src/RComp.cpp:993`), so a full disk yields a
+   (`src/RComp.cpp:623-624`, `fclose` at `src/RComp.cpp:998`), so a full disk yields a
    truncated `dispatch.h` the next build consumes as complete. `AddDebugInfo`
    is gated by `if (1)` at `src/RComp.cpp:539`.

@@ -56,8 +56,8 @@ The block has two parts, in this order (Traced):
    replaces with name-keyed records; this note is only about part 1 in front of
    them.
 
-`szDataSeg` is a serialized field of the `Module` object (`inc/Res.h:852`,
-`FIELD_I32(2, szDataSeg)`; declared at `inc/Res.h:992`).
+`szDataSeg` is a serialized field of the `Module` object (`inc/Res.h:853`,
+`FIELD_I32(2, szDataSeg)`; declared at `inc/Res.h:993`).
 
 ## How it is written
 
@@ -70,10 +70,10 @@ central finding.)
 - `Module` is created with `new Module`, and `Object::operator new` zeroes the
   whole allocation (`inc/Base.h:694`, `memset(vp,0,sz + pad)`). So `szDataSeg`
   starts at 0 and, absent any assignment, stays 0 through compile and through
-  the serialize at `inc/Res.h:852`.
+  the serialize at `inc/Res.h:853`.
 - The VM's global-variable machinery does exist: the grammar assigns each
-  global an address `Address = HeapHead++` (`lang/Grammar.acc:1363`, generated
-  into `src/yygram.cpp:7797`), where `HeapHead` is a plain counter starting at 0
+  global an address `Address = HeapHead++` (`lang/Grammar.acc:1372`, generated
+  into `src/yygram.cpp:7808`), where `HeapHead` is a plain counter starting at 0
   (`src/RComp.cpp:65`). But `HeapHead` is never written back into `szDataSeg`.
   The compiler counts globals and forgets the count.
 
@@ -92,7 +92,7 @@ harness (`scratchpad/modpeek3.c`) decompresses the group with the game's own
 the `Module` struct image. The read is cross-checked: the `szTextSeg` value must
 equal the size of the module's `QTextSeg` data node, and it does, which fixes
 the field offset beyond doubt. The `Module` struct is 49464 bytes, matching the
-pin at `inc/Res.h:837`.
+pin at `inc/Res.h:838`.
 
 Three modules, all built at HEAD `0e62b33`:
 
@@ -137,7 +137,7 @@ Nothing, and it could not, even if the segment were non-empty. (Q3.)
 - **Today: there is no content.** With `szDataSeg == 0` the segment is
   0 bytes, so there is nothing to renumber. (Observed.)
 - **Hypothetically, if globals were wired up:** the data segment would hold VM
-  global variables addressed by `HeapHead` index (`lang/Grammar.acc:1363`),
+  global variables addressed by `HeapHead` index (`lang/Grammar.acc:1372`),
   assigned in *global-declaration order*, not resource order. Adding or removing
   an `Effect`/`Item`/`Monster` does not add or remove a global, so it cannot
   move a global's address. The data segment is welded to the *global-variable

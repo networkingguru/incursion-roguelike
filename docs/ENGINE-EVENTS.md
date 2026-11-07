@@ -55,13 +55,13 @@ in the build.**
 `EventInfo EventStack[EVENT_STACK_SIZE]`, `EventSP` starting at -1 (`src/Event.cpp:135-136`); the size is 128
 (`inc/Defines.h:79`). The only bound is `CHECK_OVERFLOW` (`src/Event.cpp:133`), which calls `Fatal("Event Stack Overflow!")` and
 exits. There is no depth budget, no recursion counter and no cycle detection in `src/Event.cpp`. Unrelated code reads frames
-assuming the enclosing context: `src/Fight.cpp:898-905`, `src/Prayer.cpp:589`, `src/Skills.cpp:1772`, `src/Target.cpp:1771`.
+assuming the enclosing context: `src/Fight.cpp:915-922`, `src/Prayer.cpp:589`, `src/Skills.cpp:1772`, `src/Target.cpp:1771`.
 
 ## Re-entrancy
 **The system has no general protection against re-entrancy.** Shared by every nested event: `VMachine::Regs[64]`, `SRegs[64]`,
-`Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1324`);
+`Stack[8192]`, `Memory`, `szMemory` are `static` (`inc/Res.h:66-74`) with one VM instance, `theGame->VM` (`inc/Res.h:1325`);
 `Execute` saves and restores only `Regs[63]` (`src/VMachine.cpp:459`, `:522-530`). `Resource::cAnnot`, `cAnnot2` and `EvMsg[64]`
-are `static` on `Resource` (`inc/Res.h:228-229`) — one annotation cursor for the whole game. The code says so: "Nested
+are `static` on `Resource` (`inc/Res.h:229-230`) — one annotation cursor for the whole game. The code says so: "Nested
 FAnnot/NAnnot doesn't normally [work]" (`src/Annot.cpp:619-621`); `FAnnot2` is a one-level kludge, and depth 3 has no cursor.
 `Thing::PlaceNear` holds `static Creature* Displace[64]` (`src/Display.cpp:456`) and re-enters itself via `PlaceAt` (`:611`),
 which the code notes can overflow the C stack (`:605-607`). Only three places are protected: `StatiCollection::Nested` defers
@@ -84,7 +84,7 @@ generation-0 parent every time, and the generation cap at `src/Creature.cpp:556`
 **2. `Player::MoveDepth` re-enters itself. Fixed (inc-upw.15, closed as a duplicate of inc-x9i).** `MoveDepth`
 (`src/Feature.cpp:1385`) calls `PlaceAt` (`:1659`) -> `PlaceAt` throws `EV_PLACE`/`EV_FIELDON` (`src/Display.cpp:240`, `:330`) and
 calls `TerrainEffects` (`:393`) -> a portal or terrain handler calls `MoveDepth` again (`src/Feature.cpp:475`;
-`src/Move.cpp:1585`, inside `Creature::TerrainEffects` at `src/Move.cpp:1446`). The re-entry path is ordinary event dispatch; no
+`src/Move.cpp:1592`, inside `Creature::TerrainEffects` at `src/Move.cpp:1453`). The re-entry path is ordinary event dispatch; no
 C++ call from `MoveDepth` to `MoveDepth` exists. *Invariant violated:* a function its caller can re-enter must hold no
 call-lifetime state in `static` storage. The follower array is now local, `Thing *GoWith[64]` (`src/Feature.cpp:1405`), bounded at
 `:1552`; `static Creature* Displace[64]` (`src/Display.cpp:456`) still violates it. *Fix:* the re-entry was not the cause. The
