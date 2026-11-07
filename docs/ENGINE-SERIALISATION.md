@@ -419,7 +419,7 @@ Repaired on load, and nothing else is:
 | `Thing::m` from `Thing::hm` | inc/Map.h:981 |
 | `Player::MyTerm = T1` | inc/Creature.h:1584 |
 | `Module` resource caches zeroed | inc/Res.h:841-842, in `Module::Serialize`, which runs on load as well as save. A load builds the object with the empty `ARCHIVE_CLASS` constructor (inc/Base.h:806), so the zeroing in `Module()` (inc/Res.h:924-925) runs only for the module the resource compiler creates (src/RComp.cpp:141) |
-| module text segment un-inverted | inc/Res.h:913-917 |
+| module text segment un-inverted | inc/Res.h:915-917 |
 | garbage payload in a loaded `Target` | src/Registry.cpp:1017-1018, src/Target.cpp:1583 |
 
 NOT repaired on the v0 path, whose only validation is the group-header
@@ -547,7 +547,7 @@ grep -n "virtual" inc/Res.h | head -3                                   # first 
 7. **Fixed.** `CFile::Seek` now tests `realloc`'s return value and throws
    `EMEMORY` (src/Term.cpp:3718-3729). It still has no caller in
    src/Registry.cpp, so it is unreached today.
-8. inc/Res.h:843-845 vs :912-916 — `SaveModule` inverts `QTextSeg` in
+8. inc/Res.h:843-845 vs :915-917 — `SaveModule` inverts `QTextSeg` in
    place on the save pass, but the restore pass runs with `saveMode` and
    `loadMode` both false (`SaveFixupScope::Restore`,
    src/Registry.cpp:194-200), so neither branch runs and the segment stays
