@@ -1,0 +1,378 @@
+# Fixture builder: characters built from a text file (inc-10v7f)
+
+Version 2. Version 1 was reviewed by two independent reviewers (bead notes,
+2026-11-06); every Critical and Major finding is folded in below, and the
+section that answers it names the finding (R = resilience review, K =
+code-grounded review).
+
+## Problem
+
+A character fixture (`tools/fixtures/chars/<name>.sav`) is made today by
+walking the character creation screens with a key script on a seed
+(`tools/make_char_fixture.sh`). When the save format or the game code
+changes, the only repair is to walk the screens again, and the walk then
+rolls differently. In the inc-pu6v.369 merge, 16 epic fixtures stopped
+loading after a save-tag move; regenerating them gave 6 different
+characters, lost the drow fixture's Call Companions perk, and broke 12
+checks. The automatic rebuild in the epic's `tools/headless.sh` (inc-zto3q)
+reruns the same walk and has the same flaw.
+
+## Goals (owner's rulings, 2026-11-06, bead notes)
+
+- G1. A fixture is a committed text file (`.char`) that states the
+  character. The `.sav` is a build product.
+- G2. The builder MUST run the same functions character creation runs and
+  MUST NOT copy creation logic.
+- G3. A change MUST be repaired quickly and automatically, or MUST fail
+  loudly with a one-line fix. Nothing may change a character silently.
+- G4. A fixture holds only the character. A check that needs a map scene
+  builds it after loading.
+- G5. Every fixture converts, on master and on the epic.
+
+## Non-goals
+
+- Testing the creation screens (their own key-script checks stay).
+- Keeping epic saves loading (rule `epic-saves-are-disposable`, inc-1macr).
+- Cross-branch number collisions (inc-cjos0, another session).
+
+## 1. One creation source (K-M6, R-M-1)
+
+Creation already has one place where each decision is made or replayed: the
+`MO_CREATE` / `MO_RECREATE` switch sites that reincarnation uses
+(`RollAttributes` `src/Create.cpp:2287`, `GrantGear` `src/Annot.cpp:588-642`,
+skill ranks `:1223-1233`, the prompt primitives `src/Term.cpp:2895, 3421`,
+`src/TextTerm.cpp:1015, 1424, 1868`). The builder MUST NOT add a second
+layer beside it. Instead those sites call ONE interface, `CreationSource`,
+with three backends:
+
+| backend | used by | each decision comes from |
+|---|---|---|
+| `Live` | normal play | the screen and `random()`, exactly as today |
+| `Replay` | gallery reincarnation | `RInf`, exactly as today; `gallery.dat` format unchanged, because master players' galleries must keep working |
+| `File` | the builder | a `.char` file, by key and name |
+
+`Live` can also RECORD: it writes every decision it made, in `.char` form,
+to a file. Recording is how a new fixture is made by playing (section 8),
+and it is the oracle of the equivalence check (C2).
+
+Every site that today branches on `MO_RECREATE` MUST branch on the source
+instead, and the old branch MUST be deleted, so there is one code path per
+decision. A site is "a decision" when it asks the player or draws a random
+number that decides a character fact.
+
+## 2. Decisions that must be sourced
+
+Each decision site calls the source with a stable KEY that the call site
+passes as a constant (an enum), never the prompt's display text (R-M-2,
+K-m5). Rewording a prompt therefore changes nothing.
+
+Prompts (K-C1): `LMenu`, `LMultiSelect`, `ChoicePrompt`, `yn`, the
+spell table `TextTerm::LearnTable` (`src/TextTerm.cpp:1824`), the attribute
+screen in `RollAttributes` (direct key reads `src/Create.cpp:2477, 2583`),
+the skill screen `TextTerm::SkillManager` (`src/Managers.cpp:2110-2228`; its
+commit at `:2215-2218` becomes a function both the screen and the source
+call), the creation option screen `OptionManager(OPC_CHARGEN)` (`:866`), and
+every prompt a creation-time script raises (`lib/races.irh` EV_BIRTH yn,
+the epic god menu with its "No god" and CG_FEAT "Cancel" rows).
+
+Random draws that decide a character fact (R-C-2, K-C3, K-M3): gender
+(`:916`), name (`PickName :72`), attribute sets and rerolls, perk type and
+details (`CreatePerk`, rolls at `:1828-2030`), hit points and mana per level
+(`AdvanceLevel`), `formulaSeed` (`:885`, which also decides the Multitude
+domain pool `:2686`), `storeSeed` (`:1454`), and inside `GrantGear` every
+draw: inclusion chance, `GF_RANDOM_ITEM` (`src/Annot.cpp:661-677`),
+`GF_RANDOM_EFFECT` (`:679-712`), item level (`:720-735`), `Amount.Roll()`
+(`:743`), plus `GrantBeginnerKit` (`src/Create.cpp:549-598`), and the
+missile, thrown and ammo counts (`:1281-1311`).
+
+### Two tripwires (the resilience backbone)
+
+With the `File` backend active, from the start of `Player::Create` to the
+end of the last post-creation key:
+
+- T1, key reads. `GetCharRaw`, `GetCharCmd`, `GetKey` and `ReadLine` fail
+  the build when called outside a sourced decision, naming the screen title
+  and the calling function. A new screen can never hang a build or be
+  answered by accident (K-C1).
+- T2, random draws. `random()` and the dice functions fail the build when
+  called outside a sourced decision, naming the calling function. A draw
+  that truly decides no character fact (a cosmetic draw) goes through an
+  explicit `unstatedDraw("<reason>")` wrapper, so every exemption is
+  written at its site (R-C-2).
+
+Both turn every unforeseen change (new prompt, new screen, new random draw,
+an RNG stream shift) from silent into a named build failure.
+
+## 3. The character file
+
+`tools/fixtures/chars/<name>.char`: `key: value` lines, `#` comments.
+
+- Every value is a NAME (race, class, god, feat, skill, spell, item,
+  effect, perk field), never an rID or menu index. Labels are normalized
+  (color codes and markup stripped, case kept); a value matching two
+  options fails the build; spells are `<spell> [source]` (K-m4).
+- A key that repeats is an ordered queue, consumed in the order the game
+  asks (feats, domains, spell pages) (K-M5).
+- Every stated value MUST be consumed. A surplus value, an unknown key, a
+  duplicate single key, or a value out of range fails the build (R-M-2,
+  R-M-6, K-M5).
+- A repeated identical request (the game rejected the answer and asked
+  again, for example the epic's god loop `src/Create.cpp:1197-1210`) fails
+  with "stated value rejected by the game" (K-M4).
+- `options:` names the settings file. `seed:` seeds only draws that went
+  through `unstatedDraw` and everything after creation that the file does
+  not cover (flavors, the depth-1 map).
+- Perks (K-M2): one block per perk, every field of the Perk struct by name
+  (type, item, effect, plus, the seven qualities, bane, resist, immune, feat,
+  ability, spell). `GrantPerks` (`:2213`) becomes non-static and applies the
+  block. A check fails if a Perk struct field has no `.char` field.
+- Keys for creation facts the sheet records (K-C2, K-M3): `stat_method`,
+  `rerolls`, `rerolled_perks`, `xp`, `deaths`, `explore`, skill ranks by
+  pool (`skills: <pool> <skill>: <ranks>`).
+- `kit:` is the full granted-item list: item, effect, plus, quantity, each
+  answering one `GrantGear`/`GrantBeginnerKit` draw (K-C3).
+- An `expect:` block, written by a person, lists the facts the fixture's
+  checks rely on, compared at build. A wrong hand edit fails here (R-M-6).
+- Chained fixtures (made today by loading another fixture) are flattened
+  into one full `.char`; there is no `from:` (K-m6).
+
+## 4. Post-creation keys (K-M1, R-M-3)
+
+Applied after creation, in file order. Each calls one engine function. Where
+the logic sits inline in a UI today, it MUST be moved into a function that
+the UI and the builder both call, with its validation:
+
+| key | function (moved from) |
+|---|---|
+| `level: <class> [choices]` | `AdvanceLevel`, plus the XP and free-advance gate (moved from `src/Managers.cpp:2695-2700`); fails if `Level[]` did not change (K-m8) |
+| `addclass: <class>` | the multiclass validation and `TrainAs` (moved from `src/Managers.cpp:2733-2800`) |
+| `xp: <n>` | `GainXP`, as wizard "Generate 50 XP Ticks" does |
+| `learn: <spell> <source>` | the learning path of that source; source `wizard` is the moved wizard case 17 body (`src/Debug.cpp:858`) |
+| `item: <item> [effect] [plus]` | the item creation the wizard Item Acquisition performs (moved from `src/Term.cpp:3270-3290` and `src/Debug.cpp:618-630`), ending as it does in `EV_PICKUP` |
+| `place: <item> <slot or pack or floor>` | the inventory manager's move function (moved from its key handler) |
+| `wizard: on`, `switch: <name>` | the wizard flag and option bits |
+| `join: <god>`, `rung`, `altar` | the moved bodies of wizard cases 34 and 38 (`src/Debug.cpp:1178`, epic adds `ReconcileClassPowers` `:1226`). A fixture whose god came from the wizard keeps `join:`; it is never converted to the creation key `god:` (K-M4) |
+| `companion: <kind>` | the Animal Companion skill-use path |
+| `hp_now`, `stati` | raw writes, allowed only for a check's own wound or counter, each with a `# why` comment naming the bead (R-M-3) |
+| `condition: <item> <damage>` | the item damage function a trap uses |
+
+Each moved body gets a check that the menu path and the builder path give
+the same result (R-M-3).
+
+## 5. Build mode
+
+`tools/build_fixture.sh <name>` (K-m3) builds in a sandbox like
+`tools/headless.sh` (own `save/` and `logs/`, links to `mod/` and `lib/`) by
+running `incursion-headless -build <name>.char`. It:
+
+1. Loads modules and options and seeds from `seed`.
+2. Installs the `File` source and calls `Game::NewGame` unchanged; no split
+   is needed (K-m1). Creation's gallery write is skipped when the source is
+   `File`; `TouchGallery` then returns early (K-m2, tested).
+3. Applies the post-creation keys.
+4. Verifies (section 6), then saves through `Game::SaveGame` and writes the
+   sheet through the engine's `DumpCharacter`.
+
+## 6. Verification
+
+- V1. Every stated value was consumed and every `expect:` fact holds.
+- V2. The sheet's provenance header records the cache key. A cached `.sav`
+  is used only under its own key, so a stale `.sav` cannot be loaded (K-C5,
+  R-M-4).
+- V3. Seed independence: the build runs twice with two different `seed`
+  values; the full canonical dump of the character (save dump of the Player
+  and its inventory, clocks and the map excluded) MUST be identical (R).
+
+## 7. The fixture cache and automatic repair (K-C4, R-M-4, R-M-5)
+
+Owner's ruling D1 (2026-11-06, after measuring 0.10-0.19 s per creation and
+save, 0.14-0.15 s per load and sheet): the `.sav` and `.sheet.txt` are NOT
+tracked. Only the `.char` is.
+
+- The cache is `logs/fixture-cache/<key>/<name>.sav` and `.sheet.txt` in
+  the worktree, where `<key>` is a hash of the `.char`, its options file and
+  the `incursion-headless` binary. Any change to any of the three is a cache
+  miss, so a fixture always matches the current code, module and save format.
+- `INCURSION_LOAD=<name>` (or the old path form, mapped by name) makes
+  `tools/headless.sh` build on a miss, then copy the cached `.sav` into the
+  run's sandbox as today. A build takes a per-fixture lock
+  (`logs/fixture-locks/<name>`), builds into a temporary directory and
+  renames into place, so concurrent runs never see a half-written file.
+- A freshly built fixture that then fails to load is a loader or writer
+  defect: exit 8, `FIXTURE LOAD FAILED`, never rebuilt again.
+- Derived sheet lines (a rules change moving AC, to-hit, speed) change with
+  the code. A check MUST NOT assert on a derived value read from a
+  `.sheet.txt`; it reads the live value from the engine.
+- The existing tracked `.sav`, `.sheet.txt`, `.keys` and `MANIFEST` files are
+  removed from git when their fixture converts.
+
+## 8. Making and converting fixtures
+
+- New fixture: play or key-script to the character with the `Live` source
+  recording; the recorded `.char` is committed; or write the `.char` by hand.
+- Conversion (K-M6, R-S-2): for each existing fixture, run its key script
+  with recording on the current binary to get a `.char` skeleton, then set
+  each value that differs from the OLD fixture to the old value, then build.
+  The oracle is the OLD `.sav`: its full canonical dump, taken with the
+  binary it loads in (master fixtures: current master; epic fixtures: the
+  epic at d71c1823, before the 449-451 tag move), MUST equal the new build's
+  dump outside an explicit allowlist (provenance, clocks, map, flavors,
+  gallery slot). Any other difference fails that fixture's conversion. The
+  helper that fills old values stays until the epic conversion lands.
+- Every fixture converts (G5). None is deleted (R-S-1).
+- Scenes (G4, K-M8): `engaged-hostile` and `orc-barbarian-seed1-opt0818-store`
+  become character fixtures; their checks build the scene with the wizard
+  monster summon and a stated `storeSeed`. `levitate-bottom-seed1` becomes a
+  character fixture; owner's ruling D2 (2026-11-06): `check_dungeonmap_bounds.sh`
+  jumps to depth 10 with the wizard depth command, and the test hook
+  `INCURSION_LEVITATE_CHASM` (`src/Feature.cpp:1681`), set by the check, ALWAYS
+  sets the square under the player and the square directly east of him to
+  chasm terrain on arrival at the bottom level and grants levitation. The
+  hook's chasm search is removed, so nothing depends on the seed's map.
+- Old-format specimens. Some tools read a fixture `.sav` as a FILE in the
+  save format it was written in, not as a character: they test recovery or
+  conversion of old formats (`check_script_var_recovery.py`,
+  `check_convert_guard.sh`, `check_spell_source_bits.sh`, and on both
+  branches `check_linux_save_roundtrip.sh`, `check_vararg_format_live.sh`,
+  `swarm_theft_results.py`, epic `repro_inc_pu6v239_innate_status.sh`). The
+  plan MUST classify each use. A use that needs the old bytes moves that
+  exact `.sav` to `tools/fixtures/specimens/`, tracked and never rebuilt; a
+  use that only needs a character switches to the cache.
+- `tools/make_char_fixture.sh`, `MANIFEST`, `tools/sync_char_fixtures.sh`
+  and every key script used only to make a fixture are retired;
+  `tools/fixtures/README.md` describes the new system.
+
+## 9. Checks (each shown red by its named mutation)
+
+- C1 `check_fixture_build.sh`: builds every `.char`; V1-V3 hold; editing a
+  `.char` changes the cache key. Red: a cache lookup that ignores the
+  `.char` hash serves the old `.sav`.
+- C2 `check_fixture_equivalence.sh`: walks characters through the real
+  screens with `Live` recording, builds the recorded `.char`, and compares
+  full canonical dumps both ways. Coverage: every decision key MUST be hit by
+  at least one walk (a list generated from the enum fails on a key no walk
+  hits); the gate runs a fixed subset, the nightly run sweeps every race and
+  class. Red: (a) a creation step the `File` path skips; (b) a new random
+  draw; (c) a new prompt; (d) a new raw-key screen (K-M7, R-C-3).
+- C3 `check_fixture_tripwires.sh`: T1 and T2 fire, with their messages, on
+  an inserted `yn`, an inserted raw-key screen and an inserted `random()`.
+- C4 `check_fixture_repair.sh`: in a scratch build, move a save tag; the
+  next run misses the cache, rebuilds, and loads the same character (V3 dump
+  identical); a truncated cached `.sav` is NOT rebuilt and exits 8; two
+  concurrent runs of one fixture build it once.
+- C5 `check_perk_fields.sh`: every Perk struct field has a `.char` field.
+- C6 `check_moved_bodies.sh`: each moved wizard or inventory body gives the
+  same result from its menu and from its `.char` key.
+- Every check that loads a fixture passes `tools/seed_sweep.sh` and carries
+  `# fact: character -- fixture <name>`; it reads no map, flavor or derived
+  sheet value (VERIFICATION.md seed rule, R).
+- The "no copied logic" property is a review item: the code reviewer
+  confirms it and the sign-off goes in the bead notes.
+
+## 10. Order of work
+
+1. Master (inc-10v7f): the source interface and its backends, tripwires,
+   moved bodies, build mode, checks, conversion of master's 74 fixtures.
+   Early proof on two fixtures common to both branches (R-S-3).
+2. Land. Merge master into inc-pu6v through inc-pu6v.369; the supply sites
+   are one-line calls, to keep the merge surface small; C2 and C3 MUST pass
+   on the epic before .369 lands (R-S-3).
+3. In inc-pu6v.369: convert the epic's fixtures against the d71c1823 dumps,
+   then the proof below.
+
+## Proof on the current failure
+
+With the epic's tags at 453-455: every epic fixture rebuilds from its
+`.char` and its dump equals the d71c1823 dump outside the allowlist;
+`tools/check_innate_status_source.sh` case C passes (Call Companions stated
+as a perk block), and the 11 checks that failed after the walk regeneration
+pass: check_semirath_crown, check_semirath_joining, check_essiah_playtest,
+check_reapply_single_grant, check_storycraft, check_semirath_income,
+check_betrayed_mark, check_wand_skill_check, check_cursor_left_on,
+check_wildshape_gray, check_wildshape_cheetah_desc.
+
+## 11. Version 3 amendments (second review, 2026-11-06)
+
+A third reviewer checked v2 against the code (findings N1-N12, m1-m7 in the
+bead notes). Each amendment below overrides the section it names.
+
+- A1 (N1, sec 2 and 5). The T2 window is `Player::Create` alone, plus each
+  post-creation key body on its own. The span from `Create` returning to the
+  first key (map generation, placement, `InitCompanions`, `NoteArrival`) is
+  outside it. `Game::NewGame` is split at the `Create` return by MOVING the
+  tail into a function the old path calls, so K-m1 ("no split") is
+  withdrawn. C3 adds: a draw inserted in map generation does NOT trip T2;
+  one inserted in `AdvanceLevel` does.
+- A2 (N2). Script draws during creation events (`EV_BIRTH`, `EV_ADVANCE`;
+  80 hooks in `lib/`, e.g. `lib/classes.irh:1441, 2908`) go through the
+  source, keyed by (resource name, event, ordinal within the event). Kit
+  entries gain `quality:`. The plan sweeps all 80 hooks.
+- A3 (N3, sec 7). Cache key = hash of the `.char`, its options file, the
+  binary AND `mod/Incursion.Mod`. A build runs under a clean environment: an
+  allowlist of `INCURSION_*` variables, the seed from the file only. A
+  cached `.sav` that fails to load with a module-slide message rebuilds once;
+  any other load failure is exit 8.
+- A4 (N4, sec 3). Each `GrantGear` draw is keyed by (granting resource,
+  annotation ordinal, draw kind: chance, random item, random effect, level,
+  amount). An annotation with no entry fails the build and prints the line
+  to add; an entry with no annotation fails as surplus.
+- A5 (N5). Every sourced decision declares a default. A build never uses a
+  default silently: a missing key fails and prints the exact `key: value`
+  line. `tools/fill_chars.sh` writes every missing line, using defaults, into
+  every `.char`, as a reviewed diff in the bead that added the decision;
+  `tools/char_rekey.sh <old> <new>` renames a key or value in every `.char`.
+  Neither runs inside a check, which never writes a tracked file.
+- A6 (N6, sec 1). Plan step 1 produces a grep-complete list of every
+  `MO_RECREATE`, `MO_CREATE`, `reincarnate` and `RInf` site on BOTH branches
+  (master's list includes `src/Create.cpp:862, 882, 887-889, 962, 965, 1012,
+  1015, 1088, 1091, 1122, 1199, 1202, 1223, 1456-1463, 3774, 3777` and
+  `src/MultiSelectProbe.cpp:48-76`). One recorder with two serializers
+  (`RInf` for the gallery, `.char` for fixtures); the recorder pops a
+  decision on back-navigation as `RInf.nRsp--` does today. Replay returns
+  NOT_RECORDED for every decision `RInf` does not hold, and the site then
+  behaves as `Live`, so reincarnation behaves exactly as today. A grep check
+  fails on any new `MO_RECREATE` or `reincarnate` branch outside the source.
+- A7 (N7, sec 8). The canonical dump is `-dump` with every rID printed as a
+  resource name (`SafeResName`, `src/Dump.cpp:128`), handles dropped, and
+  extended with per-level hit and mana rolls, skill ranks per pool, perk
+  blocks, kit with qualities, spell lists and stati by name; the tool is
+  `tools/char_dump.sh`. What it does not print is not compared, so gaps are
+  closed by extending the dump. The epic oracle: build the epic at d71c1823
+  in a scratch worktree and store the canonical dumps of its 82 fixtures in
+  `~/Scripts/Incursion/docs/evidence/inc-10v7f/epic-d71c1823/` before .369
+  converts them. d71c1823 stays in git, so this has no deadline.
+- A8 (N8, sec 2). T1 sits in ONE non-virtual wrapper in the shared `TextTerm`
+  layer that every key read passes, not in the three backends. Acknowledgment
+  reads (`[MORE]`, message boxes) are answered by the builder and logged, not
+  failed. The build forces `OPT_AUTOMORE`.
+- A9 (N9, sec 2 and 6). Plan step 0 runs T2 in log-only mode over a full
+  race-by-class creation sweep to count every `random()` caller before the
+  tripwire is armed. Draws after an `srand` from a stated value
+  (`formulaSeed`, `storeSeed`) count as stated. `NextSeed()` calls are
+  sourced. The cosmetic stream (`cosmetic_random`) needs no exemption.
+  `unstatedDraw` sites are listed in a tracked baseline that may only shrink.
+  V3 uses 8 seeds, not 2.
+- A10 (N10). `tools/fixture_sheet.sh <name>` prints the cached sheet path.
+  The plan classifies the 33 tools that read a `.sheet.txt` and the other
+  callers of `check_char_fixture.sh` and `make_char_fixture.sh`.
+  `INCURSION_FIXTURE_PIN=<key>` serves the entry the baseline binary built,
+  and the gate's record and compare scripts set it, so a before/after holds
+  the characters fixed. Every build appends name, key and dump hash to
+  `logs/fixture-builds.tsv`; `tools/finish_bead.sh` reports each fixture
+  whose dump hash changed, so no character change is silent.
+- A11 (N11). One `.char` per fixture name per branch. They are text and merge
+  like code; at the .369 merge each common name keeps the epic's god and
+  creation keys.
+- A12 (N12). D2: the hook grants levitation first, then sets the chasm under
+  the player and to the east (in bounds), and the check's oracle text and its
+  obsolete "do not shorten" note are re-derived and its red re-proved; the
+  hook lands on both branches. The retire list adds the epic-only
+  `tools/check_fixtures_load.sh`, `tools/repro_zto3q_rebuild.sh`, the
+  inc-zto3q block of `tools/headless.sh` and its references in
+  `tools/finish_bead.sh` and `tools/check_lib.sh`. The `File` path sets
+  `GallerySlot = -1` explicitly, and a test covers it.
+- A13 (minor). The cache keeps the last 3 keys per worktree; a lock older
+  than 30 minutes is stale, as on the epic; script-raised prompts are keyed
+  by (resource, event, ordinal); C7 `check_player_fields.sh` lists every
+  serialized Player field as stated, derived or excluded, and fails on an
+  unlisted one; C4 also proves a module slide rebuilds exactly once.
