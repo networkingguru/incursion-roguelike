@@ -479,3 +479,115 @@ small, mechanical step, not a redesign.
   - `tools/census_creation_draws.sh` stays, run by the nightly harness; it
     reports any draw in the window that is neither sourced nor in the
     baseline, before a fixture build meets it.
+
+## 14. Version 6 amendments: scenes (2026-11-07, revision 2)
+
+A built fixture gets a fresh, random level 1, so a check that read the map a
+`.sav` once froze loses it. Research (bead notes 2026-11-07,
+`logs/sites/map31-needs.md`) read the 31 checks marked as map-dependent: 9
+need nothing specific from the map, 21 need placed monsters, items, features
+or terrain, and 1 needs depth 10 (ruling D2, section 8, unchanged). None
+needs the level generator. Owner's ruling (2026-11-07): a check that reads
+the map runs on a fixed test map and places what it needs by name. The level
+is not made stable; it is not used. Revision 2 folds in two reviews (engine
+findings E1-E10, verification findings V1-V10, bead notes). Each amendment
+below overrides the section it names.
+
+- S1 (overrides the "reads no map" clause of section 9). A check MAY read
+  the map only when it states a scene. It then reads only the test map and
+  the things its scene placed.
+- S2. The test map. A new Region "Fixture Test Chamber", appended to
+  `lib/dungeon.irh` (append-only rule), with a `Grid`. `Map::Generate` loads
+  a Region rID as the whole level through `Map::LoadFixedMap`
+  (`src/MakeLev.cpp:1485, 1536`), so the map size is the grid size and no
+  random draw places a room. The grid MUST give:
+  - 41 by 41 squares. `Map::WriteMap` flips a grid at random on both axes
+    (`src/MakeLev.cpp:1176-1186`); an odd size puts the center square on
+    itself under every flip (E1).
+  - A one-square border of "Indestructable Rock" (the resource's own
+    spelling, `lib/dungeon.irh:546`), so square (0,0) is rock.
+  - Open floor everywhere inside the border, of a new lit floor terrain
+    "Fixture Lit Floor" that carries `TF_LOCAL_LIGHT`. `calcLight` lights
+    only such terrain on a fixed map (`:167-176`); `RF_ALWAYS_LIT` is read
+    only by room generation and does nothing here (E2, V1).
+  - A `Tiles` entry for the start tile with `TILE_START` at (20,20) (E7).
+  The scene applier clears `isVault` on every square after the map is
+  written, because `WriteMap` sets it on every grid square (`:1187`) and
+  rest, teleport and spawn code treat vault squares differently (E3). No
+  monster arrives on the test map except by a scene line: the applier turns
+  off the map's wandering-monster arrival (`DaysPassed` path) (E7).
+- S3. The scene file. `tools/fixtures/scenes/<name>.scene`, the section 3
+  grammar (`key: value`, names only, every line consumed, a bad line fails
+  with its line number). Keys:
+  - `map: <region>`: optional; the default is "Fixture Test Chamber".
+  - `monster: <name> at <dx> <dy> [hostile|peaceful|ally] [asleep]`
+  - `item: <section 3 item value> at <dx> <dy> [count <n>]`; a corpse or
+    statue names its monster with `of <monster>`. Offset 0 0 puts the item
+    on the player's own square.
+  - `terrain: <name> at <dx> <dy> [to <dx2> <dy2>]`: one square, or a
+    filled rectangle. Terrain MAY replace open floor (inner walls, plain
+    unlit "Floor" for a dark patch) (V2, V7).
+  - `feature: <name> at <dx> <dy>`: doors, portals, altars, traps.
+  Offsets are from the player's start square. A name MUST be written in
+  full, with any `;tag` suffix ("stinking cloud;terrain"). A new typed
+  finder resolves it: it takes the key's resource type, counts every exact
+  match across all modules, and fails on zero or on more than one.
+  `Game::Find` cannot serve: it takes no type, returns the first match in
+  type order, and caches 31 characters of the name (`src/Res.cpp:358`)
+  (E5). A square outside the map, or a monster or item put on a square that
+  is not open floor, fails the run.
+- S4. Applying a scene. A check sets `INCURSION_SCENE=<name>`;
+  `tools/headless.sh` passes it to the run. The scene applies at the first
+  arrival on a map, whether the character was loaded from a fixture or made
+  in the run (V3). The applier:
+  1. Builds the test map and moves the player, the player's companions and
+     mount onto it, through ONE helper extracted from `Player::MoveDepth`'s
+     companion gathering (`src/Feature.cpp:1448`). `MoveDepth` itself
+     refuses a non-dungeon `dID`, and a portal move takes the player only
+     (`:481`) (E4). The old level 1 stays in memory and in the save, as
+     after any portal trip.
+  2. Applies the scene lines in file order.
+  Placement reuses engine bodies, moved, never copied (section 4, G2):
+  monster creation and placement from wizard summon (`src/Debug.cpp:674`),
+  which keeps honoring `INCURSION_SUMMON_NO_GEAR` (`:686`) (V6); attitude,
+  sleep and ally status from the bodies `WriteMap` (`src/MakeLev.cpp:1286-1296`)
+  and wizard "Make Player Master of Monster" (case 28) use; floor items and
+  features from `WriteMap`'s item and feature branches (`:1260-1296`).
+  Item Acquisition is not reused: it puts the item in the pack through
+  `EV_PICKUP` (E6). The plan lists each extraction.
+- S5. A scene MUST state every map fact its check reads. Facts it does not
+  state (a summoned monster's hit points, an item's flavor) stay random.
+  `tools/seed_sweep.sh` varies them (`INCURSION_SEED_OVERRIDE`) and catches a
+  check whose result changes with them. It cannot catch a fact that happens
+  to hold on every swept seed; the reviewer of each converted check confirms
+  that its scene states every fact the check reads (V6).
+- S6. New check C8 `check_scene.sh`: one scene that uses every key. It
+  asserts the map size, rock at (0,0), every interior square open and lit
+  (`BrightAt`), `isVault` clear, the player at (20,20) (`EnterX`/`EnterY`),
+  each companion and the mount on the test map, each placed thing on its
+  square with its attitude and sleep, no monster the scene did not place
+  after 100 turns of rest, and the same state after a save and a reload (E9).
+  Red, one mutation each: (a) an offset applied with the wrong sign; (b) a
+  `terrain:` line skipped; (c) an unknown name accepted; (d) an ambiguous
+  name accepted; (e) the scene not applied at all; (f) placement on the old
+  level 1 instead of the test map; (g) companions left behind; (h) a monster
+  accepted on a wall square; (i) lines applied in reverse order; (j) an even
+  grid size (V4).
+- S7. Fact lines. A check that states a scene carries
+  `# fact: map -- scene <name>`. `docs/VERIFICATION.md`'s controls catalog
+  gains a row for `INCURSION_SCENE` in the same commit as C8, so
+  `tools/check_fact_lines.py` accepts the line (V5).
+- S8. Conversion of the 31 checks. 5 drop stale "arrival map" fact lines
+  and state no scene. 4 build their scene in a source probe; they state
+  `map:` alone, so the probe runs on the test map. 21 get a scene file; a
+  check with two sessions on different scenes (`check_natural_save.sh`)
+  gives each session its own scene. A converted check drops any
+  "Genocide Everything" step it used to clear the random level, because the
+  test map holds only what the scene placed (V7). `check_vararg_format_live.sh`
+  reads a `.sav` as a file; section 8's specimen rule decides it, not a
+  scene (V7). `check_dungeonmap_bounds.sh` keeps ruling D2. Section 8's
+  three scene fixtures stay as section 8 states; where one of them serves a
+  check in the 31, S8 wins and that check gets a `.scene` file.
+- S9. Open: no feature named "rune" exists in `lib/` (E10). The plan's first
+  conversion step finds the resource names `check_natural_save.sh` reads
+  (its runes and tanglefoot strands) and writes them into its scenes.
