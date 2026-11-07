@@ -1137,6 +1137,12 @@ struct __FindCache
    K_EMBED scope in Game's archive body below. */
 class Game;
 void SaveV1_SegmentFields(Registry &r, Game &g, int slot);
+/* Named data migrations (inc-cjos0); the table lives in src/SaveV1.cpp. */
+class Player;
+const char* SaveV1_MigrationList();             /* every name, comma-joined */
+void SaveV1_NoteFileMigrations(const char *list);
+const char* SaveV1_RanMigrations();
+bool SaveV1_RunMigrations(Player *pl);
 /* Write pre-flight (src/SaveV1.cpp): the early, non-destructive copy of the
    segment-geometry refusal above. Game::SaveGame and RunSaveConvert both
    call it BEFORE touching the existing file, so a refused save cannot
@@ -1270,6 +1276,20 @@ class Game : public Object
       FIELD_OBJ("Limbo", Limbo);
       FIELD_OBJ("ModFiles", ModFiles);
       FIELD_STR("SaveFile", SaveFile);
+      /* inc-cjos0: the names of the data migrations this file holds. A
+         stack staging String: it covers no byte of Game. */
+      if (r.V1Active())
+        {
+          String migs;
+          /* String() leaves itself uninitialised while the Registry is
+             loading (src/Registry.cpp, RegistryScope). */
+          memset((void*)&migs, 0, sizeof(migs));
+          if (isSave)
+            migs = SaveV1_MigrationList();
+          r.V1Str("Migrations", migs);
+          if (!isSave)
+            SaveV1_NoteFileMigrations(migs.GetLength() ? migs.GetData() : "");
+        }
       /* Load-direction fixups, below every field they read. V1Active()
          guards them because this body also runs on the v0 path. */
       if (!isSave && r.V1Active())

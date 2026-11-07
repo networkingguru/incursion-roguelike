@@ -97,6 +97,74 @@ uint32 SaveV1_FileRevision()
     return v1FileRevision;
   }
 
+/* Named data migrations (inc-cjos0). A migration is a name; the Game record
+   saves the names applied. impliedRev: a file of that revision or later
+   already holds the effect though its list lacks the name; 0 = never implied.
+   Row order is run order. THE one table: a new migration is a new row. */
+struct V1Migration {
+    const char *name;
+    uint32      impliedRev;
+    void      (Player::*fn)();
+};
+static const V1Migration v1Migrations[] = {
+    { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+    { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
+};
+#define V1_NMIGRATIONS (sizeof(v1Migrations)/sizeof(v1Migrations[0]))
+static std::string v1FileMigrations;   /* the loaded file's Migrations field */
+static std::string v1RanMigrations;    /* what the last load ran */
+
+const char* SaveV1_MigrationList()
+  {
+    static std::string all;
+    all.clear();
+    for (size_t i = 0; i != V1_NMIGRATIONS; i++)
+      {
+        if (i) all += ",";
+        all += v1Migrations[i].name;
+      }
+    return all.c_str();
+  }
+
+void SaveV1_NoteFileMigrations(const char *list)
+  { v1FileMigrations = list ? list : ""; }
+
+const char* SaveV1_RanMigrations()
+  { return v1RanMigrations.c_str(); }
+
+/* Run every migration the file lacks; true when any ran. */
+bool SaveV1_RunMigrations(Player *pl)
+  {
+    std::string have = "," + v1FileMigrations + ",";
+    v1RanMigrations.clear();
+    size_t pos = 0;
+    while (!v1FileMigrations.empty() && pos <= v1FileMigrations.size())
+      {
+        size_t end = v1FileMigrations.find(',', pos);
+        if (end == std::string::npos) end = v1FileMigrations.size();
+        std::string nm = v1FileMigrations.substr(pos, end - pos);
+        bool known = false;
+        for (size_t i = 0; i != V1_NMIGRATIONS; i++)
+          if (nm == v1Migrations[i].name) known = true;
+        if (!nm.empty() && !known)
+          fprintf(stderr, "SaveV1: ignoring unknown migration \"%s\" "
+                  "in the save\n", nm.c_str());
+        pos = end + 1;
+      }
+    for (size_t i = 0; i != V1_NMIGRATIONS; i++)
+      {
+        const V1Migration &m = v1Migrations[i];
+        if (m.impliedRev && m.impliedRev <= v1FileRevision)
+          continue;
+        if (have.find(std::string(",") + m.name + ",") != std::string::npos)
+          continue;
+        (pl->*m.fn)();
+        if (!v1RanMigrations.empty()) v1RanMigrations += ",";
+        v1RanMigrations += m.name;
+      }
+    return !v1RanMigrations.empty();
+  }
+
 /* Raw (uncompressed) payload mode, for the mutation tools: DEBUG builds
    write Compression = 0 when INCURSION_V1_RAW=1. The reader always follows
    the file's own Compression field, so this only affects writers. */
