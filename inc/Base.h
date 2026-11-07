@@ -746,6 +746,7 @@ struct groupHeader
 
 /* v1 wire kinds (docs/SAVE-SCHEMA-SPEC.md; the wire format is normative in
    docs/superpowers/plans/2026-08-24-save-schema-v1.md). */
+// family: v1_kind stored enum u8
 enum {
   K_U8 = 1, K_I8 = 2, K_U16 = 3, K_I16 = 4, K_U32 = 5, K_I32 = 6,
   K_STR   = 7,   /* uint32 len, len bytes, no NUL */
@@ -756,15 +757,18 @@ enum {
   K_EMBED = 12   /* uint32 len; a nested field stream with its own tag scope
                     and its own tag-0 terminator */
 };
+// end family: v1_kind
 
 /* Wire pool ids, in the canonical declaration order of inc/Res.h:875-897.
    Append-only forever. */
+// family: v1_pool stored enum u8
 enum {
   SP_MON = 0, SP_ITM = 1, SP_FEA = 2, SP_EFF = 3, SP_ART = 4, SP_QUE = 5,
   SP_DGN = 6, SP_ROU = 7, SP_NPC = 8, SP_CLA = 9, SP_RAC = 10, SP_DOM = 11,
   SP_GOD = 12, SP_REG = 13, SP_TER = 14, SP_TXT = 15, SP_VAR = 16,
   SP_TEM = 17, SP_FLA = 18, SP_BEV = 19, SP_ENC = 20
 };
+// end family: v1_pool
 
 /* v1 field names. Every saved field is named by a string, unique within its
    scope (the nearest ARCHIVE_CLASS or FieldsV1 owner, plus the name of each

@@ -11,6 +11,7 @@
 enum btype { SYS_OBJ, LOC_VAR, MOD_FUNC, GLOB_VAR, MEM_VAR, MEM_FUNC, 
              RES_VAR, SYS_FUNC, RES_MEM, RES_FUNC, ANY };
 
+// family: dt stored ordinal u8
 #define DT_VOID     1
 #define DT_INT32    2
 #define DT_HOBJ     3
@@ -23,7 +24,9 @@ enum btype { SYS_OBJ, LOC_VAR, MOD_FUNC, GLOB_VAR, MEM_VAR, MEM_FUNC,
 #define DT_INT8    10
 #define DT_UINT8   11
 #define DT_UINT16  12
+/* alias of DT_UINT16 */
 #define DT_UNKNOWN 12
+// end family: dt
 
 
 #define RT_CONSTANT    0

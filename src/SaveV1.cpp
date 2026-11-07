@@ -296,7 +296,9 @@ static int v1FrameDepth;
    the owner (the last V1ProbeScope) plus "." and the name of each embed opened
    since. An indexed name is "<name>#<i>". */
 
+// family: t_type stored ordinal u8, t_all internal
 #define V1_REC_NAMES 200   /* record type byte of the name table; no T_ value is this large */
+// end family: t_type, t_all
 
 struct V1NameRow { std::string scope, name; };
 
