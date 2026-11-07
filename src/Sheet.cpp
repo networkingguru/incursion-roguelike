@@ -904,7 +904,7 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
           StatiIterNature(p,SKILL_BONUS)
               if (S->Source == SS_PERM)
               cs.sFeats += Format("    %s\n", 
-                  SkillInfo[ S->Val ] .name);
+                  SkillInfo[ SkillIndex(S->Val) ] .name);
           StatiIterEnd(p)
           break; 
 
@@ -1003,12 +1003,13 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
 
   cs.sSkills = Format("%cSkill Ratings:%c\n",-WHITE,-GREY);
 
-  for(i=1;i!=SK_LAST;i++) {
-    if (!SkillInfo[i].name)
+  for(int k=1;k!=SK_COUNT;k++) {
+    i = SkillByIndex(k);
+    if (!SkillInfo[k].name)
       continue;
     j = p->SkillLevel(i);
     if (j != p->Mod2((int8)p->SkillAttr(i)) &&
-        (SkillInfo[i].imp || 1)) {
+        (SkillInfo[k].imp || 1)) {
         int color; 
         if (j > 25) color = WHITE;
         else if (j > 20) color = YELLOW; 
@@ -1020,15 +1021,15 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
         else if (j > 1) color = BLUE; 
         else color = SHADOW; 
 
-        skname = SkillInfo[i].name;
+        skname = SkillInfo[k].name;
         skname.Replace("Knowledge","Know");
 
         cs.sSkills += Format("  %c%-16s %c%+d%s %c(%c%d%c ranks",
             -color, (const char*) skname,
             -WHITE, j, abs(j) > 9 ? "" : " ", -BROWN,
-            p->SkillRanks[i] ? (p->SkillRanks[i] == 
+            p->SkillRanks[k] ? (p->SkillRanks[k] == 
               p->MaxRanks(i) ? -WHITE : -YELLOW) : -BROWN,
-             p->SkillRanks[i], -BROWN);
+             p->SkillRanks[k], -BROWN);
 
         if (p->Mod2((int8)p->SkillAttr(i)))
           cs.sSkills += Format(", %+d %s",
@@ -1069,11 +1070,11 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
         /*
         cs.sSkills += Format("  %c%-15s (%s %+d, rnk %+d, oth %+d)\n",
             -color,
-            SkillInfo[i].name,
+            SkillInfo[k].name,
             AttrTitle[ p->SkillAttr(i) ] , 
             p->Mod2(p->SkillAttr(i)),
-            p->SkillRanks[i],
-            j - (p->Mod2(p->SkillAttr(i)) + p->SkillRanks[i])
+            p->SkillRanks[k],
+            j - (p->Mod2(p->SkillAttr(i)) + p->SkillRanks[k])
             );
         */
         /*
@@ -1111,7 +1112,7 @@ void TextTerm::CreateCharSheet(CharSheet &cs)
           header = true;
         } 
         cs.sRacial += Format("  %-15s (%+d, %s)\n",
-            SkillInfo[S->Val].name, S->Mag,
+            SkillInfo[SkillIndex(S->Val)].name, S->Mag,
             NAME(S->eID));
       } 
   StatiIterEnd(p)

@@ -1729,10 +1729,10 @@ void Character::Dump()
     int16 i,j; rID gID;
     Creature::Dump();
     T1->SWrite(XPrint("<9>Skill Ranks:<7>\n"));
-    for(i=0;i!=SK_LAST;i++)
-      if (SkillRanks[i])
+    for(int k=0;k!=SK_COUNT;k++)
+      if (SkillRanks[k])
         T1->SWrite(Format("  %s: %d (rating %+d)\n",
-          Lookup(SK_CONSTNAMES,i),SkillRanks[i],SkillLevel(i)));
+          Lookup(SK_CONSTNAMES,SkillByIndex(k)),SkillRanks[k],SkillLevel(SkillByIndex(k))));
     T1->SWrite(XPrint("<10>Spell Flags:<7>\n"));
     for(i=0;i!=MAX_SPELLS;i++)
       if (Spells[i]) {

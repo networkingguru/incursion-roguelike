@@ -520,7 +520,7 @@ class TClass: public Resource
     public:
       TClass() : Resource(T_TCLASS) { }
   		uint8 HitDie, ManaDie, DefMod;
-		  uint8 Skills[40];
+		  int16 Skills[40];
       uint8 Saves[3], AttkVal[4];
       uint8 SkillPoints;
       uint32 Proficiencies;
@@ -544,7 +544,7 @@ class TRace: public Resource
     rID mID; rID BaseRace;
     rID FavouredClass[3];
 		int8 AttrAdj[8];
-		int8 Skills[12];
+		int16 Skills[12];
     hText MNames, FNames, SNames;
     void SetFlag(uint16 fl)   { Flags[fl/8] |=  (1 << (fl % 8)); }
     void UnsetFlag(uint16 fl) { Flags[fl/8] &= ~(1 << (fl % 8)); }

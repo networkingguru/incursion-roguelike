@@ -1610,7 +1610,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 307:
         VERIFY(h,T_CHARACTER,"UseSkill")
         ASSERT(REGS(63) >= 1)
-        oCharacter(h)->UseSkill((uint8)STACK(1));
+        oCharacter(h)->UseSkill((int16)STACK(1));
         return;
     case 308:
         VERIFY(h,T_CHARACTER,"UseAbility")

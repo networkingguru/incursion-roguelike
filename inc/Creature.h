@@ -14,6 +14,27 @@
    hold. The unpacked source is returned as an SP_* kind bit (0 when none).
    These live here rather than in Defines.h because the game-data module
    compiler parses Defines.h and does not understand C++ `inline`. */
+/* Skill numbers: 1..SK_LASTSKILL-1 (fixed) and SK_HIGH_FIRST..SK_HIGH_END-1
+   (new skills). Feats use their own literal numbers below SK_HIGH_FIRST.
+   SkillIndex maps a skill number to its row in SkillInfo[] and SkillRanks[]
+   (length SK_COUNT): 1..48 to themselves, SK_HIGH_FIRST+k to SK_LASTSKILL+k.
+   A number that is not a skill maps to 0, the empty row, so an index never
+   leaves 0..SK_COUNT-1. SkillByIndex is the inverse; it returns 0 for index
+   0 and for an index outside 1..SK_COUNT-1. In inc/Creature.h, not
+   Defines.h, because the module compiler does not parse C++ `inline`. */
+static inline bool IsSkill(int n) {
+    return (n >= 1 && n < SK_LASTSKILL) || (n >= SK_HIGH_FIRST && n < SK_HIGH_END);
+}
+static inline int SkillIndex(int n) {
+    if (n >= 1 && n < SK_LASTSKILL) return n;
+    if (n >= SK_HIGH_FIRST && n < SK_HIGH_END) return SK_LASTSKILL + (n - SK_HIGH_FIRST);
+    return 0;
+}
+static inline int SkillByIndex(int i) {
+    if (i >= 1 && i < SK_LASTSKILL) return i;
+    if (i >= SK_LASTSKILL && i < SK_COUNT) return SK_HIGH_FIRST + (i - SK_LASTSKILL);
+    return 0;
+}
 static inline int32 SpellVersionPack(int16 sp, int16 srcCode) {
     return (int32)(((srcCode & 0x7) << 12) | (sp & 0xFFF));
 }
@@ -78,7 +99,7 @@ struct YuseCommand
 
 struct SkillInfoStruct
   {
-    uint8 sk;   // SK_SPOT
+    int16 sk;   // SK_SPOT
     const char * name; 
     bool  imp;  // implemented?  
     bool  active;
@@ -815,8 +836,8 @@ class Character: public Creature
       /* inc-h5aql: X (reach) and S (short) weapon sets; M and R keep the four above. */
       hObj defReach, defReachOff, defShort, defShortOff;
       int16 BAttr[7], KAttr[ATTR_LAST]; //Base Attributes
-      int8 SkillRanks[SK_LASTSKILL];
-      uint16 Feats[(FT_LAST/8)+1];
+      int8 SkillRanks[SK_COUNT];
+      uint16 Feats[(FEATBITS_LAST/8)+1];
       uint8 Abilities[CA_LAST];
       uint16 SpentSP[6], BonusSP[6], TotalSP[6];       
       uint8 TurnTypes[4],TurnLevels[4];
@@ -1026,7 +1047,7 @@ class Character: public Creature
       virtual void   setSpellFlags(rID spID, uint32 fl) 
                        { Spells[theGame->SpellNum(spID)] = fl; }
       virtual int16  GetSkillRanks(int16 sk)
-                       { return SkillRanks[sk]; }
+                       { return SkillRanks[SkillIndex(sk)]; }
       virtual int16  GetBAB(int16 mode);
       /* inc-4999 phase 4b: the spell's flags with its four kind bits
          (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC) replaced by the cast's source
@@ -1038,7 +1059,7 @@ class Character: public Creature
 
       /* Functions for Performing Actions */
       //virtual EvReturn AttackMsg(EventInfo&e);
-      void UseSkill(uint8 sk);
+      void UseSkill(int16 sk);
       void UseFeat(uint16 ft);
       void UseAbility(uint8 ab,int16 pa);
       bool DisarmTrap(Trap * tr, bool active); 
@@ -1121,7 +1142,7 @@ class Character: public Creature
          which are real rIDs and are named. Upgrade path: write these as
          rows keyed through the name table, the way the spec's "resource
          memory segment" section already requires for MonMem/EffMem. */
-      static_assert(sizeof(Character) == 12664,
+      static_assert(sizeof(Character) == 12824,
                     "Character's coverage pin row pads assume this");
       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
@@ -1138,8 +1159,8 @@ class Character: public Creature
       FIELD_H  ("defShortOff", defShortOff);
       FIELD_ARRAY("BAttr", BAttr, sizeof(int16), 7);
       FIELD_ARRAY("KAttr", KAttr, sizeof(int16), ATTR_LAST);
-      FIELD_ARRAY("SkillRanks", SkillRanks, sizeof(int8), SK_LASTSKILL);
-      FIELD_ARRAY("Feats", Feats, sizeof(uint16), (FT_LAST/8)+1);
+      FIELD_ARRAY("SkillRanks", SkillRanks, sizeof(int8), SK_COUNT);
+      FIELD_ARRAY("Feats", Feats, sizeof(uint16), (FEATBITS_LAST/8)+1);
       FIELD_ARRAY("Abilities", Abilities, sizeof(uint8), CA_LAST);
       FIELD_ARRAY("SpentSP", SpentSP, sizeof(uint16), 6);
       FIELD_ARRAY("BonusSP", BonusSP, sizeof(uint16), 6);
@@ -1418,6 +1439,10 @@ struct ReincarnationInfo
     int16    cRsp, nRsp;
     int32    formulaSeed, storeSeed;
   };
+/* The gallery file holds this struct raw, by sizeof. SkillRanks[100] is part
+   of that format, so the skill rank table must never outgrow it. */
+static_assert(SK_COUNT <= 100,
+  "ReincarnationInfo::SkillRanks[100] is a gallery file format; SK_COUNT may not pass 100");
 
 struct QuickKey
   {
@@ -1572,7 +1597,7 @@ class Player: public Character
       virtual void IdentByTrial(Item *it, int16 Quality=0);
       void ShowStats();
       //String BonusBreakdown(int8 at, int16 maxlen=250);
-	    String & SkillBreakdown(int8 sk, int16 maxlen=250);
+	    String & SkillBreakdown(int16 sk, int16 maxlen=250);
       String & SpellBreakdown(int8 sp, int16 maxlen=250);
       String & ResistBreakdown(int8 dt, int16 maxlen=250);
 
@@ -1628,7 +1653,7 @@ class Player: public Character
          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
          not rIDs. Same ceiling and same upgrade path as the note in
          Character's list above. */
-      static_assert(sizeof(Player) == 23728,
+      static_assert(sizeof(Player) == 23888,
                     "Player's coverage pin row pads assume this");
       static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
       static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");

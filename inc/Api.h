@@ -474,7 +474,7 @@ system void   T_CHARACTER::SetInvSlot(int16 sl, hObj:T_ITEM it);
   /* CasterLev() et al. awaiting revision */
 
 system void   T_CHARACTER::UseFeat(int16 ft);
-system void   T_CHARACTER::UseSkill(uint8 sk);
+system void   T_CHARACTER::UseSkill(int16 sk);
 system void   T_CHARACTER::UseAbility(uint8 ab,int16 pa);
 
 system void   T_CHARACTER::GodMessage(rID gID, int16 msg,...);

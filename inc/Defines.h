@@ -2100,7 +2100,7 @@ typedef signed int        hObj;
 #define SP_SRC_PRIMAL 3
 #define SP_SRC_BARDIC 4
 // end family: sp_src
-// family: sk stored ordinal i8 grows SK_LASTSKILL grows SK_LAST
+// family: sk stored ordinal i16 grows SK_LASTSKILL grows SK_LAST
 
 /* The SpellVersionPack/SpellVersionSpell/SpellVersionSrcCode/
    SpellSrcCodeKind/SpellKindSrcCode helpers live in inc/Creature.h, near the
@@ -2169,6 +2169,26 @@ typedef signed int        hObj;
 #define SK_LAST       49  /* alias of SK_LASTSKILL */
 #define SK_ANY -1
 // end family: sk
+/* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+   up to 999 and raises SK_HIGH_END by one. SK_COUNT is the length of every
+   array indexed by SkillIndex(). IsSkill/SkillIndex live in inc/Creature.h.
+   Each name has a family of its own: SK_COUNT equals SK_LASTSKILL and
+   SK_HIGH_END equals SK_HIGH_FIRST until the first high skill exists, and a
+   family may not hold two names with one value unless one is an alias. */
+// family: sk_high_first stored ordinal i16 sentinel SK_HIGH_FIRST
+#define SK_HIGH_FIRST 800
+// end family: sk_high_first
+// family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+#define SK_HIGH_END   800
+// end family: sk_high_end
+// family: sk_count stored ordinal i16 grows SK_COUNT
+#define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
+// end family: sk_count
+/* Highest skill or feat number the Character::Feats bit array holds, one bit
+   per number for skills and feats alike. */
+// family: featbits stored ordinal i16 grows FEATBITS_LAST
+#define FEATBITS_LAST 999
+// end family: featbits
 // family: grade internal
 
 #define ABYSSAL     0
@@ -2561,336 +2581,336 @@ typedef signed int        hObj;
 #define FT_MONK_LIST         1
 
 
-#define FT_FIRST               (SK_LAST + 1)
-#define FT_AB                  (SK_LAST + 1)  /* alias of FT_FIRST */
-#define FT_ACROBATIC           (FT_AB + 1)
-#define FT_ACUTE_SENSES        (FT_AB + 2)
+#define FT_FIRST               50
+#define FT_AB                  50  /* alias of FT_FIRST */
+#define FT_ACROBATIC           51
+#define FT_ACUTE_SENSES        52
 /* upstream: this define lacked its closing paren, identical on Win32 (plain
    preprocessor text); no code expands it, so no behavior changes. Traced.
    inc-mhn1w; not sent. */
-#define FT_AIM_FOR_THE_EYES    (FT_AB + 3)
-#define FT_AIMED_SHOT          (FT_AB + 4)
-#define FT_ALERTNESS           (FT_AB + 5)
-#define FT_ALLURING            (FT_AB + 6)
-#define FT_AMBIDEXTERITY       (FT_AB + 7)
-#define FT_AMPLIFY_SPELL       (FT_AB + 8)
-#define FT_ANCHOR_SPELL        (FT_AB + 9)
-#define FT_ANIMAL_BOND         (FT_AB + 10)
-#define FT_AP_LIGHT            (FT_AB + 11)
-#define FT_AP_MEDIUM           (FT_AB + 12)
-#define FT_AP_HEAVY            (FT_AB + 13)
-#define FT_ARTIFICER           (FT_AB + 14)
-#define FT_ARMOUR_OPTIMIZATION  (FT_AB + 15)
-#define FT_ARTERIAL_STRIKE     (FT_AB + 16)
-#define FT_ATHLETIC            (FT_AB + 17)
-#define FT_AUGMENT_HEALING     (FT_AB + 18)
-#define FT_AUGMENT_SUMMONING   (FT_AB + 19)
-#define FT_BACKSTAB            (FT_AB + 20)
-#define FT_BATTLEFIELD_INSPIRATION (FT_AB + 21)
-#define FT_BEASTIAL_EMPATHY    (FT_AB + 22)
-#define FT_BEAST_SHAPES        (FT_AB + 23)
-#define FT_BIND_SPELL          (FT_AB + 24)
-#define FT_BLIND_FIGHT         (FT_AB + 25)
-#define FT_BLINDSIGHT          (FT_AB + 26)
-#define FT_BRACHIATION         (FT_AB + 27)
-#define FT_BREAKFALL           (FT_AB + 28)
-#define FT_BREAK_THE_BREATH    (FT_AB + 29)
-#define FT_BREW_POTION         (FT_AB + 30)
-#define FT_BROAD_COUNTERSPELL  (FT_AB + 31)
+#define FT_AIM_FOR_THE_EYES    53
+#define FT_AIMED_SHOT          54
+#define FT_ALERTNESS           55
+#define FT_ALLURING            56
+#define FT_AMBIDEXTERITY       57
+#define FT_AMPLIFY_SPELL       58
+#define FT_ANCHOR_SPELL        59
+#define FT_ANIMAL_BOND         60
+#define FT_AP_LIGHT            61
+#define FT_AP_MEDIUM           62
+#define FT_AP_HEAVY            63
+#define FT_ARTIFICER           64
+#define FT_ARMOUR_OPTIMIZATION  65
+#define FT_ARTERIAL_STRIKE     66
+#define FT_ATHLETIC            67
+#define FT_AUGMENT_HEALING     68
+#define FT_AUGMENT_SUMMONING   69
+#define FT_BACKSTAB            70
+#define FT_BATTLEFIELD_INSPIRATION 71
+#define FT_BEASTIAL_EMPATHY    72
+#define FT_BEAST_SHAPES        73
+#define FT_BIND_SPELL          74
+#define FT_BLIND_FIGHT         75
+#define FT_BLINDSIGHT          76
+#define FT_BRACHIATION         77
+#define FT_BREAKFALL           78
+#define FT_BREAK_THE_BREATH    79
+#define FT_BREW_POTION         80
+#define FT_BROAD_COUNTERSPELL  81
 
-#define FT_CD                  (FT_AB + 32)
+#define FT_CD                  82
 
-#define FT_CAPTIVATING         (FT_CD + 0)  /* alias of FT_CD */
-#define FT_CENTERED            (FT_CD + 1)
-#define FT_CHI_STRIKE          (FT_CD + 2)
-#define FT_CHINK_IN_THE_ARMOUR  (FT_CD + 3)
-#define FT_CHOKE_HOLD          (FT_CD + 4)
-#define FT_CIRCLE_KICK         (FT_CD + 5)
-#define FT_CLEAR_MINDED        (FT_CD + 6)
-#define FT_CLEAVE              (FT_CD + 7)
-#define FT_CLEAVE_ASUNDER      (FT_CD + 8)
-#define FT_CLOSE_QUARTERS_FIGHTER (FT_CD + 9)
-#define FT_COMBAT_BRUTE        (FT_CD + 10)
-#define FT_COMBAT_CASTING      (FT_CD + 11)
-#define FT_COMBAT_FINESSE      (FT_CD + 12)
-#define FT_COMBAT_OPPORTUNIST  (FT_CD + 13)
-#define FT_COMBAT_REFLEXES     (FT_CD + 14)
-#define FT_CONSECRATE_SPELL    (FT_CD + 15)
-#define FT_CONTROL_SPELL       (FT_CD + 16)
-#define FT_COORDINATED_TACTICS (FT_CD + 17)
-#define FT_CRAFT_ARMOUR         (FT_CD + 18)
-#define FT_CRAFT_WEAPON        (FT_CD + 19)
-#define FT_DANCE_OF_TUKIMA     (FT_CD + 20)
-#define FT_DASH                (FT_CD + 21)
-#define FT_DEADLY_CRIT         (FT_CD + 22)
-#define FT_DEATH_BLOW          (FT_CD + 23)
-#define FT_DECIEVER            (FT_CD + 24)
-#define FT_DEFENSIVE_SHOT      (FT_CD + 25)
-#define FT_DEFENSIVE_SPELL     (FT_CD + 26)
-#define FT_DEFENSIVE_SYNERGY   (FT_CD + 27)
-#define FT_DEFENSIVE_THROW     (FT_CD + 28)
-#define FT_DEFILING_SPELL      (FT_CD + 29)
-#define FT_DEFLECT_ARROWS      (FT_CD + 30)
-#define FT_DEFLECT_MAGIC       (FT_CD + 31)
-#define FT_DEFT_OPPORTUNIST    (FT_CD + 32)
-#define FT_DETECTIVE           (FT_CD + 33)
-#define FT_DIEHARD             (FT_CD + 34)
-#define FT_DIRTY_FIGHTING      (FT_CD + 35)
-#define FT_DIVINE_AEGIS        (FT_CD + 37)
-#define FT_DIVINE_ARMOUR        (FT_CD + 38)
-#define FT_DIVINE_CLEANSING    (FT_CD + 39)
-#define FT_DIVINE_MIGHT        (FT_CD + 40)
-#define FT_DIVINE_RESISTANCE   (FT_CD + 41)
-#define FT_DIVINE_VENGEANCE    (FT_CD + 42)
-#define FT_DIVINE_VIGOR        (FT_CD + 43)
-#define FT_DODGE               (FT_CD + 44)
-#define FT_DOLOROUS_BLOW       (FT_CD + 45)
-#define FT_DOMAIN_FOCUS        (FT_CD + 46)
-#define FT_DOMAIN_MASTERY      (FT_CD + 47)
-#define FT_DOUBLE_WEAPON_FIGHTING (FT_CD + 48)
-#define FT_DRAGON_SHAPES       (FT_CD + 49)
-#define FT_EFG                 (FT_CD + 50)
+#define FT_CAPTIVATING         82  /* alias of FT_CD */
+#define FT_CENTERED            83
+#define FT_CHI_STRIKE          84
+#define FT_CHINK_IN_THE_ARMOUR  85
+#define FT_CHOKE_HOLD          86
+#define FT_CIRCLE_KICK         87
+#define FT_CLEAR_MINDED        88
+#define FT_CLEAVE              89
+#define FT_CLEAVE_ASUNDER      90
+#define FT_CLOSE_QUARTERS_FIGHTER 91
+#define FT_COMBAT_BRUTE        92
+#define FT_COMBAT_CASTING      93
+#define FT_COMBAT_FINESSE      94
+#define FT_COMBAT_OPPORTUNIST  95
+#define FT_COMBAT_REFLEXES     96
+#define FT_CONSECRATE_SPELL    97
+#define FT_CONTROL_SPELL       98
+#define FT_COORDINATED_TACTICS 99
+#define FT_CRAFT_ARMOUR         100
+#define FT_CRAFT_WEAPON        101
+#define FT_DANCE_OF_TUKIMA     102
+#define FT_DASH                103
+#define FT_DEADLY_CRIT         104
+#define FT_DEATH_BLOW          105
+#define FT_DECIEVER            106
+#define FT_DEFENSIVE_SHOT      107
+#define FT_DEFENSIVE_SPELL     108
+#define FT_DEFENSIVE_SYNERGY   109
+#define FT_DEFENSIVE_THROW     110
+#define FT_DEFILING_SPELL      111
+#define FT_DEFLECT_ARROWS      112
+#define FT_DEFLECT_MAGIC       113
+#define FT_DEFT_OPPORTUNIST    114
+#define FT_DETECTIVE           115
+#define FT_DIEHARD             116
+#define FT_DIRTY_FIGHTING      117
+#define FT_DIVINE_AEGIS        119
+#define FT_DIVINE_ARMOUR        120
+#define FT_DIVINE_CLEANSING    121
+#define FT_DIVINE_MIGHT        122
+#define FT_DIVINE_RESISTANCE   123
+#define FT_DIVINE_VENGEANCE    124
+#define FT_DIVINE_VIGOR        125
+#define FT_DODGE               126
+#define FT_DOLOROUS_BLOW       127
+#define FT_DOMAIN_FOCUS        128
+#define FT_DOMAIN_MASTERY      129
+#define FT_DOUBLE_WEAPON_FIGHTING 130
+#define FT_DRAGON_SHAPES       131
+#define FT_EFG                 132
 
-#define FT_EAGLE_CLAW_ATTACK   (FT_EFG + 1) 
-#define FT_EARTHS_EMBRACE      (FT_EFG + 2)
-#define FT_EDUCATED            (FT_EFG + 3)
-#define FT_ELEGANT_DEFENSE     (FT_EFG + 4)
-#define FT_ELUSIVE_TARGET      (FT_EFG + 5)
-#define FT_EMPOWER_SPELL       (FT_EFG + 6)
-#define FT_EMPOWER_TURNING     (FT_EFG + 7)
-#define FT_ENDURANCE           (FT_EFG + 8)
-#define FT_ENFOLDING_LOCK      (FT_EFG + 9)
-#define FT_ENGENDER_PITY       (FT_EFG + 10)
-#define FT_ENLARGE_SPELL       (FT_EFG + 11)
-#define FT_EXOTIC_WEAPON       (FT_EFG + 12)
-#define FT_EXPERTISE           (FT_EFG + 13)
-#define FT_EXPERT_TACTICIAN    (FT_EFG + 14)
-#define FT_EXTEND_SPELL        (FT_EFG + 15)
-#define FT_FALLING_STAR_STRIKE (FT_EFG + 16)
-#define FT_FASTER_THAN_THE_EYE (FT_EFG + 17)
-#define FT_FAST_WILD_SHAPE     (FT_EFG + 18)
-#define FT_FAR_SHOT            (FT_EFG + 19)
-#define FT_FEATHERFOOT         (FT_EFG + 20)
-#define FT_FISTS_OF_IRON       (FT_EFG + 21)
-#define FT_FLICK_OF_THE_WRIST  (FT_EFG + 22)
-#define FT_FLYBY_ATTACK        (FT_EFG + 23)
-#define FT_FLYING_KICK         (FT_EFG + 24)
-#define FT_FOCUS_SPELL         (FT_EFG + 25)
-#define FT_FORTIFY_SPELL       (FT_EFG + 26)
-#define FT_FORGE_RING          (FT_EFG + 27)
-#define FT_FREEZE_THE_LIFEBLOOD (FT_EFG + 28)
-#define FT_GRACEFUL            (FT_EFG + 29)
-#define FT_GREAT_BLOW          (FT_EFG + 30)
-#define FT_GREAT_CLEAVE        (FT_EFG + 31)
-#define FT_GREAT_FORTITUDE     (FT_EFG + 32)
-#define FT_GREAT_THROW         (FT_EFG + 33)
-#define FT_GREATER_SOULBLADE   (FT_EFG + 34)
-#define FT_GUARDED_INVOCATION  (FT_EFG + 35)
-#define FT_GUARDED_STANCE      (FT_EFG + 36)
-#define FT_GUILDMAGE           (FT_EFG + 37)
-#define FT_HI                  (FT_EFG + 38)
+#define FT_EAGLE_CLAW_ATTACK   133 
+#define FT_EARTHS_EMBRACE      134
+#define FT_EDUCATED            135
+#define FT_ELEGANT_DEFENSE     136
+#define FT_ELUSIVE_TARGET      137
+#define FT_EMPOWER_SPELL       138
+#define FT_EMPOWER_TURNING     139
+#define FT_ENDURANCE           140
+#define FT_ENFOLDING_LOCK      141
+#define FT_ENGENDER_PITY       142
+#define FT_ENLARGE_SPELL       143
+#define FT_EXOTIC_WEAPON       144
+#define FT_EXPERTISE           145
+#define FT_EXPERT_TACTICIAN    146
+#define FT_EXTEND_SPELL        147
+#define FT_FALLING_STAR_STRIKE 148
+#define FT_FASTER_THAN_THE_EYE 149
+#define FT_FAST_WILD_SHAPE     150
+#define FT_FAR_SHOT            151
+#define FT_FEATHERFOOT         152
+#define FT_FISTS_OF_IRON       153
+#define FT_FLICK_OF_THE_WRIST  154
+#define FT_FLYBY_ATTACK        155
+#define FT_FLYING_KICK         156
+#define FT_FOCUS_SPELL         157
+#define FT_FORTIFY_SPELL       158
+#define FT_FORGE_RING          159
+#define FT_FREEZE_THE_LIFEBLOOD 160
+#define FT_GRACEFUL            161
+#define FT_GREAT_BLOW          162
+#define FT_GREAT_CLEAVE        163
+#define FT_GREAT_FORTITUDE     164
+#define FT_GREAT_THROW         165
+#define FT_GREATER_SOULBLADE   166
+#define FT_GUARDED_INVOCATION  167
+#define FT_GUARDED_STANCE      168
+#define FT_GUILDMAGE           169
+#define FT_HI                  170
 
-#define FT_HAMSTRING           (FT_HI + 1)
-#define FT_HARDINESS           (FT_HI + 2)
-#define FT_HEIGHTED_TURNING    (FT_HI + 3)
-#define FT_HEIGHTEN_SPELL      (FT_HI + 4)
-#define FT_HOLD_THE_LINE       (FT_HI + 6)
-#define FT_HOVER               (FT_HI + 7)
-#define FT_IGNORE_WOUND        (FT_HI + 8)
-#define FT_IMPROVED_CRIT       (FT_HI + 9)
-#define FT_IMPROVED_DEMORALIZE (FT_HI + 10)
-#define FT_IMPROVED_GRAPPLE    (FT_HI + 11)
-#define FT_IMPROVED_ATTR       (FT_HI + 13)
-#define FT_IMPROVED_STRENGTH   (FT_HI + 13)   /* Important! Do not change the order of the */  /* alias of FT_IMPROVED_ATTR */
-#define FT_IMPROVED_DEXTERITY  (FT_HI + 14)   /* Improved [Attr] feats! The game depends on */
-#define FT_IMPROVED_CONSTITUTION (FT_HI + 15) /* (FT_IMPROVED_ATTR + A_WIS) being equal to */
-#define FT_IMPROVED_INTELLIGENCE (FT_HI + 16) /* FT_IMPROVED_WISDOM. */
-#define FT_IMPROVED_WISDOM     (FT_HI + 17)
-#define FT_IMPROVED_CHARISMA   (FT_HI + 18)
-#define FT_IMPROVED_LUCK       (FT_HI + 19)
-#define FT_INHERANT_SPELL      (FT_HI + 20)
-#define FT_INNATE_SPELL        (FT_HI + 21)
-#define FT_INSIGHTFUL          (FT_HI + 22)
-#define FT_INSTANT_STAND       (FT_HI + 23)
-#define FT_INTENSIVE_STUDY     (FT_HI + 24)
-#define FT_IRON_SKIN           (FT_HI + 25)
-#define FT_IRON_WILL           (FT_HI + 26)
-#define FT_IMPROVED_INITIATIVE (FT_HI + 27)
-#define FT_IMPROVED_MOUNT      (FT_HI + 28)
-#define FT_IMPROVED_TURNING    (FT_HI + 29)
-#define FT_JKLM                (FT_HI + 30)
+#define FT_HAMSTRING           171
+#define FT_HARDINESS           172
+#define FT_HEIGHTED_TURNING    173
+#define FT_HEIGHTEN_SPELL      174
+#define FT_HOLD_THE_LINE       176
+#define FT_HOVER               177
+#define FT_IGNORE_WOUND        178
+#define FT_IMPROVED_CRIT       179
+#define FT_IMPROVED_DEMORALIZE 180
+#define FT_IMPROVED_GRAPPLE    181
+#define FT_IMPROVED_ATTR       183
+#define FT_IMPROVED_STRENGTH   183   /* Important! Do not change the order of the */  /* alias of FT_IMPROVED_ATTR */
+#define FT_IMPROVED_DEXTERITY  184   /* Improved [Attr] feats! The game depends on */
+#define FT_IMPROVED_CONSTITUTION 185 /* (FT_IMPROVED_ATTR + A_WIS) being equal to */
+#define FT_IMPROVED_INTELLIGENCE 186 /* FT_IMPROVED_WISDOM. */
+#define FT_IMPROVED_WISDOM     187
+#define FT_IMPROVED_CHARISMA   188
+#define FT_IMPROVED_LUCK       189
+#define FT_INHERANT_SPELL      190
+#define FT_INNATE_SPELL        191
+#define FT_INSIGHTFUL          192
+#define FT_INSTANT_STAND       193
+#define FT_INTENSIVE_STUDY     194
+#define FT_IRON_SKIN           195
+#define FT_IRON_WILL           196
+#define FT_IMPROVED_INITIATIVE 197
+#define FT_IMPROVED_MOUNT      198
+#define FT_IMPROVED_TURNING    199
+#define FT_JKLM                200
 
-#define FT_JUDICIOUS_SPELL     (FT_JKLM + 1)
-#define FT_KNOCKBACK           (FT_JKLM + 2) 
-#define FT_KNOCK_PRONE         (FT_JKLM + 3)
-#define FT_LANDED_NOBLE        (FT_JKLM + 4)
-#define FT_LARCENOUS           (FT_JKLM + 5)
-#define FT_LEADERSHIP          (FT_JKLM + 6)
-#define FT_LIGHTNING_FISTS     (FT_JKLM + 7)
-#define FT_LIGHTNING_REFLEXES  (FT_JKLM + 8)
-#define FT_LIGHT_SLEEPER       (FT_JKLM + 9)
-#define FT_LION_HEART          (FT_JKLM + 10)
-#define FT_LIVING_WALL         (FT_JKLM + 11)
-#define FT_LOADBEARER          (FT_JKLM + 12)
-#define FT_LORE_OF_ACID        (FT_JKLM + 13)
-#define FT_LORE_OF_DEATH       (FT_JKLM + 14)
-#define FT_LORE_OF_FLAMES      (FT_JKLM + 15)
-#define FT_LORE_OF_RIME        (FT_JKLM + 16)
-#define FT_LORE_OF_STORMS      (FT_JKLM + 17)
-#define FT_MAGE_SLAYER         (FT_JKLM + 18)
-#define FT_MANTIS_LEAP         (FT_JKLM + 19)
-#define FT_MARTIAL_MASTERY     (FT_JKLM + 20)
-#define FT_MASTER_BULL_RUSH    (FT_JKLM + 21)
-#define FT_MASTER_DISARM       (FT_JKLM + 22)
-#define FT_MASTER_GREAT_BLOW   (FT_JKLM + 23)
-#define FT_MASTER_THROW        (FT_JKLM + 24)
-#define FT_MASTER_TRIP         (FT_JKLM + 25)
-#define FT_MAXIMIZE_SPELL      (FT_JKLM + 26)
-#define FT_MOBILITY            (FT_JKLM + 27)
-#define FT_MONKEY_GRIP         (FT_JKLM + 28)
-#define FT_MOUNTED_ARCHERY     (FT_JKLM + 29)
-#define FT_MOUNTED_COMBAT      (FT_JKLM + 30)
-#define FT_MULTIATTACK         (FT_JKLM + 31)
-#define FT_MURDEROUS           (FT_JKLM + 32)
-#define FT_MYSTIC_PREPARATION  (FT_JKLM + 33)
-#define FT_MYTHIC_SHAPES       (FT_JKLM + 34)
-#define FT_MISSILE_PROOF       (FT_JKLM + 35)
-#define FT_MASTER_GRAPPLE      (FT_JKLM + 36)
-#define FT_NOP                 (FT_JKLM + 37)
+#define FT_JUDICIOUS_SPELL     201
+#define FT_KNOCKBACK           202 
+#define FT_KNOCK_PRONE         203
+#define FT_LANDED_NOBLE        204
+#define FT_LARCENOUS           205
+#define FT_LEADERSHIP          206
+#define FT_LIGHTNING_FISTS     207
+#define FT_LIGHTNING_REFLEXES  208
+#define FT_LIGHT_SLEEPER       209
+#define FT_LION_HEART          210
+#define FT_LIVING_WALL         211
+#define FT_LOADBEARER          212
+#define FT_LORE_OF_ACID        213
+#define FT_LORE_OF_DEATH       214
+#define FT_LORE_OF_FLAMES      215
+#define FT_LORE_OF_RIME        216
+#define FT_LORE_OF_STORMS      217
+#define FT_MAGE_SLAYER         218
+#define FT_MANTIS_LEAP         219
+#define FT_MARTIAL_MASTERY     220
+#define FT_MASTER_BULL_RUSH    221
+#define FT_MASTER_DISARM       222
+#define FT_MASTER_GREAT_BLOW   223
+#define FT_MASTER_THROW        224
+#define FT_MASTER_TRIP         225
+#define FT_MAXIMIZE_SPELL      226
+#define FT_MOBILITY            227
+#define FT_MONKEY_GRIP         228
+#define FT_MOUNTED_ARCHERY     229
+#define FT_MOUNTED_COMBAT      230
+#define FT_MULTIATTACK         231
+#define FT_MURDEROUS           232
+#define FT_MYSTIC_PREPARATION  233
+#define FT_MYTHIC_SHAPES       234
+#define FT_MISSILE_PROOF       235
+#define FT_MASTER_GRAPPLE      236
+#define FT_NOP                 237
 
-#define FT_NATURAL_APTITUDE    (FT_NOP + 1)
-#define FT_NATURAL_GRAB        (FT_NOP + 2)
-#define FT_NECROPHYSIOLOGY     (FT_NOP + 3)
-#define FT_NON_STANDARD_FLURRY (FT_NOP + 4)
-#define FT_ONE_BODY_ONE_SOUL   (FT_NOP + 5)
-#define FT_OVERRUN             (FT_NOP + 6)
-#define FT_PAIN_TOLERANCE      (FT_NOP + 7)
-#define FT_PAIN_TOUCH          (FT_NOP + 8)            
-#define FT_PARTIAL_EVASION     (FT_NOP + 9)
-#define FT_PERCEPTIVE          (FT_NOP + 10)
-#define FT_PERSISTANT_SPELL    (FT_NOP + 11)
-#define FT_PERSUASIVE          (FT_NOP + 12)
-#define FT_PHYSICIAN           (FT_NOP + 13)
-#define FT_PINNING_SHOT        (FT_NOP + 14)
-#define FT_PLANT_EMPATHY       (FT_NOP + 15)
-#define FT_PLANT_SHAPES        (FT_NOP + 16)
-#define FT_POINT_BLANK_SHOT    (FT_NOP + 17)
-#define FT_POLESTAR_FIST       (FT_NOP + 18)
-#define FT_POUNCE              (FT_NOP + 19)
-#define FT_POWER_ATTACK        (FT_NOP + 20)
-#define FT_POWER_CHARGE        (FT_NOP + 21)
-#define FT_POWER_DOUBLE_WEAPON (FT_NOP + 22)
-#define FT_POWER_JUMP          (FT_NOP + 23)
-#define FT_POWER_KICK          (FT_NOP + 24)
-#define FT_PRECISE_SHOT        (FT_NOP + 25)
-#define FT_PROJECT_SPELL       (FT_NOP + 26)
-#define FT_PSYCHIC_DUEL        (FT_NOP + 27)
-#define FT_QRS                 (FT_NOP + 28)
+#define FT_NATURAL_APTITUDE    238
+#define FT_NATURAL_GRAB        239
+#define FT_NECROPHYSIOLOGY     240
+#define FT_NON_STANDARD_FLURRY 241
+#define FT_ONE_BODY_ONE_SOUL   242
+#define FT_OVERRUN             243
+#define FT_PAIN_TOLERANCE      244
+#define FT_PAIN_TOUCH          245            
+#define FT_PARTIAL_EVASION     246
+#define FT_PERCEPTIVE          247
+#define FT_PERSISTANT_SPELL    248
+#define FT_PERSUASIVE          249
+#define FT_PHYSICIAN           250
+#define FT_PINNING_SHOT        251
+#define FT_PLANT_EMPATHY       252
+#define FT_PLANT_SHAPES        253
+#define FT_POINT_BLANK_SHOT    254
+#define FT_POLESTAR_FIST       255
+#define FT_POUNCE              256
+#define FT_POWER_ATTACK        257
+#define FT_POWER_CHARGE        258
+#define FT_POWER_DOUBLE_WEAPON 259
+#define FT_POWER_JUMP          260
+#define FT_POWER_KICK          261
+#define FT_PRECISE_SHOT        262
+#define FT_PROJECT_SPELL       263
+#define FT_PSYCHIC_DUEL        264
+#define FT_QRS                 265
 
-#define FT_QUICK_DRAW          (FT_QRS + 1)
-#define FT_QUICKEN_INNATE_MAGIC (FT_QRS + 2)
-#define FT_QUICKEN_SPELL       (FT_QRS + 3)
-#define FT_QUICKEN_TURNING     (FT_QRS + 4)
-#define FT_QUICKER_THAN_THE_EYE (FT_QRS+ 5)
-#define FT_RAKE                (FT_QRS + 6)
-#define FT_RANGED_DISARM       (FT_QRS + 7)
-#define FT_RAPID_RELOAD        (FT_QRS + 8)
-#define FT_RAPID_SHOT          (FT_QRS + 9)
-#define FT_REDIRECT_ATTACK     (FT_QRS + 10)
-#define FT_REED_IN_THE_WIND    (FT_QRS + 11)
-#define FT_REFLECTIVE_COUNTERSPELL (FT_QRS + 12)
-#define FT_REND                (FT_QRS + 13)
-#define FT_REPEAT_SPELL        (FT_QRS + 14)
-#define FT_RESILIENT           (FT_QRS + 15)
-#define FT_RESIST_DEATH        (FT_QRS + 16)
-#define FT_RESIST_PARALYSIS    (FT_QRS + 17)
-#define FT_RIDE_BY_ATTACK      (FT_QRS + 18)
-#define FT_RIPOSTE             (FT_QRS + 19)
-#define FT_ROLL_WITH_IT        (FT_QRS + 20)
-#define FT_RUN                 (FT_QRS + 21)
-#define FT_RUNNING_SHOT        (FT_QRS + 22)
-#define FT_SCHOOL_FOCUS        (FT_QRS + 23)
-#define FT_SCRIBE_SCROLL       (FT_QRS + 24)
-#define FT_SCROLL_MASTERY      (FT_QRS + 25)
-#define FT_SHIELD_BASH         (FT_QRS + 26)
-#define FT_SHIELD_EXPERT       (FT_QRS + 27)
-#define FT_SHIELD_FOCUS        (FT_QRS + 28)
-#define FT_SHIELD_PROFICIENCY  (FT_QRS + 29)
-#define FT_SHOCK_TROOPER       (FT_QRS + 30)
-#define FT_SIGNATURE_ITEM      (FT_QRS + 31)
-#define FT_SKILL_APTITUDE      (FT_QRS + 32)
-#define FT_SKILL_FOCUS         (FT_QRS + 33)
-#define FT_SLIPAWAY            (FT_QRS + 34)
-#define FT_SNEAKY              (FT_QRS + 35)
-#define FT_SOULBLADE           (FT_QRS + 36)
-#define FT_SPELL_MASTERY       (FT_QRS + 37)
-#define FT_SPELL_PENETRATION   (FT_QRS + 38)
-#define FT_SPIRITED_CHARGE     (FT_QRS + 39)
-#define FT_SPRING_ATTACK       (FT_QRS + 40)
-#define FT_STAFF_MASTERY       (FT_QRS + 41)
-#define FT_STILL_SPELL         (FT_QRS + 42)
-#define FT_STRIKE_THE_WATER    (FT_QRS + 43)
-#define FT_STUBBORN_MIND       (FT_QRS + 44)
-#define FT_SUNDER              (FT_QRS + 45)
-#define FT_SUPREME_CLEAVE      (FT_QRS + 46)
-#define FT_SURE_SPELL          (FT_QRS + 47)
-#define FT_SWARM               (FT_QRS + 48)
-#define FT_SPEAR_AND_SHIELD    (FT_QRS + 49)
-#define FT_SHOOT_FROM_COVER    (FT_QRS + 50)
-#define FT_TUVWXYZ             (FT_QRS + 51)
+#define FT_QUICK_DRAW          266
+#define FT_QUICKEN_INNATE_MAGIC 267
+#define FT_QUICKEN_SPELL       268
+#define FT_QUICKEN_TURNING     269
+#define FT_QUICKER_THAN_THE_EYE 270
+#define FT_RAKE                271
+#define FT_RANGED_DISARM       272
+#define FT_RAPID_RELOAD        273
+#define FT_RAPID_SHOT          274
+#define FT_REDIRECT_ATTACK     275
+#define FT_REED_IN_THE_WIND    276
+#define FT_REFLECTIVE_COUNTERSPELL 277
+#define FT_REND                278
+#define FT_REPEAT_SPELL        279
+#define FT_RESILIENT           280
+#define FT_RESIST_DEATH        281
+#define FT_RESIST_PARALYSIS    282
+#define FT_RIDE_BY_ATTACK      283
+#define FT_RIPOSTE             284
+#define FT_ROLL_WITH_IT        285
+#define FT_RUN                 286
+#define FT_RUNNING_SHOT        287
+#define FT_SCHOOL_FOCUS        288
+#define FT_SCRIBE_SCROLL       289
+#define FT_SCROLL_MASTERY      290
+#define FT_SHIELD_BASH         291
+#define FT_SHIELD_EXPERT       292
+#define FT_SHIELD_FOCUS        293
+#define FT_SHIELD_PROFICIENCY  294
+#define FT_SHOCK_TROOPER       295
+#define FT_SIGNATURE_ITEM      296
+#define FT_SKILL_APTITUDE      297
+#define FT_SKILL_FOCUS         298
+#define FT_SLIPAWAY            299
+#define FT_SNEAKY              300
+#define FT_SOULBLADE           301
+#define FT_SPELL_MASTERY       302
+#define FT_SPELL_PENETRATION   303
+#define FT_SPIRITED_CHARGE     304
+#define FT_SPRING_ATTACK       305
+#define FT_STAFF_MASTERY       306
+#define FT_STILL_SPELL         307
+#define FT_STRIKE_THE_WATER    308
+#define FT_STUBBORN_MIND       309
+#define FT_SUNDER              310
+#define FT_SUPREME_CLEAVE      311
+#define FT_SURE_SPELL          312
+#define FT_SWARM               313
+#define FT_SPEAR_AND_SHIELD    314
+#define FT_SHOOT_FROM_COVER    315
+#define FT_TUVWXYZ             316
 
-#define FT_TACTICAL_WITHDRAWL  (FT_TUVWXYZ + 1)
-#define FT_TALENTED            (FT_TUVWXYZ + 2)
-#define FT_TERRIBLE_MEIN       (FT_TUVWXYZ + 3)
-#define FT_TOUGHNESS           (FT_TUVWXYZ + 4)
-#define FT_TRACK               (FT_TUVWXYZ + 5)
-#define FT_TRAMPLE             (FT_TUVWXYZ + 6)
-#define FT_TRANSMUTE_SPELL     (FT_TUVWXYZ + 7)
-#define FT_TURN_EVIL           (FT_TUVWXYZ + 8)
-#define FT_TURN_OUTSIDERS      (FT_TUVWXYZ + 9)
-#define FT_TURN_RESISTANCE     (FT_TUVWXYZ + 10)
-#define FT_TWIN_WEAPON_STYLE   (FT_TUVWXYZ + 11)
-#define FT_TWO_WEAPON_STYLE    (FT_TUVWXYZ + 12)
-#define FT_TWO_WEAPON_TEMPEST  (FT_TUVWXYZ + 13)
-#define FT_UNBALANCING_STRIKE  (FT_TUVWXYZ + 14)
-#define FT_UNSEEN_SPELL        (FT_TUVWXYZ + 15)
-#define FT_VERMIN_SHAPES       (FT_TUVWXYZ + 16)
-#define FT_VOCALIZE_SPELL      (FT_TUVWXYZ + 17)
-#define FT_VILE_SPELL          (FT_TUVWXYZ + 18)
-#define FT_WAND_MASTERY        (FT_TUVWXYZ + 19)
-#define FT_WARCRY              (FT_TUVWXYZ + 20)
-#define FT_WARP_SPELL          (FT_TUVWXYZ + 21)
-#define FT_WEAPON_FINESSE      (FT_TUVWXYZ + 22)
-#define FT_WEAPON_FOCUS        (FT_TUVWXYZ + 23)
-#define FT_WEAPON_FOCUS_BITE   (FT_TUVWXYZ + 24)
-#define FT_WEAPON_FOCUS_CLAW   (FT_TUVWXYZ + 25)
-#define FT_WEAPON_FOCUS_TENTACLE (FT_TUVWXYZ + 26)
-#define FT_WEAPON_FOCUS_HORNS  (FT_TUVWXYZ + 27)
-#define FT_WEAPON_FOCUS_SPORES (FT_TUVWXYZ + 28)
-#define FT_WEAPON_MASTERY      (FT_TUVWXYZ + 29)
-#define FT_WEAPON_PROFICIENCY  (FT_TUVWXYZ + 30)
-#define FT_WEAPON_SPECIALIST   (FT_TUVWXYZ + 31)
-#define FT_WEATHER_BLAST       (FT_TUVWXYZ + 32)
-#define FT_WHIRLWIND_ATTACK    (FT_TUVWXYZ + 33)
-#define FT_WILD_SHAPE_ELEMENTALKIN (FT_TUVWXYZ + 34)
-#define FT_WILD_SHAPE_MYTHIC   (FT_TUVWXYZ + 35)
-#define FT_WILD_SHAPE_PLANT    (FT_TUVWXYZ + 36)
-#define FT_WILD_SHAPE_SCENT    (FT_TUVWXYZ + 37)
-#define FT_WILD_SHAPE_VERMIN   (FT_TUVWXYZ + 38)
-#define FT_WILL_TO_LIVE        (FT_TUVWXYZ + 39)
-#define FT_WOODSMAN            (FT_TUVWXYZ + 40)
-#define FT_ZEN_ARCHERY         (FT_TUVWXYZ + 41)
-#define FT_ZEN_DEFENSE         (FT_TUVWXYZ + 42)
-#define FT_WILD_SHAPE_MASTERY  (FT_TUVWXYZ + 43)
-#define FT_WEAPON_HIGH_MASTERY (FT_TUVWXYZ + 44)
-#define FT_WEAPON_GRAND_MASTERY (FT_TUVWXYZ + 45)
+#define FT_TACTICAL_WITHDRAWL  317
+#define FT_TALENTED            318
+#define FT_TERRIBLE_MEIN       319
+#define FT_TOUGHNESS           320
+#define FT_TRACK               321
+#define FT_TRAMPLE             322
+#define FT_TRANSMUTE_SPELL     323
+#define FT_TURN_EVIL           324
+#define FT_TURN_OUTSIDERS      325
+#define FT_TURN_RESISTANCE     326
+#define FT_TWIN_WEAPON_STYLE   327
+#define FT_TWO_WEAPON_STYLE    328
+#define FT_TWO_WEAPON_TEMPEST  329
+#define FT_UNBALANCING_STRIKE  330
+#define FT_UNSEEN_SPELL        331
+#define FT_VERMIN_SHAPES       332
+#define FT_VOCALIZE_SPELL      333
+#define FT_VILE_SPELL          334
+#define FT_WAND_MASTERY        335
+#define FT_WARCRY              336
+#define FT_WARP_SPELL          337
+#define FT_WEAPON_FINESSE      338
+#define FT_WEAPON_FOCUS        339
+#define FT_WEAPON_FOCUS_BITE   340
+#define FT_WEAPON_FOCUS_CLAW   341
+#define FT_WEAPON_FOCUS_TENTACLE 342
+#define FT_WEAPON_FOCUS_HORNS  343
+#define FT_WEAPON_FOCUS_SPORES 344
+#define FT_WEAPON_MASTERY      345
+#define FT_WEAPON_PROFICIENCY  346
+#define FT_WEAPON_SPECIALIST   347
+#define FT_WEATHER_BLAST       348
+#define FT_WHIRLWIND_ATTACK    349
+#define FT_WILD_SHAPE_ELEMENTALKIN 350
+#define FT_WILD_SHAPE_MYTHIC   351
+#define FT_WILD_SHAPE_PLANT    352
+#define FT_WILD_SHAPE_SCENT    353
+#define FT_WILD_SHAPE_VERMIN   354
+#define FT_WILL_TO_LIVE        355
+#define FT_WOODSMAN            356
+#define FT_ZEN_ARCHERY         357
+#define FT_ZEN_DEFENSE         358
+#define FT_WILD_SHAPE_MASTERY  359
+#define FT_WEAPON_HIGH_MASTERY 360
+#define FT_WEAPON_GRAND_MASTERY 361
 /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
    so existing feat numbers stored in saves are unchanged. */
-#define FT_CANNIBALISM         (FT_TUVWXYZ + 46)
+#define FT_CANNIBALISM         362
 /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
    numbers stored in saves are unchanged. */
-#define FT_LUCUBRATION         (FT_TUVWXYZ + 47)
-#define FT_LAST                (FT_TUVWXYZ + 48)
+#define FT_LUCUBRATION         363
+#define FT_LAST                364
 // end family: ft
 // family: mm stored bits u32
 

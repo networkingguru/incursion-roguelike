@@ -17,7 +17,7 @@
      bool TMonster::isMType(int8 mt) 
      bool Creature::isMType(int8 mt) 
      String Player::BonusBreakdown(int8 at, int16 maxlen)
-     String Player::SkillBreakdown(int8 sk, int16 maxlen)
+     String Player::SkillBreakdown(int16 sk, int16 maxlen)
      String Player::SpellBreakdown(int8 sp, int16 maxlen)
      String Player::ResistBreakdown(int8 dt, int16 maxlen)
 
@@ -3014,7 +3014,7 @@ String & Creature::BonusBreakdown(int8 at, int16 maxlen)
     return *tmpstr((Long.GetLength() > maxlen) ? Short : Long);
   }
 
-String & Player::SkillBreakdown(int8 sk, int16 maxlen)
+String & Player::SkillBreakdown(int16 sk, int16 maxlen)
   {
     return *tmpstr("");
   }

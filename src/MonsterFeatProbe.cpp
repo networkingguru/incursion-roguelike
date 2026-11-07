@@ -302,7 +302,7 @@ void MonsterFeatProbe(Player *pl) {
             TTemplate *bt = TTEM(FIND("blackguard;template"));
             int fallback = 0;
             for (int i = 0; i < 16 && bt->NewFeats[i]; ++i)
-                if (bt->NewFeats[i] > SK_LAST &&
+                if (!IsSkill(bt->NewFeats[i]) &&
                     strncmp(FeatName(bt->NewFeats[i]), "---", 3) == 0)
                     fallback = 1;
             Error("MONSTER_FEAT name=blackguard tag=ialign ialign=%d feat53=%d fallback=%d",

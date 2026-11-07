@@ -3768,7 +3768,7 @@ int8 skn = 0;
          case 715: {
             cexpr3(&sk);
 #line 757 "lang/Grammar.acc"
- theRace->Skills[skn++] = (int8)sk; 
+ theRace->Skills[skn++] = (int16)sk; 
 # line 3773 "src/yygram.cpp"
             switch (yyselect()) {
             case 714: {
@@ -4083,7 +4083,7 @@ int class_entry ()
          case 741: {
             cexpr3(&sk);
 #line 789 "lang/Grammar.acc"
- theClass->Skills[skn++] = (uint8)sk; 
+ theClass->Skills[skn++] = (int16)sk; 
 # line 4088 "src/yygram.cpp"
             switch (yyselect()) {
             case 740: {
@@ -26138,7 +26138,7 @@ int yycoordinate[] = {
 /* 2903 */ 756013,
 /* 2904 */ 9999,
 /* 2905 */ 757009,
-/* 2906 */ 757059,
+/* 2906 */ 757060,
 /* 2907 */ 757014,
 /* 2908 */ 9999,
 /* 2909 */ 757014,
@@ -26148,10 +26148,10 @@ int yycoordinate[] = {
 /* 2913 */ 9999,
 /* 2914 */ 9999,
 /* 2915 */ 9999,
-/* 2916 */ 757060,
+/* 2916 */ 757061,
 /* 2917 */ 9999,
 /* 2918 */ 9999,
-/* 2919 */ 757060,
+/* 2919 */ 757061,
 /* 2920 */ 9999,
 /* 2921 */ 9999,
 /* 2922 */ 9999,

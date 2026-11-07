@@ -784,8 +784,8 @@ static const SchemaPad MonsterPads[] = {
    moved there from 1677-1680 by inc-30ps phase 1's TouchDef insertion),
    plus the pads the compiler leaves between its own members. Each one is
    the gap before the next member's alignment: 1937 after SkillRanks[49],
-   2173 after Abilities[143], 2263 after RageCount, 2278 before LastRest,
-   2583 after NotifiedLevel, 7038 before SacVals, 8390 before lastPulse, and
+   2331 after Abilities[143], 2421 after RageCount, 2436 before LastRest,
+   2741 after NotifiedLevel, 7196 before SacVals, 8548 before lastPulse, and
    the 4-byte tail after Proficiencies. None of these move with TouchDef,
    because Creature's own size did not change.
 
@@ -796,8 +796,8 @@ static const SchemaPad MonsterPads[] = {
    to Character, the two rows move together and both must be re-measured. */
 static const SchemaPad CharacterPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1953, 1 }, { 2189, 1 }, { 2279, 1 }, { 2294, 2 }, { 2599, 1 },
-    { 2714, 2 }, { 11154, 2 }, { 12506, 2 }
+    { 1953, 1 }, { 2347, 1 }, { 2437, 1 }, { 2438, 2 }, { 2454, 2 }, { 2759, 1 },
+    { 2874, 2 }, { 11314, 2 }, { 12666, 2 }
 };
 
 /* Player: CharacterPads without Character's tail pad -- Player's
@@ -810,10 +810,10 @@ static const SchemaPad CharacterPads[] = {
    not change. */
 static const SchemaPad PlayerPads[] = {
     { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1953, 1 }, { 2189, 1 }, { 2279, 1 }, { 2294, 2 }, { 2599, 1 },
-    { 2714, 2 }, { 11154, 2 }, { 12506, 2 },
-    { 12669, 1 }, { 12734, 2 }, { 21938, 6 }, { 21970, 6 },
-    { 22370, 6 }, { 22761, 3 }, { 23722, 6 }
+    { 1953, 1 }, { 2347, 1 }, { 2437, 1 }, { 2438, 2 }, { 2454, 2 }, { 2759, 1 },
+    { 2874, 2 }, { 11314, 2 }, { 12666, 2 },
+    { 12829, 1 }, { 12894, 2 }, { 22098, 6 }, { 22130, 6 },
+    { 22530, 6 }, { 22921, 3 }, { 23882, 6 }
 };
 
 /* Feature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
@@ -4780,9 +4780,9 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           pl->BAttr[i] = (int16)(10 + i);
         for (i = 0; i != ATTR_LAST; i++)
           pl->KAttr[i] = (int16)(300 + i);
-        for (i = 0; i != SK_LASTSKILL; i++)
+        for (i = 0; i != SK_COUNT; i++)
           pl->SkillRanks[i] = (int8)(i % 20);
-        for (i = 0; i != (FT_LAST/8)+1; i++)
+        for (i = 0; i != (FEATBITS_LAST/8)+1; i++)
           pl->Feats[i] = (uint16)(0x0101u * (uint16)(i + 1));
         for (i = 0; i != CA_LAST; i++)
           pl->Abilities[i] = (uint8)(i % 7);
@@ -5691,6 +5691,36 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           grpOk = false;
         }
       printf("SCHEMATEST GROUP items2 %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
+    /* inc-cjos0 phase 7f-2: the skill number helpers and the array lengths
+       they size, printed for tools/check_skill_numbers.sh to assert. The one
+       self-check here is the round trip SkillByIndex(SkillIndex(n)) == n. */
+    {
+      bool grpOk = true;
+      static const int probe[] = { 0, 1, 48, 49, 363, 799, 800, 999 };
+      printf("SKILLNUMBERS const SK_LASTSKILL=%d SK_HIGH_FIRST=%d SK_HIGH_END=%d "
+             "SK_COUNT=%d FEATBITS_LAST=%d\n",
+             (int)SK_LASTSKILL, (int)SK_HIGH_FIRST, (int)SK_HIGH_END,
+             (int)SK_COUNT, (int)FEATBITS_LAST);
+      printf("SKILLNUMBERS len Feats=%d SkillRanks=%d RInfSkillRanks=%d\n",
+             (int)(sizeof(((Player*)0)->Feats) / sizeof(((Player*)0)->Feats[0])),
+             (int)sizeof(((Player*)0)->SkillRanks),
+             (int)sizeof(((ReincarnationInfo*)0)->SkillRanks));
+      for (size_t k = 0; k != sizeof(probe) / sizeof(probe[0]); k++)
+        {
+          int n = probe[k];
+          printf("SKILLNUMBERS n=%d IsSkill=%d SkillIndex=%d SkillByIndex=%d\n",
+                 n, (int)IsSkill(n), SkillIndex(n), SkillByIndex(n));
+        }
+      for (int n = 0; n != 1000; n++)
+        if (IsSkill(n) && SkillByIndex(SkillIndex(n)) != n)
+          {
+            printf("SKILLNUMBERS round trip broken at %d\n", n);
+            grpOk = false;
+          }
+      printf("SCHEMATEST GROUP skillnumbers %s\n", grpOk ? "PASS" : "FAIL");
       ok = ok && grpOk;
     }
 

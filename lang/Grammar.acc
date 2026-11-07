@@ -754,7 +754,7 @@ race_entry:
                                   theRace->FavouredClass[1] = rr2; 
                                   theRace->FavouredClass[2] = rr3; }
   | SKILLS (':')? {int8 skn = 0;}
-      ( cexpr3<sk> { theRace->Skills[skn++] = (int8)sk; } (',')? )* ';'
+      ( cexpr3<sk> { theRace->Skills[skn++] = (int16)sk; } (',')? )* ';'
   | cexpr3<n> (':')? LITERAL<lv> ';' { switch(n) {
                                          case MALE_NAMES  : theRace-> MNames = lv; break;
                                          case FEMALE_NAMES: theRace-> FNames = lv; break;
@@ -786,7 +786,7 @@ class_entry:
   | GRANTS (':')? (special_ability<AbT,Abil,p,l1,l2> (',')?
       { theClass->AddAbility((int8)AbT,(int16)Abil,p,(int8)l1,(int8)l2); } )* ';'
   | SKILLS ('[') cexpr3<sp> (']')  { theClass->SkillPoints = (uint8)sp; int8 skn = 0; }
-      (':')? ( cexpr3<sk> { theClass->Skills[skn++] = (uint8)sk; } (',')? )* ';'
+      (':')? ( cexpr3<sk> { theClass->Skills[skn++] = (int16)sk; } (',')? )* ';'
   | PROFICIENCIES (':')?
       (cexpr3<pr> { theClass->Proficiencies |= pr; } (',')? )* ';'
   | FLAGS (':')?  (cexpr3<n> ('|' | ',')? { theClass->SetFlag((uint16)n); } )* ';'
