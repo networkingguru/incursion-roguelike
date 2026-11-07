@@ -72,21 +72,15 @@ static const char *SkillSubName(int16 sk)
     return buf;
 }
 
-static bool SkillRanksFromSource(int8 *ranks)
-{
-    int32 v[SK_LASTSKILL];
-    for (int16 i = 0; i != SK_LASTSKILL; i++)
-        if (!CreationAnswerRoll(CK_SKILL_RANKS, SkillSubName(i), v[i]))
-            return false;
-    for (int16 i = 0; i != SK_LASTSKILL; i++)
-        ranks[i] = (int8)v[i];
-    return true;
-}
-
-static void NoteSkillRanks(const int8 *ranks)
+/* The one commit of a skill-rank screen. The Skill Manager calls it with the
+   ranks it kept and the points it left unspent; the creation source calls it
+   with a recorded answer and no points unspent. */
+void Player::CommitSkillRanks(const int8 *ranks, const int8 *unspent)
 {
     for (int16 i = 0; i != SK_LASTSKILL; i++)
-        CreationNoteRoll(CK_SKILL_RANKS, SkillSubName(i), ranks[i]);
+        SkillRanks[i] = ranks[i];
+    for (int16 i = 0; i != 6; i++)
+        SpentSP[i] = TotalSP[i] - unspent[i];
 }
 
 static bool AttributesFromSource(int16 *attr)
@@ -117,8 +111,6 @@ static bool perkQualityCapture = false;
 static bool perkQualityGot = false;
 static int16 perkQualityGen[8];
 
-static void NoteSkillRanks(const int8 *ranks);
-static bool SkillRanksFromSource(int8 *ranks);
 static bool AttributesFromSource(int16 *attr);
 static void NoteAttributes(const int16 *attr);
 
@@ -952,19 +944,32 @@ bool Player::Create(bool) {
         CreationPickList yesNo;
         yesNo.Add("no", 0);
         yesNo.Add("yes", 1);
-        if (SourcedPick(CK_ALTER_OPTIONS, yesNo,
-                [&]() { return yn("Alter the character generation options?") ? 1 : 0; })) {
-RedoOptions:
-            MyTerm->SetMode(MO_SPLASH);
-            MyTerm->OptionManager(OPC_CHARGEN);
-            UpdateOptions(true);
-            MyTerm->Clear();
-            MyTerm->SetMode(MO_CREATE);
-        }
-        if (isExploreMode(this))
-            if (!SourcedPick(CK_EXPLORE_CONTINUE, yesNo,
-                    [&]() { return yn("Your options will place the game in Explore Mode. Continue?") ? 1 : 0; }))
-                goto RedoOptions;
+        /* The option screen is reached only through CK_ALTER_OPTIONS. Declining
+           Explore Mode sends the player back to it, which is that decision
+           again, without the first question. */
+        bool backToOptions = false;
+        do {
+            SourcedPick(CK_ALTER_OPTIONS, yesNo,
+                [&]() {
+                    if (!backToOptions && !yn("Alter the character generation options?"))
+                        return 0;
+                    int8 before[OPT_LAST];
+                    memcpy(before, Options, OPT_LAST);
+                    MyTerm->SetMode(MO_SPLASH);
+                    MyTerm->OptionManager(OPC_CHARGEN);
+                    UpdateOptions(true);
+                    MyTerm->Clear();
+                    MyTerm->SetMode(MO_CREATE);
+                    if (memcmp(before, Options, OPT_LAST) != 0)
+                        CreationNoteOptions((const int8*)Options, OPT_LAST);
+                    return 1;
+                });
+            backToOptions = false;
+            if (isExploreMode(this))
+                if (!SourcedPick(CK_EXPLORE_CONTINUE, yesNo,
+                        [&]() { return yn("Your options will place the game in Explore Mode. Continue?") ? 1 : 0; }))
+                    backToOptions = true;
+        } while (backToOptions);
     }
 
     if (isExploreMode(this))
@@ -1324,16 +1329,26 @@ RepeatAlignment:
     MyTerm->ShowTraits(); MyTerm->ShowStatus();
     MyTerm->SetWin(WIN_CREATION);
 
-    if (!SkillRanksFromSource(SkillRanks))
-        MyTerm->SkillManager(true);
-    else {
-        CalcSP();
-        SpentSP[0] = TotalSP[0];
-        SpentSP[1] = TotalSP[1];
-        SpentSP[2] = TotalSP[2];
-        SpentSP[3] = TotalSP[3];
-        SpentSP[4] = TotalSP[4];
-        SpentSP[5] = TotalSP[5];
+    {
+        /* The skill screen is one decision: the ranks it keeps. A source that
+           holds them replaces the whole screen (its confirm and abort prompts
+           included) and commits them through the same function. */
+        int32 ranks[SK_LASTSKILL];
+        bool screenRan = false;
+        SourcedRoll(CK_SKILL_RANKS, ranks, SK_LASTSKILL, SkillSubName,
+            [&]() {
+                MyTerm->SkillManager(true);
+                screenRan = true;
+                for (int16 i = 0; i != SK_LASTSKILL; i++)
+                    ranks[i] = SkillRanks[i];
+            });
+        if (!screenRan) {
+            int8 kept[SK_LASTSKILL], none[6] = { 0, 0, 0, 0, 0, 0 };
+            for (int16 i = 0; i != SK_LASTSKILL; i++)
+                kept[i] = (int8)ranks[i];
+            CalcSP();
+            CommitSkillRanks(kept, none);
+        }
     }
 
     mHP = cHP = 0;
@@ -1582,7 +1597,6 @@ SkipThisFocus:;
     rerolledPerks = SourcedRoll(CK_REROLLED_PERKS, [&]() { return (int32)rerolledPerks; }) != 0;
     rerollCount = SourcedRoll(CK_REROLLS, [&]() { return (int32)rerollCount; });
     statMethod = (int16)SourcedRoll(CK_STAT_METHOD, [&]() { return (int32)statMethod; });
-    NoteSkillRanks(SkillRanks);
     {
         int16 slot = -2;
         src->Finish(this, &slot);
@@ -6637,13 +6651,51 @@ bool Player::LearnSpell(bool left) {
             ? "Choose spells for your next rest (Space marks, Tab next level, Enter confirms)"
             : "Learn spells (Space marks, Tab next level, Enter confirms)");
 
-    if (!MyTerm->LearnTable(rows, nEmitted, myCap, left, replayKey,
-                            "help::magic,LE")) {
-        delete[] rows;
-        free(ls);
-        free(st);
-        free(ord);
-        return false;
+    /* The table is one decision: the spells it keeps marked, named
+       `<spell> [source]` and listed in the order they are learned (the order
+       of the apply loop below, which is the spell list's own order). A source
+       that holds them replaces the table; LearnTable still records and
+       replays through RInf.Rsp when it runs. */
+    {
+        CreationPickList learnPick;
+        std::vector<int32> chosen;
+        bool tableRan = false, tableOk = true;
+        for (k = 1; k <= n; k++)
+            for (i = 0; i < nEmitted; i++)
+                if (rows[i].Val == k && !rows[i].Locked) {
+                    std::string nm = std::string((const char*)rows[i].Spell) + " ["
+                        + (const char*)rows[i].Source + "]";
+                    learnPick.Add(nm.c_str(), rows[i].Val);
+                }
+        SourcedPick(CK_SPELL_LEARN, learnPick, chosen,
+            [&](std::vector<int32> &out) {
+                tableRan = true;
+                tableOk = MyTerm->LearnTable(rows, nEmitted, myCap, left, replayKey,
+                                             "help::magic,LE");
+                if (!tableOk)
+                    return false;
+                for (int16 v = 1; v <= n; v++)
+                    for (int16 r = 0; r < nEmitted; r++)
+                        if (rows[r].Val == v && rows[r].isMarked && !rows[r].Locked)
+                            out.push_back(rows[r].Val);
+                return true;
+            });
+        if (!tableRan) {
+            for (i = 0; i < nEmitted; i++)
+                if (!rows[i].Locked)
+                    rows[i].isMarked = false;
+            for (size_t c = 0; c != chosen.size(); c++)
+                for (i = 0; i < nEmitted; i++)
+                    if (!rows[i].Locked && rows[i].Val == chosen[c])
+                        rows[i].isMarked = true;
+        }
+        if (!tableOk) {
+            delete[] rows;
+            free(ls);
+            free(st);
+            free(ord);
+            return false;
+        }
     }
 
     /* A row's LS_MARK is set when its LearnRow is marked after the table. */

@@ -114,6 +114,11 @@ WALKS=(
   # and a level-up after creation that takes a feat (outside the window).
   "human-warrior-feats-s1-o22 tools/keys/p6a-human-warrior-feats.keys 1  $O22"
   "human-warrior-levelup-s1-o22 tools/keys/p6a-levelup-feat.keys     1  $O22"
+  # Phase 6b: the skill screen's abort and reset by hand, and a mage who learns
+  # his starting spells at creation and another spell at level-up in play.
+  "human-warrior-skillabort-s1-o22 tools/keys/p6b-skill-abort.keys   1  $O22"
+  "orc-mage-levelup-learn-s4-o22 tools/keys/p6b-mage-levelup-learn.keys 4 $O22"
+  "human-warrior-alteropts-s1-o22 tools/keys/p6b-alter-options.keys  1  $O22"
 )
 
 fail=0

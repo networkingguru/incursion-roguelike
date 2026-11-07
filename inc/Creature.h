@@ -1528,6 +1528,9 @@ class Player: public Character
       virtual void GainFeat(int16 list, int32 param=0);
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource);
       bool LearnSpell(bool left = false);
+      /* The one commit of a skill-rank screen: SkillRanks and SpentSP. The
+         Skill Manager and the creation source both call it (inc-10v7f 6b). */
+      void CommitSkillRanks(const int8 *ranks, const int8 *unspent);
       void ApplySpellSelection();
       bool InherentPickable(int16 sn);
       bool ChooseInherentSpell();

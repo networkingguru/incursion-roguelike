@@ -1,0 +1,30 @@
+# inc-10v7f phase 6b: make an orc mage (the starting-spells table at creation,
+# skill ranks spent by hand), then level him up IN PLAY and learn a spell from
+# the Learn Spells table (Player::LearnSpell outside the creation window must
+# record nothing and ask exactly as before). Used by
+# tools/compare_creation_walks.sh.
+
+@include chargen-mage.keys
+
+@while "personality archetype" a
+@until "Afoot" ESC
+
+w y                     # wizard mode
+w                       # [w] Wizard Mode Switches
+DOWN DOWN
+SPACE                   # Free Advancement: NO -> YES
+ESC
+d                       # character sheet
+G                       # gain a level
+@until "Mage 2" a       # answer the level-up menu, wait for the new class line
+L                       # Learn Spells
+@dump:before-mark
+DOWN*3 SPACE DOWN SPACE   # mark Endure Cold and Endure Fire (new spells)
+@dump:marked
+ENTER                   # open the summary box
+ENTER                   # confirm the box
+ESC
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved

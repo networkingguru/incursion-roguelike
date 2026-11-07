@@ -101,7 +101,9 @@
     X(TATTOO,           PICK) \
     X(FAV_ENEMY,        PICK) \
     X(SPECIALIST_SCHOOL, PICK) \
-    X(TRAIN_REPLACE,    PICK)
+    X(TRAIN_REPLACE,    PICK) \
+    X(SPELL_LEARN,      PICK) \
+    X(OPTIONS_FILE,     PICK)
 
 enum CreationKey {
 #define X(n,k) CK_##n,
@@ -188,6 +190,9 @@ public:
     virtual void NotePick(CreationKey k, const CreationContext &c,
         const std::string &text) = 0;
     virtual void NotePerks(const PerkSet &set) = 0;
+    /* The option bytes the creation option screen left, when it changed them
+       (spec B11). Live writes them beside the .char; Replay ignores them. */
+    virtual void NoteOptions(const int8 *opts, int n) = 0;
     virtual void NoteItem(CreationKey k, const CreationContext &c,
         const CreationItem &it) = 0;
     /* Window close: Live writes the .char file when it is asked for. */
@@ -233,6 +238,15 @@ void CreationNoteItem(CreationKey k, const char *sub, const CreationItem &it);
 /* The retained perk set: the one set the player kept from the five offered. */
 bool CreationAnswerPerks(PerkSet &out);
 void CreationNotePerks(const PerkSet &set);
+/* A multi-answer pick: the source gives one answer per call, in order, until
+   it gives none; every answer is a name in `list`. Returns false when the
+   source holds no answer, or an answer names nothing in `list`. The recorder
+   writes one line per value, in the order given. */
+bool CreationAnswerPickMany(CreationKey k, const char *sub,
+    const CreationPickList &list, std::vector<int32> &values);
+void CreationNotePickMany(CreationKey k, const char *sub,
+    const CreationPickList &list, const std::vector<int32> &values);
+void CreationNoteOptions(const int8 *opts, int n);
 
 template<class Live>
 int32 SourcedRoll(CreationKey k, Live live, const char *sub = NULL)
@@ -261,6 +275,42 @@ int32 SourcedPick(CreationKey k, const CreationPickList &list, Live live,
             break;
         }
     return v;
+}
+
+/* A screen that decides many numbers at once (the skill ranks): n rolls, each
+   with its own sub name. `live` runs the screen and fills vals[0..n); a source
+   that holds every number answers them all and `live` does not run. */
+template<class Live>
+void SourcedRoll(CreationKey k, int32 *vals, int16 n, const char *(*subName)(int16),
+    Live live)
+{
+    int16 i;
+    for (i = 0; i != n; i++)
+        if (!CreationAnswerRoll(k, subName(i), vals[i]))
+            break;
+    if (i == n)
+        return;
+    live();
+    for (i = 0; i != n; i++)
+        CreationNoteRoll(k, subName(i), vals[i]);
+}
+
+/* A table that decides a set of choices (the spell table). `live(out)` fills
+   `out` with the chosen values (values from list.values, in the order to
+   record) and returns false when the player backed out; a back-out is not a
+   decision and is not recorded. Returns true when a decision was made, by the
+   source or by `live`. */
+template<class Live>
+bool SourcedPick(CreationKey k, const CreationPickList &list,
+    std::vector<int32> &out, Live live, const char *sub = NULL)
+{
+    if (CreationAnswerPickMany(k, sub, list, out))
+        return true;
+    out.clear();
+    if (!live(out))
+        return false;
+    CreationNotePickMany(k, sub, list, out);
+    return true;
 }
 
 /* `live` fills `io` with the item it generated. */

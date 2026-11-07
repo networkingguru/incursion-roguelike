@@ -295,11 +295,42 @@ static void EmitPerks(const PerkSet &set)
     }
 }
 
+/* The changed options file sits beside the .char: same directory, same base
+   name, `.options.dat` (spec B11). */
+static std::string OptionsBase(const char *path)
+{
+    std::string s = path;
+    size_t dot = s.rfind('.'), slash = s.find_last_of("/\\");
+    if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
+        s.erase(dot);
+    return s;
+}
+
+static std::string OptionsFileName(const char *path)
+{
+    std::string s = OptionsBase(path) + ".options.dat";
+    size_t slash = s.find_last_of("/\\");
+    return slash == std::string::npos ? s : s.substr(slash + 1);
+}
+
+static std::string optionsBytes;
+static bool haveOptions = false;
+
 static void WriteCharFile()
 {
     const char *path = getenv("INCURSION_RECORD_CHAR");
     if (!path || !*path)
         return;
+    if (haveOptions) {
+        std::string op = OptionsBase(path) + ".options.dat";
+        FILE *of = fopen(op.c_str(), "wb");
+        if (!of)
+            Error("INCURSION_RECORD_CHAR: cannot write %s", op.c_str());
+        else {
+            fwrite(optionsBytes.data(), 1, optionsBytes.size(), of);
+            fclose(of);
+        }
+    }
     FILE *f = fopen(path, "w");
     if (!f) {
         Error("INCURSION_RECORD_CHAR: cannot write %s", path);
@@ -438,6 +469,19 @@ public:
     }
     void NoteItem(CreationKey k, const CreationContext &c, const CreationItem &it)
         { Emit(k, c, ItemText(it)); }
+    void NoteOptions(const int8 *opts, int n)
+    {
+        const char *path = getenv("INCURSION_RECORD_CHAR");
+        if (!path || !*path)
+            return;
+        optionsBytes.assign((const char*)opts, (size_t)n);
+        if (haveOptions)
+            return;
+        haveOptions = true;
+        CreationContext c = MakeContext(CK_OPTIONS_FILE, NULL);
+        Emit(CK_OPTIONS_FILE, c, OptionsFileName(path));
+        Advance(CK_OPTIONS_FILE, c);
+    }
     void Close(bool completed)
     {
         if (completed)
@@ -482,6 +526,7 @@ public:
     void NotePick(CreationKey, const CreationContext&, const std::string&) {}
     void NotePerks(const PerkSet&) {}
     void NoteItem(CreationKey, const CreationContext&, const CreationItem&) {}
+    void NoteOptions(const int8*, int) {}
     void Close(bool) {}
 };
 
@@ -506,6 +551,8 @@ CreationWindow::CreationWindow() : done(false)
     scopeStack.clear();
     ordinals.clear();
     recorded.clear();
+    haveOptions = false;
+    optionsBytes.clear();
 }
 
 CreationWindow::~CreationWindow()
@@ -615,4 +662,39 @@ void CreationNotePerks(const PerkSet &set)
     if (!windowOpen)
         return;
     activeSource->NotePerks(set);
+}
+
+bool CreationAnswerPickMany(CreationKey k, const char *sub, const CreationPickList &list,
+    std::vector<int32> &values)
+{
+    values.clear();
+    for (size_t n = 0; n != list.names.size(); n++) {
+        int32 v; std::string text; bool inList;
+        if (!CreationAnswerPick(k, sub, list, v, text, inList))
+            break;
+        if (!inList) {
+            values.clear();
+            return false;
+        }
+        values.push_back(v);
+    }
+    return !values.empty();
+}
+
+void CreationNotePickMany(CreationKey k, const char *sub, const CreationPickList &list,
+    const std::vector<int32> &values)
+{
+    for (size_t i = 0; i != values.size(); i++)
+        for (size_t j = 0; j != list.values.size(); j++)
+            if (list.values[j] == values[i]) {
+                CreationNotePick(k, sub, list.names[j]);
+                break;
+            }
+}
+
+void CreationNoteOptions(const int8 *opts, int n)
+{
+    if (!windowOpen || itemDepth > 0)
+        return;
+    activeSource->NoteOptions(opts, n);
 }

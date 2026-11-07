@@ -25,14 +25,19 @@
 # fact: the text of src/Create.cpp -- read from the working tree by grep; no game run, no seed, no map
 # fact: the text of Resource::GrantGear in src/Annot.cpp -- read from the working tree by awk and grep; no game run, no seed, no map
 # fact: which tokens count as a branch -- the two patterns above, fixed in this file
-# fact: which calls count as a prompt or a key read -- LMenu, ChoicePrompt, yn, GetCharRaw and GetCharCmd, fixed in the scan_prompts script below
+# fact: which calls count as a prompt or a key read -- LMenu, ChoicePrompt, yn, GetCharRaw, GetCharCmd, SkillManager, LearnTable and OptionManager, fixed in the scan_prompts script below
 # fact: where a sourced decision begins and ends -- the balanced parentheses of a SourcedPick, SourcedRoll or SourcedItem call, found by the same script; no game run, no seed, no map
 # fact: which prompts are exempt -- the ALLOW table in scan_prompts, each entry with its reason
 #
-# PROMPTS (inc-10v7f phase 6a). The third scan fails on any LMenu(, ChoicePrompt(,
-# yn(, GetCharRaw( or GetCharCmd( call in src/Create.cpp that does not sit inside
-# the parentheses of a SourcedPick, SourcedRoll or SourcedItem call, which is the
-# sourced primitive's live function. Comments, string literals and `#if 0`
+# PROMPTS (inc-10v7f phases 6a and 6b). The third scan fails on any LMenu(,
+# ChoicePrompt(, yn(, GetCharRaw(, GetCharCmd(, SkillManager(, LearnTable( or
+# OptionManager( call in src/Create.cpp that does not sit inside the parentheses
+# of a SourcedPick, SourcedRoll or SourcedItem call, which is the sourced
+# primitive's live function. The last three are whole screens (the creation
+# skill screen, the spell table, the creation option screen) that read keys in
+# TextTerm and Managers code this scan does not read; the creation
+# Player::LearnSpell(true) calls (and the level-up one) reach LearnTable inside
+# Player::LearnSpell, so the LearnTable call is where they are held. Comments, string literals and `#if 0`
 # blocks are set aside first. The ALLOW table names the prompts that are exempt,
 # each with its reason; a new entry needs one.
 #
@@ -151,7 +156,7 @@ for m in re.finditer(r"\bSourced(?:Pick|Roll|Item)\s*\(", masked):
 
 lines = src.split("\n")
 bad = []
-for m in re.finditer(r"(?<![\w.>])(?:\w+->)?(LMenu|ChoicePrompt|yn|GetCharRaw|GetCharCmd)\s*\(", masked):
+for m in re.finditer(r"(?<![\w.>])(?:\w+->)?(LMenu|ChoicePrompt|yn|GetCharRaw|GetCharCmd|SkillManager|LearnTable|OptionManager)\s*\(", masked):
     if any(a <= m.start() < b for a, b in spans):
         continue
     ln = masked.count("\n", 0, m.start()) + 1
@@ -161,7 +166,7 @@ for m in re.finditer(r"(?<![\w.>])(?:\w+->)?(LMenu|ChoicePrompt|yn|GetCharRaw|Ge
     bad.append((ln, text.strip()))
 # a call written without the arrow form is matched above; a call through
 # `->` or `.` needs its own pass because of the lookbehind
-for m in re.finditer(r"(?:->|\.)(LMenu|ChoicePrompt|yn|GetCharRaw|GetCharCmd)\s*\(", masked):
+for m in re.finditer(r"(?:->|\.)(LMenu|ChoicePrompt|yn|GetCharRaw|GetCharCmd|SkillManager|LearnTable|OptionManager)\s*\(", masked):
     if any(a <= m.start() < b for a, b in spans):
         continue
     ln = masked.count("\n", 0, m.start()) + 1
@@ -231,7 +236,22 @@ if [ "${1:-}" = "--selftest" ]; then
     elif scan_prompts "$tmp/f.cpp" > /dev/null; then
         echo "selftest: mutation f (the abandon prompt unwrapped) was NOT caught"; fail=1
     fi
-    [ $fail -eq 0 ] && echo "selftest: all 6 mutations caught"
+    # Phase 6b: unwrap each screen from its sourced decision. The scan MUST
+    # name that screen's call, not just fail.
+    for m in "g:SkillManager:CK_SKILL_RANKS" "h:LearnTable:CK_SPELL_LEARN" "i:OptionManager:CK_ALTER_OPTIONS"; do
+        id="${m%%:*}"; rest="${m#*:}"; call="${rest%%:*}"; key="${rest#*:}"
+        sed -E "s/Sourced(Roll|Pick)\\(${key},/Unsourced(${key},/" "$FILE" > "$tmp/$id.cpp"
+        if cmp -s "$FILE" "$tmp/$id.cpp"; then
+            echo "selftest: mutation $id did not change the file"; fail=1
+        else
+            mout="$(scan_prompts "$tmp/$id.cpp" 2>&1)"
+            case "$mout" in
+                *"$call("*) ;;
+                *) echo "selftest: mutation $id (${call} unwrapped) was NOT caught"; fail=1 ;;
+            esac
+        fi
+    done
+    [ $fail -eq 0 ] && echo "selftest: all 9 mutations caught"
     exit $fail
 fi
 
