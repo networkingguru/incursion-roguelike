@@ -36,6 +36,12 @@ values and file:line, when:
      below the bound's value, or the tree's mark drops a `bound` that the base
      mark carries. The bound sizes the array the values index (OPT_LAST sizes
      Options[]). The bound name itself is a stored value, compared by rule 1;
+  9. (mark `grows <NAME>`, spec 6.1) a limit that sizes a saved array has a
+     tree value BELOW the base's, or the tree's mark drops a `grows` the base
+     mark carries. A value above the base's passes rule 1. The base value is
+     read from the base's family, else compiled on the base tree (a limit
+     that sat in a no-family block there). A new member of the family MAY take
+     the value the limit had on the base: that value is not held (rule 3);
   8. inc/SaveLegacyTags.h differs from the base ref's copy. That table
      describes files already written; a branch never edits it. A base that has
      no such file freezes nothing.
@@ -262,6 +268,7 @@ def compare(base, tree, problems, retired):
             continue
         shape, width = t["shape"], t["width"]
         sent = set(t["sentinels"])
+        grows = set(t.get("grows", []))
         tvals = {}
         for m in t["members"]:
             tvals.setdefault(m[0], m)
@@ -269,6 +276,17 @@ def compare(base, tree, problems, retired):
         for m in base.get(fam, {}).get("members", []):
             bvals.setdefault(m[0], m)
         ret = dict(retired.get(fam, []))
+        for gn in base.get(fam, {}).get("grows", []):
+            if gn not in grows:
+                out.append("FAIL: family %s: the base mark says 'grows %s' and the tree's mark "
+                           "drops it. Fix: keep the `grows %s` clause" % (fam, gn, gn))
+        for gn, bv in sorted(t.get("grows_base", {}).items()):
+            if gn in grows and gn in tvals and gn not in bvals:
+                ncomp += 1
+                if tvals[gn][1] < bv:
+                    out.append("FAIL: family %s %s shrank: base %d, tree %d (%s). A limit "
+                               "that sizes a saved array may grow and must not shrink"
+                               % (fam, gn, bv, tvals[gn][1], where(tvals[gn])))
         for name, m in sorted(tvals.items()):
             if name not in sent and not fits(m[1], shape, width):
                 out.append("FAIL: family %s %s = %d at %s does not fit %s (shape %s)"
@@ -281,7 +299,13 @@ def compare(base, tree, problems, retired):
             # gone: it keeps its value, and the tree's class says it is not stored.
             now = tvals.get(name) if b_stored else anywhere.get(name)
             if now is not None:
-                if now[1] != b[1]:
+                if name in grows and now[1] >= b[1]:
+                    pass   # a limit that sizes a saved array may grow
+                elif name in grows:
+                    out.append("FAIL: family %s %s shrank: base %d (%s), tree %d (%s). A limit "
+                               "that sizes a saved array may grow and must not shrink"
+                               % (fam, name, b[1], where(b), now[1], where(now)))
+                elif now[1] != b[1]:
                     out.append("FAIL: family %s %s changed: base %d (%s), tree %d (%s)"
                                % (fam, name, b[1], where(b), now[1], where(now)))
             elif name not in ret:
@@ -307,17 +331,19 @@ def family_collisions(t, b, ret):
     tools/move_branch_values.py imports it."""
     shape, width = t["shape"], t["width"]
     sent = set(t["sentinels"])
+    grows = set(t.get("grows", []))   # a limit is no stored value: its base value is free
     tvals = {}
     for m in t["members"]:
         tvals.setdefault(m[0], m)
     bvals = {}
     for m in b.get("members", []):
         bvals.setdefault(m[0], m)
-    held = [(n, bm[1], "base %s" % where(bm)) for n, bm in bvals.items() if n not in sent]
+    held = [(n, bm[1], "base %s" % where(bm)) for n, bm in bvals.items()
+            if n not in sent and n not in grows]
     held += [(n, v, "retired") for n, v in ret.items()]
     out = []
     for name, m in sorted(tvals.items()):
-        if name in bvals or name in sent:
+        if name in bvals or name in sent or name in grows:
             continue
         for hn, hv, why in held:
             if clash(shape, width, m[1], hv):
@@ -344,8 +370,9 @@ def read_families(tree_root, strictly):
     return fams, (problems if strictly else [])
 
 
-def compile_values(tree_root, names):
-    """Compile and run a printer for the names. Return {name: value}."""
+def compile_values(tree_root, names, optional=False):
+    """Compile and run a printer for the names. Return {name: value}. optional:
+    a name the tree does not #define is left out (the base may lack a new limit)."""
     if not names:
         return {}
     work = tempfile.mkdtemp(prefix="stored_values.")
@@ -353,7 +380,10 @@ def compile_values(tree_root, names):
         lines = ['#include "Incursion.h"', "#include <cstdio>",
                  '#define NVP(n, v) printf("%s %lld\\n", n, (long long)(v))',
                  "int main() {"]
-        lines += ['NVP("%s", %s);' % (n, n) for n in sorted(names)]
+        if optional:
+            lines += ['#ifdef %s\nNVP("%s", %s);\n#endif' % (n, n, n) for n in sorted(names)]
+        else:
+            lines += ['NVP("%s", %s);' % (n, n) for n in sorted(names)]
         lines += ["return 0; }"]
         cpp, exe = os.path.join(work, "sv.cpp"), os.path.join(work, "sv")
         with open(cpp, "w") as f:
@@ -368,7 +398,7 @@ def compile_values(tree_root, names):
             if ln.strip():
                 n, v = ln.split()
                 out[n] = int(v)
-        missing = names - set(out)
+        missing = set() if optional else names - set(out)
         if missing:
             raise Unmeasured("the compiler printed no value for %s" % sorted(missing)[:5])
         return out
@@ -398,6 +428,19 @@ def apply_compiler(fams, tree_root):
             new.append((n, v, p, l))
         d["members"] = new
     return kept
+
+
+def attach_grows_base(base, tree, base_root):
+    """Put the base value of each `grows` limit the base families do not hold into
+    tree[fam]["grows_base"]. On the base such a limit may sit in a no-family block,
+    where no family reads it; the compiler reads it from the base tree."""
+    def need(fam, d):
+        have = {m[0] for m in base.get(fam, {}).get("members", [])}
+        return [g for g in d.get("grows", []) if g not in have] if d["class"] == "stored" else []
+    want = {g for fam, d in tree.items() for g in need(fam, d)}
+    vals = compile_values(base_root, want, optional=True)
+    for fam, d in tree.items():
+        d["grows_base"] = {g: vals[g] for g in need(fam, d) if g in vals}
 
 
 def extract_base(ref, dest, root=None):
@@ -436,6 +479,7 @@ def measure(ref, root=None, use_compiler=True, retired_path=None):
                 ft = ex.submit(apply_compiler, tree, root)
                 kept = ft.result()
                 fb.result()
+            attach_grows_base(base, tree, tmp)
         return base, tree, problems, retired, kept
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -533,6 +577,37 @@ def selftest():
         assert c == 1 and "B_Z = 5" in m, (c, m)
         c, m = go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_LAST 4\n"))
         assert c == 1 and "drops it" in m and "bound B_LAST" in m, (c, m)
+        # rule 9: a `grows` limit may rise, never fall; its old value is free (spec 6.1)
+        gw = "stored ordinal u8 grows G_LAST"
+        gb = fam("g", "#define G_X 1\n#define G_LAST 2\n", gw)
+        assert go(gb, gb)[0] == 0
+        assert go(gb, fam("g", "#define G_X 1\n#define G_NEW 2\n#define G_LAST 3\n", gw))[0] == 0
+        c, m = go(gb, fam("g", "#define G_X 1\n#define G_NEW 2\n#define G_LAST 3\n",
+                          "stored ordinal u8"))
+        assert c == 1 and "G_LAST changed" in m and "drops it" in m, (c, m)
+        c, m = go(gb, fam("g", "#define G_X 1\n#define G_LAST 1\n", gw))
+        assert c == 1 and "G_LAST shrank: base 2" in m and "tree 1" in m, (c, m)
+        c, m = go(gb, fam("g", "#define G_X 1\n#define G_LAST 2\n", "stored ordinal u8"))
+        assert c == 1 and "drops it" in m, (c, m)
+        c, m = go(gb, fam("g", "#define G_X 1\n#define G_NEW 3\n#define G_LAST 3\n", gw)
+                  .replace("G_NEW 3", "G_NEW 1"))
+        assert c == 1 and "tree-only G_NEW = 1" in m, (c, m)  # a stored value still collides
+        # the base held the limit in a no-family block: its value comes from the compiler
+        nf = "// no-family\n#define MAX_G 25\n// end no-family\n"
+        bt, _ = read_families(tree_of(nf), False)
+
+        def go_gb(tree_text, gbase):
+            tree, problems = read_families(tree_of(tree_text), True)
+            for d in tree.values():
+                d["grows_base"] = dict(gbase)
+            msgs, _n = compare(bt, tree, problems, {})
+            print("  %s" % (("RED   " + msgs[0][:100]) if msgs else "GREEN"))
+            return (1 if msgs else 0), "\n".join(msgs)
+        lw = "stored ordinal u16 grows MAX_G"
+        assert go_gb(fam("lim", "#define MAX_G 25\n", lw), {"MAX_G": 25})[0] == 0
+        assert go_gb(fam("lim", "#define MAX_G 30\n", lw), {"MAX_G": 25})[0] == 0
+        c, m = go_gb(fam("lim", "#define MAX_G 20\n", lw), {"MAX_G": 25})
+        assert c == 1 and "MAX_G shrank: base 25, tree 20" in m, (c, m)
         eb = fam("e", "enum { E_A, E_B, E_C };\n", "stored enum i32")
         assert go(eb, eb)[0] == 0
         c, m = go(eb, fam("e", "enum { E_A, E_NEW, E_B, E_C };\n", "stored enum i32"))

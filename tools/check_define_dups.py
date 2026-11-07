@@ -45,6 +45,17 @@ CLASS (one per family on every open mark; the end mark carries none):
                                             so it is not a stored value. A
                                             sentinel that sizes a stored array
                                             carries NO sentinel clause.
+  grows <NAME>         (stored only, repeatable) NAME is a define or enumerator
+                                            of the family that sizes a saved
+                                            array (spec 6.1). It may grow and
+                                            must never shrink:
+                                            tools/check_stored_values.py
+                                            refuses a tree value below the
+                                            base's and accepts one above, and a
+                                            new member may take the value the
+                                            limit had on the base.
+                                            tools/move_branch_values.py raises
+                                            it when it moves a value past it.
   bound <NAME>         (stored ordinal or enum only, once) NAME is a define or
                                             enumerator of the family that is the
                                             EXCLUSIVE upper limit of its values
@@ -58,7 +69,8 @@ CLASS (one per family on every open mark; the end mark carries none):
                                             free value below it or refuses.
 A mark with no class, a bad class, a bad shape or a bad width exits 1 naming
 the line. Every block of one family MUST carry the same class, shape and width.
-A `sentinel` or `bound` clause MUST name a member of the same family.
+A `sentinel`, `grows` or `bound` clause MUST name a member of the same family.
+A name MUST NOT carry both `sentinel` and `grows`.
 An `enum` family holds enumerators only, and any other shape holds defines only.
 An enumerator takes the value the compiler gives it (previous + 1, or its
 explicit `= expr`, first one 0). Only enums wholly inside a family block count.
@@ -99,7 +111,8 @@ Exit:  0 clean   1 unmarked define, duplicate, bad alias, or bad class
 
 IMPORT. load_families(defines=None) returns (families, problems). families maps
 a family name to {"class": "internal"|"stored", "shape": str|None, "width":
-str|None, "sentinels": [NAME], "bounds": [NAME], "members": [(name, value, file, line)]}.
+str|None, "sentinels": [NAME], "bounds": [NAME], "grows": [NAME],
+"members": [(name, value, file, line)]}.
 problems is the list of FAIL lines (empty when the marks are sound).
 tools/check_stored_values.py imports it.
 
@@ -248,7 +261,8 @@ HOW = ("Fix: write '// family: %s internal' or '// family: %s stored "
 def parse_class(fam, rest, no):
     """rest: the tokens after the family name. Return (spec, problem). spec is
     {"class","shape","width","sentinels"}; problem is a message or None."""
-    spec = {"class": None, "shape": None, "width": None, "sentinels": [], "bounds": []}
+    spec = {"class": None, "shape": None, "width": None, "sentinels": [], "bounds": [],
+            "grows": []}
     if not rest:
         return spec, ("line %d: family %s has no class. " % (no, fam)) + HOW % (fam, fam)
     if rest[0] == "internal":
@@ -269,15 +283,15 @@ def parse_class(fam, rest, no):
                       "u32 or i32)" % (no, fam, rest[2] if len(rest) > 2 else ""))
     tail = rest[3:]
     while tail:
-        if tail[0] not in ("sentinel", "bound") or len(tail) < 2 \
+        if tail[0] not in ("sentinel", "bound", "grows") or len(tail) < 2 \
                 or not IDENT.fullmatch(tail[1]):
             return spec, ("line %d: family %s has a bad word '%s' after its width "
-                          "(only 'sentinel <NAME>' or 'bound <NAME>' may follow)"
-                          % (no, fam, " ".join(tail)))
+                          "(only 'sentinel <NAME>', 'grows <NAME>' or 'bound <NAME>' may "
+                          "follow)" % (no, fam, " ".join(tail)))
         if tail[0] == "bound" and rest[1] == "bits":
             return spec, ("line %d: family %s is a bits family, so 'bound %s' has no "
                           "meaning (use shape ordinal or enum)" % (no, fam, tail[1]))
-        spec["sentinels" if tail[0] == "sentinel" else "bounds"].append(tail[1])
+        spec[{"sentinel": "sentinels", "bound": "bounds", "grows": "grows"}[tail[0]]].append(tail[1])
         tail = tail[2:]
     spec.update({"class": "stored", "shape": rest[1], "width": rest[2]})
     return spec, None
@@ -530,7 +544,7 @@ def scan_all(files):
         problems += outside + bad
         for no, fam, spec in specs:
             d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
-                                      "sentinels": [], "bounds": [], "members": [],
+                                      "sentinels": [], "bounds": [], "grows": [], "members": [],
                                       "marks": [], "rows": [], "first": None})
             d["marks"].append((path, no))
             if spec["class"] is None:
@@ -549,10 +563,12 @@ def scan_all(files):
                 d["sentinels"].append((s, path, no))
             for s in spec["bounds"]:
                 d["bounds"].append((s, path, no))
+            for s in spec["grows"]:
+                d["grows"].append((s, path, no))
         for no, name, value, kind, fams_here, alias, known in placed:
             for fam in fams_here:
                 d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
-                                          "sentinels": [], "bounds": [], "members": [],
+                                          "sentinels": [], "bounds": [], "grows": [], "members": [],
                                           "marks": [], "rows": [], "first": None})
                 d["rows"].append((no, name, value, kind, alias, known, path))
                 d["members"].append((name, value, rel(path), no))
@@ -563,6 +579,15 @@ def scan_all(files):
             if s not in names:
                 problems.append("FAIL: %s: family %s says 'sentinel %s' but %s is not a "
                                 "define or enumerator of the family"
+                                % (where(path, no, multi_files), fam, s, s))
+        for s, path, no in d["grows"]:
+            if s not in names:
+                problems.append("FAIL: %s: family %s says 'grows %s' but %s is not a "
+                                "define or enumerator of the family"
+                                % (where(path, no, multi_files), fam, s, s))
+            if s in {x for x, _p, _n in d["sentinels"]}:
+                problems.append("FAIL: %s: family %s says both 'sentinel %s' and 'grows %s'; "
+                                "a limit that sizes a saved array is not a sentinel"
                                 % (where(path, no, multi_files), fam, s, s))
         for s, path, no in d["bounds"]:
             if s not in names:
@@ -582,6 +607,7 @@ def scan_all(files):
                                                   next(r[1] for r in d["rows"] if r[3] == "enum")))
         d["sentinels"] = [s for s, _p, _n in d["sentinels"]]
         d["bounds"] = [s for s, _p, _n in d["bounds"]]
+        d["grows"] = [s for s, _p, _n in d["grows"]]
     return fams, problems, multi
 
 
@@ -594,7 +620,7 @@ def load_families(defines=None, files=None):
     fams, problems, _multi = scan_all(files)
     out = {f: {"class": d["class"], "shape": d["shape"], "width": d["width"],
                "sentinels": list(d["sentinels"]), "bounds": list(d["bounds"]),
-               "members": list(d["members"])}
+               "grows": list(d["grows"]), "members": list(d["members"])}
            for f, d in fams.items()}
     return out, problems
 
@@ -779,6 +805,21 @@ def selftest():
         assert c == 1 and "sentinel NOPE" in m, (c, m)
         c, m = run("// family: a internal sentinel A_X\n#define A_X 1\n// end family: a\n")
         assert c == 1 and "is internal" in m, (c, m)
+        # grows (inc-cjos0 phase 7f): a member of its own family, stored only, never a sentinel
+        c, m = run(fam("a", "#define A_X 1\n#define A_LAST 2\n", stored + " grows A_LAST"))
+        assert c == 0, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n", stored + " grows NOPE"))
+        assert c == 1 and "grows NOPE" in m and "not a define or enumerator" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n#define A_LAST 2\n",
+                       stored + " sentinel A_LAST grows A_LAST"))
+        assert c == 1 and "both 'sentinel A_LAST' and 'grows A_LAST'" in m, (c, m)
+        c, m = run("// family: a internal grows A_X\n#define A_X 1\n// end family: a\n")
+        assert c == 1 and "is internal" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n#define A_LAST 2\n",
+                       stored + " grows A_LAST bound A_LAST"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % (n[0] - 4))])
+        assert problems == [] and fams["a"]["grows"] == ["A_LAST"], (problems, fams)
         # one class per family across its blocks
         c, m = run(fam("a", "#define A_X 1\n", stored) + fam("a", "#define A_Y 2\n", "internal"))
         assert c == 1 and "family a says" in m, (c, m)

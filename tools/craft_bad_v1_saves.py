@@ -298,36 +298,51 @@ def to_legacy(data, rev=6):
     """Rewrite a revision 7 RAW file as a revision `rev` (3-6) file: every
     field id becomes the frozen tag number of its (scope, name), the name
     table record is removed, and the stamp reads IS1.<rev>. Used ONLY by the
-    cases that are old-revision files by definition (IS1.3). Dies on a field
-    the frozen table has no row for."""
+    cases that are old-revision files by definition (IS1.3). A field the
+    frozen table has no row for is dropped (a legacy file never held it);
+    an embed with no row dies."""
     v1 = V1File(data)
     if v1.rev < 7:
         return data
     by_id = {nid: k for k, nid in v1.ids.items()}
     legacy = legacy_lookup(rev)
-    out = bytearray(data)
+    dropped = []
 
     def walk(start, length):
+        """The new bytes of one field region (terminator included). A field
+        with no frozen row is cut out (a legacy file never held it); an
+        embed with no row dies, since cutting it cuts its contents."""
+        body = b""
         for f in v1.parse_fields(start, length):
-            nid = f["tag"]
-            key = by_id[nid]
+            key = by_id[f["tag"]]
+            raw = data[f["off"]:f["off"] + f["size"]]
             if key not in legacy:
-                die("to_legacy: no revision %d tag for \"%s\" in scope "
-                    "\"%s\"" % (rev, key[1], key[0]))
-            out[f["off"]:f["off"] + 2] = struct.pack("<H", legacy[key])
+                if f["kind"] == K_EMBED:
+                    die("to_legacy: no revision %d tag for embed \"%s\" "
+                        "in scope \"%s\"" % (rev, key[1], key[0]))
+                if key not in dropped:
+                    dropped.append(key)
+                continue
             if f["kind"] == K_EMBED:
                 l, = struct.unpack_from("<I", data, f["off"] + 3)
-                walk(f["off"] + 7, l)
+                inner = walk(f["off"] + 7, l)
+                raw = raw[:3] + struct.pack("<I", len(inner)) + inner
+            body += struct.pack("<H", legacy[key]) + raw[2:]
+        return body + struct.pack("<H", 0)
 
+    out = data[:PAYLOAD_OFF]
     for r in v1.records:
-        if r["type"] != REC_NAMES:
-            walk(r["off"] + 9, r["length"])
-    t = v1.table
-    cut = 9 + t["length"]
-    out = out[:t["off"]] + out[t["off"] + cut:]
-    out = bytes(out)
+        if r["type"] == REC_NAMES:
+            continue
+        body = walk(r["off"] + 9, r["length"])
+        out += data[r["off"]:r["off"] + 5] + struct.pack("<I", len(body)) \
+            + body
+    out += data[-4:]
+    for scope, name in dropped:
+        sys.stderr.write("to_legacy: dropped \"%s\" in scope \"%s\" "
+                         "(no revision %d row)\n" % (name, scope, rev))
     out = patch_i32(out, OBJCOUNT_OFF, v1.obj_count - 1)
-    out = fix_sizes(out, -cut)
+    out = fix_sizes(out, len(out) - len(data))
     stamp = ("IS1.%d" % rev).encode()
     return out[:4] + stamp + b"\0" * (12 - len(stamp)) + out[16:]
 

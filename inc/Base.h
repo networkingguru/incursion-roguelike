@@ -796,6 +796,11 @@ enum {
 #define FIELD_BLOB_AT(name,i,p,sz) do { if (r.V1Active()) r.V1Blob_AT((name),(i),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
 #define FIELD_ARRAY(name,p,elem,count) r.V1Array((name),(p),(elem),(count))
+/* An array of rows. savedRowLen is the row length the file records (a named
+   field beside the array); tail is the count of trailing columns that keep
+   their meaning when a row grows. See Registry::V1ArrayRows. */
+#define FIELD_ARRAY_ROWS(name,p,elem,rows,rowLen,savedRowLen,tail) \
+  r.V1ArrayRows((name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail))
 #define FIELD_OBJ(name,m)  do { if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
                                (m).FieldsV1(r); r.V1EmbedEnd(); } \
                                else (m).Serialize(r); } while (0)
@@ -917,6 +922,14 @@ class Registry
        address; this stages Status::eID through the name table itself. */
     void V1RidStatus(const char *name, Status &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1Array(const char *name, void *p, size_t elemSize, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    /* A two-dimensional array written flat, rows * rowLen elements. The writer
+       is V1Array. The reader takes the row length the FILE records
+       (savedRowLen, read by the caller from a field beside the array) and
+       copies row by row, so a row that grew shifts nothing. The last `tail`
+       columns of a saved row land in the last `tail` columns of the current
+       row (SacVals' total and maximum). A file with fewer rows, or a shorter
+       row, loads; more rows or a longer row refuses. inc-cjos0 phase 7f. */
+    void V1ArrayRows(const char *name, void *p, size_t elemSize, uint32 rows, uint32 rowLen, uint32 savedRowLen, uint32 tail, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     /* The widening read for a fixed array whose element type grew. newName is
        what this build writes; oldName is a retired name holding the same array
        with a narrower element. V1_OFF and V1_SAVE write nothing; a load reads

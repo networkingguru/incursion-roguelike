@@ -74,6 +74,7 @@ FIELD_CALL_PATTERNS = [
     #  index names the member)
     (re.compile(r"FIELD_(?:U8|I8|U16|I16|U32|I32|H|RID|STR)\b\s*\("), 1),
     (re.compile(r"FIELD_ARRAY\b\s*\("), 1),
+    (re.compile(r"FIELD_ARRAY_ROWS\b\s*\("), 1),
     (re.compile(r"FIELD_BLOB\b\s*\("), 1),
     (re.compile(r"FIELD_OBJ\b\s*\("), 1),
     (re.compile(r"FIELD_EMBED\b\s*\("), 1),

@@ -3192,13 +3192,51 @@ void Registry::V1Array(const char *name, void *p, size_t elemSize, uint32 count,
     uint32 c, es;
     memcpy(&c, e->pay, 4);
     memcpy(&es, e->pay + 4, 4);
-    /* The count landed through its own field line before this call, and the
-       caller allocated for it; the wire disagreeing with either is
-       corruption, not extension. */
-    if (c != count || es != (uint32)elemSize)
+    /* A limit that sizes a saved array may grow (spec section 6.1): a saved
+       array shorter than this build's loads into the front of it, and the
+       rest stays as the zeroed object holds it. A longer one is a shrink and
+       refuses, as does a different element size. */
+    if (c > count || es != (uint32)elemSize)
       throw ECORRUPT;
     if (c)
       memcpy(p, e->pay + 8, (size_t)c * es);
+  }
+
+void Registry::V1ArrayRows(const char *name, void *p, size_t elemSize, uint32 rows, uint32 rowLen, uint32 savedRowLen, uint32 tail, int v1Line, const char *v1File)
+  {
+    if (v1.mode != V1_LOAD)
+      {
+        V1Array(name, p, elemSize, rows * rowLen, v1Line, v1File);   /* V1_OFF: no-op; V1_SAVE: the flat array */
+        return;
+      }
+    const V1Ent *e = v1Find(name, v1Line, v1File);
+    if (!e)
+      return;
+    if (e->kind != K_ARRAY)
+      throw ECORRUPT;
+    uint32 c, es;
+    memcpy(&c, e->pay, 4);
+    memcpy(&es, e->pay + 4, 4);
+    if (es != (uint32)elemSize)
+      throw ECORRUPT;
+    /* A row that grew is the only change this accepts: the file's rows are no
+       longer than this build's, and no more of them. */
+    if (savedRowLen == 0 || savedRowLen > rowLen || tail > savedRowLen
+        || c % savedRowLen != 0 || c / savedRowLen > rows)
+      throw ECORRUPT;
+    uint32 savedRows = c / savedRowLen;
+    const uint8 *src = e->pay + 8;
+    uint8 *dst = (uint8*) p;
+    uint32 head = savedRowLen - tail;
+    for (uint32 r = 0; r != savedRows; r++)
+      {
+        const uint8 *s = src + (size_t)r * savedRowLen * es;
+        uint8 *d = dst + (size_t)r * rowLen * es;
+        if (head)
+          memcpy(d, s, (size_t)head * es);
+        if (tail)
+          memcpy(d + (size_t)(rowLen - tail) * es, s + (size_t)head * es, (size_t)tail * es);
+      }
   }
 
 /* inc-vqla: read a fixed uint16 array written under a retired tag and widen
@@ -3220,11 +3258,11 @@ void Registry::V1ArrayWiden16(const char *newName, const char *oldName, uint32 *
     uint32 c, es;
     memcpy(&c, e->pay, 4);
     memcpy(&es, e->pay + 4, 4);
-    if (c != count || es != 2)
+    if (c > count || es != 2)
       throw ECORRUPT;
     if (v1Find(newName, v1Line, v1File))
       return;   /* the widened form supersedes the old one */
-    for (uint32 i = 0; i != count; i++)
+    for (uint32 i = 0; i != c; i++)
       {
         uint16 v;
         memcpy(&v, e->pay + 8 + (size_t)i * 2, 2);
@@ -5717,6 +5755,32 @@ bool Registry::V1RunSchemaLoad(const char *path)
               Player *pl = (Player*) o;
               printf("field Character.NotifiedLevel=%d\n",
                      (int)pl->NotifiedLevel);
+              /* The saved values of the arrays whose limits may grow (spec
+                 6.1), nonzero entries only, so a longer array in a grown
+                 build prints the same lines. tools/check_array_growth.sh
+                 reads them. */
+              for (i = 0; i != ATTR_LAST; i++)
+                if (pl->KAttr[i])
+                  printf("field Character.KAttr[%d]=%d\n", (int)i, (int)pl->KAttr[i]);
+              for (i = 0; i != 3; i++)
+                for (j = 0; j != MAX_CHAR_LEVEL; j++)
+                  {
+                    if (pl->hpRolls[i][j])
+                      printf("field Character.hpRolls[%d][%d]=%d\n", (int)i, (int)j, (int)pl->hpRolls[i][j]);
+                    if (pl->manaRolls[i][j])
+                      printf("field Character.manaRolls[%d][%d]=%d\n", (int)i, (int)j, (int)pl->manaRolls[i][j]);
+                  }
+              for (i = 0; i != 7; i++)
+                for (j = 0; j != 15; j++)
+                  if (pl->GainAttr[i][j])
+                    printf("field Character.GainAttr[%d][%d]=%d\n", (int)i, (int)j, (int)pl->GainAttr[i][j]);
+              for (i = 0; i != MAX_GODS; i++)
+                for (j = 0; j != MAX_SAC_CATS + 2; j++)
+                  if (pl->SacVals[i][j])
+                    printf("field Character.SacVals[%d][%d]=%d\n", (int)i, (int)j, (int)pl->SacVals[i][j]);
+              for (i = 0; i != OPT_LAST; i++)
+                if (pl->Options[i])
+                  printf("field Player.Options[%d]=%d\n", (int)i, (int)pl->Options[i]);
               printf("field Player.cAutoBuff=%d\n", (int)pl->cAutoBuff);
               continue;
             }

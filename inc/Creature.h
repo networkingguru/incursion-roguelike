@@ -1175,10 +1175,19 @@ class Character: public Creature
       FIELD_U8 ("fallen", fallen);
       FIELD_SKIP(isFallenPaladin);   /* travels as `fallen` above */
       FIELD_ARRAY("Level", Level, sizeof(int8), 3);
-      FIELD_ARRAY("hpRolls", hpRolls, sizeof(int8), 3 * MAX_CHAR_LEVEL);
-      FIELD_ARRAY("manaRolls", manaRolls, sizeof(int8), 3 * MAX_CHAR_LEVEL);
+      /* The row length travels beside each array of rows (spec section 6.1,
+         inc-cjos0). A file written before the field existed has rows of the
+         length then in force: 11, 11, 15 here. */
+      uint16 hpRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 manaRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 GainAttrRow = 15;
+      FIELD_U16("hpRollsRow", hpRollsRow);
+      FIELD_U16("manaRollsRow", manaRollsRow);
+      FIELD_U16("GainAttrRow", GainAttrRow);
+      FIELD_ARRAY_ROWS("hpRolls", hpRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, hpRollsRow, 0);
+      FIELD_ARRAY_ROWS("manaRolls", manaRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, manaRollsRow, 0);
       FIELD_ARRAY("SaveBonus", SaveBonus, sizeof(int8), 16);
-      FIELD_ARRAY("GainAttr", GainAttr, sizeof(int16), 7 * 15);
+      FIELD_ARRAY_ROWS("GainAttr", GainAttr, sizeof(int16), 7, 15, GainAttrRow, 0);
       FIELD_I8 ("NotifiedLevel", NotifiedLevel);
       r.V1EmbedBegin("ClassID", ClassID, sizeof(ClassID));
       for (i = 0; i != 6; i++)
@@ -1207,7 +1216,11 @@ class Character: public Creature
       FIELD_ARRAY("FavourLev", FavourLev, sizeof(int16), MAX_GODS);
       FIELD_ARRAY("TempFavour", TempFavour, sizeof(int32), MAX_GODS);
       FIELD_ARRAY("Anger", Anger, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY("SacVals", SacVals, sizeof(int32), MAX_GODS * (MAX_SAC_CATS + 2));
+      /* The last two columns of a SacVals row are the total and the maximum
+         (src/Prayer.cpp), so the reader keeps them last (tail 2). */
+      uint16 SacValsRow = isSave ? MAX_SAC_CATS + 2 : 12;
+      FIELD_U16("SacValsRow", SacValsRow);
+      FIELD_ARRAY_ROWS("SacVals", SacVals, sizeof(int32), MAX_GODS, MAX_SAC_CATS + 2, SacValsRow, 2);
       FIELD_ARRAY("FavPenalty", FavPenalty, sizeof(int16), MAX_GODS);
       FIELD_ARRAY("PrayerTimeout", PrayerTimeout, sizeof(int16), MAX_GODS);
       FIELD_ARRAY("AngerThisTurn", AngerThisTurn, sizeof(int16), MAX_GODS);

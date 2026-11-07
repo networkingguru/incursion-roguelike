@@ -521,7 +521,7 @@ typedef signed int        hObj;
 #define AN_POISON     22
 #define AN_TILE       24
 // end family: an
-// family: sl stored ordinal u8
+// family: sl stored ordinal u8 grows SL_LAST grows NUM_SLOTS
 
 #define SL_INAIR     0
 #define SL_READY     1
@@ -1713,7 +1713,7 @@ typedef signed int        hObj;
 #define ELUC_FOUNTAIN  5
 #define ELUC_MAEVE     6
 // end family: ex_luc
-// family: ma stored ordinal u8 sentinel MA_LAST
+// family: ma stored ordinal u8 sentinel MA_LAST grows MA_LAST_REAL
 
 
 #define MA_ALL          0
@@ -1956,7 +1956,7 @@ typedef signed int        hObj;
 #define AL_NONGOOD    0x0040
 #define AL_NONEVIL    0x0080
 // end family: al
-// family: attr stored ordinal i8
+// family: attr stored ordinal i8 grows ATTR_LAST
 
 #define A_STR 0
 #define A_DEX 1
@@ -2100,7 +2100,7 @@ typedef signed int        hObj;
 #define SP_SRC_PRIMAL 3
 #define SP_SRC_BARDIC 4
 // end family: sp_src
-// family: sk stored ordinal i8
+// family: sk stored ordinal i8 grows SK_LASTSKILL grows SK_LAST
 
 /* The SpellVersionPack/SpellVersionSpell/SpellVersionSrcCode/
    SpellSrcCodeKind/SpellKindSrcCode helpers live in inc/Creature.h, near the
@@ -2179,7 +2179,7 @@ typedef signed int        hObj;
 #define SUPERIOR    5
 #define UNEARTHLY   6
 // end family: grade
-// family: ca stored ordinal i16
+// family: ca stored ordinal i16 grows CA_LAST
 //#define DIVINE      7
 
 
@@ -2545,7 +2545,7 @@ typedef signed int        hObj;
 #define DF_SEARCHED 0x80
 #define DF_PICKED   0x80  /* alias of DF_SEARCHED */
 // end family: df_door
-// family: ft stored ordinal u16
+// family: ft stored ordinal u16 grows FT_LAST
 
 /* We avoid -1, because that's a special signifier in TextVal
    arrays for the function Lookup to use. */
@@ -2923,7 +2923,7 @@ typedef signed int        hObj;
 #define MM_VOCALIZE      0x04000000  /* No verbal component */
 #define MM_WARP          0x08000000  /* Pass through Walls */
 // end family: mm
-// family: study stored ordinal u8
+// family: study stored ordinal u8 grows STUDY_LAST
 
 #define STUDY_CASTING     1
 #define STUDY_BARDIC      2
@@ -4725,7 +4725,7 @@ typedef signed int        hObj;
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
 #define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
 // end family: opt_gen
-// family: opt stored ordinal u16 bound OPT_LAST
+// family: opt stored ordinal u16 bound OPT_LAST grows OPT_LAST
 
 
 #define OPC_TACTICAL            500
@@ -5034,21 +5034,37 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define PRIO_FEATURE_FLOOR      110
 #define PRIO_MAX                120
 // end family: prio
-// no-family
-
-
+// A limit that sizes a saved array grows and never shrinks (spec 6.1). Each one
+// is its own family, so a new stored value never collides with another limit.
+// family: lim_dungeons stored ordinal u16 grows MAX_DUNGEONS
 #define MAX_DUNGEONS       32
+// end family: lim_dungeons
+// no-family
 #define MAX_DUNGEON_LEVELS 50
+// end no-family
+// family: lim_modules stored ordinal u16 grows MAX_MODULES
 #define MAX_MODULES        126
+// end family: lim_modules
+// no-family
 #define MAX_WILDER_GRIDX   16
 #define MAX_WILDER_GRIDY   16
+// end no-family
+// family: lim_spells stored ordinal u16 grows MAX_SPELLS
 #define MAX_SPELLS         2048
+// end family: lim_spells
+// family: lim_gods stored ordinal u16 grows MAX_GODS
 #define MAX_GODS           25
+// end family: lim_gods
+// family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL
 #define MAX_CHAR_LEVEL     11
+// end family: lim_char_level
+// no-family
 #define MAX_CORRIDOR_LENGTH 8192
 #define ANNOT_INITIAL_SIZE 50
-#define MAX_SAC_CATS       10
 // end no-family
+// family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
+#define MAX_SAC_CATS       10
+// end family: lim_sac_cats
 // family: namelist internal
 
 
@@ -5369,9 +5385,10 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define TC_ACTION    0xFF000006 // '[action]'
 #define TC_WCHOICE   0xFF000007 // '60%'
 // end family: tc
-// no-family
-
+// family: lim_overlay_glyphs stored ordinal u16 grows MAX_OVERLAY_GLYPHS
 #define MAX_OVERLAY_GLYPHS 250
+// end family: lim_overlay_glyphs
+// no-family
 
 #ifndef max
 // end no-family

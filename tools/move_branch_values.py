@@ -30,7 +30,10 @@ the shape of the family:
            its value; each is reported.
 Then, in each family that moved a name, every `sentinel <NAME>` of the mark is
 rewritten to max+1 of the merged family (ordinal and enum families; a bits
-sentinel has no meaning and is left). Two moved names never take one value. A
+sentinel has no meaning and is left). A `grows <NAME>` limit (spec 6.1) is no
+stored value: it stays out of the merged family, and when a moved value reaches
+it, it is raised to max+1 and never lowered. A bound that is also `grows`
+(OPT_LAST) is raised the same way instead of refusing. Two moved names never take one value. A
 new value that does not fit the storage width is REFUSED naming bead inc-xm3nq.
 A value written as an expression (`FT_FIRST + 3`) is rewritten to the literal;
 the report line says so. It changes no base name, no base value, and no line
@@ -91,6 +94,7 @@ def plan(base, tree, retired):
             continue
         shape, width = t["shape"], t["width"]
         sent = set(t["sentinels"])
+        grows = set(t.get("grows", []))
         tvals = {}
         for m in t["members"]:
             tvals.setdefault(m[0], m)
@@ -98,8 +102,9 @@ def plan(base, tree, retired):
         for name, m, _hn, _hv, _why in hits:
             names[name] = m
         order = sorted(names, key=lambda n: (names[n][2], names[n][3]))
-        merged = [m[1] for m in base.get(fam, {}).get("members", []) if m[0] not in sent]
-        merged += [m[1] for n, m in tvals.items() if n not in sent]
+        merged = [m[1] for m in base.get(fam, {}).get("members", [])
+                  if m[0] not in sent and m[0] not in grows]
+        merged += [m[1] for n, m in tvals.items() if n not in sent and n not in grows]
         merged += list(ret.values())
         if shape == "bits":
             held = 0
@@ -116,7 +121,7 @@ def plan(base, tree, retired):
                                   file=names[name][2], line=names[name][3],
                                   shape=shape, sentinel=False))
             continue
-        bounds = [tvals[b][1] for b in t.get("bounds", []) if b in tvals]
+        bounds = [tvals[b][1] for b in t.get("bounds", []) if b in tvals and b not in grows]
         lim = min(bounds) if bounds else None
         below = [v for v in merged if lim is None or v < lim]
         taken = set(merged)
@@ -144,6 +149,14 @@ def plan(base, tree, retired):
             if m is not None and m[1] != mx + 1:
                 moves.append(dict(fam=fam, name=s, old=m[1], new=mx + 1, file=m[2],
                                   line=m[3], shape=shape, sentinel=True))
+        for g in sorted(grows):
+            m = tvals.get(g)
+            if m is not None and m[1] < mx + 1:
+                if not csv.fits(mx + 1, shape, width):
+                    raise Refused("family %s: the limit %s would take %d, which does not fit "
+                                  "%s (bead inc-xm3nq)" % (fam, g, mx + 1, width))
+                moves.append(dict(fam=fam, name=g, old=m[1], new=mx + 1, file=m[2],
+                                  line=m[3], shape=shape, sentinel=True, grows=True))
     return moves
 
 
@@ -311,7 +324,7 @@ def apply_moves(root, moves, vals):
         if isinstance(n, str):
             s += "  [the expression `%s` is now a literal]" % n
         if mv["sentinel"]:
-            s += "  [sentinel]"
+            s += "  [grows]" if mv.get("grows") else "  [sentinel]"
         report.append(s)
     for (fam, nm), val in sorted(notes.items(), key=lambda kv: str(kv[0])):
         if isinstance(val, tuple):
@@ -344,7 +357,8 @@ def run_move(root, ref, dry, use_compiler=True, out=print):
         for mv in sorted(moves, key=lambda m: (m["fam"], m["file"], m["line"])):
             out("%s %s %d -> %d %s:%d%s" % (mv["fam"], mv["name"], mv["old"], mv["new"],
                                             mv["file"], mv["line"],
-                                            "  [sentinel]" if mv["sentinel"] else ""))
+                                            "  [%s]" % ("grows" if mv.get("grows") else "sentinel")
+                                            if mv["sentinel"] else ""))
         out("move_branch_values: dry run, would move %d value(s)" % len(moves))
         return 0
     for line in apply_moves(root, moves, vals):
@@ -501,6 +515,25 @@ def selftest():
              fam("o", "#define O_X 1\n#define O_Y 2\n#define O_LAST 3\n", bd),
              fam("o", "#define O_X 1\n#define O_Y 2\n#define O_Z 2\n#define O_LAST 3\n", bd),
              code=1, grep=["family o", "no free value below the bound O_LAST = 3"])
+        gw = "stored ordinal u8 grows G_LAST"
+        case("a grows limit: a moved value takes the old limit value, the limit rises",
+             fam("g", "#define G_X 1\n#define G_Y 2\n#define G_LAST 3\n", gw),
+             fam("g", "#define G_X 1\n#define G_Y 2\n#define G_Z 2\n#define G_LAST 3\n", gw),
+             want=fam("g", "#define G_X 1\n#define G_Y 2\n#define G_Z 3\n#define G_LAST 4\n",
+                      gw),
+             grep=["g G_Z 2 -> 3", "g G_LAST 3 -> 4", "[grows]"])
+        case("a grows limit already above the moved value is left alone",
+             fam("g", "#define G_X 1\n#define G_Y 2\n#define G_LAST 3\n", gw),
+             fam("g", "#define G_X 1\n#define G_Y 2\n#define G_Z 2\n#define G_LAST 9\n", gw),
+             want=fam("g", "#define G_X 1\n#define G_Y 2\n#define G_Z 3\n#define G_LAST 9\n",
+                      gw))
+        gbd = "stored ordinal u16 bound O_LAST grows O_LAST"
+        case("a bound that also grows rises instead of refusing",
+             fam("o", "#define O_X 1\n#define O_Y 2\n#define O_LAST 3\n", gbd),
+             fam("o", "#define O_X 1\n#define O_Y 2\n#define O_Z 2\n#define O_LAST 3\n", gbd),
+             want=fam("o", "#define O_X 1\n#define O_Y 2\n#define O_Z 3\n#define O_LAST 4\n",
+                      gbd),
+             grep=["o O_Z 2 -> 3", "o O_LAST 3 -> 4"])
         print("case: no-op on master")
         d, defs = mkrepo(b, fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n"))
         g(d, "checkout", "-q", "master")
