@@ -189,7 +189,7 @@ Rejected alternatives:
    of `MDataSeg[i]`. Today that blob is empty.
 2. Write the resource memory *rows* that follow (bytes `[szDataSeg, MDataSegSize)`)
    as the name-keyed records the spec requires. These replace the raw
-   `FIELD_BLOB` at `inc/Res.h:1234` and its embed at `inc/Res.h:1257`.
+   `FIELD_BLOB` at `inc/Res.h:1234` and its embed at `inc/Res.h:1258`.
 3. On load, after the loaded module is known, compare the saved segment length
    against the loaded module's `szDataSeg`. If they differ, throw `ECORRUPT`.
    If they match (always, today), copy the blob to the front of the freshly
