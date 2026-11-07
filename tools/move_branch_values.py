@@ -16,12 +16,16 @@ tree-only name whose value a base name or a retired value holds in the same
 stored family). It rewrites the tree-only name's value in its source line by
 the shape of the family:
   ordinal  the next value after the maximum of the merged family (base names,
-           tree names, retired values; sentinel names left out).
+           tree names, retired values; sentinel names left out). When the mark
+           names `bound <NAME>` (the value that sizes the array the family
+           indexes, OPT_LAST), the new value MUST be below the bound: the next
+           value when it is below, else the highest free value below the bound,
+           else REFUSED naming the family. The bound itself never moves.
   bits     the lowest free bit of the storage width, free of every base, tree
            and retired value. No free bit: REFUSED, the word is full.
   enum     the enumerator's line moves to the end of its enum (before the
            sentinel names that end it) with an explicit `= <value>` chosen as
-           for ordinal, so no base enumerator shifts. An enumerator that
+           for ordinal (a `bound` binds here too), so no base enumerator shifts. An enumerator that
            followed it gets an explicit value only when the move would change
            its value; each is reported.
 Then, in each family that moved a name, every `sentinel <NAME>` of the mark is
@@ -112,13 +116,26 @@ def plan(base, tree, retired):
                                   file=names[name][2], line=names[name][3],
                                   shape=shape, sentinel=False))
             continue
-        mx = max(merged)
+        bounds = [tvals[b][1] for b in t.get("bounds", []) if b in tvals]
+        lim = min(bounds) if bounds else None
+        below = [v for v in merged if lim is None or v < lim]
+        taken = set(merged)
+        mx = max(below, default=-1)
         for name in order:
             new = mx + 1
+            if lim is not None and new >= lim:
+                free = [v for v in range(lim - 1, min(below, default=0) - 1, -1)
+                        if v not in taken]
+                if not free:
+                    raise Refused("family %s: no free value below the bound %s = %d for %s "
+                                  "(bead inc-xm3nq)" % (fam, ",".join(t["bounds"]), lim, name))
+                new = free[0]
+            else:
+                mx = new
             if not csv.fits(new, shape, width):
                 raise Refused("family %s: %s would take %d, which does not fit %s "
                               "(bead inc-xm3nq)" % (fam, name, new, width))
-            mx = new
+            taken.add(new)
             moves.append(dict(fam=fam, name=name, old=names[name][1], new=new,
                               file=names[name][2], line=names[name][3],
                               shape=shape, sentinel=False))
@@ -468,6 +485,22 @@ def selftest():
         case("--dry-run writes nothing", b,
              fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n"), dry=True,
              grep=["stati A_Z 2 -> 3", "would move 1"])
+        bd = "stored ordinal u16 bound O_LAST"
+        case("a bound: the next value is taken while it is below the bound",
+             fam("o", "#define O_X 1\n#define O_Y 3\n#define O_LAST 5\n", bd),
+             fam("o", "#define O_X 1\n#define O_Y 3\n#define O_Z 3\n#define O_LAST 5\n", bd),
+             want=fam("o", "#define O_X 1\n#define O_Y 3\n#define O_Z 4\n#define O_LAST 5\n",
+                      bd))
+        case("a bound: no value at or above it, the highest free one below it",
+             fam("o", "#define O_X 1\n#define O_Y 4\n#define O_LAST 5\n", bd),
+             fam("o", "#define O_X 1\n#define O_Y 4\n#define O_Z 4\n#define O_LAST 5\n", bd),
+             want=fam("o", "#define O_X 1\n#define O_Y 4\n#define O_Z 3\n#define O_LAST 5\n",
+                      bd),
+             grep=["o O_Z 4 -> 3"])
+        case("a bound with no free value below it refuses naming the family",
+             fam("o", "#define O_X 1\n#define O_Y 2\n#define O_LAST 3\n", bd),
+             fam("o", "#define O_X 1\n#define O_Y 2\n#define O_Z 2\n#define O_LAST 3\n", bd),
+             code=1, grep=["family o", "no free value below the bound O_LAST = 3"])
         print("case: no-op on master")
         d, defs = mkrepo(b, fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n"))
         g(d, "checkout", "-q", "master")

@@ -24,7 +24,21 @@ values and file:line, when:
   4. a name's value does not fit the width of the family (u8 0..255, i8
      -128..127 ...; shape bits: 0..2^w-1 as a bit pattern, or a negative
      value no lower than -2^(w-1));
-  5. load_families reports any problem, an unclassified family included.
+  5. load_families reports any problem, an unclassified family included
+     (a function-like #define inside a stored family is one, see
+     check_define_dups.py);
+  6. (shape bits) two names of the tree have different masks that overlap,
+     tree-only names included, unless the larger mask is an AGGREGATE: exactly
+     the OR of the smaller masks of the family (KN_IDENTIFIED is KN_ARTI |
+     KN_RUSTPROOF). Equal masks are aliases, left to check_define_dups.py. A
+     partial overlap is never allowed;
+  7. (shape ordinal or enum, mark `bound <NAME>`) a value of the family is not
+     below the bound's value, or the tree's mark drops a `bound` that the base
+     mark carries. The bound sizes the array the values index (OPT_LAST sizes
+     Options[]). The bound name itself is a stored value, compared by rule 1;
+  8. inc/SaveLegacyTags.h differs from the base ref's copy. That table
+     describes files already written; a branch never edits it. A base that has
+     no such file freezes nothing.
 WHICH CLASS DECIDES. When the BASE mark of a family carries a class, the base
 class decides for that family's base names: a name of a base family that is
 stored MUST appear in a stored family of the tree with the same value, else
@@ -127,6 +141,99 @@ def where(m):
     return "%s:%d" % (m[2], m[3])
 
 
+LEGACY_TABLE = "inc/SaveLegacyTags.h"
+
+
+def legacy_table_problem(ref, root):
+    """Rule 8. Return a FAIL line, or None when the tree's table is the base's
+    (or the base has none). Raises Unmeasured when git cannot answer."""
+    r = subprocess.run(["git", "-C", root, "cat-file", "-e", "%s:%s" % (ref, LEGACY_TABLE)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None  # no such file on the base: nothing frozen yet
+    r = subprocess.run(["git", "-C", root, "show", "%s:%s" % (ref, LEGACY_TABLE)],
+                       capture_output=True)
+    if r.returncode != 0:
+        raise Unmeasured("cannot read %s of %s: %s" % (LEGACY_TABLE, ref,
+                                                         r.stderr.decode().strip()))
+    try:
+        with open(os.path.join(root, LEGACY_TABLE), "rb") as f:
+            now = f.read()
+    except OSError as e:
+        return ("FAIL: %s is gone from the tree; it is on %s. It describes files already "
+                "written, so a branch never removes it (%s)" % (LEGACY_TABLE, ref, e))
+    if now != r.stdout:
+        return ("FAIL: %s differs from %s. It describes files already written, so a "
+                "branch never edits it. Fix: restore it with `git checkout %s -- %s`."
+                % (LEGACY_TABLE, ref, ref, LEGACY_TABLE))
+    return None
+
+
+def overlap_problems(fam, t):
+    """Rule 6 for one stored bits family t. Return FAIL lines."""
+    width = t["width"]
+    sent = set(t["sentinels"])
+    mem = {}
+    for m in t["members"]:
+        if m[0] not in sent:
+            mem.setdefault(m[0], m)
+    pats = {n: pattern(m[1], width) for n, m in mem.items()}
+
+    def aggregate(name):
+        acc = 0
+        for n, p in pats.items():
+            if n != name and p and p != pats[name] and p & pats[name] == p:
+                acc |= p
+        return acc == pats[name]
+    out, names = [], sorted(mem)
+    for i, an in enumerate(names):
+        for bn in names[i + 1:]:
+            pa, pb = pats[an], pats[bn]
+            if pa == pb or not pa & pb:
+                continue
+            if pa & pb == pb:
+                hi, lo = an, bn
+            elif pa & pb == pa:
+                hi, lo = bn, an
+            else:
+                hi = lo = None
+            if hi is not None and aggregate(hi):
+                continue
+            out.append("FAIL: family %s %s = 0x%X at %s and %s = 0x%X at %s share bits "
+                       "0x%X with different meanings. Fix: give each its own free bit; "
+                       "a larger mask is allowed only as exactly the OR of the smaller "
+                       "masks of the family"
+                       % (fam, an, mem[an][1], where(mem[an]), bn, mem[bn][1], where(mem[bn]),
+                          pa & pb))
+    return out
+
+
+def bound_problems(fam, t, b):
+    """Rule 7 for one stored family t; b is the base's family dict (may be {})."""
+    out = []
+    bounds = t.get("bounds", [])
+    for bn in b.get("bounds", []):
+        if bn not in bounds:
+            out.append("FAIL: family %s: the base mark says 'bound %s' and the tree's mark "
+                       "drops it. Fix: keep the `bound %s` clause" % (fam, bn, bn))
+    sent = set(t["sentinels"])
+    vals = {}
+    for m in t["members"]:
+        vals.setdefault(m[0], m)
+    for bn in bounds:
+        if bn not in vals:
+            continue  # load_families reported it
+        lim = vals[bn][1]
+        for name, m in sorted(vals.items()):
+            if name in sent or name in bounds or m[1] < lim:
+                continue
+            out.append("FAIL: family %s %s = %d at %s is not below the bound %s = %d (%s). "
+                       "The bound sizes the array this value indexes. Fix: take a free "
+                       "value below it"
+                       % (fam, name, m[1], where(m), bn, lim, where(vals[bn])))
+    return out
+
+
 def compare(base, tree, problems, retired):
     """base, tree: load_families results. Return (FAIL lines, names compared)."""
     out = ["FAIL: " + (p[6:] if p.startswith("FAIL: ") else p) for p in problems]
@@ -184,6 +291,9 @@ def compare(base, tree, problems, retired):
             if (name in tvals or b_stored) and not fits(b[1], shape, width):
                 out.append("FAIL: family %s %s = %d at base %s does not fit %s (shape %s)"
                            % (fam, name, b[1], where(b), width, shape))
+        if shape == "bits":
+            out += overlap_problems(fam, t)
+        out += bound_problems(fam, t, base.get(fam, {}))
         for name, m, hn, hv, why in family_collisions(t, base.get(fam, {}), ret):
             out.append("FAIL: family %s tree-only %s = %d at %s reuses the value "
                        "of %s = %d (%s)" % (fam, name, m[1], where(m), hn, hv, why))
@@ -335,6 +445,9 @@ def run(ref):
     try:
         base, tree, problems, retired, kept = measure(ref, ROOT, True, RETIRED)
         msgs, ncomp = compare(base, tree, problems, retired)
+        legacy = legacy_table_problem(ref, ROOT)
+        if legacy:
+            msgs.append(legacy)
         nfam = sum(1 for d in tree.values() if d["class"] == "stored")
         if msgs:
             print("\n".join(msgs), file=sys.stderr)
@@ -397,6 +510,29 @@ def selftest():
         assert c == 1 and "tree-only F_C" in m and "F_B" in m, (c, m)
         c, m = go(bb, bb + fam("f", "#define F_C 0x10000\n", bits))
         assert c == 1 and "does not fit u16" in m, (c, m)
+        # rule 6: unequal overlapping masks, tree-only names included (F04)
+        c, m = go(bb, bb + fam("f", "#define F_N 0x0300\n#define F_M 0x0600\n", bits))
+        assert c == 1 and "F_N = 0x300" in m and "F_M = 0x600" in m and "share bits 0x200" in m, (c, m)
+        c, m = go(bb, bb + fam("f", "#define F_N 0x0200\n#define F_M 0x0300\n", bits))
+        assert c == 1 and "F_M = 0x300" in m and "F_N = 0x200" in m, (c, m)
+        assert go(bb, bb + fam("f", "#define F_N 0x0100\n#define F_M 0x0200\n"
+                                    "#define F_NM 0x0300\n", bits))[0] == 0  # an aggregate passes
+        assert go(bb, bb + fam("f", "#define F_N 0x0100\n#define F_M 0x0100 /* alias */\n",
+                               bits))[0] == 0  # equal masks are aliases (check_define_dups)
+        # rule 7: a bound is an exclusive limit; the mark must keep it (F05)
+        bd = "stored ordinal u16 bound B_LAST"
+        bz = fam("o", "#define B_X 1\n#define B_Y 2\n#define B_LAST 4\n", bd)
+        assert go(bz, bz)[0] == 0
+        assert go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_Z 3\n"
+                               "#define B_LAST 4\n", bd))[0] == 0
+        c, m = go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_Z 4\n"
+                               "#define B_LAST 4\n", bd))
+        assert c == 1 and "B_Z = 4" in m and "not below the bound B_LAST = 4" in m, (c, m)
+        c, m = go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_Z 5\n"
+                               "#define B_LAST 4\n", bd))
+        assert c == 1 and "B_Z = 5" in m, (c, m)
+        c, m = go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_LAST 4\n"))
+        assert c == 1 and "drops it" in m and "bound B_LAST" in m, (c, m)
         eb = fam("e", "enum { E_A, E_B, E_C };\n", "stored enum i32")
         assert go(eb, eb)[0] == 0
         c, m = go(eb, fam("e", "enum { E_A, E_NEW, E_B, E_C };\n", "stored enum i32"))
@@ -457,6 +593,24 @@ def selftest():
         subprocess.run(g + ["init", "-q", "-b", "master"], check=True)
         subprocess.run(g + ["add", "-A"], check=True)
         subprocess.run(g + ["commit", "-q", "-m", "base"], check=True)
+        # rule 8: the legacy table is frozen against the base (F09)
+        os.makedirs(os.path.join(repo, "inc"), exist_ok=True)
+        lt = os.path.join(repo, LEGACY_TABLE)
+        assert legacy_table_problem("master", repo) is None  # base has no table yet
+        with open(lt, "w") as f:
+            f.write('{ "Character", 411, "alignGE", 3, 6 },\n{ "Character", 412, "alignLC", 3, 6 },\n')
+        subprocess.run(g + ["add", "-A"], check=True)
+        subprocess.run(g + ["commit", "-q", "-m", "table"], check=True)
+        assert legacy_table_problem("master", repo) is None  # tree == base
+        with open(lt, "w") as f:
+            f.write('{ "Character", 411, "alignLC", 3, 6 },\n{ "Character", 412, "alignGE", 3, 6 },\n')
+        p = legacy_table_problem("master", repo)
+        print("  %s" % ("RED   " + p[:100] if p else "GREEN"))
+        assert p and "already written" in p and LEGACY_TABLE in p, p
+        os.remove(lt)
+        p = legacy_table_problem("master", repo)
+        assert p and "is gone" in p, p
+        subprocess.run(g + ["checkout", "-q", "--", LEGACY_TABLE], check=True)
         dest = os.path.join(tmp, "got")
         os.makedirs(dest)
         global ROOT

@@ -1193,8 +1193,10 @@ typedef signed int        hObj;
 #define AD_SWAL    93
 #define AD_FALL    94
 
-#define is_wepdmg(a) (a == AD_SLASH || a == AD_PIERCE || a == AD_BLUNT)
 // end family: ad
+// no-family
+#define is_wepdmg(a) (a == AD_SLASH || a == AD_PIERCE || a == AD_BLUNT)
+// end no-family
 // family: attack stored ordinal i16
  
 
@@ -1272,7 +1274,11 @@ typedef signed int        hObj;
 #define A_TRAM    26
 #define A_RAKE    27
 #define A_LAST_STANDARD 29  /* last true attack */
+// end family: attack
+// no-family
 #define is_standard_attk(a) ((a) > 0 && (a) <= A_LAST_STANDARD)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_CRUS    30  /* crush, after grab */
 #define A_SUCK    31  /* (A_CRUS) Suck Blood (vampire, dire mosquito, lamprey, etc. */
@@ -1284,7 +1290,11 @@ typedef signed int        hObj;
 #define A_DGST    37  /* digests opponent (trapper, etc.) */
 
 #define A_LAST_POSTGRAB 39
+// end family: attack
+// no-family
 #define is_postgrab_attk(a)  ((a) > A_LAST_STANDARD && (a) <= A_LAST_POSTGRAB)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_SPIT    40  /* spits substance - ranged */
 #define A_HURL    41  /* Throw object            */
@@ -1301,7 +1311,11 @@ typedef signed int        hObj;
 #define A_DETH    52  /* Death Throes (occurs when mon dies) */
 #define A_PROX    53  /* Proximity Effect */
 #define A_LAST_SPECIAL 53  /* alias of A_PROX */
+// end family: attack
+// no-family
 #define is_special_attk(a) ((a) > A_LAST_POSTGRAB && (a) <= A_LAST_SPECIAL)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_AURA    54  /* damage on contact */
 #define A_PASS    55  /* UNUSED: response to melee attack */
@@ -1313,7 +1327,11 @@ typedef signed int        hObj;
   /* ww: A_DEQU -- hit Item2 first, if not, then Item, if not, then
    * apply to attacker */
 #define A_LAST_RESPONSE 60  /* alias of A_DEQU */
+// end family: attack
+// no-family
 #define is_response_attk(a) ((a) > A_LAST_SPECIAL && (a) <= A_LAST_RESPONSE)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_BULL    61
 #define A_COUP    62
@@ -1337,7 +1355,11 @@ typedef signed int        hObj;
 #define A_AEYE    80  /* Avert Eyes */
 #define A_PREC    81  /* Precision Strike */
 #define A_LAST_MANEUVER 81  /* alias of A_PREC */
+// end family: attack
+// no-family
 #define is_maneuver(a) ((a) > A_LAST_RESPONSE && (a) <= A_LAST_MANEUVER)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_MOVE    90  
 #define A_CLER    91  /* Casts Divine Spells, max spell lev = DType */
@@ -1355,7 +1377,11 @@ typedef signed int        hObj;
 #define A_SEEM   102
 #define A_LAST_MABILITY 102  /* alias of A_SEEM */
 
+// end family: attack
+// no-family
 #define is_ability_attk(a) ((a) > A_LAST_MANEUVER && (a) <= A_LAST_MABILITY)
+// end no-family
+// family: attack stored ordinal i16
 
 #define A_ALSO    110  /* Bite for 3d6 AD_NORM and 1d4 AD_DRDX */
 #define A_CRIT    111  /* Bite for 3d6 AD_NORM, and AD_ENGL on critical */
@@ -1984,6 +2010,8 @@ typedef signed int        hObj;
 #define A_SPD 54 /* Universal Speed Modifier */
 #define A_MAG 55 /* Add to both A_ARC and A_DIV */
 
+// end family: attr
+// no-family
 #define percent_attr(i) (i == A_MOV || i == A_SPD_MELEE ||             \
    i == A_SPD_ARCHERY || i == A_SPD_THROWN || i == A_SPD_BRAWL ||      \
    i == A_SPD_OFFHAND || i == A_SPD)
@@ -1991,7 +2019,7 @@ typedef signed int        hObj;
                             j == BONUS_SACRED || j == BONUS_WEAPON ||  \
                             j == BONUS_SKILL || j == BONUS_COMP ||     \
                             j == BONUS_FEAT || AttrAdj[i][j] < 0)
-// end family: attr
+// end no-family
 // family: r_race internal
 
 
@@ -4697,7 +4725,7 @@ typedef signed int        hObj;
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
 #define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
 // end family: opt_gen
-// family: opt stored ordinal u16
+// family: opt stored ordinal u16 bound OPT_LAST
 
 
 #define OPC_TACTICAL            500
@@ -4804,32 +4832,39 @@ typedef signed int        hObj;
    NOTE: If in the future the ATTR is extended to include more than the colour, then all masking should be checked.
 */
 
+// end no-family
+/* inc-cjos0: a saved map grid holds each tile's glyph word as it is packed
+   here (src/SaveV1.cpp copies the word raw), so the widths, shifts and masks
+   below are stored values. Changing one changes what every saved glyph means. */
+// family: glyph_word stored ordinal u32
 #define GLYPH_ID_BITS			12
 #define GLYPH_FORE_BITS			COLOUR_BITS
-#define GLYPH_BACK_BITS			COLOUR_BITS
+#define GLYPH_BACK_BITS			COLOUR_BITS  /* alias of GLYPH_FORE_BITS */
 #define GLYPH_ATTR_BITS			(GLYPH_BACK_BITS + GLYPH_FORE_BITS)
+#define GLYPH_ID_MASK			((1 << GLYPH_ID_BITS) - 1)
+#define GLYPH_ATTR_SHIFT        (GLYPH_ID_BITS)  /* alias of GLYPH_ID_BITS */
+#define GLYPH_ATTR_MASK         (((1 << GLYPH_ATTR_BITS) - 1) << GLYPH_ATTR_SHIFT)
+#define GLYPH_FORE_SHIFT        (GLYPH_ATTR_SHIFT)  /* alias of GLYPH_ID_BITS */
+#define GLYPH_FORE_MASK         (((1 << GLYPH_FORE_BITS) - 1) << GLYPH_FORE_SHIFT)
+#define GLYPH_BACK_SHIFT        (GLYPH_ATTR_SHIFT + GLYPH_FORE_BITS)
+#define GLYPH_BACK_MASK         (((1 << GLYPH_BACK_BITS) - 1) << GLYPH_BACK_SHIFT)
+#define GLYPH_COLOUR_MASK		(GLYPH_FORE_MASK + GLYPH_BACK_MASK)  /* alias of GLYPH_ATTR_MASK */
+// end family: glyph_word
+// no-family
 
 #define GLYPH_ID(value)         (value)
-#define GLYPH_ID_MASK			((1 << GLYPH_ID_BITS) - 1)
 #define GLYPH_ID_VALUE(glyph)   ((glyph) & GLYPH_ID_MASK)
 
-#define GLYPH_ATTR_SHIFT        (GLYPH_ID_BITS)
 #define GLYPH_ATTR(value)       ((value) << GLYPH_ATTR_SHIFT)
-#define GLYPH_ATTR_MASK         (((1 << GLYPH_ATTR_BITS) - 1) << GLYPH_ATTR_SHIFT)
 #define GLYPH_ATTR_VALUE(glyph) (((glyph) & GLYPH_ATTR_MASK) >> GLYPH_ATTR_SHIFT)
 
-#define GLYPH_FORE_SHIFT        (GLYPH_ATTR_SHIFT)
 #define GLYPH_FORE(value)       ((value) << GLYPH_FORE_SHIFT)
-#define GLYPH_FORE_MASK         (((1 << GLYPH_FORE_BITS) - 1) << GLYPH_FORE_SHIFT)
 #define GLYPH_FORE_VALUE(glyph) (((glyph) & GLYPH_FORE_MASK) >> GLYPH_FORE_SHIFT)
 
-#define GLYPH_BACK_SHIFT        (GLYPH_ATTR_SHIFT + GLYPH_FORE_BITS)
 #define GLYPH_BACK(value)       ((value) << GLYPH_BACK_SHIFT)
-#define GLYPH_BACK_MASK         (((1 << GLYPH_BACK_BITS) - 1) << GLYPH_BACK_SHIFT)
 #define GLYPH_BACK_VALUE(glyph) (((glyph) & GLYPH_BACK_MASK) >> GLYPH_BACK_SHIFT)
 
 #define GLYPH_COLOUR(value)     ((value) << GLYPH_FORE_SHIFT)
-#define GLYPH_COLOUR_MASK		(GLYPH_FORE_MASK + GLYPH_BACK_MASK)
 #define GLYPH_COLOUR_VALUE(g)   (((g) & GLYPH_COLOUR_MASK) >> GLYPH_FORE_SHIFT)
 
 #define GLYPH_VALUE(id, attr)   (GLYPH_ID(id) | GLYPH_ATTR(attr))
