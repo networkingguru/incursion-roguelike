@@ -585,15 +585,10 @@ variable inside an existing owner breaks the append rule against the ledger.
 The bead that merges master into the epic (`.claude/rules/epic-branches.md`)
 MUST restore each retired declaration at its old ordinal, place each new
 variable after the owner's existing ones, and re-record the ledger in that bead.
-Saves written by the epic before that merge are IS1.3 files from a different
-variable list, and they MUST convert, not refuse. That bead MUST build the
-epic's module at each commit where the epic's variable list changed, and add
-one frozen table per distinct list, each with its build's array lengths and
-owner names. The recovery tries every table with IS1.3 step 1. Exactly one
-table MUST match, or all matching tables MUST hold the same variable list;
-otherwise the load refuses, naming the matching tables. Masok
-(`~/Scripts/Incursion-inc-pu6v/save/Masok.sav`) MUST convert, and the bead
-MUST show it loading.
+Saves written by an epic build are playtest saves and are disposable
+(`.claude/rules/engine-data-knowledge.md`, `epic-saves-are-disposable`). The
+merge bead MUST NOT add a conversion for them, and a merge MAY make them
+refuse to load.
 
 `docs/SCRIPT-DATA-SEGMENT.md` is superseded. Its verdict rested on "0 bytes in
 every real module, and no compile path can change it", which was false.

@@ -51,3 +51,7 @@ See [[save-schema-order-ledger-design]] for the build-time half.
 ## nothing-is-sellable-except-gems
 
 2026-10-21, during the Multitude design (inc-pu6v.17, Mammon hole A 3.4). The session raised the risk that a dead retainer's gear could be sold for gold. Brian, verbatim: "Nothing is sellable in this game except gems; write this down somewhere very durable so you fucking quit bringing this up." Earlier sessions had raised resale as a risk too. Bead inc-vpf9.
+
+## epic-saves-are-disposable
+
+2026-11-06, during the inc-pu6v.369 merge of master into inc-pu6v. Master and the epic both used Character save tags 449-451. The session asked whether Laucian.sav and Rathmere.sav, Brian's epic playtest saves, had to keep loading. Brian, verbatim: "NO. Goddamn, why don't you know this? WHen tyou find out, fix that TOO. EPICS SAVES DO NOT MATTER. I've said this many times. I am playtesting only. I do not care. Kill them." No loaded rule stated this before, and docs/SAVE-SCHEMA-SPEC.md required epic saves (Masok) to convert; that requirement was removed in the same bead. Bead inc-1macr.
