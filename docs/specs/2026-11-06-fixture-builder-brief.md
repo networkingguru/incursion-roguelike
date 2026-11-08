@@ -2,7 +2,7 @@
 
 Goal, design and rulings: `docs/specs/2026-11-06-fixture-builder-spec.md` v5
 (cited as "spec §N", "A<n>" for the section 11 amendments and "B<n>" for the
-section 12-13 amendments, "S<n>" for the section 14 scene amendments; B18 (three generic primitives) governs every
+section 12-13 amendments, "V7-<n>" for the section 15 scope amendments (section 14, scenes, moved to inc-9s4u0); B18 (three generic primitives) governs every
 decision site; an amendment overrides the section it names). Stack: C++ engine, `BACKEND=posix
 ./build_macos.sh`, shell and Python checks run through `tools/headless.sh`.
 Sized: Large. Every phase is one commit on branch `inc-10v7f`, lane `tools:`
@@ -13,13 +13,13 @@ Sized: Large. Every phase is one commit on branch `inc-10v7f`, lane `tools:`
 | AC | Criterion (short) | Proved in |
 |---|---|---|
 | AC1 | Every master fixture is a `.char` plus a `.sav` built from it | Phase 13 |
-| AC2 | Builder calls creation's own functions; reviewer confirms nothing is copied | Phases 4-8; `tools/check_creation_source_sites.sh`; code review sign-off in bead notes (phase 15) |
+| AC2 | Builder calls creation's own functions; reviewer confirms nothing is copied | Phases 4-7; `tools/check_creation_source_sites.sh`; code review sign-off in bead notes (phase 15) |
 | AC3 | A check builds through creation and builder, fails on a sheet difference, red by mutation | Phase 10 (C2) |
 | AC4 | A check fails when a `.sav` differs from what its `.char` builds | Phase 9 (C1, V2) |
 | AC5 | `tools/headless.sh` rebuilds a fixture from its `.char` | Phase 9 |
 | AC6 | Epic proof on the inc-pu6v.369 merge | inc-pu6v.369, after this bead lands (spec §10 step 3). Before landing, add a line naming inc-10v7f AC6 to the inc-pu6v.369 description, so `tools/check_bead_evidence.py` accepts the AC6 line as a named follow-up |
 | AC7 | `tools/fixtures/README.md` describes the new system | Phase 13 |
-| AC8 | Every map-reading check runs on the fixed test map with a scene; C8 red by each named mutation | Phases 13a-13b (spec §14) |
+| AC8 | The 9 map-flagged checks that need nothing from the map load built fixtures; the 22 that need a placed map keep their old `.sav` as a specimen for inc-9s4u0 | Phase 13 (V7-2) |
 
 ## Standing constraint: `Live` MUST NOT change normal play
 
@@ -40,27 +40,20 @@ the phase's base commit. A difference stops the phase.
 | `src/Create.cpp` | Every decision site of the phase-1 list calls the source; the `MO_RECREATE` branches are deleted; `GrantPerks` non-static; `Game::NewGame` tail moved into a function (A1); `GallerySlot = -1` under `File` (A12). |
 | `src/Annot.cpp` | `GrantGear` draws keyed by (resource, annotation ordinal, draw kind) (A4). |
 | `src/Term.cpp`, `src/TextTerm.cpp` | Prompt primitives and `LearnTable` call the source; the single T1 key-read wrapper (A8). |
-| `src/Managers.cpp` | `SkillManager` commit extracted (spec §2); level gate and multiclass bodies moved into functions (spec §4). |
-| `src/Debug.cpp` | Wizard bodies moved into functions: learn, item, join/rung/altar (spec §4). |
+| `src/Managers.cpp` | `SkillManager` commit extracted (spec §2). |
 | `src/Event.cpp` or the script dispatch site of the phase-1 list | Creation-event script draws and prompts keyed by (resource, event, ordinal) (A2). |
 | `src/Main.cpp` | `-build <file>` and `-dump` extension entry points (spec §5, A7). |
 | `src/Dump.cpp` | Canonical dump: rIDs as names, handles dropped, per-level rolls, skill pools, perks, kit qualities, spells, stati (A7). |
-| `src/Feature.cpp` | `INCURSION_LEVITATE_CHASM`: grant levitation, then chasm under and east of the player; search removed (D2, A12). |
 | `src/MultiSelectProbe.cpp` | Its `MO_RECREATE` sites call the source (A6). |
 | `tools/char_dump.sh`, `tools/build_fixture.sh`, `tools/fixture_sheet.sh`, `tools/fill_chars.sh`, `tools/char_rekey.sh`, `tools/char_convert.sh` (new) | Spec §5, §8, A5, A7, A10. `char_convert.sh` stays until the epic conversion lands. |
 | `tools/headless.sh`, `tools/finish_bead.sh`, `tools/gate_record.sh`, `tools/gate_compare.sh` | Cache lookup, lock, exit 8, module-slide rebuild, pin, build log report (spec §7, A3, A10, A13). |
-| `tools/check_fixture_build.sh`, `_equivalence.sh`, `_tripwires.sh`, `_repair.sh`, `check_perk_fields.sh`, `check_moved_bodies.sh`, `check_player_fields.sh`, `check_creation_source_sites.sh` (new) | C1-C7 (C8 is the scene row below) and the A6 grep check. Each carries its `# fact:` lines. |
+| `tools/check_fixture_build.sh`, `_equivalence.sh`, `_tripwires.sh`, `_repair.sh`, `check_perk_fields.sh`, `check_player_fields.sh`, `check_creation_source_sites.sh` (new) | C1-C5, C7 and the A6 grep check. Each carries its `# fact:` lines. |
 | `tools/fixtures/unstated_draws.baseline` (new) | `unstatedDraw` sites; may only shrink (A9). |
 | `tools/fixtures/chars/*.char` (new, 74) | The converted fixtures. Tracked `.sav`, `.sheet.txt`, `.keys`, `MANIFEST` removed (spec §7). |
 | `tools/fixtures/specimens/` (new) | Old-format `.sav` files that phase 2 classifies as "needs the bytes" (spec §8). |
 | Every tool phase 2 lists as a fixture reader | Switched to `INCURSION_LOAD=<name>`, `tools/fixture_sheet.sh` or a specimen path. |
 | `tools/make_char_fixture.sh`, `tools/sync_char_fixtures.sh`, `tools/check_char_fixture.sh`, fixture-only key scripts | Retired (spec §8). |
-| `tools/check_dungeonmap_bounds.sh` | Depth-10 jump, new hook, oracle text re-derived, red re-proved (D2, A12). |
 | `tools/fixtures/README.md`, `.gitignore` | New system described; `logs/fixture-cache/` ignored (spec §8). |
-| `lib/dungeon.irh` | Appended: Region "Fixture Test Chamber" (41 by 41 grid) and Terrain "Fixture Lit Floor" (spec §14 S2). |
-| `src/Scene.cpp` (new) | Scene parser, typed finder, applier (spec §14 S3-S4). |
-| `src/Feature.cpp`, `src/MakeLev.cpp`, `src/Debug.cpp` | Companion-moving helper out of `Player::MoveDepth`; monster, attitude, floor-item and feature placement bodies moved out of `WriteMap`, wizard summon and wizard case 28 (spec §14 S4). |
-| `tools/check_scene.sh` (new), `tools/fixtures/scenes/*.scene` (new), the 31 map-flagged checks, `docs/VERIFICATION.md` | C8; scene files; conversion; the `INCURSION_SCENE` catalog row (spec §14 S6-S8). |
 
 ## Phases (one commit each)
 
@@ -131,10 +124,7 @@ the phase's base commit. A difference stops the phase.
    dump equals the old `.sav`'s dump (B7); the `OptionManager` yn is
    answered "no" (B11); a repeated god request with a non-empty queue
    passes, with an empty queue fails (B4).
-8. **Post-creation keys and moved bodies (spec §4).** Move each inline body
-   into a function the UI calls; add the keys; add C6. Verify: C6 red when
-   one moved body is changed only on the builder side; the wizard menus give
-   the same dumps as before the move, old binary against new.
+8. **Dropped (V7-1).** No post-creation keys, no moved bodies, no C6.
 9. **Cache and automatic repair (spec §7, A3, A10, A13).** Cache key,
    clean environment, `tools/headless.sh` lookup with lock and temporary
    rename, exit 8, one module-slide rebuild, keep 3 keys, 30-minute stale
@@ -166,13 +156,15 @@ the phase's base commit. A difference stops the phase.
     Stop and report before phase 13 if not. This proves the procedure on
     master only; epic compatibility is proved by C2 and C3 on the epic in
     inc-pu6v.369 (spec §10 step 2).
-13. **Convert all 74 master fixtures (spec §8, G4, D2).** Record each
+13. **Convert all 74 master fixtures (spec §8, G4, V7-1, V7-2).** Record each
     fixture's key script on the current binary, fill old values with the
     conversion helper, build, compare the full dump with the old `.sav`'s
-    dump on current master outside the allowlist. Scenes become character
-    fixtures with their scene built by the check, except checks in
-    `logs/sites/map31-needs.md`, which 13b converts; the D2 hook change and
-    `check_dungeonmap_bounds.sh` re-derived; specimens moved; every phase-2
+    dump on current master outside the allowlist. Each fixture's
+    post-creation steps move into the key scripts of the checks that need
+    them (V7-1). Of the 31 checks in `logs/sites/map31-needs.md`, the 9 that
+    need nothing from the map switch to built fixtures; the 22 that need a
+    placed map keep their old `.sav` as a specimen for inc-9s4u0 (V7-2);
+    specimens moved; every phase-2
     tool switched; old files and retired tools removed; README rewritten;
     the `docs/VERIFICATION.md` catalog row for `INCURSION_LOAD` updated (B8);
     README states the add-a-decision procedure (B18); a test adds a dummy
@@ -180,23 +172,9 @@ the phase's base commit. A difference stops the phase.
     `fill_chars.sh`. The nightly census run is wired in
     `~/Scripts/nightly-harness` as a separate commit in that repository.
     Verify: per-fixture comparison table in the bead notes (AC1); every check
-    phase 2 lists, except the 31 in `logs/sites/map31-needs.md` (13b owns
-    them), passes and passes `tools/seed_sweep.sh`; AC7. Large
+    phase 2 lists, except the 22 that wait for inc-9s4u0, passes and passes `tools/seed_sweep.sh`; AC7. Large
     enough to split across several implementer runs; one commit at the end.
-13a. **Test map and scene applier (spec §14 S2-S7).** Append the Region and
-    lit floor terrain; the typed finder; the scene parser; the applier with
-    its moved bodies; `INCURSION_SCENE` in `tools/headless.sh`; C8 and the
-    VERIFICATION.md catalog row; the new moved bodies added to C6. Runs after phases 7-8 (S4
-    needs the `File` build). Verify: C8 green, and red on each of its
-    mutations (a)-(j); `tools/nightly_verify.sh --compare`.
-13b. **Convert the 31 map-flagged checks (spec §14 S8, S9).** Per
-    `logs/sites/map31-needs.md`: fact lines, scene files, Genocide steps
-    dropped; S9's rune and tanglefoot names found first (none found: stop
-    and report to the bead). Verify: each
-    converted check passes, passes `tools/seed_sweep.sh`, and goes red on
-    its own existing mutation, or a new one named in the bead notes; the
-    table in the bead notes has a column "scene states every fact read",
-    filled by the reviewer (S5) (AC8).
+13a, 13b. **Moved to inc-9s4u0 (V7-2).**
 14. **Epic oracle dumps (A7).** No commit on this branch. Make a scratch
     worktree at d71c1823 with a detached HEAD (no branch, so
     `tools/check_orphan_branches.sh` stays green), apply the phase-3 dump
@@ -217,7 +195,7 @@ the phase's base commit. A difference stops the phase.
 ## Implementers
 
 `tools/claude_budget.py` said `sonnet-first` at 19:29 on 2026-11-06 (day 5,
-39% of 55%). Coding phases (0, 3-11, 13, 13a, 13b) go to `sonnet` with label `budget:`
+39% of 55%). Coding phases (0, 3-7, 9-11, 13) go to `sonnet` with label `budget:`
 while it says so, else DeepSeek in phases of about 40 steps, then Haiku 5.5+,
 `sonnet`, `opus`, per `always-implement-via-codex`. Re-run the budget tool
 before each dispatch. Research phases (1, 2) go to an agent with label
@@ -238,11 +216,9 @@ before the next dispatch.
   `.char`, run a check that loads it; edit one feat in a `.char` and see the
   next run rebuild.
 - Live data: all 74 master fixtures converted and compared with their old
-  `.sav` dumps; every check that loads a fixture passes; a reincarnation from
+  `.sav` dumps; every check that loads a fixture, except the 22 that wait
+  for inc-9s4u0, passes; a reincarnation from
   a real gallery behaves as before.
 - Gate: `tools/nightly_verify.sh --compare` at each source phase, and
   `tools/finish_bead.sh` at landing.
-- Scenes (adversarial): an unknown name, an ambiguous name, a name without
-  its `;tag`, an offset off the map, a monster on a wall, a rectangle with
-  its corners reversed, a fixture with a companion and a mount, a character
-  made in the run, a save and reload on the test map.
+- Scenes: moved to inc-9s4u0 (V7-2).

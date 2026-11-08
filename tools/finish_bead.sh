@@ -681,6 +681,16 @@ else
     echo "=== gate SKIPPED (--no-gate) ==="
 fi
 
+# STEP 4-fixtures (inc-10v7f, spec B8). Report each fixture whose built
+# character changed against the base pin record. It reports and NEVER blocks the
+# landing: a character change is often the point of the bead, and the gate has
+# already judged the checks. Its failure to run is a line, not a stop.
+if [ -x "$WORKTREE/tools/fixture_changes_report.sh" ]; then
+    echo "=== fixtures: characters changed since the recorded base ==="
+    ( cd "$WORKTREE" && tools/fixture_changes_report.sh ) ||
+        echo "finish_bead: the fixture report exited $?; continuing."
+fi
+
 # STEP 4a (inc-mhn1w). Only this script writes tools/resource_order.ledger. The
 # gate's build recorded it when the gate built; --no-gate, --docs-only and
 # --reuse-pass may not have. Make sure the worktree ledger records the module,

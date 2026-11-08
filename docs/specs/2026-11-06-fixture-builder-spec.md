@@ -136,28 +136,9 @@ an RNG stream shift) from silent into a named build failure.
 - Chained fixtures (made today by loading another fixture) are flattened
   into one full `.char`; there is no `from:` (K-m6).
 
-## 4. Post-creation keys (K-M1, R-M-3)
+## 4. Post-creation keys
 
-Applied after creation, in file order. Each calls one engine function. Where
-the logic sits inline in a UI today, it MUST be moved into a function that
-the UI and the builder both call, with its validation:
-
-| key | function (moved from) |
-|---|---|
-| `level: <class> [choices]` | `AdvanceLevel`, plus the XP and free-advance gate (moved from `src/Managers.cpp:2695-2700`); fails if `Level[]` did not change (K-m8) |
-| `addclass: <class>` | the multiclass validation and `TrainAs` (moved from `src/Managers.cpp:2733-2800`) |
-| `xp: <n>` | `GainXP`, as wizard "Generate 50 XP Ticks" does |
-| `learn: <spell> <source>` | the learning path of that source; source `wizard` is the moved wizard case 17 body (`src/Debug.cpp:858`) |
-| `item: <item> [effect] [plus]` | the item creation the wizard Item Acquisition performs (moved from `src/Term.cpp:3270-3290` and `src/Debug.cpp:618-630`), ending as it does in `EV_PICKUP` |
-| `place: <item> <slot or pack or floor>` | the inventory manager's move function (moved from its key handler) |
-| `wizard: on`, `switch: <name>` | the wizard flag and option bits |
-| `join: <god>`, `rung`, `altar` | the moved bodies of wizard cases 34 and 38 (`src/Debug.cpp:1178`, epic adds `ReconcileClassPowers` `:1226`). A fixture whose god came from the wizard keeps `join:`; it is never converted to the creation key `god:` (K-M4) |
-| `companion: <kind>` | the Animal Companion skill-use path |
-| `hp_now`, `stati` | raw writes, allowed only for a check's own wound or counter, each with a `# why` comment naming the bead (R-M-3) |
-| `condition: <item> <damage>` | the item damage function a trap uses |
-
-Each moved body gets a check that the menu path and the builder path give
-the same result (R-M-3).
+Withdrawn by section 15 (V7-1). A fixture holds only the created character.
 
 ## 5. Build mode
 
@@ -169,8 +150,7 @@ running `incursion-headless -build <name>.char`. It:
 2. Installs the `File` source and calls `Game::NewGame` unchanged; no split
    is needed (K-m1). Creation's gallery write is skipped when the source is
    `File`; `TouchGallery` then returns early (K-m2, tested).
-3. Applies the post-creation keys.
-4. Verifies (section 6), then saves through `Game::SaveGame` and writes the
+3. Verifies (section 6), then saves through `Game::SaveGame` and writes the
    sheet through the engine's `DumpCharacter`.
 
 ## 6. Verification
@@ -261,8 +241,6 @@ tracked. Only the `.char` is.
   identical); a truncated cached `.sav` is NOT rebuilt and exits 8; two
   concurrent runs of one fixture build it once.
 - C5 `check_perk_fields.sh`: every Perk struct field has a `.char` field.
-- C6 `check_moved_bodies.sh`: each moved wizard or inventory body gives the
-  same result from its menu and from its `.char` key.
 - Every check that loads a fixture passes `tools/seed_sweep.sh` and carries
   `# fact: character -- fixture <name>`; it reads no map, flavor or derived
   sheet value (VERIFICATION.md seed rule, R).
@@ -482,6 +460,9 @@ small, mechanical step, not a redesign.
 
 ## 14. Version 6 amendments: scenes (2026-11-07, revision 2)
 
+Moved to inc-9s4u0 by section 15 (V7-2). Kept here as that bead's design;
+nothing in this section is work for inc-10v7f.
+
 A built fixture gets a fresh, random level 1, so a check that read the map a
 `.sav` once froze loses it. Research (bead notes 2026-11-07,
 `logs/sites/map31-needs.md`) read the 31 checks marked as map-dependent: 9
@@ -591,3 +572,20 @@ below overrides the section it names.
 - S9. Open: no feature named "rune" exists in `lib/` (E10). The plan's first
   conversion step finds the resource names `check_natural_save.sh` reads
   (its runes and tanglefoot strands) and writes them into its scenes.
+
+## 15. Version 7 amendments: scope (2026-11-08)
+
+Owner's rulings, 2026-11-08 (bead notes). The builder regenerates the
+created character and nothing else. Each amendment overrides the sections
+it names.
+
+- V7-1. Every step after game load belongs to the check that needs it, in
+  that check's own key script. Withdrawn: section 4, section 5 step 3, C6,
+  A1's "plus each post-creation key body" clause, and B13. The tripwire
+  window ends where `-build` exits.
+- V7-2. Section 14 (S1-S9), ruling D2 and A12 move to inc-9s4u0, which
+  depends on this bead. Of the 31 map-flagged checks
+  (`logs/sites/map31-needs.md`), the 9 that need nothing from the map switch
+  to built fixtures in this bead. The 22 that need a placed map keep their
+  old `.sav` as a specimen until inc-9s4u0 converts them. Section 8's scene
+  bullet applies only to fixtures whose checks are not among the 22.
