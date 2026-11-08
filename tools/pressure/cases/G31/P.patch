@@ -1,0 +1,91 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 53b563d..bfb9807 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1249,6 +1249,8 @@ class Character: public Creature
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
++      uint32 ac8Retire = 17;
++      FIELD_U32("Ac8Retire", ac8Retire);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this
+@@ -1573,6 +1575,8 @@ class Player: public Character
+       bool HasBookFor(int16 sn);
+       void MigrateSpellFlagsRev5();
+       void MigrateSpellFlagsRev6();
++      /* grw migration decl slot A */
++      /* grw migration decl slot B */
+       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
+          known spell plus a summary. Called at the end of the migration and
+          once after every load (migrated or not). */
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index f87c653..b67de67 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -11,10 +11,12 @@ struct RenamedFieldName  { const char *scope, *oldName, *newName; };
+ 
+ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+   { "Character", "SpellsU16" },
++  /* grw slot B */
+   { NULL, NULL }
+ };
+ 
+ static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
++  /* grw slot A */
+   { NULL, NULL, NULL }
+ };
+ 
+diff --git a/inc/Target.h b/inc/Target.h
+index baf1c16..673feb0 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -104,7 +104,9 @@ typedef enum {
+     TargetResents,
+     /* inc-9622 phase 1: append only. TargetWhy::type is stored in saves as a
+        raw int, so every existing value keeps its number. Phase 2 uses this. */
+-    TargetLostTrack
++    TargetLostTrack,
++    /* grw slot A */
++    /* grw slot B */
+ } TargetWhyType;
+ // end family: target_why_type
+ 
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index 95e45b8..75a1ff4 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1681,6 +1681,8 @@ struct FeatInfoStruct FeatInfo[] = {
+   /* The Weapon Expert Tree */
+ 
+ 
++  /* growth feat slot A */
++  /* growth feat slot B */
+   { 0, } , // ending element
+ 
+ } ; // ww: endof: "FeatInfoStruct FeatInfo[]" 
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index 3992292..e26325f 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -117,6 +117,8 @@ struct V1Migration {
+ static const V1Migration v1Migrations[] = {
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
++    /* grw migration slot A */
++    /* grw migration slot B */
+ };
+ #define V1_NMIGRATIONS (sizeof(v1Migrations)/sizeof(v1Migrations[0]))
+ static std::string v1FileMigrations;   /* the loaded file's Migrations field */
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index 39f7316..a33610d 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -3,4 +3,6 @@
+ #          rename <scope> <old> <new>  the reader matches either name
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
++# grw slot A
+ Character SpellsU16
++# grw slot B

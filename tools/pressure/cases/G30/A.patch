@@ -1,0 +1,547 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index bfb9807..66f6ca3 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -893,6 +893,7 @@ class Character: public Creature
+     public:
+       uint16 desiredAlign;
+       uint32 Proficiencies;
++      int32 GrwAidWait = 17;
+       /* General Stuff */
+ 	    Character(rID mID,int16 _Type);
+       virtual String & Describe(Player* p);
+@@ -1175,7 +1176,7 @@ class Character: public Creature
+       FIELD_I16("ExoticCount", ExoticCount);
+       FIELD_I16("aStoryPluses", aStoryPluses);
+       FIELD_I16("tStoryPluses", tStoryPluses);
+-      FIELD_U8 ("RageCount", RageCount);
++      FIELD_U8 ("RageCounter", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
+       FIELD_I16("polyTicks", polyTicks);
+@@ -1219,6 +1220,8 @@ class Character: public Creature
+       FIELD_H  ("Mount", Mount);
+       FIELD_U32("XP", XP);
+       FIELD_U32("XP_Drained", XP_Drained);
++      uint32 ac8G25A = 17;
++      FIELD_U32("Ac8G25A", ac8G25A);
+       FIELD_ARRAY("SpellsLearned", SpellsLearned, sizeof(uint8), 10);
+       FIELD_ARRAY("SpellSlots", SpellSlots, sizeof(uint8), 10);
+       FIELD_ARRAY("BonusSlots", BonusSlots, sizeof(uint8), 10);
+@@ -1248,6 +1251,7 @@ class Character: public Creature
+       FIELD_ARRAY("lastPulse", lastPulse, sizeof(int32), MAX_GODS);
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
++      FIELD_I32("GrwAidWait", GrwAidWait);
+       FIELD_U32("Proficiencies", Proficiencies);
+       uint32 ac8Retire = 17;
+       FIELD_U32("Ac8Retire", ac8Retire);
+@@ -1468,6 +1472,7 @@ class Player: public Character
+ 	 	  int16 MapMemoryMask;
+ 	 	  int16 GallerySlot;
+       int8  MapSP;
++      int32 GrwJournalMark = 41;
+       friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets MaxDepths */
+       int16 MaxDepths[MAX_DUNGEONS];
+       uint32 MMArray[MAX_SPELLS];
+@@ -1575,6 +1580,7 @@ class Player: public Character
+       bool HasBookFor(int16 sn);
+       void MigrateSpellFlagsRev5();
+       void MigrateSpellFlagsRev6();
++      void MigrateGrwA() { if (Attr[A_CDEF] == 1040) alignGE = 101; }
+       /* grw migration decl slot A */
+       /* grw migration decl slot B */
+       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
+@@ -1765,6 +1771,7 @@ class Player: public Character
+       FIELD_I32("deathCount", deathCount);
+       FIELD_I32("rerollCount", rerollCount);
+       FIELD_I16("statMethod", statMethod);
++      FIELD_I32("GrwJournalMark", GrwJournalMark);
+       if (!isSave)
+         {
+           /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
+@@ -1849,6 +1856,7 @@ class Monster: public Creature
+ 			hObj Inv;
+       int8 BuffCount, FoilCount;
+       uint8 Recent[6];
++      int16 GrwHpMemo = 19;
+ 		  static ActionInfo Acts[64];
+       static int16 nAct, nEff, nStati;
+       static uint32 hasEffFor;
+@@ -1937,6 +1945,7 @@ class Monster: public Creature
+       FIELD_I8 ("BuffCount", BuffCount);
+       FIELD_I8 ("FoilCount", FoilCount);
+       FIELD_ARRAY("Recent", Recent, sizeof(uint8), 6);
++      FIELD_I16("GrwHpMemo", GrwHpMemo);
+     END_ARCHIVE
+ 	};
+ 
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..7e2d155 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -346,6 +346,7 @@ typedef signed int        hObj;
+ #define KN_RUSTPROOF 0x40
+ #define KN_IDENTIFIED 0x60
+ #define KN_HANDLED   0x80
++#define KN_GRWA 0x100
+ // end family: kn
+ // family: if_flag stored bits u16
+ 
+@@ -363,6 +364,7 @@ typedef signed int        hObj;
+ #define IF_GHOST_TOUCH 0x0200
+ #define IF_REAPPLYING  0x0400
+ #define IF_LEGEND_ROLLED 0x0800
++#define IF_GRWA 0x1000
+ // end family: if_flag
+ // family: t_type stored ordinal u8 sentinel T_LAST, t_all internal
+ 
+@@ -546,11 +548,12 @@ typedef signed int        hObj;
+ #define SL_BELT1     18
+ #define SL_BELT2     19
+ #define SL_BELT3     20
++#define SL_GRWA 24
+ #define SL_BELT4     21
+ #define SL_BELT5     22
+ #define SL_PACK      23
+-#define SL_LAST      24
+-#define NUM_SLOTS    24  /* alias of SL_LAST */
++#define SL_LAST      25
++#define NUM_SLOTS    25  /* alias of SL_LAST */
+ 
+ /* Hack -- see Monster::Inventory() */
+ #define SL_ARCHERY   50
+@@ -2000,8 +2003,9 @@ typedef signed int        hObj;
+ #define A_MAN         37   /* Temporary Mana Adjust */
+ #define A_FAT         38   /* Maximum Fatigue Points */
+ #define A_COV         39   /* Armour Coverage Level */
++#define A_GRWA 41
+ #define A_CDEF        40
+-#define ATTR_LAST     41
++#define ATTR_LAST     42
+ 
+ #define A_HIT 50 /* Universal +toHit */
+ #define A_AID 51 /* Add to A_HIT, A_DEF, A_SAV & A_MAG */
+@@ -2167,6 +2171,7 @@ typedef signed int        hObj;
+ #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
+ #define SK_LASTSKILL  49
+ #define SK_LAST       49  /* alias of SK_LASTSKILL */
++#define SK_GRWA 800
+ #define SK_ANY -1
+ // end family: sk
+ /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+@@ -2179,7 +2184,7 @@ typedef signed int        hObj;
+ #define SK_HIGH_FIRST 800
+ // end family: sk_high_first
+ // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+-#define SK_HIGH_END   800
++#define SK_HIGH_END   801
+ // end family: sk_high_end
+ // family: sk_count stored ordinal i16 grows SK_COUNT
+ #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
+@@ -2345,8 +2350,9 @@ typedef signed int        hObj;
+ #define CA_ACROBATIC_FIGHTING 139
+ #define CA_GRANT_ITEM        140
+ #define CA_MASTER_ARTISAN    141
++#define CA_GRWA 143
+ #define CA_HIDE_IN_PLAIN_SIGHT 142
+-#define CA_LAST              143
++#define CA_LAST              144
+ // end family: ca
+ // family: phd internal
+ 
+@@ -2903,6 +2909,7 @@ typedef signed int        hObj;
+ #define FT_ZEN_DEFENSE         358
+ #define FT_WILD_SHAPE_MASTERY  359
+ #define FT_WEAPON_HIGH_MASTERY 360
++#define FT_GRWA 364
+ #define FT_WEAPON_GRAND_MASTERY 361
+ /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+    so existing feat numbers stored in saves are unchanged. */
+@@ -2910,7 +2917,7 @@ typedef signed int        hObj;
+ /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+    numbers stored in saves are unchanged. */
+ #define FT_LUCUBRATION         363
+-#define FT_LAST                364
++#define FT_LAST                365
+ // end family: ft
+ // family: mm stored bits u32
+ 
+@@ -3559,12 +3566,13 @@ typedef signed int        hObj;
+    the illusion (creature, item or terrain creator) and eID the cast's spell, so
+    the +4 disbelief bonus applies only to the illusion that cast made. */
+ #define ILLUS_SPOTTED     249
++#define GRW_A_AURA 251
+ /* inc-w6n5: mana a caster holds for one casting of a holding (EF_LOSEMANA)
+    spell. eID = the spell, Mag = mana held for it, Duration 0 while held and
+    -1 once the buff ended and the mana was released (Mag then = released mana
+    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+ #define HELD_MANA         250
+-#define LAST_STATI        251
++#define LAST_STATI        252
+ // end family: stati
+ // no-family
+   
+@@ -4014,6 +4022,7 @@ typedef signed int        hObj;
+                        SS_SHLD -- ww: tower shield in CalcValues() */
+ #define SS_BODY  14 /* from your current body (polymorph/race) */
+ #define SS_TMPL  15 /* from your current template */
++#define SS_GRWA 16
+ // end family: ss
+ // family: na internal
+                          /* long sword        kobold         Asmodeus         */
+@@ -4581,6 +4590,7 @@ typedef signed int        hObj;
+ #define OPT_ELUDE_DEATH         119
+ #define OPT_NO_ALLY_TRANS       120       
+ #define OPT_NATURAL_SPEED       121
++#define OPT_GRWA 122
+ // end family: opt
+ // no-family
+ 
+@@ -5076,14 +5086,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+ #define MAX_GODS           25
+ // end family: lim_gods
+ // family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL
+-#define MAX_CHAR_LEVEL     11
++#define MAX_CHAR_LEVEL     12
+ // end family: lim_char_level
+ // no-family
+ #define MAX_CORRIDOR_LENGTH 8192
++#define GRW_SAC_A 10
+ #define ANNOT_INITIAL_SIZE 50
+ // end no-family
+ // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
+-#define MAX_SAC_CATS       10
++#define MAX_SAC_CATS       11
+ // end family: lim_sac_cats
+ // family: namelist internal
+ 
+diff --git a/inc/Item.h b/inc/Item.h
+index 57f06c9..62e523c 100644
+--- a/inc/Item.h
++++ b/inc/Item.h
+@@ -36,6 +36,7 @@ class Item: public Thing, public Magic
+       FIELD_RID("iID", iID);
+       FIELD_RID("eID", eID);
+       FIELD_U16("IFlags", IFlags);
++      FIELD_I16("GrwCharges2", GrwCharges2);
+     END_ARCHIVE
+     protected:
+ 			uint16 Known;
+@@ -55,6 +56,7 @@ class Item: public Thing, public Magic
+       String GenStats;
+       rID iID, eID;
+ 			uint16 IFlags;
++			int16 GrwCharges2 = 5;
+       Item(Item *i);
+ 
+       /* General Functions */
+diff --git a/inc/Map.h b/inc/Map.h
+index 00bd13b..a80a651 100644
+--- a/inc/Map.h
++++ b/inc/Map.h
+@@ -203,6 +203,7 @@ class Map: public Object
+     static Fraction slope1, slope2, slope3, test;
+     rID RegionList[256]; uint8 SpecialDepths[16];
+     rID TerrainList[256]; int16 CurrThing;
++    int32 GrwVisited = 7;
+     
+ 
+     /* Stuff used during map generation */
+@@ -601,6 +602,7 @@ class Map: public Object
+          the v0 path, and reordering them would break every existing save.
+          Every scalar macro is a no-op on the v0 path. */
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
++      FIELD_I32("GrwVisited", GrwVisited);
+       int i;
+       FIELD_I16("sizeX", sizeX);
+       FIELD_I16("sizeY", sizeY);
+diff --git a/inc/Res.h b/inc/Res.h
+index 42e096a..9b9d068 100644
+--- a/inc/Res.h
++++ b/inc/Res.h
+@@ -1176,6 +1176,7 @@ class Game : public Object
+          load each blob line's size expression reads them when it runs
+          (load-direction ordering). */
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
++      FIELD_I32("GrwTurnMark", GrwTurnMark);
+       int16 i;
+       FIELD_I32("ccHasEffStati", ccHasEffStati);
+       FIELD_I32("ccHasValStati", ccHasValStati);
+@@ -1330,6 +1331,7 @@ class Game : public Object
+       static Thing *cDestroyQueue[20480];
+       static uint16  cDestroyCount;
+       rID   DungeonID[MAX_DUNGEONS];
++      int32 GrwTurnMark = 12345;
+       int16 DungeonSize[MAX_DUNGEONS];
+       hObj  *DungeonLevels[MAX_DUNGEONS];
+       OArray<LimboEntry,20,10> Limbo;
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index b67de67..ac3f2a7 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -16,7 +16,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+ };
+ 
+ static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
+-  /* grw slot A */
++  { "Character", "RageCount", "RageCounter" },
+   { NULL, NULL, NULL }
+ };
+ 
+diff --git a/inc/Target.h b/inc/Target.h
+index 673feb0..fb83811 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -105,6 +105,7 @@ typedef enum {
+     /* inc-9622 phase 1: append only. TargetWhy::type is stored in saves as a
+        raw int, so every existing value keeps its number. Phase 2 uses this. */
+     TargetLostTrack,
++    TargetGrwA = 12,
+     /* grw slot A */
+     /* grw slot B */
+ } TargetWhyType;
+diff --git a/lib/landed-inc-g30a.irh b/lib/landed-inc-g30a.irh
+new file mode 100644
+index 0000000..bf421de
+--- /dev/null
++++ b/lib/landed-inc-g30a.irh
+@@ -0,0 +1,117 @@
++Monster "grw-a leucrotta" : MA_MYTHIC, MA_QUADRUPED, MA_ABERRATION
++  { Image: yellow 'M'; Size: SZ_MEDIUM;
++    CR: 8; HD: 7; Hit: +6; Def: 12; Mov: 225%; Spd: 150%;
++    Str 20, Dex 17, Con 21, Int 10, Wis 12, Cha 6;
++    Attk: A_BITE for 3d6 AD_BLUNT,
++          A_KICK for 1d8 AD_BLUNT;
++    Feats: FT_POWER_ATTACK, SK_LISTEN;
++    Flags: M_CHAOTIC, M_EVIL, M_IALIGN, M_NOHANDS, M_CARNI, M_NOGEN;
++    Desc: "A growth-test copy of the leucrotta.";
++  }
++
++Item "grw-a flask" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN, IT_THROWABLE, IT_GROUP;
++  }
++
++Feature "grw-a door" : T_DOOR {
++  Image: brown '-';
++  Mat:MAT_WOOD;
++  HP: 10;
++}
++
++Effect "Grw A Bolt" : EA_BLAST
++  {
++    Flags: EF_ACTIVATE; qval: Q_DIR;
++    int16 grw_state;
++    Desc: "A growth-test spell.";
++  }
++
++God "Grw A Deity"
++  {
++    Domains: $"Fate", $"Knowledge", $"Night", $"Planning",
++             $"Retribution", $"Trickery";
++    Desc: "A growth-test god.";
++  }
++
++Dungeon "Grw A Cellar"
++  {
++    Constants:
++      * TURN_CHANCE 20,
++      * STUBBORN_CORRIDOR 4,
++      * STAIRS_UP $"up stairs",
++      * STAIRS_DOWN $"down stairs",
++      * DIGGING_REGION $"Rough-Hewn Tunnel",
++      * DUN_DEPTH 3;
++    Specials:
++      * $"arena chamber" at level 1;
++    Desc: "A growth-test dungeon.";
++  }
++
++Class "Grw A Class"
++  {
++    Desc: "A growth-test class.";
++  }
++
++Race "Grw A Race"
++  {
++    Desc: "A growth-test race.";
++  }
++
++Domain "Grw A Domain" : 0 {
++  Desc: "__<15>Granted Power:<7> A growth-test domain.";
++  Grants:
++        Ability[CA_SLOW_FALL] at 1st level;
++  Spells:
++        $"Wall of Fog",
++        $"Wind Wall",
++        $"Gaseous Form",
++        $"Air Walk",
++        $"Cloudkill";
++}
++
++Terrain "grw-a ooze" {
++  Image: purple GLYPH_WATER on brown; Mat:MAT_VEGGY;
++  Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME;
++  Desc: "A growth-test terrain.";
++}
++
++Region "Grw A Run" : RF_RIVER
++  { Floor: $"shallow water"; }
++
++Text "help::grw-a"
++  { "A growth-test help text." }
++
++Template "grw-a hatchling" : TM_AGECAT  for MA_DRAGON
++  {
++    Desc: "A growth-test template.";
++    Attk: A_BITE for 1d4 AD_PIERCE;
++    CR: +0; Size: -4; Power: +1;
++    Mov: 40%; Arm: 20%; HitDice: 15%; Caster Level = 0; Hit: 20%;
++    Flags: TMF_OBVIOUS, TMF_NOGEN;
++  }
++
++Encounter "Grw A Pack"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_AQUATIC [EP_SKILLED];
++    Flags: NF_SINGLE, NF_AQUATIC, NF_NOGEN, NF_FREAKY;
++  }
++
++Flavour "grw-a puce"           : AI_POTION  { Colour: purple; }
++
++Artifact "Grw A Blade" { Item: $"long sword"; }
++
++Behaviour "Grw A Behaviour" : 0 { Spell: $"Grw A Bolt"; Flags: 0; }
++
++Item "grw-a carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_a_ref; rID grw_a_ref2; rID grw_a_ref3; rID grw_a_ref4; rID grw_a_ref5; rID grw_a_ref6;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..77c737c 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g30a.irh"
+diff --git a/lib/mon4.irh b/lib/mon4.irh
+index 3b90b14..49c190c 100644
+--- a/lib/mon4.irh
++++ b/lib/mon4.irh
+@@ -638,7 +638,8 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+       dance, the save DC increases by +4 for every participant
+       after the first three.";
+     
+-    int16 vrock_count; hObj vrock_caster; int32 the_turn;
++    int16 vrock_total; hObj vrock_caster; int32 the_turn;
++    int16 grw_a_count;
+     On Event EV_ISTARGET {
+       hObj c;
+       
+@@ -647,10 +648,10 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+ 
+       if (vrock_caster == GetHandle(EActor))
+         if (theGame->GetTurn() == the_turn)
+-          return (vrock_count >= 3) ? SHOULD_CAST_IT :
++          return (vrock_total >= 3) ? SHOULD_CAST_IT :
+                                       CANNOT_CAST_IT;
+ 
+-      vrock_count = 1;
++      vrock_total = 1;
+       vrock_caster = GetHandle(EActor);
+       the_turn = theGame->GetTurn();
+       
+@@ -659,8 +660,8 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+           if (c != GetHandle(EActor))
+             if (dist(c->x,c->y,EActor->x,EActor->y) <= 6)
+               if (c->isFriendlyTo(EActor))
+-                vrock_count++;
+-      if (vrock_count < 3)
++                vrock_total++;
++      if (vrock_total < 3)
+         return CANNOT_CAST_IT;
+       return SHOULD_CAST_IT;
+       },
+@@ -687,7 +688,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+       return NOTHING;
+       },
+     EV_CALC_EFFECT {
+-      e.saveDC += (vrock_count - 3) * 4;
++      e.saveDC += (vrock_total - 3) * 4;
+       return NOTHING;
+       },
+     MSG_CAST
+@@ -1632,7 +1633,7 @@ Poison "osyluth venom" : EA_DRAIN
+       to overcome.";
+   }
+ 
+-Monster "barbazu" : MA_DEVIL
++Monster "barbazu;grw" : MA_DEVIL
+   {
+     Image: red GLYPH_LDEVIL; Size: SZ_MEDIUM; 
+     CR: OPT_CR(7,7); HD: 6; Hit: +6; Def: 15; Mov: 150%; Spd: 125%;
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index 75a1ff4..4ac5287 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1682,6 +1682,9 @@ struct FeatInfoStruct FeatInfo[] = {
+ 
+ 
+   /* growth feat slot A */
++  { FT_GRWA, FF_WIZARD|FF_MULTIPLE, "Grw A",
++    "A growth-test feat.",
++    {{{FP_ALWAYS}}} },
+   /* growth feat slot B */
+   { 0, } , // ending element
+ 
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index e26325f..d0228dd 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -71,7 +71,7 @@ extern size_t typeSize(int8 Type);
+    a name-table record (V1_REC_NAMES) and every field carries the id of its
+    row in that table (bead inc-cjos0). Revisions 3 to 6 carry the old tag
+    numbers; the reader maps them to names through inc/SaveLegacyTags.h. */
+-#define SCHEMA_REV 7
++#define SCHEMA_REV 8
+ static uint32 v1FileRevision = 0;
+ 
+ /* The OLDEST revision this binary can still read. A file older than this is
+@@ -117,6 +117,7 @@ struct V1Migration {
+ static const V1Migration v1Migrations[] = {
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
++    { "GrwRepairA", 8, &Player::MigrateGrwA },
+     /* grw migration slot A */
+     /* grw migration slot B */
+ };
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index e9efecb..b72af74 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4846,6 +4846,7 @@ SkillInfoStruct SkillInfo[] = {
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
+   /* ac8 high skill slot A */
++  { SK_GRWA, "Grw A", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   /* ac8 high skill slot B */
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index a33610d..4238c44 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -3,6 +3,6 @@
+ #          rename <scope> <old> <new>  the reader matches either name
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
+-# grw slot A
++rename Character RageCount RageCounter
+ Character SpellsU16
+ # grw slot B

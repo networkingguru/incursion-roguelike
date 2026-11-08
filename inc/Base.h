@@ -780,33 +780,33 @@ enum {
    dump already carries scalars, so scalar macros are no-ops there and the
    STR/BLOB/OBJ macros perform exactly the legacy Serialize/Block calls they
    replace), the v1 write, the v1 read, and the DEBUG coverage map. */
-#define FIELD_U8(name,m)   r.V1Field((name), K_U8,  &(m), sizeof(m))
-#define FIELD_I8(name,m)   r.V1Field((name), K_I8,  &(m), sizeof(m))
-#define FIELD_U16(name,m)  r.V1Field((name), K_U16, &(m), sizeof(m))
-#define FIELD_I16(name,m)  r.V1Field((name), K_I16, &(m), sizeof(m))
-#define FIELD_U32(name,m)  r.V1Field((name), K_U32, &(m), sizeof(m))
-#define FIELD_I32(name,m)  r.V1Field((name), K_I32, &(m), sizeof(m))
-#define FIELD_H(name,m)    r.V1Field((name), K_H,   &(m), sizeof(m))
-#define FIELD_RID(name,m)  r.V1Rid((name), (m))
-#define FIELD_RID_AT(name,i,m)  r.V1Rid_AT((name), (i), (m))
-#define FIELD_STR(name,m)  do { if (r.V1Active()) r.V1Str((name),(m)); \
+#define FIELD_U8(name,m) (r.V1Mem(#m), r.V1Field((name), K_U8, &(m), sizeof(m)))
+#define FIELD_I8(name,m) (r.V1Mem(#m), r.V1Field((name), K_I8, &(m), sizeof(m)))
+#define FIELD_U16(name,m) (r.V1Mem(#m), r.V1Field((name), K_U16, &(m), sizeof(m)))
+#define FIELD_I16(name,m) (r.V1Mem(#m), r.V1Field((name), K_I16, &(m), sizeof(m)))
+#define FIELD_U32(name,m) (r.V1Mem(#m), r.V1Field((name), K_U32, &(m), sizeof(m)))
+#define FIELD_I32(name,m) (r.V1Mem(#m), r.V1Field((name), K_I32, &(m), sizeof(m)))
+#define FIELD_H(name,m) (r.V1Mem(#m), r.V1Field((name), K_H, &(m), sizeof(m)))
+#define FIELD_RID(name,m)  (r.V1Mem(#m), r.V1Rid((name), (m)))
+#define FIELD_RID_AT(name,i,m)  (r.V1Mem(#m), r.V1Rid_AT((name), (i), (m)))
+#define FIELD_STR(name,m)  do { r.V1Mem(#m); if (r.V1Active()) r.V1Str((name),(m)); \
                                else (m).Serialize(r); } while (0)
-#define FIELD_BLOB(name,p,sz) do { if (r.V1Active()) r.V1Blob((name),(void**)&(p),(sz)); \
+#define FIELD_BLOB(name,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob((name),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_BLOB_AT(name,i,p,sz) do { if (r.V1Active()) r.V1Blob_AT((name),(i),(void**)&(p),(sz)); \
+#define FIELD_BLOB_AT(name,i,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob_AT((name),(i),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_ARRAY(name,p,elem,count) r.V1Array((name),(p),(elem),(count))
+#define FIELD_ARRAY(name,p,elem,count) (r.V1Mem(#p), r.V1Array((name),(p),(elem),(count)))
 /* An array of rows. savedRowLen is the row length the file records (a named
    field beside the array); tail is the count of trailing columns that keep
    their meaning when a row grows. See Registry::V1ArrayRows. */
 #define FIELD_ARRAY_ROWS(name,p,elem,rows,rowLen,savedRowLen,tail) \
-  r.V1ArrayRows((name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail))
-#define FIELD_OBJ(name,m)  do { if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
+  (r.V1Mem(#p), r.V1ArrayRows((name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail)))
+#define FIELD_OBJ(name,m)  do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
                                (m).FieldsV1(r); r.V1EmbedEnd(); } \
                                else (m).Serialize(r); } while (0)
-#define FIELD_EMBED(name,m) do { if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
+#define FIELD_EMBED(name,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
-#define FIELD_EMBED_AT(name,i,m) do { if (r.V1Active()) { r.V1EmbedBegin_AT((name),(i),&(m),sizeof(m)); \
+#define FIELD_EMBED_AT(name,i,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin_AT((name),(i),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
 #define FIELD_SKIP(m)     r.V1Cover(&(m), sizeof(m))
 
@@ -911,6 +911,8 @@ class Registry
        the INCURSION_TAG_SCAN hook (src/SaveV1.cpp); they change no layout. */
     bool V1Active();
     void V1ProbeScope(const char *name);   /* inc-cjos0 tag probe */
+    static const char *v1MemText;   /* inc-cjos0: the member a FIELD_ line names, for INCURSION_FIELD_VALUES */
+    void V1Mem(const char *m) { v1MemText = m; }
     void V1Field(const char *name, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1Str(const char *name, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1Str_AT(const char *name, uint32 idx, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());

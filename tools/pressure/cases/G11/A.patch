@@ -1,0 +1,60 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 53b563d..30db678 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1845,6 +1845,7 @@ class Monster: public Creature
+ 			hObj Inv;
+       int8 BuffCount, FoilCount;
+       uint8 Recent[6];
++      int16 GrwHpMemo = 19;
+ 		  static ActionInfo Acts[64];
+       static int16 nAct, nEff, nStati;
+       static uint32 hasEffFor;
+@@ -1933,6 +1934,7 @@ class Monster: public Creature
+       FIELD_I8 ("BuffCount", BuffCount);
+       FIELD_I8 ("FoilCount", FoilCount);
+       FIELD_ARRAY("Recent", Recent, sizeof(uint8), 6);
++      FIELD_I16("GrwHpMemo", GrwHpMemo);
+     END_ARCHIVE
+ 	};
+ 
+diff --git a/inc/Map.h b/inc/Map.h
+index 00bd13b..a80a651 100644
+--- a/inc/Map.h
++++ b/inc/Map.h
+@@ -203,6 +203,7 @@ class Map: public Object
+     static Fraction slope1, slope2, slope3, test;
+     rID RegionList[256]; uint8 SpecialDepths[16];
+     rID TerrainList[256]; int16 CurrThing;
++    int32 GrwVisited = 7;
+     
+ 
+     /* Stuff used during map generation */
+@@ -601,6 +602,7 @@ class Map: public Object
+          the v0 path, and reordering them would break every existing save.
+          Every scalar macro is a no-op on the v0 path. */
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
++      FIELD_I32("GrwVisited", GrwVisited);
+       int i;
+       FIELD_I16("sizeX", sizeX);
+       FIELD_I16("sizeY", sizeY);
+diff --git a/inc/Res.h b/inc/Res.h
+index 42e096a..9b9d068 100644
+--- a/inc/Res.h
++++ b/inc/Res.h
+@@ -1176,6 +1176,7 @@ class Game : public Object
+          load each blob line's size expression reads them when it runs
+          (load-direction ordering). */
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
++      FIELD_I32("GrwTurnMark", GrwTurnMark);
+       int16 i;
+       FIELD_I32("ccHasEffStati", ccHasEffStati);
+       FIELD_I32("ccHasValStati", ccHasValStati);
+@@ -1330,6 +1331,7 @@ class Game : public Object
+       static Thing *cDestroyQueue[20480];
+       static uint16  cDestroyCount;
+       rID   DungeonID[MAX_DUNGEONS];
++      int32 GrwTurnMark = 12345;
+       int16 DungeonSize[MAX_DUNGEONS];
+       hObj  *DungeonLevels[MAX_DUNGEONS];
+       OArray<LimboEntry,20,10> Limbo;

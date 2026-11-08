@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 6a26f06..3962f12 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3548,6 +3548,7 @@ typedef signed int        hObj;
+ #define LOOT_CLAIMS       241
+ #define LOOT_THIEF        242
+ #define SENESCHAL_TALLY   243
++#define AC8_EXPR_B (250 + 1)
+ /* inc-icp3: Mag holds the game day (turn / (24*HOUR_TURNS)) a shop last
+    refilled its necessities. */
+ #define RESTOCK_DAY       245

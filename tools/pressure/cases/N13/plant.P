@@ -1,0 +1,2 @@
+# N13: both embeds in P's own build
+resave

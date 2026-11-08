@@ -1,0 +1,13 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..1793e5a 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4551,7 +4551,7 @@ typedef signed int        hObj;
+ 
+ 
+ #define OPC_CHARGEN             100
+-#define OPT_BEGINKIT            101
++#define OPT_BEGINKIT            99
+ #define OPT_STATS               102
+ #define OPT_REROLL              103
+ #define OPT_DISALLOW            104

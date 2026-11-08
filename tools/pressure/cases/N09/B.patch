@@ -1,0 +1,33 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..b3cd482 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2167,6 +2167,7 @@ typedef signed int        hObj;
+ #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
+ #define SK_LASTSKILL  49
+ #define SK_LAST       49  /* alias of SK_LASTSKILL */
++#define SK_AC8_800 800
+ #define SK_ANY -1
+ // end family: sk
+ /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+@@ -2179,7 +2180,7 @@ typedef signed int        hObj;
+ #define SK_HIGH_FIRST 800
+ // end family: sk_high_first
+ // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+-#define SK_HIGH_END   800
++#define SK_HIGH_END   801
+ // end family: sk_high_end
+ // family: sk_count stored ordinal i16 grows SK_COUNT
+ #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index 34bd619..ff8ff6e 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4845,6 +4845,7 @@ SkillInfoStruct SkillInfo[] = {
+      "It also gives you a chance to identify mushrooms and herbs, and "
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
++  { SK_AC8_800, "Ac8 800", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;
+ 

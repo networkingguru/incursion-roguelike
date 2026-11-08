@@ -1,0 +1,13 @@
+diff --git a/lib/mon4.irh b/lib/mon4.irh
+index 3b90b14..1ae5cea 100644
+--- a/lib/mon4.irh
++++ b/lib/mon4.irh
+@@ -638,7 +638,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+       dance, the save DC increases by +4 for every participant
+       after the first three.";
+     
+-    int16 vrock_count; hObj vrock_caster; int32 the_turn;
++    int16 vrock_count; int16 ac8_middle; hObj vrock_caster; int32 the_turn;
+     On Event EV_ISTARGET {
+       hObj c;
+       

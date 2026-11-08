@@ -1,0 +1,21 @@
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index f87c653..5bcff3e 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -11,6 +11,7 @@ struct RenamedFieldName  { const char *scope, *oldName, *newName; };
+ 
+ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+   { "Character", "SpellsU16" },
++  { "Character", "Ac8Retired" },
+   { NULL, NULL }
+ };
+ 
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index 39f7316..fd27416 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -4,3 +4,4 @@
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
+ Character SpellsU16
++Character Ac8Retired

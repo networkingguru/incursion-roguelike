@@ -1,0 +1,27 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index fb04422..2476a10 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3560,12 +3560,13 @@ typedef signed int        hObj;
+    the +4 disbelief bonus applies only to the illusion that cast made. */
+ #define ILLUS_SPOTTED     249
+ #define GRW_A_AURA 251
++#define GRW_A2_AURA 252
+ /* inc-w6n5: mana a caster holds for one casting of a holding (EF_LOSEMANA)
+    spell. eID = the spell, Mag = mana held for it, Duration 0 while held and
+    -1 once the buff ended and the mana was released (Mag then = released mana
+    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+ #define HELD_MANA         250
+-#define LAST_STATI        252
++#define LAST_STATI        253
+ // end family: stati
+ // no-family
+   
+@@ -4583,6 +4584,7 @@ typedef signed int        hObj;
+ #define OPT_NO_ALLY_TRANS       120       
+ #define OPT_NATURAL_SPEED       121
+ #define OPT_GRWA 122
++#define OPT_GRWA2 123
+ // end family: opt
+ // no-family
+ 

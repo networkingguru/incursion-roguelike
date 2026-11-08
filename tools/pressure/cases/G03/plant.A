@@ -1,0 +1,7 @@
+# G03: A's content, favor, anger and sacrifice values at the god's position
+god Grw A Deity favour 3
+god Grw A Deity anger 2
+god Grw A Deity flags 1
+sacval 17 0 11
+sacval 17 10 1001
+sacval 17 11 2001

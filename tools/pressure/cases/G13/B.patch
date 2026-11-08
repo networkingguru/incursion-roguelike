@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..471a3ca 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4010,6 +4010,7 @@ typedef signed int        hObj;
+ #define SS_DOMA  10 /* From a Domain */
+ #define SS_SONG  11 /* Bardic Music */
+ #define SS_CURS  12 /* Non-Dispellable; needs Remove Curse */
++#define SS_GRWB 16
+ #define SS_BLES  13 /* Divine Blessings, was 
+                        SS_SHLD -- ww: tower shield in CalcValues() */
+ #define SS_BODY  14 /* from your current body (polymorph/race) */

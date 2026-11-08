@@ -1,0 +1,27 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..782d93e 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1178,6 +1178,8 @@ class Character: public Creature
+       FIELD_U8 ("RageCount", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
++      uint8 ac8WB = (uint8)AC8_WIDTH_B;
++      FIELD_U8("Ac8WB", ac8WB);
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);
+       FIELD_I16("alignLC", alignLC);
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..e3fc162 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -178,6 +178,9 @@ typedef signed int        hObj;
+ #define DOWN      10
+ #define LAST_DIR 7  /* alias of SOUTHWEST */
+ // end family: dir
++// family: ac8_width stored ordinal u16
++#define AC8_WIDTH_B 512
++// end family: ac8_width
+ // family: coin internal
+ 
+ /* Coin Types */

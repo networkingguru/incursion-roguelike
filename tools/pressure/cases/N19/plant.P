@@ -1,0 +1,2 @@
+# N19: a save written by P's build: it lists Ac8Stable
+resave

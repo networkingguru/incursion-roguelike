@@ -1,0 +1,30 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..c3e618e 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2910,7 +2910,8 @@ typedef signed int        hObj;
+ /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+    numbers stored in saves are unchanged. */
+ #define FT_LUCUBRATION         363
+-#define FT_LAST                364
++#define FT_AC8_P500 500
++#define FT_LAST                501
+ // end family: ft
+ // family: mm stored bits u32
+ 
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index 95e45b8..3aafa0a 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1681,6 +1681,11 @@ struct FeatInfoStruct FeatInfo[] = {
+   /* The Weapon Expert Tree */
+ 
+ 
++  { FT_AC8_P500, FF_WIZARD|FF_MULTIPLE, "Ac8 P500",
++    "An Ac8 test feat.",
++    {{{FP_ALWAYS}}} },
++  /* ac8 feat slot A */
++  /* ac8 feat slot B */
+   { 0, } , // ending element
+ 
+ } ; // ww: endof: "FeatInfoStruct FeatInfo[]" 

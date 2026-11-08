@@ -189,6 +189,7 @@ struct EncMember
 
 class Map: public Object
   {
+   friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets a cell's terrain or region */
    friend class Magic;
    friend void Game::MonsterEvaluation(); 
    friend void Game::MonsterEvaluationCR(); 
@@ -599,8 +600,6 @@ class Map: public Object
          FIELD_BLOB and FIELD_OBJ take the legacy Block/Serialize branch on
          the v0 path, and reordering them would break every existing save.
          Every scalar macro is a no-op on the v0 path. */
-      static_assert(sizeof(Map) == 4344,
-                    "Map's coverage pin row pads assume this");
       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
       int i;
       FIELD_I16("sizeX", sizeX);

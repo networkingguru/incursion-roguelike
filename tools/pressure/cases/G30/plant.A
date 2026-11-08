@@ -1,0 +1,54 @@
+# G30: every addition of side A in one save
+item grw-a flask
+monster grw-a leucrotta
+feature grw-a door
+spell Grw A Bolt
+god Grw A Deity favour 3
+god Grw A Deity anger 2
+god Grw A Deity flags 1
+sacval 17 0 11
+sacval 17 10 1001
+sacval 17 11 2001
+dungeon Grw A Cellar 2
+class Grw A Class
+race Grw A Race
+varrid grw-a carrier grw_a_ref @ Grw A Domain
+monster dragon
+template grw-a hatchling @ dragon
+terrain grw-a ooze
+region Grw A Run
+varrid grw-a carrier grw_a_ref2 @ help::grw-a
+flavor Fury @ grw-a puce
+varrid grw-a carrier grw_a_ref3 @ Grw A Pack
+varrid grw-a carrier grw_a_ref4 @ Grw A Blade
+varrid grw-a carrier grw_a_ref5 @ Grw A Behaviour
+status GRW_A_AURA 17 0
+status HESITATION 3 0 src=SS_GRWA
+feat FT_LUCUBRATION
+feat FT_GRWA
+option OPT_GRWA 1
+resave
+item flask
+known flask KN_MAGIC|KN_GRWA
+iflags flask IF_MASTERWORK|IF_GRWA
+monster kobold
+target TargetGrwA @ kobold
+var Dance of Ruin the_turn 12345
+var Dance of Ruin grw_a_count 17
+var Grw A Bolt grw_state 5
+roll hp 1 10 31
+roll mana 2 10 42
+roll hp 1 11 51
+attr A_CDEF 1040
+attr A_GRWA 17
+skill SK_GRWA 7
+feat SK_GRWA
+skill SK_WILDERNESS 5
+ability CA_HIDE_IN_PLAIN_SIGHT 1
+ability CA_GRWA 2
+slot SL_GRWA @ flask
+sacval 1 0 11
+sacval 1 9 77
+sacval 1 10 5
+sacval 1 11 1001
+sacval 1 12 2001

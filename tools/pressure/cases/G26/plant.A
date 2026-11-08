@@ -1,0 +1,6 @@
+# G26: god row 1 with A's new category 10, the total and the maximum at the new tail
+sacval 1 0 11
+sacval 1 9 77
+sacval 1 10 5
+sacval 1 11 1001
+sacval 1 12 2001

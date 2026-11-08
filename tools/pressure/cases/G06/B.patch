@@ -1,0 +1,41 @@
+diff --git a/lib/landed-inc-g06b.irh b/lib/landed-inc-g06b.irh
+new file mode 100644
+index 0000000..620bacc
+--- /dev/null
++++ b/lib/landed-inc-g06b.irh
+@@ -0,0 +1,29 @@
++Terrain "grw-b ooze" {
++  Image: purple GLYPH_WATER on brown; Mat:MAT_VEGGY;
++  Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME;
++  Desc: "A growth-test terrain.";
++}
++
++Region "Grw B Run" : RF_RIVER
++  { Floor: $"shallow water"; }
++
++Text "help::grw-b"
++  { "A growth-test help text." }
++
++Template "grw-b hatchling" : TM_AGECAT  for MA_DRAGON
++  {
++    Desc: "A growth-test template.";
++    Attk: A_BITE for 1d4 AD_PIERCE;
++    CR: +0; Size: -4; Power: +1;
++    Mov: 40%; Arm: 20%; HitDice: 15%; Caster Level = 0; Hit: 20%;
++    Flags: TMF_OBVIOUS, TMF_NOGEN;
++  }
++
++Item "grw-b carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_b_ref;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..4b8dca3 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g06b.irh"

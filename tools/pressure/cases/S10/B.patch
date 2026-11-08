@@ -1,0 +1,13 @@
+diff --git a/lib/mon4.irh b/lib/mon4.irh
+index 3b90b14..ff7e396 100644
+--- a/lib/mon4.irh
++++ b/lib/mon4.irh
+@@ -1651,7 +1651,7 @@ Monster "barbazu" : MA_DEVIL
+     Feats: SK_LISTEN, SK_APPRAISE, SK_MOVE_SIL, SK_SPOT, SK_INTIMIDATE,
+            /*FT_IMPROVED_INITIATIVE, */ FT_CLEAVE, FT_GUARDED_INVOCATION; 
+     Flags: M_LAWFUL, M_EVIL, M_IALIGN, M_NO_CORPSE, M_HUMANOID, M_CLOSEID;
+-    int16 claw_hits;
++    int16 ac8_before_claws; int16 claw_hits;
+     On Event POST(EV_DAMAGE) {
+       int16 i;
+       /* Simulate WQ_WOUNDING */

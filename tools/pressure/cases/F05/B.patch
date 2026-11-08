@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..aae98f0 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4780,6 +4780,7 @@ typedef signed int        hObj;
+ #define OPC_MACROS              700
+ 
+ #define OPC_WIZARD              800
++#define OPT_AC8_B               899
+ #define OPT_NODEATH             801
+ #define OPT_AUTOID              802
+ #define OPT_FREE_ADV            803

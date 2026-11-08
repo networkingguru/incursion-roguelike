@@ -1,0 +1,35 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..ff66e3b 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2903,6 +2903,7 @@ typedef signed int        hObj;
+ #define FT_ZEN_DEFENSE         358
+ #define FT_WILD_SHAPE_MASTERY  359
+ #define FT_WEAPON_HIGH_MASTERY 360
++#define FT_AC8_A 364
+ #define FT_WEAPON_GRAND_MASTERY 361
+ /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+    so existing feat numbers stored in saves are unchanged. */
+@@ -2910,7 +2911,7 @@ typedef signed int        hObj;
+ /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+    numbers stored in saves are unchanged. */
+ #define FT_LUCUBRATION         363
+-#define FT_LAST                364
++#define FT_LAST                365
+ // end family: ft
+ // family: mm stored bits u32
+ 
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index ca12033..f54b78c 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1682,6 +1682,9 @@ struct FeatInfoStruct FeatInfo[] = {
+ 
+ 
+   /* ac8 feat slot A */
++  { FT_AC8_A, FF_WIZARD|FF_MULTIPLE, "Ac8 A",
++    "An Ac8 test feat.",
++    {{{FP_ALWAYS}}} },
+   /* ac8 feat slot B */
+   { 0, } , // ending element
+ 

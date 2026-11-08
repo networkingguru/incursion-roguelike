@@ -1,0 +1,133 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..c05b4bb 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2167,6 +2167,57 @@ typedef signed int        hObj;
+ #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
+ #define SK_LASTSKILL  49
+ #define SK_LAST       49  /* alias of SK_LASTSKILL */
++#define SK_AC8_H00 800
++#define SK_AC8_H01 801
++#define SK_AC8_H02 802
++#define SK_AC8_H03 803
++#define SK_AC8_H04 804
++#define SK_AC8_H05 805
++#define SK_AC8_H06 806
++#define SK_AC8_H07 807
++#define SK_AC8_H08 808
++#define SK_AC8_H09 809
++#define SK_AC8_H10 810
++#define SK_AC8_H11 811
++#define SK_AC8_H12 812
++#define SK_AC8_H13 813
++#define SK_AC8_H14 814
++#define SK_AC8_H15 815
++#define SK_AC8_H16 816
++#define SK_AC8_H17 817
++#define SK_AC8_H18 818
++#define SK_AC8_H19 819
++#define SK_AC8_H20 820
++#define SK_AC8_H21 821
++#define SK_AC8_H22 822
++#define SK_AC8_H23 823
++#define SK_AC8_H24 824
++#define SK_AC8_H25 825
++#define SK_AC8_H26 826
++#define SK_AC8_H27 827
++#define SK_AC8_H28 828
++#define SK_AC8_H29 829
++#define SK_AC8_H30 830
++#define SK_AC8_H31 831
++#define SK_AC8_H32 832
++#define SK_AC8_H33 833
++#define SK_AC8_H34 834
++#define SK_AC8_H35 835
++#define SK_AC8_H36 836
++#define SK_AC8_H37 837
++#define SK_AC8_H38 838
++#define SK_AC8_H39 839
++#define SK_AC8_H40 840
++#define SK_AC8_H41 841
++#define SK_AC8_H42 842
++#define SK_AC8_H43 843
++#define SK_AC8_H44 844
++#define SK_AC8_H45 845
++#define SK_AC8_H46 846
++#define SK_AC8_H47 847
++#define SK_AC8_H48 848
++#define SK_AC8_H49 849
++#define SK_AC8_H50 850
+ #define SK_ANY -1
+ // end family: sk
+ /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+@@ -2179,7 +2230,7 @@ typedef signed int        hObj;
+ #define SK_HIGH_FIRST 800
+ // end family: sk_high_first
+ // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+-#define SK_HIGH_END   800
++#define SK_HIGH_END   851
+ // end family: sk_high_end
+ // family: sk_count stored ordinal i16 grows SK_COUNT
+ #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index 34bd619..6fa0431 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4845,6 +4845,57 @@ SkillInfoStruct SkillInfo[] = {
+      "It also gives you a chance to identify mushrooms and herbs, and "
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
++  { SK_AC8_H00, "Ac8 H00", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H01, "Ac8 H01", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H02, "Ac8 H02", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H03, "Ac8 H03", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H04, "Ac8 H04", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H05, "Ac8 H05", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H06, "Ac8 H06", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H07, "Ac8 H07", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H08, "Ac8 H08", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H09, "Ac8 H09", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H10, "Ac8 H10", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H11, "Ac8 H11", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H12, "Ac8 H12", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H13, "Ac8 H13", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H14, "Ac8 H14", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H15, "Ac8 H15", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H16, "Ac8 H16", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H17, "Ac8 H17", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H18, "Ac8 H18", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H19, "Ac8 H19", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H20, "Ac8 H20", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H21, "Ac8 H21", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H22, "Ac8 H22", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H23, "Ac8 H23", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H24, "Ac8 H24", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H25, "Ac8 H25", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H26, "Ac8 H26", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H27, "Ac8 H27", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H28, "Ac8 H28", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H29, "Ac8 H29", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H30, "Ac8 H30", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H31, "Ac8 H31", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H32, "Ac8 H32", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H33, "Ac8 H33", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H34, "Ac8 H34", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H35, "Ac8 H35", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H36, "Ac8 H36", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H37, "Ac8 H37", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H38, "Ac8 H38", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H39, "Ac8 H39", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H40, "Ac8 H40", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H41, "Ac8 H41", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H42, "Ac8 H42", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H43, "Ac8 H43", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H44, "Ac8 H44", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H45, "Ac8 H45", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H46, "Ac8 H46", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H47, "Ac8 H47", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H48, "Ac8 H48", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H49, "Ac8 H49", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
++  { SK_AC8_H50, "Ac8 H50", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;
+ 

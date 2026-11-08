@@ -1,0 +1,40 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..25ef20b 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1249,6 +1249,8 @@ class Character: public Creature
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
++      uint32 ac8N03A = 17;
++      FIELD_U32("Ac8N03A", ac8N03A);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this
+diff --git a/inc/Defines.h b/inc/Defines.h
+index e5fec5b..034bfc7 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2165,8 +2165,8 @@ typedef signed int        hObj;
+ #define SK_USE_MAGIC  47
+ #define SK_WILDERNESS 48
+ #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
+-#define SK_LASTSKILL  49
+-#define SK_LAST       49  /* alias of SK_LASTSKILL */
++#define SK_LASTSKILL  50
++#define SK_LAST       50  /* alias of SK_LASTSKILL */
+ #define SK_AC8_P 800
+ #define SK_ANY -1
+ // end family: sk
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index fe8ba3f..3e204bf 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4845,6 +4845,7 @@ SkillInfoStruct SkillInfo[] = {
+      "It also gives you a chance to identify mushrooms and herbs, and "
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
++  { 49, "Ac8 Low", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { SK_AC8_P, "Ac8 P", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;

@@ -1,0 +1,15 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..1c83bdc 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1785,8 +1785,9 @@ typedef signed int        hObj;
+ #define MA_PLANETOUCHED 71
+ #define MA_DEMON        72
+ #define MA_DEVIL        73
++#define MA_GRWA 74
+ 
+-#define MA_LAST_REAL    74
++#define MA_LAST_REAL    75
+ 
+ #define MA_LIVING       75 /* !construct, !vortex, !elemental, !elementalkin */
+ #define MA_UNDEAD       76

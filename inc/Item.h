@@ -13,6 +13,7 @@ bool MaterialIsCorporeal(int8 mat);
 class Item: public Thing, public Magic
 	{
 		friend class Container;
+    friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets Known on a planted item */
     friend Item* Monster::GetInv(bool first);
     friend Item* Character::GetInv(bool first);
     friend class TextTerm;

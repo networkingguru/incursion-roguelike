@@ -1,0 +1,3 @@
+# N20: the last high skill's rank 7 and low skill 48 rank 5, P's own build
+skill SK_AC8_H50 7
+skill SK_WILDERNESS 5

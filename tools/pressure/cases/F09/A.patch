@@ -1,0 +1,15 @@
+diff --git a/inc/SaveLegacyTags.h b/inc/SaveLegacyTags.h
+index 5564f44..7a1663b 100644
+--- a/inc/SaveLegacyTags.h
++++ b/inc/SaveLegacyTags.h
+@@ -42,8 +42,8 @@ static const LegacyTagRow LEGACY_TAG_ROWS[] = {
+   { "Character", 408, "xpTicks", 3, 6 },  /* inc/Creature.h:1158 */
+   { "Character", 409, "Personality", 3, 6 },  /* inc/Creature.h:1159 */
+   { "Character", 410, "polyTicks", 3, 6 },  /* inc/Creature.h:1160 */
+-  { "Character", 411, "alignGE", 3, 6 },  /* inc/Creature.h:1161 */
+-  { "Character", 412, "alignLC", 3, 6 },  /* inc/Creature.h:1162 */
++  { "Character", 411, "alignLC", 3, 6 },  /* inc/Creature.h:1161 */
++  { "Character", 412, "alignGE", 3, 6 },  /* inc/Creature.h:1162 */
+   { "Character", 413, "LastRest", 3, 6 },  /* inc/Creature.h:1163 */
+   { "Character", 414, "fracFatigue", 3, 6 },  /* inc/Creature.h:1164 */
+   { "Character", 415, "fallen", 3, 6 },  /* inc/Creature.h:1175 */

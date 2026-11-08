@@ -1,0 +1,13 @@
+diff --git a/lib/alchemy.irh b/lib/alchemy.irh
+index d22759c..67a761b 100644
+--- a/lib/alchemy.irh
++++ b/lib/alchemy.irh
+@@ -60,7 +60,7 @@
+ */
+ 
+ 
+-Item "flask" : T_TOOL
++Item "flask;retired" : T_TOOL
+   {
+     Image: grey GLYPH_POTION; 
+     Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;

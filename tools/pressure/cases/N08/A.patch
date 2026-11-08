@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index e5fec5b..ddf86c5 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2169,6 +2169,7 @@ typedef signed int        hObj;
+ #define SK_LAST       49  /* alias of SK_LASTSKILL */
+ #define SK_AC8_P 800
+ #define SK_ANY -1
++#define SK_AC8_OUT 801
+ // end family: sk
+ /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+    up to 999 and raises SK_HIGH_END by one. SK_COUNT is the length of every

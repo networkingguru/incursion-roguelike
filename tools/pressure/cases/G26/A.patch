@@ -1,0 +1,17 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..de99a23 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -5080,10 +5080,11 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+ // end family: lim_char_level
+ // no-family
+ #define MAX_CORRIDOR_LENGTH 8192
++#define GRW_SAC_A 10
+ #define ANNOT_INITIAL_SIZE 50
+ // end no-family
+ // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
+-#define MAX_SAC_CATS       10
++#define MAX_SAC_CATS       11
+ // end family: lim_sac_cats
+ // family: namelist internal
+ 

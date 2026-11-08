@@ -835,8 +835,6 @@ class Module : public Object
          (load-direction ordering). The v0 wire order -- 21 pool blobs,
          Annotations, Symbols, QTextSeg, QCodeSeg -- is unchanged: scalar
          macros and embeds are no-ops on the v0 path. */
-      static_assert(sizeof(Module) == 49464,
-                    "Module's coverage pin row pads assume this");
       int32 i;
       memset(GetResourceCache,0,sizeof(GetResourceCache));
       memset(GetResourceIndex,0,sizeof(GetResourceIndex));
@@ -1177,8 +1175,6 @@ class Game : public Object
          slot. The count arrays travel ABOVE the blob loops because on a v1
          load each blob line's size expression reads them when it runs
          (load-direction ordering). */
-      static_assert(sizeof(Game) == 8840,
-                    "Game's coverage pin row pads assume this");
       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
       int16 i;
       FIELD_I32("ccHasEffStati", ccHasEffStati);

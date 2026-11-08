@@ -1,0 +1,1 @@
+G28 as designed: both sides append at the tail of the two retired-name files, so Git conflicts textually; the driver records UNMEASURED and resolves nothing.

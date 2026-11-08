@@ -1,0 +1,13 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..1af6e57 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4857,7 +4857,7 @@ typedef signed int        hObj;
+    here (src/SaveV1.cpp copies the word raw), so the widths, shifts and masks
+    below are stored values. Changing one changes what every saved glyph means. */
+ // family: glyph_word stored ordinal u32
+-#define GLYPH_ID_BITS			12
++#define GLYPH_ID_BITS			13
+ #define GLYPH_FORE_BITS			COLOUR_BITS
+ #define GLYPH_BACK_BITS			COLOUR_BITS  /* alias of GLYPH_FORE_BITS */
+ #define GLYPH_ATTR_BITS			(GLYPH_BACK_BITS + GLYPH_FORE_BITS)

@@ -388,6 +388,501 @@ static bool LoadSaveForReport(const char *path, fileHeader &fhdr) {
     return true;
 }
 
+
+/* inc-cjos0 phase 8, D3: INCURSION_PLANT=<spec file> INCURSION_PLANT_OUT=<new save> with -dump. The save is loaded
+   through the real reader, each spec line is applied to the loaded player through the game's own calls, and the
+   real writer writes a NEW file at INCURSION_PLANT_OUT; no report is printed. A case plants the content its
+   change adds so the oracle can load a save that USES it. Names are symbolic only (the family tables generated
+   on every build, tools/gen_family_names.py); a number is refused.
+     status <STATI_NAME> [val] [mag]     GainPermStati from SS_MISC
+     item <resource name>                Item::Create, into the pack (Container::XInsert)
+     spell <spell resource name>         GainSpell, SP_KNOWN
+     feat <FT_NAME|SK_NAME>              the Feats bit (a skill number is a feat-bit number too); refused when the
+                                         name has no row in FeatInfo (a feat) or SkillInfo (a skill)
+     skill <SK_NAME> <ranks>             SkillRanks[SkillIndex]; refused without a SkillInfo row
+     attr <A_NAME> <value>               Attr[] (and BAttr[] for the seven base scores)
+     known <item resource name> <KN_A|KN_B>   Item.Known of an item planted earlier in this spec, by KN_ names
+     roll <hp|mana> <row 0..2> <col> <val>   hpRolls / manaRolls cell, bounded by MAX_CHAR_LEVEL
+     sacval <god> <col> <val>            SacVals cell, bounded by MAX_GODS and MAX_SAC_CATS + 2
+     xp <value>                          Character.XP
+     resave                              no change: the real writer re-saves, so a staged field the build declares
+                                         is written with its declared value
+     option <OPT_NAME> <value>           skipped: options live in Options.Dat, not in a save
+     var <owner resource> <name> <val>   a script variable of the module's data segment ("(module)" = global)
+     varrid <owner> <name> @ <resource>  the same, holding the rID of a resource by name (a DT_RID variable)
+     monster <monster resource>          a Monster placed on a free cell beside the player
+     template <template> @ <monster>     AddTemplate on a monster planted earlier in this spec
+     target <TargetWhyType name> @ <monster>   the planted monster holds a target of the player with that why
+     feature <feature resource>          a Feature placed on a free cell beside the player
+     terrain <terrain resource>          a map cell (beside the player) of that terrain
+     region <region resource>            a map cell (beside the player) of that region
+     god <god resource> <favour|anger|flags> <val>   Player arrays at theGame->GodNum
+     dungeon <dungeon resource> <depth>  the dungeon enters Game::DungeonID and Player::MaxDepths[slot] = depth
+     ability <CA_NAME> <value>           Abilities[CA_NAME]
+     slot <SL_NAME> @ <item resource>    Inv[SL_NAME] = the item planted earlier in this spec
+     monkills <MA_NAME> <count>          JournalInfo.numMonOfType[MA_NAME]
+     iflags <item resource> <IF_A[|IF_B]>   Item.IFlags of an item planted earlier in this spec
+     status ... src=<SS_NAME>            the status's source (default SS_MISC)
+     class <class resource>              Player::ClassID[0]
+     race <race resource>                Player::RaceID
+     flavor <effect resource> @ <flavour resource>   the flavour of a potion effect (EffMem)
+     field <scope> <member> <value>      refused: this build stages no test field
+   Any other line, an unknown name, or a call the engine refuses: exit 2 naming the line. */
+extern const char *V1FamName(const char *fam, long value);
+extern bool V1FamValue(const char *fam, const char *name, long &value);
+
+static bool PlantNumber(const char *t, long &v) {
+    char *e = NULL;
+    v = strtol(t, &e, 10);
+    return e && *t && !*e;
+}
+
+struct DumpPlanter {
+    static bool HasTableEntry(long n) {
+        if (IsSkill((int)n)) return SkillInfo[SkillIndex((int)n)].sk == (int)n;
+        for (int j = 0; FeatInfo[j].feat; j++) if (FeatInfo[j].feat == n) return true;
+        return false;
+    }
+    static void Feat(Player *p, long ft) { p->Feats[ft / 8] |= (uint16)(1 << (ft % 8)); }
+    static void Skill(Player *p, int sk, int ranks) { p->SkillRanks[SkillIndex(sk)] = (int8)ranks; }
+    static void BaseAttr(Player *p, long at, int val) { p->BAttr[at] = (int16)val; }
+    static bool Roll(Player *p, bool hp, long r, long c, long val) {
+        if (r < 0 || r >= 3 || c < 0 || c >= MAX_CHAR_LEVEL || val < -128 || val > 127) return false;
+        (hp ? p->hpRolls : p->manaRolls)[r][c] = (int8)val; return true; }
+    static bool SacVal(Player *p, long g, long c, long val) {
+        if (g < 0 || g >= MAX_GODS || c < 0 || c >= MAX_SAC_CATS + 2) return false;
+        p->SacVals[g][c] = (int32)val; return true; }
+    static void XP(Player *p, long val) { p->XP = (uint32)val; }
+    static rID *CellList(Map *m, bool terrain) { return terrain ? m->TerrainList : m->RegionList; }
+    static void God(Player *p, int g, const std::string &f, long v) {
+        if (f == "favour") p->FavourLev[g] = (int32)v; else if (f == "anger") p->Anger[g] = (int16)v; else p->godFlags[g] = (uint16)v; }
+    static void MaxDepth(Player *p, int i, long d) { p->MaxDepths[i] = (int16)d; }
+    static void Ability(Player *p, int i, long v) { p->Abilities[i] = (uint8)v; }
+    static void Slot(Player *p, int i, Item *it) { p->Inv[i] = it->myHandle; }
+    static void MonKills(Player *p, int i, long v) { p->JournalInfo.numMonOfType[i] = (int)v; }
+    static void IFlags(Item *it, long bits) { it->IFlags = (uint16)(it->IFlags | bits); }
+    static void Known(Item *it, long bits) { it->Known = (uint16)(it->Known | bits); }
+};
+
+/* Items planted by `item` lines of this spec, so a later `known` line finds them by resource. */
+static std::vector<std::pair<rID, Item*> > plantedItems;
+
+/* A resource name may hold spaces: everything after the verb. */
+static std::string PlantName(const std::vector<std::string> &w) {
+    std::string n;
+    for (size_t i = 1; i != w.size(); i++) { if (i > 1) n += ' '; n += w[i]; }
+    return n;
+}
+
+
+/* Monsters planted by `monster` lines, so `template` and `target` lines find them by resource. */
+static std::vector<std::pair<rID, Monster*> > plantedMonsters;
+
+/* A free cell near the player: in bounds, not solid, no creature, no feature, not the player's own. */
+static bool PlantCell(Player *p, int &cx, int &cy) {
+    Map *mp = p->m;
+    if (!mp) return false;
+    for (int d = 1; d <= 6; d++)
+        for (int dy = -d; dy <= d; dy++)
+            for (int dx = -d; dx <= d; dx++) {
+                int x = p->x + dx, y = p->y + dy;
+                if (!dx && !dy) continue;
+                if (!mp->InBounds(x, y) || mp->SolidAt(x, y)) continue;
+                if (mp->FCreatureAt(x, y) || mp->FFeatureAt(x, y)) continue;
+                cx = x; cy = y; return true;
+            }
+    return false;
+}
+
+static rID PlantResource(const std::string &nm, int type) {
+    rID r = FIND(nm.c_str());
+    if (!r || !theGame->Get(r) || !theGame->Get(r)->isType(type)) return 0;
+    return r;
+}
+
+static bool PlantVarSet(const std::string &ownerName, const std::string &varName, int32 val) {
+    for (int ms = 0; ms < MAX_MODULES; ++ms) {
+        Module *mod = Game::Modules[ms];
+        if (!mod || mod->szDataSeg <= 0 || !theGame->MDataSeg[ms]
+            || theGame->MDataSegSize[ms] < (uint32)mod->szDataSeg) continue;
+        for (int i = 0; i < mod->Symbols.Total(); ++i) {
+            DebugInfo *d = mod->Symbols[i];
+            if (d->BType != GLOB_VAR && d->BType != RES_VAR) continue;
+            if (strncmp(d->Ident, varName.c_str(), 31) || varName.size() > 31) continue;
+            rID owner = d->BType == GLOB_VAR ? 0 : d->xID;
+            const char *name = owner ? mod->GetText(mod->__GetResource(owner)->Name) : "(module)";
+            if (strcmp(name, ownerName.c_str())) continue;
+            memcpy(theGame->MDataSeg[ms] + (size_t)d->Address * 4, &val, sizeof(val));
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Words [from, to) of a spec line joined by single spaces. */
+static std::string PlantJoin(const std::vector<std::string> &w, size_t from, size_t to) {
+    std::string n;
+    for (size_t i = from; i < to && i < w.size(); i++) { if (i > from) n += ' '; n += w[i]; }
+    return n;
+}
+
+static size_t PlantAt(const std::vector<std::string> &w) {   /* index of the `@` separator, or 0 */
+    for (size_t i = 1; i != w.size(); i++) if (w[i] == "@") return i;
+    return 0;
+}
+
+/* The verbs of the growth cases (G01-G32): content a save can hold, planted by resource name. */
+static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::string &why, bool &handled) {
+    const std::string &verb = w[0];
+    handled = true;
+    long v = 0;
+    if (verb == "monster") {
+        std::string nm = PlantJoin(w, 1, w.size());
+        rID r = PlantResource(nm, T_TMONSTER);
+        int cx, cy;
+        if (!r) { why = "no monster resource named " + nm; return false; }
+        if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+        Monster *mn = new Monster(r);
+        mn->PlaceAt(p->m, cx, cy);
+        if (!p->m->FCreatureAt(cx, cy)) { why = "the map did not take " + nm; return false; }
+        plantedMonsters.push_back(std::make_pair(r, mn));
+        return true;
+    }
+    if (verb == "template" || verb == "target") {
+        size_t at = PlantAt(w);
+        if (!at || at + 1 >= w.size() || at < 2) { why = verb + " <name> @ <monster resource>"; return false; }
+        std::string mname = PlantJoin(w, at + 1, w.size());
+        rID mr = PlantResource(mname, T_TMONSTER);
+        Monster *mn = NULL;
+        for (size_t i = 0; i != plantedMonsters.size(); i++) if (plantedMonsters[i].first == mr) mn = plantedMonsters[i].second;
+        if (!mr || !mn) { why = "no monster " + mname + " planted earlier in this spec"; return false; }
+        std::string what = PlantJoin(w, 1, at);
+        if (verb == "template") {
+            rID tr = PlantResource(what, T_TTEMPLATE);
+            if (!tr) { why = "no template resource named " + what; return false; }
+            mn->AddTemplate(tr);
+            return true;
+        }
+        if (!V1FamValue("target_why_type", what.c_str(), v)) { why = "no target why type named " + what; return false; }
+        Target tg = {};
+        tg.type = TargetEnemy;
+        tg.data.Creature.c = p->myHandle;
+        tg.priority = 30;
+        tg.why.Set((TargetWhyType)v);
+        if (!mn->ts.addTarget(tg)) { why = "the target system refused the target"; return false; }
+        return true;
+    }
+    if (verb == "ability") {
+        if (w.size() != 3 || !PlantNumber(w[2].c_str(), v)) { why = "ability <CA_NAME> <value>"; return false; }
+        long ca = 0;
+        if (!V1FamValue("ca", w[1].c_str(), ca) || ca < 0 || ca >= CA_LAST) { why = "no ability named " + w[1]; return false; }
+        if (v < 0 || v > 255) { why = "ability value out of 0..255"; return false; }
+        DumpPlanter::Ability(p, (int)ca, v);
+        return true;
+    }
+    if (verb == "monkills") {
+        if (w.size() != 3 || !PlantNumber(w[2].c_str(), v) || v < 0) { why = "monkills <MA_NAME> <count>"; return false; }
+        long ma = 0;
+        if (!V1FamValue("ma", w[1].c_str(), ma) || ma < 0 || ma >= MA_LAST_REAL) { why = "no monster type named " + w[1]; return false; }
+        DumpPlanter::MonKills(p, (int)ma, v);
+        return true;
+    }
+    if (verb == "slot") {
+        size_t at = PlantAt(w);
+        if (!at || at != 2 || at + 1 >= w.size()) { why = "slot <SL_NAME> @ <item resource>"; return false; }
+        long sl = 0;
+        if (!V1FamValue("sl", w[1].c_str(), sl) || sl < 0 || sl >= NUM_SLOTS) { why = "no slot named " + w[1]; return false; }
+        std::string nm = PlantJoin(w, at + 1, w.size());
+        rID r = PlantResource(nm, T_TITEM);
+        Item *it = NULL;
+        for (size_t i = 0; i != plantedItems.size(); i++) if (plantedItems[i].first == r) it = plantedItems[i].second;
+        if (!r || !it) { why = "no item " + nm + " planted earlier in this spec"; return false; }
+        DumpPlanter::Slot(p, (int)sl, it);
+        return true;
+    }
+    if (verb == "iflags") {
+        if (w.size() < 3) { why = "iflags <item resource> <IF_NAME[|IF_NAME]>"; return false; }
+        std::string nm = PlantJoin(w, 1, w.size() - 1);
+        rID r = PlantResource(nm, T_TITEM);
+        Item *it = NULL;
+        for (size_t i = 0; i != plantedItems.size(); i++) if (plantedItems[i].first == r) it = plantedItems[i].second;
+        if (!r || !it) { why = "no item " + nm + " planted earlier in this spec"; return false; }
+        long bits = 0;
+        const std::string &names = w[w.size() - 1];
+        for (size_t s = 0; s <= names.size(); ) {
+            size_t e = names.find('|', s);
+            if (e == std::string::npos) e = names.size();
+            std::string one = names.substr(s, e - s);
+            if (!V1FamValue("if_flag", one.c_str(), v)) { why = "no item-flag named " + one; return false; }
+            bits |= v;
+            s = e + 1;
+        }
+        DumpPlanter::IFlags(it, bits);
+        return true;
+    }
+    if (verb == "feature") {
+        std::string nm = PlantJoin(w, 1, w.size());
+        rID r = PlantResource(nm, T_TFEATURE);
+        int cx, cy;
+        if (!r) { why = "no feature resource named " + nm; return false; }
+        if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+        Feature *ft = new Feature(r);
+        ft->PlaceAt(p->m, cx, cy);
+        if (!p->m->FFeatureAt(cx, cy)) { why = "the map did not take " + nm; return false; }
+        return true;
+    }
+    if (verb == "terrain" || verb == "region") {
+        bool ter = verb == "terrain";
+        std::string nm = PlantJoin(w, 1, w.size());
+        rID r = PlantResource(nm, ter ? T_TTERRAIN : T_TREGION);
+        int cx, cy;
+        if (!r) { why = "no " + verb + " resource named " + nm; return false; }
+        if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+        rID *list = DumpPlanter::CellList(p->m, ter);
+        int k = -1;
+        for (int i = 0; i != 256; i++) if (list[i] == r) { k = i; break; }
+        if (k < 0) for (int i = 1; i != 256; i++) if (!list[i]) { list[i] = r; k = i; break; }
+        if (k < 0) { why = "the map's " + verb + " list is full"; return false; }
+        if (ter) p->m->At(cx, cy).Terrain = k; else p->m->At(cx, cy).Region = k;
+        return true;
+    }
+    if (verb == "god") {
+        if (w.size() < 4 || !PlantNumber(w[w.size() - 1].c_str(), v)) { why = "god <god resource> <favour|anger|flags> <value>"; return false; }
+        const std::string &field = w[w.size() - 2];
+        std::string nm = PlantJoin(w, 1, w.size() - 2);
+        rID r = PlantResource(nm, T_TGOD);
+        if (!r) { why = "no god resource named " + nm; return false; }
+        int g = theGame->GodNum(r);
+        if (g < 0 || g >= MAX_GODS) { why = "god " + nm + " is outside the arrays of this build"; return false; }
+        if (field != "favour" && field != "anger" && field != "flags") { why = "god field is favour, anger or flags"; return false; }
+        DumpPlanter::God(p, g, field, v);
+        return true;
+    }
+    if (verb == "dungeon") {
+        if (w.size() < 3 || !PlantNumber(w[w.size() - 1].c_str(), v) || v < 1) { why = "dungeon <dungeon resource> <depth>"; return false; }
+        std::string nm = PlantJoin(w, 1, w.size() - 1);
+        rID r = PlantResource(nm, T_TDUNGEON);
+        if (!r) { why = "no dungeon resource named " + nm; return false; }
+        int i;
+        for (i = 1; i != MAX_DUNGEONS && theGame->DungeonID[i]; i++) if (theGame->DungeonID[i] == r) break;
+        if (i == MAX_DUNGEONS) { why = "no free dungeon slot"; return false; }
+        if (!theGame->DungeonID[i]) {   /* the registration Game::GetDungeonMap makes on the first arrival */
+            const uint32 allocated = min(MAX_DUNGEON_LEVELS, RES(r)->GetConst(DUN_DEPTH) + 1);
+            theGame->DungeonID[i] = r;
+            theGame->DungeonSize[i] = min(MAX_DUNGEON_LEVELS, (int16)(RES(r)->GetConst(DUN_DEPTH)));
+            theGame->DungeonLevels[i] = (hObj*)malloc(sizeof(hObj) * allocated);
+            memset(theGame->DungeonLevels[i], 0, sizeof(hObj) * allocated);
+        }
+        DumpPlanter::MaxDepth(p, i, v);
+        return true;
+    }
+    if (verb == "class" || verb == "race") {
+        std::string nm = PlantJoin(w, 1, w.size());
+        rID r = PlantResource(nm, verb == "class" ? T_TCLASS : T_TRACE);
+        if (!r) { why = "no " + verb + " resource named " + nm; return false; }
+        if (verb == "class") p->ClassID[0] = r; else p->RaceID = r;
+        return true;
+    }
+    if (verb == "flavor") {
+        size_t at = PlantAt(w);
+        if (!at || at < 2 || at + 1 >= w.size()) { why = "flavor <effect resource> @ <flavour resource>"; return false; }
+        std::string en = PlantJoin(w, 1, at), fn = PlantJoin(w, at + 1, w.size());
+        rID er = PlantResource(en, T_TEFFECT), fr = PlantResource(fn, T_TFLAVOR);
+        if (!er) { why = "no effect resource named " + en; return false; }
+        if (!fr) { why = "no flavour resource named " + fn; return false; }
+        EffMem *em = EFFMEM(er, p);
+        if (!em) { why = "the effect has no memory record"; return false; }
+        if (TFLA(fr)->IType == AI_POTION) em->PFlavorID = fr; else em->FlavorID = fr;
+        return true;
+    }
+    if (verb == "varrid") {
+        size_t at = PlantAt(w);
+        if (!at || at < 4 || at + 1 >= w.size()) { why = "varrid <owner resource name> <variable name> @ <resource name>"; return false; }
+        std::string rn = PlantJoin(w, at + 1, w.size());
+        rID r = FIND(rn.c_str());
+        if (!r || !theGame->Get(r)) { why = "no resource named " + rn; return false; }
+        if (!PlantVarSet(PlantJoin(w, 1, at - 1), w[at - 1], (int32)r)) { why = "no script variable " + w[at - 1] + " owned by " + PlantJoin(w, 1, at - 1); return false; }
+        return true;
+    }
+    handled = false;
+    return true;
+}
+
+static bool PlantLine(Player *p, const std::vector<std::string> &w, std::string &why) {
+    const std::string &verb = w[0];
+    long v = 0, a = 0, b = 0;
+    char buf[160];
+    { bool handled; bool ok = PlantGrowthLine(p, w, why, handled); if (handled) return ok; }
+    if (verb == "status") {
+        std::vector<std::string> sw(w);
+        long srcv = SS_MISC;
+        if (sw.size() > 2 && sw.back().compare(0, 4, "src=") == 0) {
+            if (!V1FamValue("ss", sw.back().c_str() + 4, srcv)) { why = "no status source named " + sw.back().substr(4); return false; }
+            sw.pop_back();
+        }
+        if (sw.size() < 2 || sw.size() > 4) { why = "status <STATI_NAME> [val] [mag] [src=SS_NAME]"; return false; }
+        if (!V1FamValue("stati", sw[1].c_str(), v)) { why = "no status named " + sw[1]; return false; }
+        long val = -1, mag = -1;
+        if (sw.size() > 2 && !PlantNumber(sw[2].c_str(), val)) { why = "val is not a number"; return false; }
+        if (sw.size() > 3 && !PlantNumber(sw[3].c_str(), mag)) { why = "mag is not a number"; return false; }
+        p->GainPermStati((int16)v, NULL, (int8)srcv, (int16)val, (int16)mag);
+        if (!p->HasStati((int16)v)) { why = "the engine did not give the status"; return false; }
+        return true;
+    }
+    if (verb == "item") {
+        if (w.size() < 2) { why = "item <resource name>"; return false; }
+        std::string nm = PlantName(w);
+        rID r = FIND(nm.c_str());
+        if (!r || !theGame->Get(r) || !theGame->Get(r)->isType(T_TITEM)) { why = "no item resource named " + nm; return false; }
+        Item *it = Item::Create(r);
+        if (!it) { why = "Item::Create refused " + nm; return false; }
+        /* Character::GainItem runs the wield events, which need a game in play; the pack takes the item directly
+           (Container::XInsert, as src/InvCursorProbe.cpp does). */
+        Item *pk = p->InSlot(SL_PACK);
+        if (!pk || !pk->isType(T_CONTAIN) || !((Container*)pk)->XInsert(it)) { why = "the pack did not take " + nm; return false; }
+        plantedItems.push_back(std::make_pair(r, it));
+        return true;
+    }
+    if (verb == "known") {
+        /* the last word joins KN_ names with `|`; the words between are the item resource name */
+        if (w.size() < 3) { why = "known <item resource name> <KN_NAME[|KN_NAME]>"; return false; }
+        std::string nm;
+        for (size_t i = 1; i + 1 < w.size(); i++) { if (i > 1) nm += ' '; nm += w[i]; }
+        rID r = FIND(nm.c_str());
+        Item *it = NULL;
+        for (size_t i = 0; i != plantedItems.size(); i++) if (plantedItems[i].first == r) it = plantedItems[i].second;
+        if (!r || !it) { why = "no item named " + nm + " planted earlier in this spec"; return false; }
+        long bits = 0;
+        const std::string &names = w[w.size() - 1];
+        for (size_t s = 0; s <= names.size(); ) {
+            size_t e = names.find('|', s);
+            if (e == std::string::npos) e = names.size();
+            std::string one = names.substr(s, e - s);
+            if (!V1FamValue("kn", one.c_str(), v)) { why = "no known-flag named " + one; return false; }
+            bits |= v;
+            s = e + 1;
+        }
+        DumpPlanter::Known(it, bits);
+        return true;
+    }
+    if (verb == "roll") {
+        if (w.size() != 5 || (w[1] != "hp" && w[1] != "mana") || !PlantNumber(w[2].c_str(), a) || !PlantNumber(w[3].c_str(), b)
+            || !PlantNumber(w[4].c_str(), v)) { why = "roll <hp|mana> <row> <col> <value>"; return false; }
+        if (!DumpPlanter::Roll(p, w[1] == "hp", a, b, v)) { why = "roll cell outside the arrays of this build"; return false; }
+        return true;
+    }
+    if (verb == "sacval") {
+        if (w.size() != 4 || !PlantNumber(w[1].c_str(), a) || !PlantNumber(w[2].c_str(), b) || !PlantNumber(w[3].c_str(), v))
+            { why = "sacval <god> <col> <value>"; return false; }
+        if (!DumpPlanter::SacVal(p, a, b, v)) { why = "sacval cell outside the arrays of this build"; return false; }
+        return true;
+    }
+    if (verb == "xp") {
+        if (w.size() != 2 || !PlantNumber(w[1].c_str(), v) || v < 0) { why = "xp <value>"; return false; }
+        DumpPlanter::XP(p, v);
+        return true;
+    }
+    if (verb == "resave") {
+        if (w.size() != 1) { why = "resave takes no argument"; return false; }
+        return true;
+    }
+    if (verb == "spell") {
+        if (w.size() < 2) { why = "spell <spell resource name>"; return false; }
+        std::string nm = PlantName(w);
+        rID r = FIND(nm.c_str());
+        if (!r || !theGame->Get(r) || !theGame->Get(r)->isType(T_TEFFECT) || theGame->SpellNum(r) < 0)
+            { why = "no spell resource named " + nm; return false; }
+        p->GainSpell(r, SP_KNOWN);
+        if (!(p->getSpellFlags(r) & SP_KNOWN)) { why = "the engine did not learn the spell"; return false; }
+        return true;
+    }
+    if (verb == "feat") {
+        if (w.size() != 2) { why = "feat <FT_NAME>"; return false; }
+        if ((!V1FamValue("ft", w[1].c_str(), v) && !V1FamValue("sk", w[1].c_str(), v)) || v < 0 || v > FEATBITS_LAST) { why = "no feat or skill named " + w[1]; return false; }
+        /* A bit with no row in FeatInfo (a feat) or SkillInfo (a skill) has no entry in the game's table: a name
+           that only anchors the range (FT_FIRST) plants a save that -dump cannot load. */
+        if (!DumpPlanter::HasTableEntry(v)) { why = w[1] + " has no entry in the feat or skill table"; return false; }
+        DumpPlanter::Feat(p, v);
+        return true;
+    }
+    if (verb == "skill") {
+        if (w.size() != 3 || !PlantNumber(w[2].c_str(), a)) { why = "skill <SK_NAME> <ranks>"; return false; }
+        if (!V1FamValue("sk", w[1].c_str(), v) || !IsSkill((int)v) || SkillInfo[SkillIndex((int)v)].sk != (int)v)
+            { why = "no skill named " + w[1] + " with an entry in the skill table"; return false; }
+        if (a < 0 || a > 127) { why = "ranks out of 0..127"; return false; }
+        DumpPlanter::Skill(p, (int)v, (int)a);
+        return true;
+    }
+    if (verb == "attr") {
+        if (w.size() != 3 || !PlantNumber(w[2].c_str(), a)) { why = "attr <A_NAME> <value>"; return false; }
+        if (!V1FamValue("attr", w[1].c_str(), v) || v < 0 || v >= ATTR_LAST) { why = "no attribute named " + w[1]; return false; }
+        p->Attr[v] = (int16)a;
+        if (v < 7) DumpPlanter::BaseAttr(p, v, (int)a);
+        return true;
+    }
+    if (verb == "option") {
+        if (w.size() != 3) { why = "option <OPT_NAME> <value>"; return false; }
+        fprintf(stderr, "incursion -dump: plant: option %s skipped: options live in Options.Dat, not in a save\n", w[1].c_str());
+        return true;
+    }
+    if (verb == "var") {
+        /* the owner resource name may hold spaces ("Dance of Ruin"): the last two words are the variable and its value */
+        if (w.size() < 4 || !PlantNumber(w[w.size() - 1].c_str(), a)) { why = "var <owner resource name> <variable name> <value>"; return false; }
+        std::string ownerName;
+        for (size_t i = 1; i + 2 < w.size(); i++) { if (i > 1) ownerName += ' '; ownerName += w[i]; }
+        const std::string &varName = w[w.size() - 2];
+        for (int ms = 0; ms < MAX_MODULES; ++ms) {
+            Module *mod = Game::Modules[ms];
+            if (!mod || mod->szDataSeg <= 0 || !theGame->MDataSeg[ms]
+                || theGame->MDataSegSize[ms] < (uint32)mod->szDataSeg) continue;
+            for (int i = 0; i < mod->Symbols.Total(); ++i) {
+                DebugInfo *d = mod->Symbols[i];
+                if (d->BType != GLOB_VAR && d->BType != RES_VAR) continue;
+                if (strncmp(d->Ident, varName.c_str(), 31) || varName.size() > 31) continue;
+                rID owner = d->BType == GLOB_VAR ? 0 : d->xID;
+                const char *name = owner ? mod->GetText(mod->__GetResource(owner)->Name) : "(module)";
+                if (strcmp(name, ownerName.c_str())) continue;
+                int32 val = (int32)a;
+                memcpy(theGame->MDataSeg[ms] + (size_t)d->Address * 4, &val, sizeof(val));
+                return true;
+            }
+        }
+        why = "no script variable " + varName + " owned by " + ownerName;
+        return false;
+    }
+    if (verb == "field") { why = "this build stages no test field (field <scope> <member> <value>)"; return false; }
+    snprintf(buf, sizeof(buf), "unknown verb %s", verb.c_str());
+    why = buf;
+    (void)b;
+    return false;
+}
+
+/* Returns only on success (the new save is written); on any refusal it names the line and exits 2. */
+static void RunPlant(Player *p, const char *specPath, const char *outPath) {
+    FILE *f = fopen(specPath, "r");
+    if (!f) { fprintf(stderr, "incursion -dump: plant: cannot read %s\n", specPath); exit(2); }
+    char line[512];
+    int no = 0;
+    while (fgets(line, sizeof(line), f)) {
+        no++;
+        std::vector<std::string> w;
+        for (char *t = strtok(line, " \t\r\n"); t; t = strtok(NULL, " \t\r\n")) {
+            if (t[0] == '#') break;
+            w.push_back(t);
+        }
+        if (w.empty()) continue;
+        std::string why;
+        if (!PlantLine(p, w, why)) {
+            fprintf(stderr, "incursion -dump: plant: line %d (%s): %s\n", no, w[0].c_str(), why.c_str());
+            exit(2);
+        }
+    }
+    fclose(f);
+    extern bool SaveV1_FieldValuesResave(const char *out);
+    if (!SaveV1_FieldValuesResave(outPath)) { fprintf(stderr, "incursion -dump: plant: the writer refused\n"); exit(2); }
+    printf("plant: wrote %s\n", outPath);
+}
+
 bool RunRecoverVars(const char *path) {
     fileHeader fhdr;
     if (!LoadSaveForReport(path, fhdr)) return false;
@@ -398,12 +893,27 @@ bool RunSaveDump(const char *path) {
     fileHeader fhdr;
     if (!LoadSaveForReport(path, fhdr)) return false;
 
+    /* inc-cjos0: INCURSION_FIELD_VALUES makes the real writer run once over the loaded game, so the
+       probe logs what each member holds. The re-save goes to <that file>.resave, never over the input. */
+    if (const char *fv = getenv("INCURSION_FIELD_VALUES")) {
+        extern bool SaveV1_FieldValuesResave(const char *out);
+        if (!SaveV1_FieldValuesResave((std::string(fv) + ".resave").c_str())) return false;
+    }
+
     InitGodArrays();
 
     Player *p = oPlayer(theGame->p[0]);
     Map *m = oMap(theGame->m[0]);
     T1->SetPlayer(p);
     T1->SetMap(m);
+
+    if (const char *spec = getenv("INCURSION_PLANT")) {
+        const char *out = getenv("INCURSION_PLANT_OUT");
+        if (!out || !*out) { fprintf(stderr, "incursion -dump: plant: INCURSION_PLANT_OUT is unset\n"); exit(2); }
+        if (!strcmp(out, path)) { fprintf(stderr, "incursion -dump: plant: the output is the input\n"); exit(2); }
+        RunPlant(p, spec, out);
+        return true;
+    }
 
     /* ---------------------------------------------------------- report -- */
 

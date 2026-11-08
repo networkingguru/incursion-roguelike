@@ -1,0 +1,13 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..d16eff5 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1178,6 +1178,8 @@ class Character: public Creature
+       FIELD_U8 ("RageCount", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
++      uint32 ac8N06 = 29;
++      FIELD_U32("Ac8N06Sk", ac8N06);
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);
+       FIELD_I16("alignLC", alignLC);

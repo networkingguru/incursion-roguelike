@@ -1,0 +1,19 @@
+diff --git a/lib/landed-inc-g02b.irh b/lib/landed-inc-g02b.irh
+new file mode 100644
+index 0000000..5c51773
+--- /dev/null
++++ b/lib/landed-inc-g02b.irh
+@@ -0,0 +1,7 @@
++Effect "Grw B Bolt" : EA_BLAST
++  {
++    Flags: EF_ACTIVATE; qval: Q_DIR;
++    int16 grw_state;
++    Desc: "A growth-test spell.";
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..228b6da 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g02b.irh"

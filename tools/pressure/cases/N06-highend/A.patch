@@ -1,0 +1,13 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index e5fec5b..5f0e1fa 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2180,7 +2180,7 @@ typedef signed int        hObj;
+ #define SK_HIGH_FIRST 800
+ // end family: sk_high_first
+ // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+-#define SK_HIGH_END   801
++#define SK_HIGH_END   800
+ // end family: sk_high_end
+ // family: sk_count stored ordinal i16 grows SK_COUNT
+ #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))

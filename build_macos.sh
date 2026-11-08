@@ -300,6 +300,38 @@ else
     LINK_LIBS="-lz $GUI_LIBS"
 fi
 
+# ------------------------------------------------------- parallel compile ---
+# pjob <label> <command...> runs one compile in the background, at most
+# INCURSION_BUILD_JOBS at once (default: the core count). Each compile's output
+# goes to its own log and is printed as one block when the compile ends; a
+# failed compile prints its log under "FAILED:" and pjob_wait then stops the
+# build. No object is skipped or reordered: only the wall time changes.
+BUILD_JOBS="${INCURSION_BUILD_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}"
+case "$BUILD_JOBS" in ''|*[!0-9]*|0) BUILD_JOBS=1 ;; esac
+PJOB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/incursion-build.XXXXXX")"
+trap 'rm -rf "$PJOB_DIR"' EXIT
+pjob() {
+    local label="$1"; shift
+    while [ "$(jobs -r | wc -l)" -ge "$BUILD_JOBS" ]; do sleep 0.05; done
+    (
+        log="$PJOB_DIR/$(printf '%s' "$label" | tr '/' '_').log"
+        if "$@" > "$log" 2>&1; then
+            [ -s "$log" ] && cat "$log"
+            exit 0
+        fi
+        { echo "FAILED: $label"; cat "$log"; } >&2
+        : > "$log.failed"
+        exit 1
+    ) &
+}
+pjob_wait() {
+    wait || true
+    if ls "$PJOB_DIR"/*.failed > /dev/null 2>&1; then
+        echo "build: STOPPED, a compile failed ($(ls "$PJOB_DIR"/*.failed | wc -l | tr -d ' ') file(s)); no binary was built" >&2
+        exit 1
+    fi
+}
+
 # ---------------------------------------------------------------- libtcod ----
 # Built from the vendored copy. The bundled zlib is too old to compile against
 # a modern SDK (it redefines fdopen), so it is skipped in favour of system -lz.
@@ -331,11 +363,12 @@ elif [ ! -f "$TCODLIB" ]; then
         case "$f" in libtcod/src/zlib/*) continue ;; esac
         o="$TOBJ/$(echo "$f" | tr '/' '_').o"
         if [ "${f##*.}" = "c" ]; then
-            $CC $TCOD_CSTD $TFLAGS -c "$f" -o "$o"
+            pjob "$f" $CC $TCOD_CSTD $TFLAGS -c "$f" -o "$o"
         else
-            $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
+            pjob "$f" $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
         fi
     done
+    pjob_wait
     $AR rcs "$TCODLIB" "$TOBJ"/*.o
 fi
 
@@ -348,6 +381,45 @@ echo "--- compiling Incursion ---"
 CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing ${CXXFLAGS_EXTRA_TARGET:-} ${CXXFLAGS_EXTRA_GCC:-} $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
 CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -Wno-return-type $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
+# Record sizes and pad tables for the save coverage check come from the
+# compiler, with THESE flags, on every build (inc-cjos0 phase 8a): a hand-written
+# number is a merge conflict nobody can resolve by hand. The header lives beside
+# this build's objects' name, so two builds with different flags never share one.
+# The generator exits 1 and names the class when it cannot measure one; it writes
+# "LAYOUT_MEASURED 0" for a compiler with no layout dump (gcc, mingw) and then the
+# coverage check reports "not measured" rather than passing. INCURSION_LAYOUT_
+# UNMEASURED=1 forces that path.
+GEN="$ROOT/build/gen/$(basename "$OBJ")"
+mkdir -p "$GEN"
+if command -v python3 >/dev/null 2>&1 && [ -f tools/gen_record_layout.py ]; then
+    GEN_START=$SECONDS
+    if ! python3 -B tools/gen_record_layout.py --cxx "$CXX" --out "$GEN/RecordLayout.h" -- $CXXFLAGS; then
+        echo "build: STOPPED by tools/gen_record_layout.py; no binary was built"
+        exit 1
+    fi
+    echo "build: record layout generated ($((SECONDS - GEN_START))s)"
+else
+    echo "build: WARNING no python3 or tools/gen_record_layout.py; record layout not measured"
+    rm -f "$GEN/RecordLayout.h"
+fi
+# The value -> name tables the field-value observer prints beside a typed number, from the family marks of
+# inc/Defines.h (inc-cjos0 phase 8, D3). Never a hand table. Without python3 the observer prints bare numbers.
+if command -v python3 >/dev/null 2>&1 && [ -f tools/gen_family_names.py ]; then
+    if ! python3 -B tools/gen_family_names.py --out "$GEN/FamilyNames.h"; then
+        echo "build: STOPPED by tools/gen_family_names.py; no binary was built"
+        exit 1
+    fi
+else
+    rm -f "$GEN/FamilyNames.h"
+fi
+CXXFLAGS="$CXXFLAGS -I$GEN"
+
+# INCURSION_MODULE_ONLY=1 (set by tools/pressure/oracle.sh only): $ROOT/$OUT is already a binary built from
+# byte-identical C++ sources (inc-cjos0 phase 8, D5). Skip the compile and the link. The data step below still
+# recompiles mod/Incursion.Mod from lib/ and runs the order guard and the schema coverage check, as a full build does.
+if [ "${INCURSION_MODULE_ONLY:-}" = 1 ] && [ -x "$ROOT/$OUT" ]; then
+echo "build: module only; reusing $OUT (INCURSION_MODULE_ONLY=1)"
+else
 for f in src/*.cpp; do
     n="$(basename "$f" .cpp)"
     # Only one backend links: each defines main(), Error() and Fatal().
@@ -358,7 +430,7 @@ for f in src/*.cpp; do
     [ -n "$skip" ] && continue
     std="c++17"
     case "$n" in Tokens|Art) std="c++14" ;; esac
-    $CXX -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
+    pjob "$f" $CXX -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
 done
 
 # src/cpp1-6.c are the DECUS preprocessor, used only by -compile, so a shipping
@@ -371,11 +443,13 @@ for f in src/*.c; do
     if [ "$COMPILER" = no ]; then
         case "$n" in cpp[1-6]) continue ;; esac
     fi
-    $CC -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
+    pjob "$f" $CC -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
 done
+pjob_wait
 
 echo "--- linking ---"
 $CXX -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
+fi
 
 # ------------------------------------------------------------- game data -----
 # A shipping binary cannot build its own data: that is the point of it. The
@@ -443,6 +517,31 @@ elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COM
             echo "order ledger: recorded the module's new entries."
         fi
     fi
+fi
+
+# The schema coverage check, early: a member added to an archived class with no
+# FIELD_ line used to stop the build at a hand-written static_assert. The pads
+# are generated now, so the only thing that notices is the coverage check, and
+# this runs it. It needs the module compiled just above and a binary that runs
+# here, so only the ordinary headless developer build does it. The posix build
+# defines DEBUG (COMPILER=yes), which is what makes coverage run. A finding stops
+# the build; the lines name the class (Player or Monster, the objects written)
+# and the uncovered offset and length.
+if [ "$BACKEND" = posix ] && [ "$TARGET" = native ] && [ "$COMPILER" = yes ] \
+   && [ -z "$EXTRA_CXXFLAGS" ]; then
+    COV_START=$SECONDS
+    COVDIR="$(mktemp -d "${TMPDIR:-/tmp}/incursion-cov.XXXXXX")"
+    "$ROOT/$OUT" -schematest "$COVDIR" -timeout 120 < /dev/null > "$COVDIR/out.txt" 2>&1 || true
+    if grep -q "SCHEMA COVERAGE" "$COVDIR/out.txt"; then
+        echo "build: STOPPED by the schema coverage check; a saved class has bytes no FIELD_ line covers:"
+        grep "SCHEMA COVERAGE" "$COVDIR/out.txt" | sort -u | head -20 | sed 's/^/    /'
+        echo "    add the FIELD_ line (or FIELD_SKIP for a member that is deliberately not saved)"
+        rm -rf "$COVDIR"
+        exit 1
+    fi
+    { grep "^coverage: " "$COVDIR/out.txt" || true; } | sort -u
+    rm -rf "$COVDIR"
+    echo "build: schema coverage checked ($((SECONDS - COV_START))s)"
 fi
 
 echo

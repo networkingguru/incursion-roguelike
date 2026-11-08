@@ -1,0 +1,24 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..1202159 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1571,6 +1571,7 @@ class Player: public Character
+       bool ChooseLucubrationBook();
+       bool HasBookFor(int16 sn);
+       void MigrateSpellFlagsRev5();
++      void MigrateAc8A() { if (Attr[A_CDEF] == 1040) alignGE = 101; }
+       void MigrateSpellFlagsRev6();
+       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
+          known spell plus a summary. Called at the end of the migration and
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index b7d756e..cb0e659 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -115,6 +115,7 @@ struct V1Migration {
+     void      (Player::*fn)();
+ };
+ static const V1Migration v1Migrations[] = {
++    { "Ac8Upgrade", 0, &Player::MigrateAc8A },
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
+ };

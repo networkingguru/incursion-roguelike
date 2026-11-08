@@ -1,0 +1,36 @@
+diff --git a/lib/landed-inc-g01a.irh b/lib/landed-inc-g01a.irh
+new file mode 100644
+index 0000000..f84d45b
+--- /dev/null
++++ b/lib/landed-inc-g01a.irh
+@@ -0,0 +1,24 @@
++Monster "grw-a leucrotta" : MA_MYTHIC, MA_QUADRUPED, MA_ABERRATION
++  { Image: yellow 'M'; Size: SZ_MEDIUM;
++    CR: 8; HD: 7; Hit: +6; Def: 12; Mov: 225%; Spd: 150%;
++    Str 20, Dex 17, Con 21, Int 10, Wis 12, Cha 6;
++    Attk: A_BITE for 3d6 AD_BLUNT,
++          A_KICK for 1d8 AD_BLUNT;
++    Feats: FT_POWER_ATTACK, SK_LISTEN;
++    Flags: M_CHAOTIC, M_EVIL, M_IALIGN, M_NOHANDS, M_CARNI, M_NOGEN;
++    Desc: "A growth-test copy of the leucrotta.";
++  }
++
++Item "grw-a flask" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN, IT_THROWABLE, IT_GROUP;
++  }
++
++Feature "grw-a door" : T_DOOR {
++  Image: brown '-';
++  Mat:MAT_WOOD;
++  HP: 10;
++}
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..5146027 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g01a.irh"

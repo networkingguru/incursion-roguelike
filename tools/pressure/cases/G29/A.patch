@@ -1,0 +1,55 @@
+diff --git a/lib/mon4.irh b/lib/mon4.irh
+index 3b90b14..f43c443 100644
+--- a/lib/mon4.irh
++++ b/lib/mon4.irh
+@@ -638,7 +638,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+       dance, the save DC increases by +4 for every participant
+       after the first three.";
+     
+-    int16 vrock_count; hObj vrock_caster; int32 the_turn;
++    int16 vrock_total; hObj vrock_caster; int32 the_turn;
+     On Event EV_ISTARGET {
+       hObj c;
+       
+@@ -647,10 +647,10 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+ 
+       if (vrock_caster == GetHandle(EActor))
+         if (theGame->GetTurn() == the_turn)
+-          return (vrock_count >= 3) ? SHOULD_CAST_IT :
++          return (vrock_total >= 3) ? SHOULD_CAST_IT :
+                                       CANNOT_CAST_IT;
+ 
+-      vrock_count = 1;
++      vrock_total = 1;
+       vrock_caster = GetHandle(EActor);
+       the_turn = theGame->GetTurn();
+       
+@@ -659,8 +659,8 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+           if (c != GetHandle(EActor))
+             if (dist(c->x,c->y,EActor->x,EActor->y) <= 6)
+               if (c->isFriendlyTo(EActor))
+-                vrock_count++;
+-      if (vrock_count < 3)
++                vrock_total++;
++      if (vrock_total < 3)
+         return CANNOT_CAST_IT;
+       return SHOULD_CAST_IT;
+       },
+@@ -687,7 +687,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
+       return NOTHING;
+       },
+     EV_CALC_EFFECT {
+-      e.saveDC += (vrock_count - 3) * 4;
++      e.saveDC += (vrock_total - 3) * 4;
+       return NOTHING;
+       },
+     MSG_CAST
+@@ -1632,7 +1632,7 @@ Poison "osyluth venom" : EA_DRAIN
+       to overcome.";
+   }
+ 
+-Monster "barbazu" : MA_DEVIL
++Monster "barbazu;grw" : MA_DEVIL
+   {
+     Image: red GLYPH_LDEVIL; Size: SZ_MEDIUM; 
+     CR: OPT_CR(7,7); HD: 6; Hit: +6; Def: 15; Mov: 150%; Spd: 125%;

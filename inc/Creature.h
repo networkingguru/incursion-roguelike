@@ -310,6 +310,7 @@ class Creature: public Thing, public Magic
          Attr[] slot -- ATTR_LAST is fixed by the save schema (field 269 is
          the whole array, sized ATTR_LAST). inc-30ps phase 1. */
       FIELD_I16("TouchDef", TouchDef);
+      FIELD_SKIP(LightAverseWasBright);   /* derived; never saved */
     END_ARCHIVE
 
 	  public:
@@ -829,6 +830,7 @@ class Character: public Creature
     friend class VMachine;
     friend class Player;
     friend void MusicChoirProbe(Player *caster);
+    friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT writes a feat bit, skill ranks, a base score */
     friend void BlasphemyProbe(Player *caster);
     protected:
 	    hObj Inv[NUM_SLOTS];
@@ -1142,8 +1144,6 @@ class Character: public Creature
          which are real rIDs and are named. Upgrade path: write these as
          rows keyed through the name table, the way the spec's "resource
          memory segment" section already requires for MonMem/EffMem. */
-      static_assert(sizeof(Character) == 12824,
-                    "Character's coverage pin row pads assume this");
       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
       static_assert(sizeof(bool) == 1, "isFallenPaladin travels as K_U8");
@@ -1466,6 +1466,7 @@ class Player: public Character
 	 	  int16 MapMemoryMask;
 	 	  int16 GallerySlot;
       int8  MapSP;
+      friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets MaxDepths */
       int16 MaxDepths[MAX_DUNGEONS];
       uint32 MMArray[MAX_SPELLS];
       rID      Macros[MAX_MACROS];    /* F1-F12, CTRL+F1-F12, ALT+F1-F12, SHIFT+F1-F12 */
@@ -1653,12 +1654,6 @@ class Player: public Character
          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
          not rIDs. Same ceiling and same upgrade path as the note in
          Character's list above. */
-      static_assert(sizeof(Player) == 23888,
-                    "Player's coverage pin row pads assume this");
-      static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
-      static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");
-      static_assert(sizeof(QuickKey) == 16, "one embed per quick key");
-      static_assert(sizeof(String) == 24, "V1Str covers a whole String");
       static_assert(sizeof(time_t) == 8, "start_second travels as 8 raw bytes");
       /* Order-independent: MyTerm is the process's one terminal, not saved
          state, and nothing below reads it. It stays where it has always
@@ -1934,8 +1929,6 @@ class Monster: public Creature
          belong to the class and not to the object, so they are outside the
          record entirely -- they are not members of any Monster and the
          coverage map never sees them. */
-      static_assert(sizeof(Monster) == 1696,
-                    "Monster's coverage pin row pads assume this");
       FIELD_H  ("Inv", Inv);
       FIELD_I8 ("BuffCount", BuffCount);
       FIELD_I8 ("FoilCount", FoilCount);

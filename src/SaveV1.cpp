@@ -33,6 +33,14 @@
 #include "Incursion.h"
 #include "SaveLegacyTags.h"
 #include "SaveRetiredNames.h"
+#if defined(__has_include)
+# if __has_include("RecordLayout.h")
+#  include "RecordLayout.h"      /* tools/gen_record_layout.py; build_macos.sh -I */
+# endif
+#endif
+#ifndef LAYOUT_MEASURED
+# define LAYOUT_MEASURED 0
+#endif
 #include <zlib.h>   /* IS1.x compressed payloads are zlib-6; libz was
                        already a link dependency (CFile's LZ path) */
 
@@ -392,6 +400,16 @@ static void v1RefuseBarred(const char *what, const char *name)
     throw ECORRUPT;
   }
 
+const char *Registry::v1MemText = NULL;
+static std::vector<std::string> v1FvMembers;   /* INCURSION_FIELD_VALUES: the member text of each field written, in order */
+static bool v1FvOn(void);
+static void v1FvMember(void)
+  {
+    if (v1FvOn())
+      v1FvMembers.push_back(Registry::v1MemText ? Registry::v1MemText : "-");
+    Registry::v1MemText = NULL;
+  }
+
 static uint16 v1WNameId(const char *name)
   {
     if (v1NameBarred(v1Path, name))
@@ -410,6 +428,7 @@ static uint16 v1WNameId(const char *name)
         v1WNames.push_back(row);
         v1WIds[key] = id;
       }
+    v1FvMember();
     v1WSeenCheck(id);
 #ifdef DEBUG
     /* inc-cjos0: INCURSION_NAMES_PLANT=dup writes the third name of a group
@@ -740,278 +759,134 @@ struct SchemaPin { const char *cls; size_t size;
    convert-guard must know this when it reasons about which old records
    are safe to carry forward. */
 
-/* Item chain on arm64/LP64: vptr 0-8; pad after Object::Type 10-12; pad
-   after Item::DmgType 133-134; pad after Item::swingCount 151-152; pad
-   before Item::Inscrip 156-160; tail pad 218-224. Every other byte is a
-   FIELD_ line, a FIELD_SKIP, an embed range, or the record envelope. */
-static const SchemaPad ItemPads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 218, 6 }
-};
+/* Sizes and pad rows are not written here. tools/gen_record_layout.py asks
+   the compiler for them on every build (build_macos.sh runs it first) and
+   writes LAYOUT_<Class>_SIZE and LAYOUT_<Class>_PADS into RecordLayout.h: the
+   vptr and each byte no data member covers. A member the field list does not
+   save must carry FIELD_SKIP, or the coverage check below fails on it. Where
+   the compiler cannot dump layouts, LAYOUT_MEASURED is 0 and the check reports
+   "not measured" instead of passing (inc-cjos0 phase 8a). */
+#if LAYOUT_MEASURED
+static_assert(sizeof(Item) == LAYOUT_Item_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(QItem) == LAYOUT_QItem_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Food) == LAYOUT_Food_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Corpse) == LAYOUT_Corpse_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Container) == LAYOUT_Container_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Weapon) == LAYOUT_Weapon_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Coin) == LAYOUT_Coin_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Armour) == LAYOUT_Armour_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Creature) == LAYOUT_Creature_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Monster) == LAYOUT_Monster_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Character) == LAYOUT_Character_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Player) == LAYOUT_Player_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Feature) == LAYOUT_Feature_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Door) == LAYOUT_Door_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Trap) == LAYOUT_Trap_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Portal) == LAYOUT_Portal_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Map) == LAYOUT_Map_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Game) == LAYOUT_Game_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
+static_assert(sizeof(Module) == LAYOUT_Module_SIZE,
+              "RecordLayout.h is stale: rebuild with build_macos.sh");
 
-/* Creature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
-   10-12, both shared with the Item row above; pad after Creature::cFP
-   1558-1560; pad after Creature::concentUsed 1577-1578; tail pad after
-   Creature::LightAverseWasBright 1679-1680. ts covers 128-1540 whole,
-   because the FIELD_OBJ embed marks the range and so takes TargetSystem's
-   own interior padding with it.
+static const SchemaPad ItemPads[] = { LAYOUT_Item_PADS };
+static const SchemaPad QItemPads[] = { LAYOUT_QItem_PADS };
+static const SchemaPad FoodPads[] = { LAYOUT_Food_PADS };
+static const SchemaPad CorpsePads[] = { LAYOUT_Corpse_PADS };
+static const SchemaPad ContainerPads[] = { LAYOUT_Container_PADS };
+static const SchemaPad WeaponPads[] = { LAYOUT_Weapon_PADS };
+static const SchemaPad CoinPads[] = { LAYOUT_Coin_PADS };
+static const SchemaPad ArmourPads[] = { LAYOUT_Armour_PADS };
+static const SchemaPad CreaturePads[] = { LAYOUT_Creature_PADS };
+static const SchemaPad MonsterPads[] = { LAYOUT_Monster_PADS };
+static const SchemaPad CharacterPads[] = { LAYOUT_Character_PADS };
+static const SchemaPad PlayerPads[] = { LAYOUT_Player_PADS };
+static const SchemaPad FeaturePads[] = { LAYOUT_Feature_PADS };
+static const SchemaPad DoorPads[] = { LAYOUT_Door_PADS };
+static const SchemaPad TrapPads[] = { LAYOUT_Trap_PADS };
+static const SchemaPad PortalPads[] = { LAYOUT_Portal_PADS };
+static const SchemaPad MapPads[] = { LAYOUT_Map_PADS };
+static const SchemaPad GamePads[] = { LAYOUT_Game_PADS };
+static const SchemaPad ModulePads[] = { LAYOUT_Module_PADS };
 
-   inc-30ps phase 1 moved this tail pad's start from 1677 to 1679: TouchDef
-   (FIELD_I16 286) was declared right after Attr[ATTR_LAST], which shifted
-   every later member of Creature forward by its own 2 bytes, WITHOUT
-   growing sizeof(Creature) -- the insertion exactly consumed what used to
-   be this row's first 2 bytes of tail padding. ShadowRange (FIELD_U8 284)
-   and NatureSight (FIELD_U8 285) are the two members that shift landed on:
-   both are archived fields, and both now sit at 1677 and 1678, inside what
-   this row used to call padding. Measured 2026-09-22 (offsetof: ShadowRange
-   1677, NatureSight 1678, LightAverseWasBright 1679; sizeof(Creature) 1680,
-   unchanged). LightAverseWasBright carries no FIELD_ macro -- it is derived
-   state, not saved -- so it alone is the real 1-byte tail pad left. */
-static const SchemaPad CreaturePads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 }
-};
-
-/* Monster: CreaturePads (see its comment for the 1679-1680 tail pad, moved
-   there from 1677-1680 by inc-30ps phase 1's TouchDef insertion), plus the
-   tail pad after Recent[6] ends at 1692 and sizeof(Monster) is 1696 --
-   unaffected by the TouchDef shift, because Creature's own size did not
-   change. */
-static const SchemaPad MonsterPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1692, 4 }
-};
-
-/* Character: CreaturePads (see its comment for the 1679-1680 tail pad,
-   moved there from 1677-1680 by inc-30ps phase 1's TouchDef insertion),
-   plus the pads the compiler leaves between its own members. Each one is
-   the gap before the next member's alignment: 1937 after SkillRanks[49],
-   2331 after Abilities[143], 2421 after RageCount, 2436 before LastRest,
-   2741 after NotifiedLevel, 7196 before SacVals, 8548 before lastPulse, and
-   the 4-byte tail after Proficiencies. None of these move with TouchDef,
-   because Creature's own size did not change.
-
-   No object is ever exactly a Character -- the class is abstract
-   (AdvanceLevel is pure virtual) -- so this row is never the one
-   ObjectSize() selects. It is here because Character's field list is real
-   and its padding is what Player's row inherits: if upstream adds a member
-   to Character, the two rows move together and both must be re-measured. */
-static const SchemaPad CharacterPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1953, 1 }, { 2347, 1 }, { 2437, 1 }, { 2438, 2 }, { 2454, 2 }, { 2759, 1 },
-    { 2874, 2 }, { 11314, 2 }, { 12666, 2 }
-};
-
-/* Player: CharacterPads without Character's tail pad -- Player's
-   MapMemoryMask occupies 12490 -- plus Player's own seven gaps and its
-   6-byte tail. MessageQueue, QuickKeys, Macros, JournalInfo and
-   GameTimeInfo carry no rows: each travels as an embed over its whole
-   range, which marks its interior padding too. The shared 1679-1680 tail
-   pad (see CreaturePads) and everything after it are unaffected by
-   inc-30ps phase 1's TouchDef insertion, because Creature's own size did
-   not change. */
-static const SchemaPad PlayerPads[] = {
-    { 0, 8 }, { 10, 2 }, { 1558, 2 }, { 1577, 1 }, { 1679, 1 },
-    { 1953, 1 }, { 2347, 1 }, { 2437, 1 }, { 2438, 2 }, { 2454, 2 }, { 2759, 1 },
-    { 2874, 2 }, { 11314, 2 }, { 12666, 2 },
-    { 12829, 1 }, { 12894, 2 }, { 22098, 6 }, { 22130, 6 },
-    { 22530, 6 }, { 22921, 3 }, { 23882, 6 }
-};
-
-/* Feature chain on arm64/LP64: vptr 0-8 and the pad after Object::Type
-   10-12, both shared with the Item/Creature rows above (same Thing base,
-   measured identical by the absence of any other coverage finding below
-   offset 128 while these four classes' own fields were still undeclared).
-   Feature's own members (cHP 128, mHP 130, fID 132, MoveMod 136) run
-   128-137; tail pad 137-144. sizeof(Feature) 144.
-
-   Feature, Door, Trap and Portal are all sizeof 144 -- Feature's own tail
-   padding (7 bytes) is roomy enough to swallow Door's and Trap's one extra
-   member without growing the object -- so size alone cannot select the
-   right row for these four the way it does for every earlier class. v1Cov-
-   Begin's exact (size, type) pass (below) picks the right row by Object::
-   Type; the size-only fallback pass is what still selects this row for a
-   real Feature or Portal object (both share this exact layout: Portal adds
-   nothing, see PortalPads). */
-static const SchemaPad FeaturePads[] = {
-    { 0, 8 }, { 10, 2 }, { 137, 7 }
-};
-
-/* Door: Feature's base pads, but Door itself uses the 137-144 range instead
-   of leaving it padding -- DoorFlags at 137, a 2-byte alignment gap before
-   the uint32 SecretSavedGlyph at 140. Only that internal gap is padding.
-   sizeof(Door) 144, same as Feature (measured; see FeaturePads). */
-static const SchemaPad DoorPads[] = {
-    { 0, 8 }, { 10, 2 }, { 138, 2 }
-};
-
-/* Trap: same shape as Door -- TrapFlags at 137, a 2-byte alignment gap,
-   then the uint32 tID at 140. sizeof(Trap) 144. */
-static const SchemaPad TrapPads[] = {
-    { 0, 8 }, { 10, 2 }, { 138, 2 }
-};
-
-/* Portal: FeaturePads verbatim -- Portal adds no members of its own, so its
-   layout is byte-for-byte Feature's (measured: cHP/mHP/fID/MoveMod land at
-   the same offsets, tail pad 137-144). This row still lands (spec: a class
-   with no own members still gets pinned) so an upstream addition to Portal
-   is caught, and the (size, type) match in v1CovBegin picks it over
-   Feature's row for a real Portal object. */
-static const SchemaPad PortalPads[] = {
-    { 0, 8 }, { 10, 2 }, { 137, 7 }
-};
-
-/* QItem chain on arm64/LP64: ItemPads' five interior/vptr pads (0-8, 10-12,
-   133-134, 151-152, 156-160), unchanged -- QItem adds no members before
-   offset 218. QItem's own members, Qualities[8] and KnownQualities, land in
-   and past Item's former 218-224 tail pad (9 bytes don't fit in 6, so
-   sizeof(QItem) grows to 232); tail pad 227-232.
-
-   No T_* type placement-news a bare QItem (every concrete descendant
-   does), and v1PinClassForType (below) never maps a Type to "QItem" for
-   that reason -- so, UNLIKE Item's row, this row is never selected by
-   v1CovBegin at all, by construction, not by a coincidence of size or
-   fallback order. (An earlier version of this comment claimed the same
-   for the OLD size-only-fallback selector, which was false: T_CONTAIN and
-   T_BOW records, whose class the old single-`type` field never named,
-   fell through by size and landed on whichever 232-byte row was first in
-   the array -- often this one. v1PinClassForType removed that fallback
-   path entirely; a row is now selected only by an alias this function
-   names explicitly.) This row exists purely so QItem's own layout is
-   documented once, in the one place every QItem descendant's own pads are
-   measured against.
-
-   Armour declares no members of its own (spec: a class with no own
-   members still gets pinned). Its OWN row, below, is selected via
-   T_ARMOUR/T_SHIELD/T_GAUNTLETS/T_BOOTS in v1PinClassForType -- never via
-   this row -- and simply reuses this array because a real Armour object's
-   layout is measured byte-identical to QItem's own: its only uncovered
-   range past offset 156 is (227, 5), the same as QItem's tail. */
-static const SchemaPad QItemPads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 5 }
-};
-
-/* Food chain: QItemPads' shape through offset 227, but Food's own Eaten
-   (int16) fills part of QItem's spare tail room instead of leaving it as
-   padding: a 1-byte alignment gap at 227, Eaten at 228-229, a 2-byte tail
-   pad 230-232. sizeof(Food) 232, same as QItem/Container/Weapon/Armour --
-   Food's 2-byte member fits in QItem's spare room without growing the
-   object (measured, mirrors the Feature/Door/Trap/Portal precedent above). */
-static const SchemaPad FoodPads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
-    { 230, 2 }
-};
-
-/* Corpse chain: FoodPads' shape through offset 232 (Corpse adds no member
-   inside QItem's tail room; mID/TurnCreated/LastDiseaseDCCheck are new
-   members past 232, not padding), plus a 6-byte tail after
-   LastDiseaseDCCheck. sizeof(Corpse) 248. */
-static const SchemaPad CorpsePads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
-    { 230, 2 }, { 242, 6 }
-};
-
-/* Container chain: QItemPads' shape through offset 227, but Contents (hObj,
-   4 bytes) fills QItem's spare tail room exactly, after the same 1-byte
-   alignment gap -- no tail pad left. sizeof(Container) 232, same as
-   QItem/Food/Weapon/Armour. */
-static const SchemaPad ContainerPads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 }
-};
-
-/* Weapon chain: same shape as FoodPads -- Bane (int16) lands where Food's
-   Eaten does, for the same reason (the sole 2-byte member added after
-   QItem's own tail room, same alignment gap and tail pad). sizeof(Weapon)
-   232. */
-static const SchemaPad WeaponPads[] = {
-    { 0, 8 }, { 10, 2 }, { 133, 1 }, { 151, 1 }, { 156, 4 }, { 227, 1 },
-    { 230, 2 }
-};
-
-/* Map on arm64/LP64: the shared Object prefix (vptr 0-8, pad after Type
-   10-12), then one gap per alignment step between its own members --
-   23 after inGenerate (bool), 2131 after QueueSP (int8), 2139 after
-   inDaysPassed (bool), 2214 after Day (int16, before the 8-aligned
-   Overlay), 4228 after ov (Overlay is 2012 bytes, the arrays behind it are
-   8-aligned), 4314 after FieldCount, and the 6-byte tail after
-   PreviousAuguries. Every static member is generation scratch outside the
-   object. Measured 2026-08-24; sizeof(Map) 4344. */
-static const SchemaPad MapPads[] = {
-    { 0, 8 }, { 10, 2 }, { 23, 1 }, { 2131, 1 }, { 2139, 1 }, { 2214, 2 },
-    { 4228, 4 }, { 4314, 2 }, { 4338, 6 }
-};
-
-/* Game on arm64/LP64: the shared Object prefix, then 2110 after Day (int16),
-   2116 after Turn (uint32, before the 8-aligned String SaveFile), 3698
-   after Difficulty (int8, before the 4-aligned DungeonID), 3892 after
-   DungeonSize (int16[32], before the 8-aligned DungeonLevels pointers),
-   8794 after szFindCache (int16, before the 8-aligned VM), and the 4-byte
-   tail after BarrierCount. Modules[] and the destroy queues are static and
-   outside the object. Measured 2026-08-24; sizeof(Game) 8840. */
-static const SchemaPad GamePads[] = {
-    { 0, 8 }, { 10, 2 }, { 2110, 2 }, { 2116, 4 }, { 3698, 2 },
-    { 3892, 4 }, { 8794, 6 }, { 8836, 4 }
-};
-
-/* Module on arm64/LP64: the shared Object prefix, then 49178 after Slot
-   (int16, before the 8-aligned Q* pointers), 49380 after szCodeSeg (int32,
-   before the 8-aligned Annotations), and 49458 after szEnc (int16, before
-   the 4-aligned TurnLastUsed). No tail pad. Measured 2026-08-24;
-   sizeof(Module) 49464. The row matters even though no check ever produces
-   a T_MODULE v1 record (see the field list's own comment in inc/Res.h):
-   an upstream member change must still be caught on purpose. */
-static const SchemaPad ModulePads[] = {
-    { 0, 8 }, { 10, 2 }, { 49178, 6 }, { 49380, 4 }, { 49458, 2 }
-};
-
+#define SCHEMA_PIN(C) { #C, sizeof(C), C##Pads, \
+                        (int)(sizeof(C##Pads)/sizeof(C##Pads[0])) }
 static const SchemaPin SchemaPins[] = {
-    { "Item", sizeof(Item), ItemPads,
-      (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
-    { "QItem", sizeof(QItem), QItemPads,
-      (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
-    { "Food", sizeof(Food), FoodPads,
-      (int)(sizeof(FoodPads)/sizeof(FoodPads[0])) },
-    { "Corpse", sizeof(Corpse), CorpsePads,
-      (int)(sizeof(CorpsePads)/sizeof(CorpsePads[0])) },
-    { "Container", sizeof(Container), ContainerPads,
-      (int)(sizeof(ContainerPads)/sizeof(ContainerPads[0])) },
-    { "Weapon", sizeof(Weapon), WeaponPads,
-      (int)(sizeof(WeaponPads)/sizeof(WeaponPads[0])) },
-    /* Coin declares no own members (ARCHIVE_CLASS body is empty; pin row
-       only). Measured sizeof(Coin) == sizeof(Item) == 224 and Coin's
-       uncovered range is identical to ItemPads' own tail -- typeSize(T_COIN)
-       reports sizeof(Item) while the placement-new switch constructs a Coin
-       (docs/ENGINE-SERIALISATION.md defect 3, spec risk 3, preserved on
-       purpose), but the two sizes coincide here, so no allocation shortfall
-       follows from the mismatch. */
-    { "Coin", sizeof(Coin), ItemPads,
-      (int)(sizeof(ItemPads)/sizeof(ItemPads[0])) },
-    /* Armour declares no own members (pin row only); see the QItemPads
-       comment above -- this row's pads ARE QItemPads, because a real
-       Armour object's layout is measured byte-identical to QItem's own. */
-    { "Armour", sizeof(Armour), QItemPads,
-      (int)(sizeof(QItemPads)/sizeof(QItemPads[0])) },
-    { "Creature", sizeof(Creature), CreaturePads,
-      (int)(sizeof(CreaturePads)/sizeof(CreaturePads[0])) },
-    { "Monster", sizeof(Monster), MonsterPads,
-      (int)(sizeof(MonsterPads)/sizeof(MonsterPads[0])) },
-    { "Character", sizeof(Character), CharacterPads,
-      (int)(sizeof(CharacterPads)/sizeof(CharacterPads[0])) },
-    { "Player", sizeof(Player), PlayerPads,
-      (int)(sizeof(PlayerPads)/sizeof(PlayerPads[0])) },
-    { "Feature", sizeof(Feature), FeaturePads,
-      (int)(sizeof(FeaturePads)/sizeof(FeaturePads[0])) },
-    { "Door", sizeof(Door), DoorPads,
-      (int)(sizeof(DoorPads)/sizeof(DoorPads[0])) },
-    { "Trap", sizeof(Trap), TrapPads,
-      (int)(sizeof(TrapPads)/sizeof(TrapPads[0])) },
-    { "Portal", sizeof(Portal), PortalPads,
-      (int)(sizeof(PortalPads)/sizeof(PortalPads[0])) },
-    { "Map", sizeof(Map), MapPads,
-      (int)(sizeof(MapPads)/sizeof(MapPads[0])) },
-    { "Game", sizeof(Game), GamePads,
-      (int)(sizeof(GamePads)/sizeof(GamePads[0])) },
-    { "Module", sizeof(Module), ModulePads,
-      (int)(sizeof(ModulePads)/sizeof(ModulePads[0])) },
+    SCHEMA_PIN(Item),
+    SCHEMA_PIN(QItem),
+    SCHEMA_PIN(Food),
+    SCHEMA_PIN(Corpse),
+    SCHEMA_PIN(Container),
+    SCHEMA_PIN(Weapon),
+    SCHEMA_PIN(Coin),
+    SCHEMA_PIN(Armour),
+    SCHEMA_PIN(Creature),
+    SCHEMA_PIN(Monster),
+    SCHEMA_PIN(Character),
+    SCHEMA_PIN(Player),
+    SCHEMA_PIN(Feature),
+    SCHEMA_PIN(Door),
+    SCHEMA_PIN(Trap),
+    SCHEMA_PIN(Portal),
+    SCHEMA_PIN(Map),
+    SCHEMA_PIN(Game),
+    SCHEMA_PIN(Module),
 };
+
+/* Embedded structs whose own compiler padding an embed may leave. An embed no
+   longer marks its whole range covered: the FIELD_ lines inside it mark their
+   own bytes, and v1CovCloseEmbed requires every other byte to be this struct's
+   padding, generated like the class pads above. The first column is the embed's
+   name as the field list gives it. An embed listed here or in SchemaStrictWrappers
+   is STRICT. Every other embed (a FIELD_OBJ over a sub-object whose bytes other
+   code saves, ClassID, Tattoos, the Map and Res lists) still marks its whole range
+   covered, as before phase 8b. */
+#define SCHEMA_EMBED_TYPES(X) \
+    X("JournalInfo", JournalInfoType) \
+    X("GameTimeInfo", GameTimeInfoType) \
+    X("QuickKey", QuickKey)
+
+/* Embeds that wrap an array of strict things and hold no struct of their own:
+   no padding, and they must not hide an inner member either. */
+static const char *const SchemaStrictWrappers[] = { "Macros", "QuickKeys", "MessageQueue" };
+
+struct SchemaEmbed { const char *name; const SchemaPad *pads; };
+#define X(N, T) \
+    static_assert(sizeof(T) == LAYOUT_EMBED_##T##_SIZE, \
+                  "RecordLayout.h is stale: rebuild with build_macos.sh"); \
+    static const SchemaPad T##EmbedPads[] = { LAYOUT_EMBED_##T##_PADS { 0, 0 } };
+SCHEMA_EMBED_TYPES(X)
+#undef X
+#define X(N, T) { N, T##EmbedPads },
+static const SchemaEmbed SchemaEmbeds[] = { SCHEMA_EMBED_TYPES(X) };
+#undef X
+#else
+static const SchemaPin SchemaPins[1] = { { NULL, 0, NULL, 0 } };
+#endif
+
+/* The members of String that V1Str accounts for. V1Str saves a String by its
+   text, so no FIELD_ line exists per member: it marks the whole String covered.
+   tools/gen_record_layout.py fails the build when the compiler's member list
+   for String (inc/Base.h) differs from this one, naming the member. */
+#define V1STR_MEMBERS "Canary", "Buffer", "Length"
+#define SCHEMA_NPINS ((int)(sizeof(SchemaPins)/sizeof(SchemaPins[0])) - (LAYOUT_MEASURED ? 0 : 1))
 
 /* Maps a record's Type byte to the class its row is filed under, by
    transcribing the placement-new switch's arms (Registry::LoadGroup,
@@ -1056,7 +931,7 @@ static const char* v1PinClassForType(int16 type)
 
 static const SchemaPin* v1FindPinByClass(const char *cls)
   {
-    for (size_t i = 0; i != sizeof(SchemaPins)/sizeof(SchemaPins[0]); i++)
+    for (int i = 0; i != SCHEMA_NPINS; i++)
       if (!strcmp(SchemaPins[i].cls, cls))
         return &SchemaPins[i];
     return NULL;
@@ -1069,7 +944,8 @@ struct V1Cov {
     const char *base;              /* the object being written */
     const SchemaPin *pin;          /* NULL when no row matched */
     const char *cls;
-    struct { size_t off, len; } open[V1_MAX_DEPTH];  /* embed ranges */
+    struct { size_t off, len; const SchemaPad *pads; const char *name; bool strict; }
+        open[V1_MAX_DEPTH];        /* embed ranges */
     int openDepth;
 };
 static V1Cov v1Cov;
@@ -1081,6 +957,16 @@ static long v1CovFindings;         /* per -schematest run; never reset by a
 static void v1CovBegin(Object *o)
   {
 #ifdef DEBUG
+#if !LAYOUT_MEASURED
+    /* No record layout from this compiler: say so once and measure nothing.
+       v1Cov.map stays NULL, so every v1Cov* call below is a no-op. */
+    static bool said;
+    if (!said)
+      { said = true;
+        fprintf(stderr, "coverage: record layout not measured on this compiler\n"); }
+    (void)o;
+    return;
+#else
     size_t sz = o->ObjectSize();
     v1Cov.map = (uint8*) calloc(1, sz);
     v1Cov.len = sz;
@@ -1116,20 +1002,20 @@ static void v1CovBegin(Object *o)
                 (unsigned long)sz, (int)o->Type);
         }
     }
+#endif
 #else
     (void)o;
 #endif
   }
 
-#ifdef DEBUG
 static bool v1CovInsideOpen(size_t b)
   {
     for (int i = 0; i != v1Cov.openDepth; i++)
-      if (b >= v1Cov.open[i].off && b < v1Cov.open[i].off + v1Cov.open[i].len)
+      if (!v1Cov.open[i].strict &&
+          b >= v1Cov.open[i].off && b < v1Cov.open[i].off + v1Cov.open[i].len)
         return true;
     return false;
   }
-#endif
 
 static void v1CovMark(const void *p, size_t size)
   {
@@ -1145,7 +1031,7 @@ static void v1CovMark(const void *p, size_t size)
         if (v1Cov.map[b])
           {
             if (v1CovInsideOpen(b))
-              continue;      /* redundant mark inside an open embed: legal */
+              continue;      /* redundant mark inside an open whole-range embed: legal */
             v1CovFindings++;
             Error("SCHEMA COVERAGE: %s: byte at offset %lu is covered twice",
                   v1Cov.cls, (unsigned long)b);
@@ -1158,35 +1044,80 @@ static void v1CovMark(const void *p, size_t size)
 #endif
   }
 
-static void v1CovOpenEmbed(const void *p, size_t size)
+static void v1CovOpenEmbed(const char *name, const void *p, size_t size)
   {
 #ifdef DEBUG
     if (!v1Cov.map)
       return;
     const char *cp = (const char*) p;
     size_t off = 0, len = 0;
-    if (cp >= v1Cov.base && cp + size <= v1Cov.base + v1Cov.len)
+    bool inside = cp >= v1Cov.base && cp + size <= v1Cov.base + v1Cov.len;
+    if (inside)
       {
-        v1CovMark(p, size);   /* interior padding of the embedded type too */
         off = (size_t)(cp - v1Cov.base);
         len = size;
       }
     if (v1Cov.openDepth < V1_MAX_DEPTH)
       {
+        const SchemaPad *pads = NULL;
+        bool strict = false;
+        for (size_t i = 0; i != sizeof(SchemaStrictWrappers)/sizeof(SchemaStrictWrappers[0]); i++)
+          if (!strcmp(SchemaStrictWrappers[i], name))
+            strict = true;
+        for (size_t i = 0; i != sizeof(SchemaEmbeds)/sizeof(SchemaEmbeds[0]); i++)
+          if (!strcmp(SchemaEmbeds[i].name, name))
+            { pads = SchemaEmbeds[i].pads; strict = true; }
+        if (inside && !strict)
+          v1CovMark(p, size);   /* whole-range embed: interior padding too */
+        v1Cov.open[v1Cov.openDepth].strict = strict;
         v1Cov.open[v1Cov.openDepth].off = off;
         v1Cov.open[v1Cov.openDepth].len = len;
+        v1Cov.open[v1Cov.openDepth].pads = pads;
+        v1Cov.open[v1Cov.openDepth].name = name;
         v1Cov.openDepth++;
       }
 #else
-    (void)p; (void)size;
+    (void)name; (void)p; (void)size;
 #endif
   }
 
+/* An embed does not mark its range covered; the FIELD_ lines inside it do.
+   At close, each byte of the range must be covered by one of them or be the
+   embedded struct's own padding (the generated rows for its name). The padding
+   is then marked covered, so an enclosing embed (QuickKeys over its elements)
+   sees every byte accounted for and cannot hide an inner member. */
 static void v1CovCloseEmbed(void)
   {
 #ifdef DEBUG
-    if (v1Cov.map && v1Cov.openDepth > 0)
-      v1Cov.openDepth--;
+    if (!v1Cov.map || v1Cov.openDepth <= 0)
+      return;
+    v1Cov.openDepth--;
+    if (!v1Cov.open[v1Cov.openDepth].strict)
+      return;
+    size_t off = v1Cov.open[v1Cov.openDepth].off, len = v1Cov.open[v1Cov.openDepth].len;
+    const SchemaPad *pads = v1Cov.open[v1Cov.openDepth].pads;
+    if (pads)
+      for (; pads->len; pads++)
+        for (uint32 b = 0; b != pads->len; b++)
+          if (pads->off + b < len && !v1Cov.map[off + pads->off + b])
+            v1Cov.map[off + pads->off + b] = 1;
+    size_t b = 0;
+    while (b != len)
+      {
+        if (v1Cov.map[off + b])
+          { b++; continue; }
+        size_t start = b;
+        while (b != len && !v1Cov.map[off + b])
+          b++;
+        v1CovFindings++;
+        Error("SCHEMA COVERAGE: %s: embed %s: uncovered bytes at offset %lu, length %lu "
+              "(offset %lu in the embed)",
+              v1Cov.cls, v1Cov.open[v1Cov.openDepth].name,
+              (unsigned long)(off + start), (unsigned long)(b - start),
+              (unsigned long)start);
+        for (size_t k = start; k != b; k++)
+          v1Cov.map[off + k] = 1;   /* one finding per gap, not one per enclosing embed */
+      }
 #endif
   }
 
@@ -1463,6 +1394,7 @@ static void v1WriteVariables(Module *mod, const char *seg)
             v1PutU8(&records, (uint8)len);
             v1Put(&records, d->Ident, len);
             v1PutU32(&records, (uint32)value);
+            { extern void V1FvVariable(Module*, DebugInfo*, int32); V1FvVariable(mod, d, value); }
           }
         v1PutU16(&v1Out, "VariableCount");
         v1PutU8(&v1Out, K_U32);
@@ -3276,7 +3208,7 @@ static void v1EmbedBegin(const char *base, const char *idname, void *member, siz
       return;
     if (v1.mode == V1_SAVE)
       {
-        v1CovOpenEmbed(member, size);
+        v1CovOpenEmbed(base, member, size);
         uint16 tag = v1WNameId(idname);   /* in the parent frame, under the parent scope */
         if (v1ProbeDepth < V1_MAX_DEPTH) v1ProbeStack[v1ProbeDepth++] = v1ProbeScope;
         v1PutU16(&v1Out, tag);
@@ -3716,6 +3648,8 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
               V1Cover(&(o->Type), sizeof(o->Type));
               V1Cover(&(o->myHandle), sizeof(o->myHandle));
 
+              size_t fvStart = v1Out.len;
+              v1FvMembers.clear();
               v1PutU8(&v1Out, (uint8)o->Type);
               v1PutU32(&v1Out, (uint32)o->myHandle);
               size_t lenPos = v1Out.len;
@@ -3726,6 +3660,7 @@ int16 Registry::SaveGroupV1(Term &t, hObj hGroup)
               v1PutU16(&v1Out, 0);   /* record terminator */
               v1Patch32(&v1Out, lenPos, (uint32)(v1Out.len - (lenPos + 4)));
               ASSERT(v1.wEmbedDepth == 0);
+              { extern void V1FvRec(size_t, uint8, uint32); V1FvRec(fvStart, (uint8)o->Type, (uint32)o->myHandle); }
               v1CovEnd();
 
               r = r->Next;
@@ -6278,4 +6213,337 @@ int RunSaveConvert(const char *path)
     printf("incursion -convert: %s is now %s; the v0 original is kept at\n"
            "%s\n", resolved, SaveSchemaID(), v0path);
     return 0;
+  }
+
+/* inc-cjos0: INCURSION_FIELD_VALUES=<file> appends one line per field the writer emitted:
+   "<h>:<type>/<scope path> <name> <kind> <value>" (rIDs by resource name, blobs as hash+length). It decodes the
+   finished record bytes, so it sees every field and cannot disagree with the file. Off when unset. */
+static void v1FvQuote(std::string &o, const uint8 *p, size_t n)
+  {
+    o += '"';
+    for (size_t i = 0; i != n; i++)
+      {
+        char b[8];
+        if (p[i] == '"' || p[i] == '\\') { o += '\\'; o += (char)p[i]; }
+        else if (p[i] < 0x20 || p[i] > 0x7e) { snprintf(b, sizeof(b), "\\x%02x", p[i]); o += b; }
+        else o += (char)p[i];
+      }
+    o += '"';
+  }
+
+static std::string v1FvHash(const uint8 *p, size_t n)
+  {
+    unsigned long long h = 1469598103934665603ULL;
+    for (size_t i = 0; i != n; i++) { h ^= p[i]; h *= 1099511628211ULL; }
+    char b[48];
+    snprintf(b, sizeof(b), "len=%lu h=%016llx", (unsigned long)n, (unsigned long long)h);
+    return b;
+  }
+
+static std::string v1FvInt(const uint8 *p, size_t sz, bool sgn)
+  {
+    unsigned long long u = 0;
+    memcpy(&u, p, sz);   /* little-endian host, as the writer */
+    char b[32];
+    if (sgn) { long long s = (sz == 1) ? (int8)u : (sz == 2) ? (int16)u : (sz == 4) ? (int32)u : (long long)u;
+               snprintf(b, sizeof(b), "%lld", (long long)s); }
+    else snprintf(b, sizeof(b), "%llu", (unsigned long long)u);
+    return b;
+  }
+
+
+/* inc-cjos0 phase 8, D3: a member that holds a typed-family value prints the number AND the name the CURRENT
+   build gives it, `nature=251(AC8_RACE_A)`, so a change of meaning shows as a changed line. The tables are
+   generated on every build from the family marks (tools/gen_family_names.py -> build/gen/FamilyNames.h). */
+#if defined(__has_include)
+# if __has_include("FamilyNames.h")
+#  include "FamilyNames.h"
+# endif
+#endif
+#ifndef FAMNAMES_MEASURED
+# define FAMNAMES_MEASURED 0
+#endif
+
+struct V1FamTab { const char *fam; const struct FamName *rows; int n; };
+#if FAMNAMES_MEASURED
+static const V1FamTab v1FamTabs[] = {
+    { "stati", FamNames_stati, FamNames_stati_n }, { "ss", FamNames_ss, FamNames_ss_n },
+    { "ft", FamNames_ft, FamNames_ft_n },          { "sk", FamNames_sk, FamNames_sk_n },
+    { "attr", FamNames_attr, FamNames_attr_n },    { "ca", FamNames_ca, FamNames_ca_n },
+    { "sl", FamNames_sl, FamNames_sl_n },          { "ma", FamNames_ma, FamNames_ma_n },
+    { "kn", FamNames_kn, FamNames_kn_n },          { "if_flag", FamNames_if_flag, FamNames_if_flag_n },
+    { "target_why_type", FamNames_target_why_type, FamNames_target_why_type_n },
+};
+#endif
+
+/* The name the current build gives <value> in family <fam>, or NULL (no table, or no name). */
+const char *V1FamName(const char *fam, long value)
+  {
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FamTabs) / sizeof(v1FamTabs[0]); t++)
+      if (!strcmp(v1FamTabs[t].fam, fam))
+        for (int i = 0; i != v1FamTabs[t].n; i++)
+          if (v1FamTabs[t].rows[i].value == value) return v1FamTabs[t].rows[i].name;
+#else
+    (void)fam; (void)value;
+#endif
+    return NULL;
+  }
+
+/* The value the current build gives <name> in family <fam>; false when it has none. */
+bool V1FamValue(const char *fam, const char *name, long &value)
+  {
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FamTabs) / sizeof(v1FamTabs[0]); t++)
+      if (!strcmp(v1FamTabs[t].fam, fam))
+        for (int i = 0; i != v1FamTabs[t].n; i++)
+          if (!strcmp(v1FamTabs[t].rows[i].name, name)) { value = v1FamTabs[t].rows[i].value; return true; }
+#else
+    (void)fam; (void)name; (void)value;
+#endif
+    return false;
+  }
+
+/* "(NAME)", or "(?)" for a value with no name; "" when the build has no tables at all. */
+static std::string v1FamShow(const char *fam, long value)
+  {
+    if (!FAMNAMES_MEASURED) return "";
+    const char *n = V1FamName(fam, value);
+    return n ? std::string("(") + n + ")" : "(?)";
+  }
+
+/* Which family names the INDEX of a saved array, or its bits. 0 = not a typed-index array. */
+static const char *v1FvIndexFam(const std::string &name)
+  {
+    if (name == "Attr" || name == "KAttr" || name == "BAttr") return "attr";
+    if (name == "SkillRanks") return "sk";
+    if (name == "Abilities") return "ca";
+    if (name == "Inv") return "sl";
+    if (name == "JournalInfo_numMonOfType") return "ma";
+    return NULL;
+  }
+
+/* A row array (hpRolls, manaRolls, SacVals) travels with its row length; the observer prints it by (row, column),
+   the last two columns of a SacVals row by name, so a limit that grew moves no cell it keeps. inc-cjos0 phase 8. */
+static uint32 v1FvRowLen[3];   /* hpRolls, manaRolls, SacVals */
+static int v1FvRowIdx(const std::string &name)
+  {
+    return name == "hpRolls" ? 0 : name == "manaRolls" ? 1 : name == "SacVals" ? 2 : -1;
+  }
+
+/* Walk the fields in [p, p+len) (ends at its tag-0). Returns false on a malformed stream. */
+static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec, const std::string *emb, size_t &mi)
+  {
+    size_t pos = 0;
+    for (;;)
+      {
+        uint16 tag; uint8 kind;
+        if (pos + 2 > len) return false;
+        memcpy(&tag, p + pos, 2); pos += 2;
+        if (tag == 0) return pos == len;
+        if (pos + 1 > len || tag > v1WNames.size()) return false;
+        kind = p[pos++];
+        const V1NameRow &row = v1WNames[tag - 1];
+        if (mi >= v1FvMembers.size()) return false;
+        std::string mem;   /* the C++ member the FIELD_ line names, without spaces */
+        for (size_t c = 0; c != v1FvMembers[mi].size(); c++)
+          if (!isspace((unsigned char)v1FvMembers[mi][c])) mem += v1FvMembers[mi][c];
+        mi++;
+        mem += '=';
+        std::string scope = emb ? *emb : rec + "/" + row.scope;
+        std::string val;
+        const char *kn = "?";
+        size_t fx = v1KindFixedSize(kind);
+        if (fx)
+          {
+            if (pos + fx > len) return false;
+            if (kind == K_RID)
+              {
+                uint32 r; memcpy(&r, p + pos, 4);
+                Resource *res = r ? theGame->Get((rID)r) : NULL;
+                char b[24];
+                if (!r) val = "{null}";
+                else if (res) val = (const char*)res->GetName(0);
+                else { snprintf(b, sizeof(b), "rid:0x%08x", r); val = b; }
+                kn = "rid";
+              }
+            else
+              {
+                bool sgn = kind == K_I8 || kind == K_I16 || kind == K_I32 || kind == K_H;
+                val = v1FvInt(p + pos, fx, sgn);
+                kn = kind == K_H ? "h" : (sgn ? "int" : "uint");
+                if (scope.find(".Status#") != std::string::npos && (row.name == "nature" || row.name == "src"))
+                  val += v1FamShow(row.name == "nature" ? "stati" : "ss", atol(val.c_str()));
+              }
+            pos += fx;
+            fprintf(f, "%s %s %s %s%s\n", scope.c_str(), row.name.c_str(), kn, mem.c_str(), val.c_str());
+            if (row.name.size() > 3 && row.name.compare(row.name.size() - 3, 3, "Row") == 0)
+              { int ri = v1FvRowIdx(row.name.substr(0, row.name.size() - 3)); if (ri >= 0) v1FvRowLen[ri] = (uint32)atol(val.c_str()); }
+            continue;
+          }
+        uint32 n, es;
+        if (kind == K_STR || kind == K_BLOB || kind == K_EMBED)
+          {
+            if (pos + 4 > len) return false;
+            memcpy(&n, p + pos, 4); pos += 4;
+            if (n > len - pos) return false;
+            if (kind == K_STR) { v1FvQuote(val, p + pos, n); kn = "str"; }
+            else if (kind == K_BLOB) { val = v1FvHash(p + pos, n); kn = "blob"; }
+            else
+              {
+                std::string sub = scope + "." + row.name;
+                if (!v1FvWalk(f, p + pos, n, rec, &sub, mi)) return false;
+                pos += n;
+                continue;
+              }
+            pos += n;
+            fprintf(f, "%s %s %s %s%s\n", scope.c_str(), row.name.c_str(), kn, mem.c_str(), val.c_str());
+            continue;
+          }
+        if (kind != K_ARRAY || pos + 8 > len) return false;
+        memcpy(&n, p + pos, 4); memcpy(&es, p + pos + 4, 4); pos += 8;
+        if (es == 0 || n > (len - pos) / es) return false;
+        const uint8 *a = p + pos;
+        pos += (size_t)n * es;
+        bool intEl = es == 1 || es == 2 || es == 4 || es == 8;
+        int rowi = intEl ? v1FvRowIdx(row.name) : -1;
+        if (rowi >= 0 && v1FvRowLen[rowi] > 0 && n % v1FvRowLen[rowi] == 0)
+          {
+            uint32 cols = v1FvRowLen[rowi];
+            for (uint32 i = 0; i != n; i++)
+              {
+                unsigned long long ev = 0;
+                memcpy(&ev, a + (size_t)i * es, es);
+                if (ev == 0) continue;
+                char idx[48];
+                if (rowi == 2 && i % cols >= cols - 2)
+                  snprintf(idx, sizeof(idx), "[%u][%s]", i / cols, (i % cols == cols - 2) ? "total" : "max");
+                else
+                  snprintf(idx, sizeof(idx), "[%u][%u]", i / cols, i % cols);
+                fprintf(f, "%s %s%s int %s%s\n", scope.c_str(), row.name.c_str(), idx, mem.c_str(),
+                        v1FvInt(a + (size_t)i * es, es, true).c_str());
+              }
+            continue;
+          }
+        /* A typed array (index = a status, skill, ability, slot, ...; Feats = one byte of feat bits) prints the
+           name beside each element, and when it is long prints each NONZERO element, not a hash per 32. */
+        const char *ifam = intEl ? v1FvIndexFam(row.name) : NULL;
+        bool featArr = intEl && row.name == "Feats";
+        bool typed = ifam || featArr;
+        uint32 step = (n <= 64 || typed) ? 1 : 32;   /* a long array logs a hash per 32 elements: a moved element still shows */
+        for (uint32 i = 0; i < n; i += step)
+          {
+            uint32 e = (i + step < n) ? i + step : n;
+            char idx[40];
+            if (step == 1) snprintf(idx, sizeof(idx), "[%u]", i);
+            else snprintf(idx, sizeof(idx), "[%u..%u]", i, e - 1);
+            unsigned long long ev = 0;
+            if (typed) memcpy(&ev, a + (size_t)i * es, es);
+            if (typed && n > 64 && ev == 0) continue;
+            val = (step == 1 && intEl) ? v1FvInt(a + (size_t)i * es, es, false) : v1FvHash(a + (size_t)i * es, (size_t)(e - i) * es);
+            if (typed && step == 1)
+              {
+                if (featArr)
+                  {
+                    std::string names;
+                    for (int b = 0; b != 16; b++)
+                      if (ev & (1ULL << b)) { if (!names.empty()) names += '|'; const char *fn = V1FamName("ft", (long)i * 8 + b); names += fn ? fn : "?"; }
+                    if (FAMNAMES_MEASURED && !names.empty()) val += "(" + names + ")";
+                  }
+                else if (FAMNAMES_MEASURED)
+                  {
+                    const char *nm = V1FamName(ifam, !strcmp(ifam, "sk") ? (long)SkillByIndex((int)i) : (long)i);
+                    val += nm ? std::string("(@") + nm + ")" : std::string("(?)");
+                  }
+              }
+            fprintf(f, "%s %s%s %s %s%s\n", scope.c_str(), row.name.c_str(), idx, (step == 1 && intEl) ? "uint" : "arr", mem.c_str(), val.c_str());
+          }
+      }
+  }
+
+static FILE *v1FvFile(void)
+  {
+    static FILE *f = NULL;
+    static bool init = false;
+    if (!init)
+      { init = true; const char *p = getenv("INCURSION_FIELD_VALUES"); if (p) f = fopen(p, "a"); }
+    return f;
+  }
+
+static bool v1FvOn(void) { return v1FvFile() != NULL; }
+
+/* inc-cjos0 phase 8, D4 (growth cases): one line per script variable, "<owner>.<ident>" with its value (an rID
+   variable by resource name), so a variable is observed by owner name and not through the segment's blob hash. */
+void V1FvVariable(Module *mod, DebugInfo *d, int32 value)
+  {
+    FILE *f = v1FvFile();
+    if (!f)
+      return;
+    const char *owner = "(module)";
+    if (d->BType != GLOB_VAR)
+      {
+        Resource *ores = mod->__GetResource(d->xID);
+        owner = ores ? mod->GetText(ores->Name) : "?";
+      }
+    char b[40];
+    std::string val;
+    const char *kn = "int";
+    if (d->DataType == DT_RID)
+      {
+        Resource *res = value ? theGame->Get((rID)value) : NULL;
+        kn = "rid";
+        if (!value) val = "{null}";
+        else if (res) val = (const char*)res->GetName(0);
+        else { snprintf(b, sizeof(b), "rid:0x%08x", (unsigned)value); val = b; }
+      }
+    else
+      { snprintf(b, sizeof(b), "%d", (int)value); val = b; }
+    std::string on = owner;   /* the value file is space-separated: an owner name keeps no spaces */
+    for (size_t i = 0; i != on.size(); i++) if (on[i] == ' ') on[i] = '_';
+    fprintf(f, "h128:t1/Game.ScriptVariable %s.%.31s %s %s\n", on.c_str(), d->Ident, kn, val.c_str());
+    fflush(f);
+  }
+
+void V1FvRec(size_t start, uint8 type, uint32 handle)
+  {
+    FILE *f = v1FvFile();
+    if (!f)
+      return;
+    const uint8 *p = (const uint8*)v1Out.p + start;
+    size_t len = v1Out.len - start;
+    char rec[40];
+    snprintf(rec, sizeof(rec), "h%u:t%u", (unsigned)handle, (unsigned)type);
+    size_t mi = 0;
+    memset(v1FvRowLen, 0, sizeof(v1FvRowLen));
+    if (len < 9 || !v1FvWalk(f, p + 9, len - 9, rec, NULL, mi) || mi != v1FvMembers.size())
+      fprintf(f, "%s MALFORMED-RECORD x x\n", rec);
+    fflush(f);
+  }
+
+/* -dump with INCURSION_FIELD_VALUES set: run the real writer over the loaded game into <out>, so the
+   probe logs what each member holds after load. The caller names a path that is not the input. */
+bool SaveV1_FieldValuesResave(const char *out)
+  {
+    String whyNot;
+    if (!SaveV1_CanWrite(*theGame, whyNot))
+      { fprintf(stderr, "incursion -dump: field-values re-save refused: %s\n", (const char*)whyNot); return false; }
+    try
+      {
+        fileHeader fh;
+        T1->OpenWrite(out);
+        memset(&fh, 0, sizeof(fh));
+        strcpy(fh.Version, SaveSchemaID());
+        fh.Sig = SIGNATURE;
+        fh.numGroups = 1;
+        fh.Compression = SaveV1_Raw() ? 0 : 1;
+        T1->FWrite(&fh, sizeof(fh));
+        MainRegistry.SaveGroupV1(*T1, 0);
+        T1->Close();
+      }
+    catch (int error_number)
+      {
+        fprintf(stderr, "incursion -dump: field-values re-save: %s\n", Lookup(FileErrors, error_number));
+        return false;
+      }
+    return true;
   }
