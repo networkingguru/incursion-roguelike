@@ -488,6 +488,11 @@ class Creature: public Thing, public Magic
             return choices[random(strlen(choices))];
           else
             return def; } 
+      /* What a script's yn and ChoicePrompt call (src/VMachine.cpp): the same
+         prompt, as one sourced decision while character creation is open. */
+      bool ScriptYn(const char* msg,bool def=true);
+      int8 ScriptChoicePrompt(const char*msg, const char*choices, char def=0,
+                     int8 col1=BROWN,int8 col2=YELLOW,bool preprompt=true);
       virtual bool canTalk(Creature *to=NULL);
       int32 ChargeBonus();
       uint32 getArmourType(bool count_shield, bool count_spells = true);

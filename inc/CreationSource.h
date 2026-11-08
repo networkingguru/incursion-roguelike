@@ -103,7 +103,11 @@
     X(SPECIALIST_SCHOOL, PICK) \
     X(TRAIN_REPLACE,    PICK) \
     X(SPELL_LEARN,      PICK) \
-    X(OPTIONS_FILE,     PICK)
+    X(OPTIONS_FILE,     PICK) \
+    X(SCRIPT_ROLL,      ROLL) \
+    X(SCRIPT_YN,        PICK) \
+    X(SCRIPT_CHOICE,    PICK) \
+    X(SCRIPT_MENU,      PICK)
 
 enum CreationKey {
 #define X(n,k) CK_##n,
@@ -127,7 +131,10 @@ struct CreationContext {
 /* A script event that makes a sourced decision pushes its context here, so
    the primitives find it without any change at the decision site. */
 struct CreationScope {
-    CreationScope(const char *resource, int event);
+    bool pushed;
+    /* `active` false pushes nothing: a caller that opens a scope only while the
+       creation window is open passes CreationWindowOpen() here. */
+    CreationScope(const char *resource, int event, bool active = true);
     ~CreationScope();
 };
 
@@ -226,6 +233,15 @@ struct CreationItemDepth {
 };
 bool CreationInsideItem();
 
+/* While a primitive's `live` runs, a draw or prompt the code makes is part of
+   that decision. The draw census reads this to tell a sourced draw from an
+   unsourced one (phase 6c). The primitives below set it. */
+struct CreationLiveDepth {
+    CreationLiveDepth();
+    ~CreationLiveDepth();
+};
+bool CreationInsideLive();
+
 /* The halves the primitives are built from. Answer returns false for
    NOT_RECORDED; a successful Answer or a Note advances the ordinal. */
 bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v);
@@ -254,7 +270,10 @@ int32 SourcedRoll(CreationKey k, Live live, const char *sub = NULL)
     int32 v;
     if (CreationAnswerRoll(k, sub, v))
         return v;
-    v = (int32)live();
+    {
+        CreationLiveDepth inside;
+        v = (int32)live();
+    }
     CreationNoteRoll(k, sub, v);
     return v;
 }
@@ -268,7 +287,10 @@ int32 SourcedPick(CreationKey k, const CreationPickList &list, Live live,
     int32 v; std::string text; bool inList;
     if (CreationAnswerPick(k, sub, list, v, text, inList) && inList)
         return v;
-    v = (int32)live();
+    {
+        CreationLiveDepth inside;
+        v = (int32)live();
+    }
     for (size_t i = 0; i != list.values.size(); i++)
         if (list.values[i] == v) {
             CreationNotePick(k, sub, list.names[i]);
@@ -290,7 +312,10 @@ void SourcedRoll(CreationKey k, int32 *vals, int16 n, const char *(*subName)(int
             break;
     if (i == n)
         return;
-    live();
+    {
+        CreationLiveDepth inside;
+        live();
+    }
     for (i = 0; i != n; i++)
         CreationNoteRoll(k, subName(i), vals[i]);
 }
@@ -307,7 +332,12 @@ bool SourcedPick(CreationKey k, const CreationPickList &list,
     if (CreationAnswerPickMany(k, sub, list, out))
         return true;
     out.clear();
-    if (!live(out))
+    bool decided;
+    {
+        CreationLiveDepth inside;
+        decided = live(out);
+    }
+    if (!decided)
         return false;
     CreationNotePickMany(k, sub, list, out);
     return true;
@@ -321,6 +351,7 @@ void SourcedItem(CreationKey k, CreationItem &io, Live live, const char *sub = N
         return;
     {
         CreationItemDepth inside;
+        CreationLiveDepth liveInside;
         live(io);
     }
     CreationNoteItem(k, sub, io);

@@ -5,7 +5,9 @@
    inc/Inline.h (__FILE__/__LINE__/__func__); Dice::Roll sites come from the
    return address (function+offset via dladdr). */
 #include "Incursion.h"
+#ifndef _WIN32
 #include <dlfcn.h>
+#endif
 
 bool g_censusActive = false;
 static int  cWin = 0, cEv = 0, cSuppress = 0;
@@ -26,7 +28,8 @@ static void CensusLine(const char *kind, const char *site, const char *fn)
                Lookup(EV_CONSTNAMES,e-pfx));
       en = buf; rn = evRes[cEv-1];
     }
-    fprintf(cFile,"%s\t%s\t%s\t%s\t%s\t%s\n",w,en,rn,kind,site,fn);
+    fprintf(cFile,"%s\t%s\t%s\t%s\t%s\t%s\t%s\n",w,en,rn,kind,site,fn,
+            CreationInsideLive() ? "sourced" : "unsourced");
     fflush(cFile);
   }
 
@@ -56,11 +59,15 @@ CensusDice::CensusDice(void *ra)
     on = false;
     if (!g_censusActive) return;
     on = true; cSuppress++;
-    Dl_info di; char site[96], fn[256];
+    char site[96], fn[256];
+#ifndef _WIN32
+    Dl_info di;
     if (dladdr(ra,&di) && di.dli_sname) {
       snprintf(fn,sizeof fn,"%s",di.dli_sname);
       snprintf(site,sizeof site,"+0x%lx",(long)((char*)ra-(char*)di.dli_saddr));
-    } else { snprintf(fn,sizeof fn,"?"); snprintf(site,sizeof site,"?"); }
+    } else
+#endif
+    { snprintf(fn,sizeof fn,"?"); snprintf(site,sizeof site,"?"); }
     cSuppress--; CensusLine("dice",site,fn); cSuppress++;
   }
 CensusDice::~CensusDice() { if (on) cSuppress--; }

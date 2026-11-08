@@ -37,11 +37,11 @@ cd "$ROOT"
 # Linux wants gcc and neither. Both honour $CC/$CXX if the caller sets them.
 HOST="$(uname -s)"
 case "$HOST" in
-    Darwin) CC="${CC:-clang}"; CXX="${CXX:-clang++}"; GUI_LIBS="-framework OpenGL" ;;
-    # -ldl -lpthread: libtcod calls dlopen/dlclose and sem_*. macOS has both in
-    # libSystem; glibc before 2.34 keeps them in separate libdl and libpthread.
-    # Harmless on newer glibc, where both are stubs inside libc.
-    Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread" ;;
+    Darwin) CC="${CC:-clang}"; CXX="${CXX:-clang++}"; GUI_LIBS="-framework OpenGL"; DL_LIBS="" ;;
+    # -ldl -lpthread: libtcod calls dlopen/dlclose and sem_*; src/DrawCensus.cpp
+    # calls dladdr. macOS has all in libSystem; glibc before 2.34 keeps them in
+    # separate libdl and libpthread. Harmless on newer glibc (stubs inside libc).
+    Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread"; DL_LIBS="-ldl" ;;
     *)      echo "Unsupported host '$HOST' (want Darwin or Linux)"; exit 1 ;;
 esac
 AR="${AR:-ar}"
@@ -266,7 +266,7 @@ elif [ "$BACKEND" = posix ]; then
     # ncurses ships with macOS and with every Linux distribution, so this adds
     # no dependency to install. It is used only to draw to a real terminal;
     # a headless run never calls into it.
-    LINK_LIBS="-lz -lncurses"
+    LINK_LIBS="-lz -lncurses $DL_LIBS"
 else
     SDL_CFLAGS="$(pkg-config --cflags sdl2)"
     SDL_LIBS="$(pkg-config --libs sdl2)"

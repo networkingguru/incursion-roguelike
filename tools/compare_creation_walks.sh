@@ -119,6 +119,17 @@ WALKS=(
   "human-warrior-skillabort-s1-o22 tools/keys/p6b-skill-abort.keys   1  $O22"
   "orc-mage-levelup-learn-s4-o22 tools/keys/p6b-mage-levelup-learn.keys 4 $O22"
   "human-warrior-alteropts-s1-o22 tools/keys/p6b-alter-options.keys  1  $O22"
+  # Phase 6c: script draws and prompts. The orc barbarian above reaches the
+  # Khasrach yn (P38) and the Barbarian 1d2 draws; the walks named here add the
+  # Dwarf Ekliazeh yn (P37), an Elf who follows Aiswin (the Transgress draw), a
+  # Rogue levelled to 6 in play (P43, outside the window), and an ESC walk.
+  # The human Priest of Asherath asks the turn-or-command prompt (P41); the
+  # Ranger (P42), Monk, Warrior and Drow walks are above.
+  "dwarf-barbarian-s1-o22 tools/keys/p6c-dwarf-barbarian.keys       1  $O22"
+  "human-priest-s1-o22    tools/keys/p6c-human-priest.keys          1  $O22"
+  "elf-priest-s1-o22      tools/keys/p6c-elf-priest.keys            1  $O22"
+  "human-rogue6-s1-o22    tools/keys/p6c-rogue-level6.keys          1  $O22"
+  "orc-barbarian-esc-s1-o22 tools/keys/p6c-esc-walk.keys            1  $O22"
 )
 
 fail=0

@@ -435,6 +435,9 @@ public:
 
     /* Formatted Menus (TextTerm.cpp) */
     virtual int32 LMenu(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX, const char*help=NULL, int8 pos = 0)=0;
+    /* What a script's LMenu calls (src/VMachine.cpp): the same menu, as one
+       sourced decision while character creation is open. */
+    int32 ScriptLMenu(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX, const char*help=NULL, int8 pos = 0);
     virtual bool  LMultiSelect(uint16 fl, const char*title,int8 MWin=WIN_MENUBOX, const char*help=NULL, int8 pos = 0)=0;
     virtual bool  LearnTable(LearnRow *rows, int16 nRows, const int16 *cap, bool creation, const char *replayKey, const char *help)=0;
     void SetQKeyType(QuickKey *qk, int16 typ) {

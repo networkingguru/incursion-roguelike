@@ -12,7 +12,8 @@
 #   CENSUS_BIN=<binary>     binary under test (default ./incursion-headless)
 #   CENSUS_ONLY=<substring> run only pairs/walks whose name contains it
 #
-# Writes logs/census/draws.tsv and logs/census/summary.txt. A pair the game
+# Writes logs/census/draws.tsv, logs/census/sourced.txt (sourced and unsourced
+# draw counts per caller) and logs/census/summary.txt. A pair the game
 # refuses ("You do not meet the requirements") is counted as refused.
 #
 # fact: seed -- fixed by CENSUS_SEED (default 4242) passed to tools/headless.sh
@@ -201,7 +202,11 @@ for c in Barbarian Mage Priest Rogue; do
     walk "special-levelup-$c" "$OPT" "$OUT/keys/h-lvl-$c.keys" "$OUT/keys/t-levelup.keys"
 done
 
-# 3. Aggregate. Each raw line: window event resource kind site function.
+# 3. Aggregate. Each raw line: window event resource kind site function
+# sourced. The last column is `sourced` when the draw ran inside a sourced
+# primitive's live function (inc/CreationSource.h), else `unsourced`. A raw
+# line from a binary that predates the column has six fields and counts as
+# `unsourced`.
 python3 -I - "$OUT" <<'PY'
 import sys, os, glob, subprocess, collections
 out = sys.argv[1]
@@ -211,9 +216,10 @@ for f in glob.glob(os.path.join(out, "runs", "*", "draws.raw")):
     run = os.path.basename(os.path.dirname(f))
     for line in open(f, errors="replace"):
         p = line.rstrip("\n").split("\t")
-        if len(p) != 6: continue
-        w, ev, res, kind, site, fn = p
-        k = (w, ev, res, kind, site, fn)
+        if len(p) == 6: p.append("unsourced")
+        if len(p) != 7: continue
+        w, ev, res, kind, site, fn, src = p
+        k = (w, ev, res, kind, site, fn, src)
         cnt[k] += 1; runs[k].add(run); funcs.add(fn)
 dem = {}
 if funcs:
@@ -223,16 +229,30 @@ if funcs:
         for a, b in zip(sorted(funcs), r.stdout.splitlines()): dem[a] = b
     except Exception: pass
 rows = []
-for (w, ev, res, kind, site, fn), n in cnt.items():
+for (w, ev, res, kind, site, fn, src), n in cnt.items():
     fn2 = dem.get(fn, fn)
     fn2 = fn2.split("(")[0]
     rows.append((w, ev, res, (kind + "@" + site) if kind != "random" else site,
-                 fn2, n, len(runs[(w, ev, res, kind, site, fn)]), kind))
+                 fn2, n, len(runs[(w, ev, res, kind, site, fn, src)]), kind, src))
 rows.sort(key=lambda r: (r[0], -r[5]))
 with open(os.path.join(out, "draws.tsv"), "w") as o:
-    o.write("window\tevent\tresource\tcall_site\tfunction\tcount\truns\tkind\n")
+    o.write("window\tevent\tresource\tcall_site\tfunction\tcount\truns\tkind\tsourced\n")
     for r in rows: o.write("\t".join(map(str, r)) + "\n")
 print("distinct call sites:", len({(r[3], r[4]) for r in rows}))
+
+# Sourced and unsourced counts per caller (function plus call site). Every
+# `unsourced` caller is to be a baseline row of
+# docs/specs/2026-11-06-fixture-builder-sites.md section 3.
+per = collections.defaultdict(lambda: [0, 0])
+for r in rows:
+    per[(r[4], r[3])][0 if r[8] == "sourced" else 1] += r[5]
+tot_s = sum(v[0] for v in per.values()); tot_u = sum(v[1] for v in per.values())
+lines = ["draws sourced=%d unsourced=%d" % (tot_s, tot_u),
+         "callers with an unsourced draw (function, call site, sourced, unsourced):"]
+for (fn, site), (s_, u_) in sorted(per.items(), key=lambda kv: -kv[1][1]):
+    if u_: lines.append("  %s\t%s\t%d\t%d" % (fn, site, s_, u_))
+open(os.path.join(out, "sourced.txt"), "w").write("\n".join(lines) + "\n")
+print("\n".join(lines))
 PY
 
 {

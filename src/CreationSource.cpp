@@ -138,10 +138,13 @@ static bool windowOpen = false;
 static std::vector<std::pair<std::string,int> > scopeStack;
 static std::map<std::string,int> ordinals;
 
-CreationScope::CreationScope(const char *resource, int event)
-    { scopeStack.push_back(std::make_pair(std::string(resource ? resource : ""), event)); }
+CreationScope::CreationScope(const char *resource, int event, bool active) : pushed(active)
+    {
+        if (active)
+            scopeStack.push_back(std::make_pair(std::string(resource ? resource : ""), event));
+    }
 CreationScope::~CreationScope()
-    { if (!scopeStack.empty()) scopeStack.pop_back(); }
+    { if (pushed && !scopeStack.empty()) scopeStack.pop_back(); }
 
 static std::string OrdinalKey(CreationKey k, const CreationContext &c)
 {
@@ -191,6 +194,25 @@ static void Emit(CreationKey k, const CreationContext &c, const std::string &tex
 {
     RecordedDecision d; d.key = k; d.ctx = c; d.text = text;
     recorded.push_back(d);
+}
+
+/* ESC backed creation up (Player::AbandonCreation answered no, then the site
+   calls PopResponse): the step the player left recorded the abandon line, and
+   nothing after it. Drop that line and give its ordinal back, so the .char of
+   a walk that ESCs and picks again holds only the final picks (phase 6c). */
+static void DropAbandonedStep()
+{
+    size_t from = recorded.size();
+    while (from != 0 && recorded[from - 1].key != CK_ABANDON)
+        from--;
+    if (from == 0)
+        return;
+    from--;
+    while (recorded.size() > from) {
+        const RecordedDecision &d = recorded.back();
+        ordinals[OrdinalKey(d.key, d.ctx)] = d.ctx.ordinal;
+        recorded.pop_back();
+    }
 }
 
 /* The engine's own table choice (Debug.cpp quality entry, Dump.cpp): armor and
@@ -442,6 +464,7 @@ public:
     {
         if (p->MyTerm->GetMode() == MO_CREATE && RInf.nRsp > 0)
             RInf.nRsp--;
+        DropAbandonedStep();
     }
     void Finish(Player *p, int16 *slot) { CreationAccess::FinishLive(p, slot); }
 
@@ -562,6 +585,11 @@ CreationWindow::~CreationWindow()
 }
 
 bool CreationWindowOpen() { return windowOpen; }
+
+static int liveDepth = 0;
+CreationLiveDepth::CreationLiveDepth() { liveDepth++; }
+CreationLiveDepth::~CreationLiveDepth() { liveDepth--; }
+bool CreationInsideLive() { return liveDepth > 0; }
 
 static int itemDepth = 0;
 CreationItemDepth::CreationItemDepth() { itemDepth++; }
