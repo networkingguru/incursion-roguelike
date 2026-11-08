@@ -57,6 +57,8 @@ if [ -z "$OUT" ]; then OUT="$(mktemp -d "${TMPDIR:-/tmp}/incursion-oracle.XXXXXX
 mkdir -p "$OUT" || exit 2
 [ "$OWN_OUT" = 1 ] && trap 'rm -rf "$OUT"' EXIT
 WORK="$(pwd -P)"
+# A field this tree renames is compared old name before to new name after (compare_values.py, rule `renamed`).
+export INCURSION_PRESSURE_RENAME_FILE="$WORK/tools/retired_field_names.txt"
 
 FAIL=0; UNM=0
 say() { echo "oracle: $1 $2${3:+ -- $3}"; }

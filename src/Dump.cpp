@@ -389,45 +389,9 @@ static bool LoadSaveForReport(const char *path, fileHeader &fhdr) {
 }
 
 
-/* inc-cjos0 phase 8, D3: INCURSION_PLANT=<spec file> INCURSION_PLANT_OUT=<new save> with -dump. The save is loaded
-   through the real reader, each spec line is applied to the loaded player through the game's own calls, and the
-   real writer writes a NEW file at INCURSION_PLANT_OUT; no report is printed. A case plants the content its
-   change adds so the oracle can load a save that USES it. Names are symbolic only (the family tables generated
-   on every build, tools/gen_family_names.py); a number is refused.
-     status <STATI_NAME> [val] [mag]     GainPermStati from SS_MISC
-     item <resource name>                Item::Create, into the pack (Container::XInsert)
-     spell <spell resource name>         GainSpell, SP_KNOWN
-     feat <FT_NAME|SK_NAME>              the Feats bit (a skill number is a feat-bit number too); refused when the
-                                         name has no row in FeatInfo (a feat) or SkillInfo (a skill)
-     skill <SK_NAME> <ranks>             SkillRanks[SkillIndex]; refused without a SkillInfo row
-     attr <A_NAME> <value>               Attr[] (and BAttr[] for the seven base scores)
-     known <item resource name> <KN_A|KN_B>   Item.Known of an item planted earlier in this spec, by KN_ names
-     roll <hp|mana> <row 0..2> <col> <val>   hpRolls / manaRolls cell, bounded by MAX_CHAR_LEVEL
-     sacval <god> <col> <val>            SacVals cell, bounded by MAX_GODS and MAX_SAC_CATS + 2
-     xp <value>                          Character.XP
-     resave                              no change: the real writer re-saves, so a staged field the build declares
-                                         is written with its declared value
-     option <OPT_NAME> <value>           skipped: options live in Options.Dat, not in a save
-     var <owner resource> <name> <val>   a script variable of the module's data segment ("(module)" = global)
-     varrid <owner> <name> @ <resource>  the same, holding the rID of a resource by name (a DT_RID variable)
-     monster <monster resource>          a Monster placed on a free cell beside the player
-     template <template> @ <monster>     AddTemplate on a monster planted earlier in this spec
-     target <TargetWhyType name> @ <monster>   the planted monster holds a target of the player with that why
-     feature <feature resource>          a Feature placed on a free cell beside the player
-     terrain <terrain resource>          a map cell (beside the player) of that terrain
-     region <region resource>            a map cell (beside the player) of that region
-     god <god resource> <favour|anger|flags> <val>   Player arrays at theGame->GodNum
-     dungeon <dungeon resource> <depth>  the dungeon enters Game::DungeonID and Player::MaxDepths[slot] = depth
-     ability <CA_NAME> <value>           Abilities[CA_NAME]
-     slot <SL_NAME> @ <item resource>    Inv[SL_NAME] = the item planted earlier in this spec
-     monkills <MA_NAME> <count>          JournalInfo.numMonOfType[MA_NAME]
-     iflags <item resource> <IF_A[|IF_B]>   Item.IFlags of an item planted earlier in this spec
-     status ... src=<SS_NAME>            the status's source (default SS_MISC)
-     class <class resource>              Player::ClassID[0]
-     race <race resource>                Player::RaceID
-     flavor <effect resource> @ <flavour resource>   the flavour of a potion effect (EffMem)
-     field <scope> <member> <value>      refused: this build stages no test field
-   Any other line, an unknown name, or a call the engine refuses: exit 2 naming the line. */
+/* INCURSION_PLANT=<spec> INCURSION_PLANT_OUT=<new save> with -dump: the real reader loads the save, each spec line
+   is applied through the game's own calls, the real writer writes a NEW file. Names are symbolic only; a number,
+   an unknown name or a refused call exits 2 naming the line. Spec language: tools/pressure/plant.sh header. */
 extern const char *V1FamName(const char *fam, long value);
 extern bool V1FamValue(const char *fam, const char *name, long &value);
 

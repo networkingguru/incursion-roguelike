@@ -33,7 +33,10 @@
 # The baseline of P is shared by the routes of a case (and of a pressure_numbers.sh run): <d2>/baseline-cache/<tree>.
 # Where a landing stops because tools/move_branch_values.py moved values (or a refusal that the mover can
 # repair), the driver commits the mover's generated diff on the bead branch and retries ONCE. A git text conflict
-# is recorded and stops the case (UNMEASURED); the driver never resolves one.
+# is resolved ONLY from the case's committed resolution, <case-dir>/resolve/<path> (one file per conflicted path; the
+# format is in tools/pressure/resolve_conflict.py); a conflict with no resolution, or a resolution that does not fit,
+# FAILS the case. A case with a resolve/ dir merges the base into each bead before finish_bead.sh runs, so the route
+# resolves the conflict wherever it arises.
 #
 # What each landing runs (D5, owner ruling 2026-11-08: build only where a save is loaded). LAND_KIND is `source` (the
 # three source checks that need no binary, no build) or `full` (build or module-only rebuild, 74-fixture compare, content, witness):
@@ -80,10 +83,11 @@ CASE_NAME="$(basename "$CASE")"
 SLUG="$(printf '%s' "$CASE_NAME" | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')"
 BEAD_A="inc-${SLUG}a"; BEAD_B="inc-${SLUG}b"; BEAD_M="inc-${SLUG}m"
 BEAD_A2="inc-${SLUG}c"; BEAD_C="inc-${SLUG}d"; BEAD_M2="inc-${SLUG}n"   # route R only
-# A case that adds resources to the module (a `grows-module` file) changes the module-shape lines of every save
-# by construction: compare_values.py then lets those lines differ (never a pool that shrank).
+# A case that changes the module (adds resources: a `grows-module` file; renames or retires one: a `renames` file)
+# changes the module-shape lines of every save by construction: compare_values.py then lets those lines differ
+# (never a pool that shrank). A case with neither file keeps the shape lines strict.
 unset INCURSION_PRESSURE_GROWS
-[ -f "$CASE/grows-module" ] && export INCURSION_PRESSURE_GROWS=1
+{ [ -f "$CASE/grows-module" ] || [ -f "$CASE/renames" ]; } && export INCURSION_PRESSURE_GROWS=1
 # A case that renames a resource on purpose lists the pairs in a `renames` file (old>new|old>new): compare_values.py
 # reads a resource value that names the old resource before and the new one after as the same resource.
 unset INCURSION_PRESSURE_RENAMES
@@ -201,6 +205,23 @@ patch_bead() {
     return $rc
 }
 
+# merge_in <worktree> <base> <logfile>: `git merge --no-edit <base>` in a bead worktree. A conflict is resolved from
+# $CASE/resolve/ (tools/pressure/resolve_conflict.py) and the merge committed; with no resolution it stays a conflict
+# (rc 1, the log says CONFLICT) and the case fails. rc 0 merged (cleanly or by resolution), 1 conflict unresolved.
+merge_in() {
+    local w="$1" b="$2" lf="$3" rc
+    git -C "$w" merge --no-edit "$b" > "$lf" 2>&1; rc=$?
+    [ $rc -eq 0 ] && return 0
+    if [ -z "$(git -C "$w" diff --name-only --diff-filter=U)" ]; then return $rc; fi
+    if [ ! -d "$CASE/resolve" ]; then
+        echo "route: FAIL: CONFLICT merging $b, and $CASE has no resolve/ directory with a resolution" >> "$lf"; return 1
+    fi
+    python3 "$HERE/resolve_conflict.py" "$w" "$CASE/resolve" >> "$lf" 2>&1 || { echo "route: CONFLICT is unresolved" >> "$lf"; return 1; }
+    git -C "$w" commit --no-edit >> "$lf" 2>&1 || return 1
+    echo "route: the conflict was resolved from $CASE/resolve" >> "$lf"
+    return 0
+}
+
 # land <bead> <base> <baseline-dir> <base-sha>: tools/finish_bead.sh with the case oracle as its gate.
 # Sets LAND_RC and LAND_VALUES (the oracle's after-values of this attempt).
 LAND_N=0
@@ -218,6 +239,14 @@ land() {
     local id="$1" base="$2" bl="$3" bsha="$4" lf rc t0 before srcsha first
     LAND_N=$((LAND_N + 1))
     lf="$LOG/land-$id-$LAND_N.log"; before="$(sha "$base")"; t0=$(now); srcsha="$(sha "$id")"
+    if [ -d "$CASE/resolve" ] && [ -d "$(wt "$id")" ]; then
+        # a case with a deliberate conflict merges the base here, so the driver can resolve it (finish_bead.sh then finds it merged)
+        merge_in "$(wt "$id")" "$base" "$LOG/premerge-$id-$LAND_N.log"; rc=$?
+        if [ $rc -ne 0 ]; then
+            record "merge $base into $id" "$LOG/premerge-$id-$LAND_N.log" "$rc" "$base" "$id" "$(sha "$id")" 0
+            LAND_RC=$rc; return $rc
+        fi
+    fi
     land_attempt "$id" "$base" "$bl" "$bsha" "$lf"; rc=$?
     record "land $id on $base" "$lf" "$rc" "$id" "$base" "$before" $(( $(now) - t0 )) "$srcsha"
     if slow_failed "$lf" "$rc"; then
@@ -255,7 +284,13 @@ land_attempt() {
          tools/finish_bead.sh "$id" ) > "$lf" 2>&1
     rc=$?
     # content planted by a landing that went through becomes the baseline of every later landing
-    if [ $rc -eq 0 ] && [ -d "$LAND_VALUES/content-new" ]; then cp -f "$LAND_VALUES"/content-new/* "$CONTENT"/; fi
+    if [ $rc -eq 0 ] && [ -d "$LAND_VALUES/content-new" ]; then
+        cp -f "$LAND_VALUES"/content-new/* "$CONTENT"/
+        # the save is readable only in a tree that holds this commit (content_check.sh)
+        for cs in "$LAND_VALUES"/content-new/*.sav; do
+            [ -f "$cs" ] && git -C "$DIR" rev-parse "$base" > "$CONTENT/$(basename "$cs" .sav).commit"
+        done
+    fi
     return $rc
 }
 
@@ -322,7 +357,7 @@ finish_from_failure() { # the first failing step decides
     [ -n "$kind" ] || verdict UNMEASURED "internal: no failing step recorded"
     case "$kind" in
         unmeasured) verdict UNMEASURED "$label could not measure: $line";;
-        conflict)   verdict UNMEASURED "$label: git text conflict, recorded and not resolved: $line";;
+        conflict)   verdict FAIL "$label: git text conflict with no usable resolution (resolve/ of the case): $(grep -hm1 -E 'FAIL|CONFLICT' "$lf" | cut -c1-200)";;
     esac
     if [ "$EXPECT" = refuse ]; then
         named="$(grep -v KNOWN "$lf" | grep -m1 -E "$EXPECT_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"   # KNOWN lines are the checks' standing notes, not the refusal
@@ -402,7 +437,7 @@ E)
     start_bead "$BEAD_M" inc-pu6v || finish_from_failure
     mw="$(wt "$BEAD_M")"
     mlf="$LOG/merge-$BEAD_M.log"; t0=$(now)
-    git -C "$mw" merge --no-edit master > "$mlf" 2>&1; mrc=$?
+    merge_in "$mw" master "$mlf"; mrc=$?
     record "merge master into $BEAD_M" "$mlf" "$mrc" master "$BEAD_M" "$(sha "$BEAD_M")" $(( $(now) - t0 ))
     [ $mrc -eq 0 ] || finish_from_failure
     mvlf="$LOG/mover-$BEAD_M.log"; t0=$(now)
@@ -468,7 +503,7 @@ R)
         local mb="$1" bl="$2" msha="$3" mre="$4" mw mlf mvlf t0 mrc mvrc mode MOVER_RE MOVED_LINE mlog
         start_bead "$mb" inc-pu6v || finish_from_failure
         mw="$(wt "$mb")"; mlf="$LOG/merge-$mb.log"; t0=$(now)
-        git -C "$mw" merge --no-edit master > "$mlf" 2>&1; mrc=$?
+        merge_in "$mw" master "$mlf"; mrc=$?
         record "merge master into $mb" "$mlf" "$mrc" master "$mb" "$(sha "$mb")" $(( $(now) - t0 ))
         [ $mrc -eq 0 ] || finish_from_failure
         mvlf="$LOG/mover-$mb.log"; t0=$(now)

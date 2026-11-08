@@ -83,6 +83,20 @@ RULES.
    default) sits inside a family block or a no-family block. A define in
    neither FAILS, naming the define and its line. Other files that hold marks
    (inc/Target.h, inc/RComp.h, inc/Base.h) are read only inside their blocks.
+1b. Rule 5 (inc-cjos0 F06): in every file of inc/ and src/ an integer constant
+   outside every block FAILS, naming file, line and name, unless
+   tools/define_baseline.txt lists its file and name. Forms: `#define NAME
+   <integer expr>` (Defines.h defines are rule 1), enum members, and scalar
+   integer `const`/`constexpr`/`static const` variables with an `=` at namespace
+   or class scope. A function-local const is NOT listed: the brace stack tells
+   it apart reliably (a block is class scope when its head holds class, struct,
+   union, namespace or extern and no `(`; `#if 0` text is skipped; an unbalanced
+   file exits 2), and the local ones are runtime values, not codes. A define
+   counts when its body has a number or char literal, or is one earlier integer
+   define, and holds no string, call, `->`, `::`, `;{}[].,=` or sizeof. The
+   baseline only shrinks: the check FAILS when it gains an entry against
+   `master:tools/define_baseline.txt` (skipped when master lacks the file or the
+   tree has no .git). Nothing regenerates it. Delete a line when a constant goes.
 2. In one family, two names with one value FAIL, unless a name is an alias
    or a known collision.
 3. The same value in two different families passes.
@@ -104,8 +118,9 @@ earlier integer define is a constant. An integer-looking expression that
 cannot be evaluated exits 2 naming the line.
 
 Usage: tools/check_define_dups.py [--defines FILE] [--selftest]
-       --defines FILE reads that one file only; without it the check reads
-       inc/Defines.h and every other file of inc/ and src/ that holds a mark.
+       --defines FILE reads that one file only (no rule 5); without it the check reads
+       inc/Defines.h and every other file of inc/ and src/ that holds a mark, and
+       applies rule 5 to every file of inc/ and src/.
 Exit:  0 clean   1 unmarked define, duplicate, bad alias, or bad class
        2 could not measure (bad marks, unevaluable expression)
 
@@ -120,11 +135,15 @@ tools/check_stored_values.py imports it.
 # fact: each define's family and class -- read from the marks in those same texts; no randomness
 # fact: which names share a value -- computed from those values and marks
 # fact: enumerator values -- counted from the enum text as the compiler counts; no build, no seed
+# fact: constants outside every block -- read from the text of inc/ and src/ against tools/define_baseline.txt; no game run, no seed
+# fact: the base baseline -- `git show master:tools/define_baseline.txt`, a committed ref, not a clock or a random value
 """
 import ast
+import bisect
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -625,11 +644,211 @@ def load_families(defines=None, files=None):
     return out, problems
 
 
-def check(defines, others=()):
-    """Return (exit code, list of message lines)."""
+BASELINE_REL = "tools/define_baseline.txt"
+BASELINE = os.path.join(ROOT, *BASELINE_REL.split("/"))
+BASE_REF = "master"
+SOURCE_EXT = (".h", ".hpp", ".cpp", ".c", ".inc")
+INT_TYPE = (r"(?:unsigned|signed|int|short|long|char|size_t|rID|hObj|uchar|ushort|uint|ulong|"
+            r"u?int(?:8|16|32|64)(?:_t)?|u?intptr_t)")
+CONST_VAR = re.compile(r"(?<!\w)(?:static\s+)?(?:constexpr|const)\s+(?:static\s+)?"
+                       r"((?:" + INT_TYPE + r"\s+)*" + INT_TYPE + r")\s+([A-Za-z_]\w*)\s*=(?!=)")
+DIRECTIVE = re.compile(r"^[ \t]*#[ \t]*(\w*)((?:\\\n|[^\n])*)|[;{}]", re.M)
+SCOPE_HEAD = re.compile(r"\b(class|struct|union|namespace|extern)\b")
+LOOSE_HOW = ("Fix: put it inside its family's marks ('// family: <name> <class>' ... "
+             "'// end family: <name>'), or inside a no-family block ('// no-family' ... "
+             "'// end no-family'). The baseline %s only shrinks.")
+
+
+def blank_strings(t):
+    """Replace the inside of string and char literals by spaces; offsets stay."""
+    out, i, n = [], 0, len(t)
+    while i < n:
+        ch = t[i]
+        if ch in "\"'":
+            j = i + 1
+            while j < n and t[j] != ch and t[j] != "\n":
+                j += 2 if t[j] == "\\" else 1
+            end = j + 1 if j < n and t[j] == ch else j
+            out.append(ch + " " * max(0, end - i - 2) + (ch if end - i >= 2 else ""))
+            i = end
+        else:
+            out.append(ch); i += 1
+    return "".join(out)
+
+
+def scope_events(t):
+    """t: blanked, comment-free text. Return (events, depth). events: sorted
+    (offset, True when every open brace is a class, struct, union, namespace or
+    extern block) after each ; { } outside a directive. `#if 0` text is skipped;
+    `#else` and `#elif` restart from the stack at the `#if`. depth: braces left
+    open at the end (not 0: the file is unmeasurable)."""
+    stack, events, conds, last = [], [], [], 0
+    for m in DIRECTIVE.finditer(t):
+        g = m.group(0)
+        if g[0] in " \t#":
+            d = m.group(1)
+            if d in ("if", "ifdef", "ifndef"):
+                conds.append([list(stack), d == "if" and m.group(2).strip() == "0"])
+            elif d in ("else", "elif") and conds:
+                stack = list(conds[-1][0]); conds[-1][1] = False
+            elif d == "endif" and conds:
+                conds.pop()
+            last = m.end()
+            continue
+        if any(c[1] for c in conds):
+            last = m.end()
+            continue
+        if g == "{":
+            head = t[last:m.start()]
+            stack.append("(" not in head and bool(SCOPE_HEAD.search(head)))
+        elif g == "}" and stack:
+            stack.pop()
+        last = m.end()
+        events.append((m.start(), all(stack)))
+    return events, len(stack)
+
+
+def is_constant_define(toks, known):
+    """toks: tokens of a define body. known: integer defines of this file so far."""
+    if not toks or any(t in STMT_TOKENS or t in ("this", "sizeof", "?") for t in toks):
+        return False
+    if any(a == "-" and b == ">" or a == ":" and b == ":" for a, b in zip(toks, toks[1:])):
+        return False
+    if any(IDENT.fullmatch(a) and b == "(" for a, b in zip(toks, toks[1:])):
+        return False  # a call
+    if any(t[0].isdigit() or t[0] == "'" for t in toks):
+        return True
+    return len(toks) == 1 and toks[0] in known
+
+
+def loose_scan(path, skip_defines=False):
+    """Every integer constant of the file that sits outside every family and
+    no-family block. Return a list of (line, name, form), form 'define', 'enum'
+    or 'const'. The form 'const' is a scalar integer `const`/`constexpr`/`static
+    const` variable with an `=` initializer at namespace or class scope; one in
+    a function body is not listed (the brace stack tells them apart: a block is
+    namespace or class scope when its head, back to the last ; { }, holds
+    class/struct/union/namespace/extern and no `(`). An unbalanced file exits 2."""
+    with open(path, encoding="latin-1") as f:
+        raw = f.read()
+    events, _notes, _specs, _bad = read_marks(raw.split("\n"))
+    spans, start = [], None
+    for no, what, _kind, _f in events:
+        if what == "open":
+            start = no
+        else:
+            spans.append((start, no))
+    text = strip_comments(raw)
+    out, known = [], set()
+    for no, line in logical_lines(text):
+        m = re.match(r"\s*#\s*define\s+([A-Za-z_]\w*)(\(?)(.*)$", line)
+        if not m or m.group(2) or not m.group(3).strip() or '"' in m.group(3):
+            continue
+        if is_constant_define(tokens(m.group(3)), known):
+            known.add(m.group(1))
+            if not skip_defines:
+                out.append((no, m.group(1), "define"))
+    for _a, _b, members in find_enums(text):
+        out += [(no, name, "enum") for no, name, _expr in members]
+    t = blank_strings(text)
+    ev, depth = scope_events(t)
+    if depth:
+        raise Unmeasurable("%d brace(s) never closed, so a const variable cannot be placed "
+                           "in a function or a class" % depth)
+    offs = [e[0] for e in ev]
+    for m in CONST_VAR.finditer(t):
+        k = bisect.bisect_left(offs, m.start()) - 1
+        if k >= 0 and not ev[k][1]:
+            continue  # inside a function body
+        cut = max(t.rfind(c, 0, m.start()) for c in ";{}")
+        pre = t[cut + 1:m.start()]
+        if pre.count("(") > pre.count(")"):
+            continue  # a parameter with a default
+        out.append((t.count("\n", 0, m.start(2)) + 1, m.group(2), "const"))
+    return sorted((no, name, form) for no, name, form in out
+                  if not any(a < no < b for a, b in spans))
+
+
+def source_files(root=ROOT):
+    """Every source file of inc/ and src/, sorted."""
+    out = []
+    for sub in ("inc", "src"):
+        for dp, _dn, fns in os.walk(os.path.join(root, sub)):
+            out += [os.path.join(dp, fn) for fn in fns if fn.endswith(SOURCE_EXT)]
+    return sorted(out)
+
+
+def load_baseline(path=BASELINE):
+    """Return {(file, name): form}. Key is file plus name, never a line."""
+    known = {}
+    try:
+        with open(path) as f:
+            for raw in f:
+                if not raw.strip() or raw.lstrip().startswith("#"):
+                    continue
+                parts = raw.rstrip("\n").split("\t")
+                if len(parts) != 3:
+                    raise Unmeasurable("%s: bad line (want file, name, form with tabs): %r"
+                                       % (rel(path), raw.rstrip("\n")))
+                known.setdefault((parts[0], parts[1]), parts[2])
+    except OSError as e:
+        raise Unmeasurable("cannot read the baseline %s: %s" % (rel(path), e))
+    return known
+
+
+def master_baseline_keys(root=ROOT, ref=BASE_REF, relpath=BASELINE_REL):
+    """The baseline keys of `ref`, or None when the tree is not a git checkout or
+    `ref` does not hold the file yet (the first landing). A checkout with no `ref`,
+    or a git failure, exits 2."""
+    if not os.path.exists(os.path.join(root, ".git")):
+        return None
+    def git(*a):
+        return subprocess.run(["git", "-C", root] + list(a), capture_output=True, text=True)
+    r = git("rev-parse", "--verify", "--quiet", ref + "^{commit}")
+    if r.returncode != 0:
+        raise Unmeasurable("git has no %s to compare the baseline against" % ref)
+    if git("cat-file", "-e", "%s:%s" % (ref, relpath)).returncode != 0:
+        return None
+    r = git("show", "%s:%s" % (ref, relpath))
+    if r.returncode != 0:
+        raise Unmeasurable("git show %s:%s failed: %s" % (ref, relpath, r.stderr.strip()))
+    keys = set()
+    for raw in r.stdout.split("\n"):
+        if raw.strip() and not raw.lstrip().startswith("#"):
+            parts = raw.split("\t")
+            if len(parts) == 3:
+                keys.add((parts[0], parts[1]))
+    return keys
+
+
+def loose_problems(files, strict_file, baseline, base_keys):
+    """FAIL lines: a constant outside every block that the baseline does not list,
+    and a baseline entry that master's baseline does not have. strict_file: the
+    file whose #defines the first rule already covers."""
+    msgs = []
+    for path in files:
+        for no, name, form in loose_scan(path, skip_defines=(path == strict_file)):
+            if (rel(path), name) not in baseline:
+                what = {"define": "#define", "enum": "enum member",
+                        "const": "const variable"}[form]
+                msgs.append("FAIL: %s line %d: unclassified constant %s (%s). %s"
+                            % (rel(path), no, name, what, LOOSE_HOW % BASELINE_REL))
+    if base_keys is not None:
+        for key in sorted(set(baseline) - base_keys):
+            msgs.append("FAIL: %s gained the entry %s %s that %s does not have. The "
+                        "baseline only shrinks; put the constant in a family block or "
+                        "a no-family block instead." % (BASELINE_REL, key[0], key[1], BASE_REF))
+    return msgs
+
+
+def check(defines, others=(), loose=None):
+    """Return (exit code, list of message lines). loose: None, or (files,
+    baseline, base_keys) for the closed-world rule over every file (rule 5)."""
     files = [defines] + list(others)
     try:
         fams, bad_msgs, multi = scan_all(files)
+        if loose is not None:
+            bad_msgs = list(bad_msgs) + loose_problems(loose[0], defines, loose[1], loose[2])
     except Unmeasurable as e:
         return 2, ["check_define_dups: UNMEASURED: %s" % e]
     except OSError as e:
@@ -670,8 +889,9 @@ def check(defines, others=()):
                                ", ".join(str(l) if not multi else "%s:%d" % (rel(p), l)
                                          for l, _n, p in g)))
     if not bad:
-        msgs.append("check_define_dups: PASS (%d families, %d known collisions)"
-                    % (len(fams), nknown))
+        msgs.append("check_define_dups: PASS (%d families, %d known collisions%s)"
+                    % (len(fams), nknown, "" if loose is None else
+                       ", %d baseline constants outside every block" % len(loose[1])))
     return (1 if bad else 0), msgs
 
 
@@ -905,6 +1125,106 @@ def selftest():
             f.write(fam("c", "#define C_X UNKNOWN + 1\n"))
         c, m = check(first, [second])
         assert c == 2 and "second.h" in "\n".join(m), (c, m)
+        # k. rule 5 (F06): every constant of every file sits in a block or the baseline
+        anchor = os.path.join(tmp, "anchor.h")
+        with open(anchor, "w") as f:
+            f.write(fam("a", "#define A_X 1\n"))
+
+        def loose_run(text, baseline=(), base_keys=None):
+            n[0] += 1
+            path = os.path.join(tmp, "L%d.h" % n[0])
+            with open(path, "w") as f:
+                f.write(text)
+            bl = {(rel(path), name): "define" for name in baseline}
+            if callable(base_keys):
+                base_keys = base_keys(rel(path))
+            code, msgs = check(anchor, [path], ([anchor, path], bl, base_keys))
+            return code, "\n".join(msgs), path
+        c, m, _p = loose_run("#define NEWD 61\n")
+        assert c == 1 and "L%d.h line 1: unclassified constant NEWD (#define)" % n[0] in m, (c, m)
+        c, m, _p = loose_run("\n  #define NEWI 61\n")  # indented, as inside a class
+        assert c == 1 and "line 2: unclassified constant NEWI" in m, (c, m)
+        c, m, _p = loose_run("enum { NEWE = 3, NEWF };\n")
+        assert c == 1 and "NEWE (enum member)" in m and "NEWF (enum member)" in m, (c, m)
+        c, m, _p = loose_run("const int NEWC = 5;\n")
+        assert c == 1 and "NEWC (const variable)" in m, (c, m)
+        for decl in ("static const uint16 NEWC = 5;", "constexpr int NEWC = 5;",
+                     "const unsigned long NEWC = 5;", "class K { static const int NEWC = 2; };",
+                     "namespace N { const int NEWC = 2; }", "const static int NEWC = 2;"):
+            c, m, _p = loose_run(decl + "\n")
+            assert c == 1 and "NEWC (const variable)" in m, (decl, c, m)
+        # not a constant: a function-local const, a default argument, a string, an array,
+        # a function-like macro, a type alias, a call
+        for text in ("void f() { const int LOC = 3; }\n",
+                     "struct S { void f() { const int LOC = 3; } };\n",
+                     "void g(const int d = 4);\n", "const char *NAME = \"x\";\n",
+                     "static const int TAB[2] = {1, 2};\n", "#define MAC(x) ((x) + 1)\n",
+                     "#define TYPE unsigned char\n", "#define CALL foo(3)\n",
+                     "#define STR \"a\"\n", "#define EMPTY\n"):
+            c, m, _p = loose_run(text)
+            assert c == 0, (text, c, m)
+        # `#if 0` text is skipped; an `#else` restarts from the `#if`
+        c, m, _p = loose_run("#if 0\nstruct S {\n#endif\nconst int ZZ = 1;\n")
+        assert c == 1 and "ZZ (const variable)" in m, (c, m)
+        c, m, _p = loose_run("#ifdef X\nvoid f() {\n#else\nvoid g() {\n#endif\n}\n"
+                             "const int YY = 1;\n")
+        assert c == 1 and "YY (const variable)" in m, (c, m)
+        # an unbalanced file cannot place a const variable: exit 2
+        c, m, _p = loose_run("void f() {\n")
+        assert c == 2 and "UNMEASURED" in m and "never closed" in m, (c, m)
+        # green: a baseline constant, on any line (the key holds no line number)
+        c, m, _p = loose_run("#define NEWD 61\n", ["NEWD"])
+        assert c == 0 and "1 baseline constants" in m, (c, m)
+        c, m, _p = loose_run("\n\n\n#define NEWD 61\n", ["NEWD"])
+        assert c == 0, (c, m)
+        # red: a renamed baseline constant is a new constant
+        c, m, _p = loose_run("#define NEWD2 61\n", ["NEWD"])
+        assert c == 1 and "unclassified constant NEWD2" in m, (c, m)
+        # green: the same constant inside a no-family block, or a family block
+        c, m, _p = loose_run("// no-family\n#define NEWD 61\nenum { NEWE };\n"
+                             "const int NEWC = 5;\n// end no-family\n")
+        assert c == 0, (c, m)
+        c, m, _p = loose_run(fam("b", "#define B_X 61\n"))
+        assert c == 0, (c, m)
+        # red: a baseline that gained an entry against the base; green when it did not
+        c, m, p = loose_run("#define NEWD 61\n", ["NEWD"], set())
+        assert c == 1 and "gained the entry" in m and "NEWD" in m, (c, m)
+        c, m, p = loose_run("#define NEWD 61\n", ["NEWD"],
+                            lambda r: {(r, "NEWD"), ("x.h", "GONE")})
+        assert c == 0, (c, m)
+        # the base baseline comes from git: a scratch repo whose master holds the file
+        repo = os.path.join(tmp, "repo")
+        os.makedirs(os.path.join(repo, "tools"))
+
+        def git(*a):
+            r = subprocess.run(["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t",
+                                "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+                               + list(a), capture_output=True, text=True)
+            assert r.returncode == 0, (a, r.stderr)
+        git("init", "-q", "-b", "master")
+        with open(os.path.join(repo, BASELINE_REL), "w") as f:
+            f.write("# c\na.h\tONE\tdefine\nb.h\tTWO\tenum\n")
+        git("add", "."); git("commit", "-q", "-m", "base")
+        assert master_baseline_keys(repo) == {("a.h", "ONE"), ("b.h", "TWO")}
+        git("checkout", "-q", "-b", "work")
+        os.remove(os.path.join(repo, BASELINE_REL))
+        git("add", "-A"); git("commit", "-q", "-m", "drop")
+        assert master_baseline_keys(repo) == {("a.h", "ONE"), ("b.h", "TWO")}  # master, not HEAD
+        assert master_baseline_keys(repo, relpath="tools/none.txt") is None  # first landing
+        try:
+            master_baseline_keys(repo, ref="nope")
+            assert False, "a missing ref must exit 2"
+        except Unmeasurable:
+            pass
+        assert master_baseline_keys(tmp) is None  # not a git checkout: no ratchet
+        bad_bl = os.path.join(tmp, "bad.txt")
+        with open(bad_bl, "w") as f:
+            f.write("a.h\tONE\n")
+        try:
+            load_baseline(bad_bl)
+            assert False, "a bad baseline line must exit 2"
+        except Unmeasurable:
+            pass
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("check_define_dups: selftest PASS")
@@ -928,7 +1248,14 @@ def main(argv):
             return 2
     if st:
         return selftest()
-    code, msgs = check(defines, [] if only else marked_files())
+    loose = None
+    if not only:
+        try:
+            loose = (source_files(), load_baseline(), master_baseline_keys())
+        except Unmeasurable as e:
+            print("check_define_dups: UNMEASURED: %s" % e, file=sys.stderr)
+            return 2
+    code, msgs = check(defines, [] if only else marked_files(), loose)
     print("\n".join(msgs), file=sys.stderr if code else sys.stdout)
     return code
 
