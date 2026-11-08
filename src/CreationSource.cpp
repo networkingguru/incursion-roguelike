@@ -473,7 +473,11 @@ Item *CreationMakeItem(const CreationItem &d)
 {
     if (!d.iID)
         return NULL;
-    Item *it = Item::Create(d.iID);
+    Item *it;
+    {
+        unstatedDraw("overwritten by stated charges and quantity");
+        it = Item::Create(d.iID);
+    }
     if (!it)
         return NULL;
     if (d.eID)
@@ -930,12 +934,19 @@ CreationWindow::CreationWindow() : done(false)
     haveStepMark = false;
     haveOptions = false;
     optionsBytes.clear();
+    /* The tripwires arm with the File source, and only then. T1 stays armed to
+       the end of the build (the NewGame tail reads keys too); T2 is the window. */
+    if (activeSource == &CreationFileSource()) {
+        g_t1Armed = true;
+        g_t2Armed = true;
+    }
 }
 
 CreationWindow::~CreationWindow()
 {
     activeSource->Close(done);
     windowOpen = false;
+    g_t2Armed = false;
 }
 
 bool CreationWindowOpen() { return windowOpen; }
@@ -1090,4 +1101,167 @@ void CreationNoteOptions(const int8 *opts, int n)
     if (!windowOpen || itemDepth > 0)
         return;
     activeSource->NoteOptions(opts, n);
+}
+
+/* ---- the tripwires (spec section 2; bead inc-10v7f phase 7b) ---------------- */
+
+#ifndef _WIN32
+#include <dlfcn.h>
+#include <cxxabi.h>
+#endif
+
+bool g_t1Armed = false;
+bool g_t2Armed = false;
+int  g_unstatedDepth = 0;
+
+/* The function that holds a return address, demangled, with the offset into it. */
+static void NameCaller(void *ra, char *out, size_t n)
+{
+    snprintf(out, n, "?");
+#ifndef _WIN32
+    Dl_info di;
+    if (ra && dladdr(ra, &di) && di.dli_sname) {
+        int status = 0;
+        char *dm = abi::__cxa_demangle(di.dli_sname, NULL, NULL, &status);
+        snprintf(out, n, "%s+0x%lx", (status == 0 && dm) ? dm : di.dli_sname,
+            (long)((char*)ra - (char*)di.dli_saddr));
+        free(dm);
+    }
+#endif
+}
+
+static const char *BaseName(const char *f)
+{
+    const char *s = strrchr(f, '/');
+    return s ? s + 1 : f;
+}
+
+/* T2. A draw is stated when a sourced decision's `live` is running (the draw
+   is part of that decision) or an unstatedDraw scope names it as deciding no
+   saved fact. Every other draw in the window fails the build. A Dice::Roll
+   names its caller, not Roll, so the dice enter this with the return address
+   they were called from. */
+static void *t2DiceCaller = NULL;
+
+void creation_t2_dice_enter(void *ra, void **prev)
+{
+    *prev = t2DiceCaller;
+    t2DiceCaller = ra;
+}
+void creation_t2_dice_leave(void *prev) { t2DiceCaller = prev; }
+
+void creation_t2_draw(const char *f, int l, const char *fn)
+{
+    if (CreationInsideLive() || g_unstatedDepth > 0)
+        return;
+    if (t2DiceCaller) {
+        char who[300];
+        NameCaller(t2DiceCaller, who, sizeof who);
+        CreationBuildFail("T2 unstated dice roll called from %s: state it in the .char "
+            "file or wrap the draw in unstatedDraw(\"<reason>\")", who);
+    }
+    CreationBuildFail("T2 unstated random draw in %s at %s:%d: state it in the .char "
+        "file or wrap the draw in unstatedDraw(\"<reason>\")", fn, BaseName(f), l);
+}
+
+/* T1. ScreenTopText is the nearest the shared layer comes to a screen title:
+   the first row with text on it, trimmed. */
+void TextTerm::ScreenTopText(char *out, int n)
+{
+    int16 x, y;
+    snprintf(out, n, "(blank screen)");
+    for (y = Windows[WIN_SCREEN].Top; y <= Windows[WIN_SCREEN].Bottom; y++) {
+        char row[256]; int len = 0;
+        for (x = Windows[WIN_SCREEN].Left; x <= Windows[WIN_SCREEN].Right && len < (int)sizeof(row) - 1; x++) {
+            int c = GLYPH_ID_VALUE(AGetChar(x, y));
+            row[len++] = (c >= 32 && c < 127) ? (char)c : ' ';
+        }
+        row[len] = 0;
+        const char *b = row;
+        while (*b == ' ') b++;
+        char *e = row + len;
+        while (e > b && e[-1] == ' ') e--;
+        *e = 0;
+        if (*b) {
+            snprintf(out, n, "%s", b);
+            return;
+        }
+    }
+}
+
+static const char *ackKind = NULL, *ackText = NULL;
+CreationAck::CreationAck(const char *kind, const char *text)
+    : prevKind(ackKind), prevText(ackText)
+{
+    ackKind = kind;
+    ackText = text ? text : "";
+}
+CreationAck::~CreationAck() { ackKind = prevKind; ackText = prevText; }
+
+static void LogAck(const char *dir, const char *kind, const char *text)
+{
+    static int acks = 0;
+    acks++;
+    char path[1024], shown[80];
+    snprintf(shown, sizeof shown, "%s", text);
+    for (char *c = shown; *c; c++)
+        if (*c == '"' || (unsigned char)*c < 32 || (unsigned char)*c > 126)
+            *c = ' ';
+    snprintf(path, sizeof path, "%slogs/build-acks.log", dir);
+    FILE *f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "ack %d window=%d %s \"%s\"\n", acks, windowOpen ? 1 : 0, kind, shown);
+        fclose(f);
+    }
+    if (acks > 500)
+        CreationBuildFail("T1 more than 500 acknowledgments; see %s", path);
+}
+
+/* The one gate every key read passes (the three wrappers in src/Term.cpp).
+   False: let the backend read (a sourced decision's `live` is running).
+   True: an acknowledgment, answered here with Enter. Otherwise the build fails
+   and this does not return. */
+bool TextTerm::T1Gate(const char *what, void *ra, int16 &key)
+{
+    if (CreationInsideLive())
+        return false;
+    if (ackKind) {
+        LogAck((const char*)IncursionDirectory, ackKind, ackText);
+        key = KY_ENTER;
+        return true;
+    }
+    char who[300], screen[100];
+    NameCaller(ra, who, sizeof who);
+    ScreenTopText(screen, sizeof screen);
+    CreationBuildFail("T1 key read outside a sourced decision: %s called from %s; the screen "
+        "shows \"%s\" (nearest text, first row with text)", what, who, screen);
+    return false;
+}
+
+__attribute__((noinline)) void CreationTripwireRawKeyScreen(Term *t)
+{
+    t->SetWin(WIN_SCREEN);
+    t->Clear();
+    t->Write(0, 0, "Tripwire probe screen");
+    volatile int16 key = t->GetCharRaw();   /* not a tail call: T1 names this function */
+    (void)key;
+}
+
+/* INCURSION_TRIPWIRE_PROBE: the fault-insertion switch of tools/check_fixture_tripwires.sh
+   (inc-10v7f). Unset, no probe site does anything. */
+bool CreationTripwireProbe(const char *name)
+{
+    static const char *probe = NULL;
+    static bool read = false;
+    if (!read) {
+        read = true;
+        const char *p = getenv("INCURSION_TRIPWIRE_PROBE");
+        if (p && *p)
+            probe = p;
+    }
+    if (!probe || strcmp(probe, name))
+        return false;
+    fprintf(stderr, "tripwire probe %s: fault inserted\n", name);
+    fflush(stderr);
+    return true;
 }

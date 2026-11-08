@@ -22,7 +22,8 @@
 # can put a gallery.dat there beforehand and read the sandbox afterwards.
 # INCURSION_SEED, INCURSION_RECORD_CHAR and every other INCURSION_* variable is
 # removed before the binary starts, so a stray variable in the caller's shell
-# cannot change the character. The seed comes from the file.
+# cannot change the character. The seed comes from the file. The one variable
+# kept is INCURSION_TRIPWIRE_PROBE (a test hook, see below).
 #
 # Exit: 0 built; 2 bad usage; 10 the build failed (the BUILD FAILED line is on
 # stderr); any other code is the binary's.
@@ -57,7 +58,10 @@ ln -sfn "$ROOT/lib" "$RUN/lib"
 
 # The sandbox is the binary's whole world. Every INCURSION_* variable goes.
 CLEAN=()
+# INCURSION_TRIPWIRE_PROBE is the one exception: tools/check_fixture_tripwires.sh
+# sets it to insert a fault and prove a tripwire fires. Unset it changes nothing.
 while IFS= read -r v; do
+    [ "$v" = INCURSION_TRIPWIRE_PROBE ] && continue
     CLEAN+=(-u "$v")
 done < <(env | sed -n 's/^\(INCURSION[A-Z0-9_]*\)=.*/\1/p')
 

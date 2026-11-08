@@ -49,8 +49,43 @@ void census_log_srand(const char *f, int l, const char *fn);
 struct CensusWindow { bool on; CensusWindow(const char *n); ~CensusWindow(); };
 struct CensusEvent  { bool on; CensusEvent(int ev, const char *res); ~CensusEvent(); };
 struct CensusDice   { bool on; CensusDice(void *ra); ~CensusDice(); };
+
+/* Fixture-builder tripwire T2 (bead inc-10v7f; spec section 2, A1, A9, B1;
+   src/CreationSource.cpp). Armed only while the File creation source is the
+   active source and a creation window is open. An armed draw that is neither
+   inside a sourced decision nor inside an unstatedDraw scope fails the build.
+   Unarmed, every hook below costs one flag test and changes no draw. */
+extern bool g_t2Armed;
+extern int  g_unstatedDepth;
+void creation_t2_draw(const char *f, int l, const char *fn);
+void creation_t2_dice_enter(void *ra, void **prev);
+void creation_t2_dice_leave(void *prev);
+struct CreationT2Dice
+  {
+    bool on; void *prev;
+    CreationT2Dice(void *ra) : on(false), prev(0)
+      { if (g_t2Armed) { on = true; creation_t2_dice_enter(ra,&prev); } }
+    ~CreationT2Dice() { if (on) creation_t2_dice_leave(prev); }
+  };
+
+/* A draw that decides no saved character fact, named at its site. The reason
+   MUST be a string literal ("" reason fails to compile otherwise). Under Live
+   and Replay it changes nothing; under File it lets the draws in its scope
+   pass T2. Each use has a row in tools/fixtures/unstated_draws.baseline, which
+   tools/check_fixture_tripwires.sh holds equal to the code. */
+struct CreationUnstated
+  {
+    CreationUnstated(const char *) { g_unstatedDepth++; }
+    ~CreationUnstated() { g_unstatedDepth--; }
+  };
+#define CREATION_UNSTATED_CAT2(a,b) a##b
+#define CREATION_UNSTATED_CAT(a,b) CREATION_UNSTATED_CAT2(a,b)
+#define unstatedDraw(reason) \
+    CreationUnstated CREATION_UNSTATED_CAT(unstatedDrawScope,__LINE__)("" reason)
+
 inline int16 census_random(int16 mx, const char *f, int l, const char *fn)
   {
+    if (g_t2Armed && mx) creation_t2_draw(f,l,fn);
     int16 r = (random)(mx);
     if (g_censusActive) census_log_random(f,l,fn);
     return r;

@@ -3324,7 +3324,43 @@ String & TextTerm::StringPrompt(int8 col, const char*msg) {
     return *tmpstr(Input);
 }
 
-const char* TextTerm::ReadLine(int16 x,int16 y,int16 first_ch) {
+/* The key-read wrappers (T1; src/CreationSource.cpp). Each passes the call to
+   the backend's *Impl unchanged unless the fixture builder's tripwire is armed.
+   noinline keeps __builtin_return_address naming the code that read the key. */
+__attribute__((noinline)) int16 TextTerm::GetCharRaw() {
+    int16 key;
+    if (g_t1Armed && T1Gate("GetCharRaw", __builtin_return_address(0), key))
+        return key;
+    return GetCharRawImpl();
+}
+
+__attribute__((noinline)) int16 TextTerm::GetCharCmd() {
+    int16 key;
+    if (g_t1Armed && T1Gate("GetCharCmd", __builtin_return_address(0), key))
+        return key;
+    return GetCharCmdImpl();
+}
+
+__attribute__((noinline)) int16 TextTerm::GetCharCmd(KeyCmdMode mode) {
+    int16 key;
+    if (g_t1Armed && T1Gate("GetCharCmd", __builtin_return_address(0), key))
+        return key;
+    return GetCharCmdImpl(mode);
+}
+
+__attribute__((noinline)) const char* TextTerm::ReadLine(int16 x,int16 y,int16 first_ch) {
+    int16 key;
+    if (g_t1Armed) T1Gate("ReadLine", __builtin_return_address(0), key);
+    return ReadLineBody(x,y,first_ch);
+}
+
+__attribute__((noinline)) const char* TextTerm::ReadLine() {
+    int16 key;
+    if (g_t1Armed) T1Gate("ReadLine", __builtin_return_address(0), key);
+    return ReadLineBody(cx,cy,0);
+}
+
+const char* TextTerm::ReadLineBody(int16 x,int16 y,int16 first_ch) {
     int16 loc, ch;
     /* upstream: Input[loc++] never tested loc against sizeof(Input), so any
        prompt taking more than 160 characters wrote past the end of the

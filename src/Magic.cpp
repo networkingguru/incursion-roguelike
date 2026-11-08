@@ -236,6 +236,7 @@ String & TEffect::Power(int8 Mod, Creature *Caster, rID spID, Item *it)
     EffectValues *ef; bool printed,percent;
     String str; printed = false;
     Dice d; EventInfo e;
+    unstatedDraw("builds a description string; the rolled value reaches no saved field");
     e.Clear();
     e.EActor = Caster;
     e.EVictim = Caster;

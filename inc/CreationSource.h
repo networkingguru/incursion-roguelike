@@ -445,4 +445,37 @@ bool SourcedItem(CreationKey k, CreationItem &io, Live live, const char *sub = N
     return false;
 }
 
+/* ---- the tripwires (spec section 2; bead inc-10v7f phase 7b) -------------- */
+
+/* T1 and T2 are armed by the creation window when the File source is active.
+   T1 stays armed to the end of the build; T2 only while the window is open.
+   A key read or a main-stream draw that no sourced decision made fails the
+   build, in one stderr line beginning `BUILD FAILED: T1` or `BUILD FAILED: T2`
+   (src/CreationSource.cpp). */
+extern bool g_t1Armed;
+
+/* A key read that only acknowledges what the screen shows ([MORE], -- more --,
+   a message box). While one lives, an armed T1 answers the read itself with
+   Enter and logs one line, naming the kind and the text, to logs/build-acks.log
+   in the build's sandbox. The three sites are in src/TextTerm.cpp. */
+struct CreationAck {
+    const char *prevKind, *prevText;
+    CreationAck(const char *kind, const char *text);
+    ~CreationAck();
+};
+
+/* INCURSION_TRIPWIRE_PROBE=<case>: tools/check_fixture_tripwires.sh inserts a
+   fault at a place the code names. Cases: yn, rawkey, random-create,
+   random-advance, random-mapgen, random-unstated. Unset, every probe site does
+   nothing. CreationTripwireProbe says true for the named case and writes one
+   stderr line first, so the check can tell a fault that ran and passed from a
+   fault that never ran. */
+bool CreationTripwireProbe(const char *name);
+/* The rawkey fault: draw a titled screen and read a key from it. It lives here,
+   not in src/Create.cpp, because tools/check_creation_source_sites.sh refuses
+   any key read in that file outside a sourced decision. */
+void CreationTripwireRawKeyScreen(Term *t);
+#define CREATION_TRIPWIRE_PROBE_RANDOM(name) \
+    do { if (CreationTripwireProbe(name)) (void)random(2); } while (0)
+
 #endif

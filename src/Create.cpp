@@ -986,6 +986,24 @@ bool Player::Create(bool) {
     src->BeginState(this);
     formulaSeed = SourcedRoll(CK_FORMULA_SEED, []() { return (int32)NextSeed(); });
 
+    /* INCURSION_TRIPWIRE_PROBE: tools/check_fixture_tripwires.sh puts one fault
+       here at a time. Unset, none of this runs. */
+    if (CreationTripwireProbe("yn")) {
+        CreationPickList probeYn;
+        probeYn.Add("no", 0);
+        probeYn.Add("yes", 1);
+        SourcedPick(CK_SCRIPT_YN, probeYn,
+            [&]() { return yn("Tripwire probe: a prompt nobody stated?") ? 1 : 0; },
+            "tripwire probe");
+    }
+    if (CreationTripwireProbe("rawkey"))
+        CreationTripwireRawKeyScreen(MyTerm);
+    if (CreationTripwireProbe("random-unstated")) {
+        unstatedDraw("tripwire probe: a draw the probe makes on purpose");
+        (void)random(2);
+    }
+    CREATION_TRIPWIRE_PROBE_RANDOM("random-create");
+
     if (Opt(OPT_ATTR_FIRST)) {
         RollAttributes();
         CalcValues(true);
@@ -1845,7 +1863,8 @@ static char * DesiredPerk = NULL;
 static void NamePerk(Perk& p, String& str) {
     String s2; Item *it;
     switch (p.type) {
-    case PERK_ITEM: 
+    case PERK_ITEM: {
+        unstatedDraw("a perk item made only to read its name, then deleted");
         it = Item::Create(p.p.i.iID);
         it->MakeMagical(p.p.i.eID,p.p.i.Plus);
         it->IFlags &= (~IF_CURSED);
@@ -1861,6 +1880,7 @@ static void NamePerk(Perk& p, String& str) {
         s2.Replace("uncursed ","");
         str = Format("Starting Item: %s", (const char*) s2);
         return;
+        }
     case PERK_FEAT: 
         str = Format("   Bonus Feat: %s",FeatName(p.p.feat)); 
         return; 
@@ -2183,7 +2203,11 @@ void CreatePerk(PerkSet& Perks, int i, PerkType type, Player *p)
    directly. Behavior is unchanged. */
 static Item *BuildPerkItem(Perk &pk, Perk &qsrc)
 {
-    Item *it = Item::Create(pk.p.i.iID);
+    Item *it;
+    {
+        unstatedDraw("overwritten by stated perk_charges");
+        it = Item::Create(pk.p.i.iID);
+    }
     ASSERT(it->GetHP() == it->MaxHP());
     it->MakeMagical(pk.p.i.eID, pk.p.i.Plus);
     /* upstream: CreatePerk rejects cursed items and NamePerk shows the item
@@ -3928,6 +3952,7 @@ int16 TotalClassLevels(rID clID) {
 void Player::AdvanceLevel() {
     CensusWindow censusWindow("AdvanceLevel");
     int16 c,i, j; TClass *tc;
+    CREATION_TRIPWIRE_PROBE_RANDOM("random-advance");
     if (TotalLevel() >= MAX_CHAR_LEVEL) {
         IPrint(Format("The maximum character level in this version of Incursion is %d.",MAX_CHAR_LEVEL));
         return;

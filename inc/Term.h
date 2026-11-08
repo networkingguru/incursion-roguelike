@@ -773,8 +773,8 @@ public:
     virtual rID MonsterOfTypePrompt(int32 type, const char * prompt, Player *recallFor = NULL);
     virtual rID MonsterPrompt(const char * prompt, Player *recallFor = NULL);
     virtual String & StringPrompt(int8 Color, const char*msg);
-    virtual const char* ReadLine(int16 x,int16 y, int16 first_ch=0);
-    virtual const char* ReadLine() { return ReadLine(cx,cy); }
+    const char* ReadLine(int16 x,int16 y, int16 first_ch=0) final;
+    const char* ReadLine() final;
     virtual const char* GetTypedString() { return &Input[0]; }
 
     /* Splash Screens (Term.Cpp) */
@@ -824,13 +824,25 @@ public:
     virtual void Color(uint16 _attr)=0;
     virtual void StopWatch(int16 milli)=0;
 
-    /* Input Functions (platform-specific) */
-    virtual int16 GetCharRaw()=0;
-    virtual int16 GetCharCmd()=0;
-    virtual int16 GetCharCmd(KeyCmdMode mode)=0;
+    /* Input Functions. Every key read passes ONE wrapper here, so the fixture
+       builder's tripwire T1 (spec section 2, A8; src/CreationSource.cpp) sees
+       it. Unarmed, a wrapper only forwards to the backend's own function, the
+       *Impl below. A backend implements the *Impl functions. */
+    int16 GetCharRaw() final;
+    int16 GetCharCmd() final;
+    int16 GetCharCmd(KeyCmdMode mode) final;
     virtual void  ClearKeyBuff()=0;
     virtual bool CheckEscape()=0;
     virtual void PrePrompt() { }
+    /* T1: the text the screen shows nearest its top, for a failure line. */
+    void ScreenTopText(char *out, int n);
+protected:
+    virtual int16 GetCharRawImpl()=0;
+    virtual int16 GetCharCmdImpl()=0;
+    virtual int16 GetCharCmdImpl(KeyCmdMode mode)=0;
+    const char* ReadLineBody(int16 x,int16 y,int16 first_ch);
+    bool T1Gate(const char *what, void *ra, int16 &key);
+public:
 
     /* General Functions (platform-specific) */
     virtual void Initialize()=0;

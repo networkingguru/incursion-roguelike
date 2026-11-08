@@ -20,7 +20,7 @@
      void posixTerm::CursorOn/Off()    Glyph posixTerm::AGetChar(...)
      void posixTerm::Save/Restore()    void posixTerm::Clear()
    Input Functions
-     int16 posixTerm::GetCharCmd(KeyCmdMode mode)   -- reads the key script
+     int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode)   -- reads the key script
    General Functions
      void posixTerm::Initialize()      void Fatal(...)  void Error(...)
    Screen Capture
@@ -179,7 +179,7 @@ public:
     virtual int32 ConvertChar(Glyph g, char **out) { return 0; }
 
     /* Input Functions */
-    virtual int16 GetCharRaw() {
+    virtual int16 GetCharRawImpl() {
         if (getenv("INCURSION_GLORY_PROBE")) {
             extern int GloryProbeKey();
             int key = GloryProbeKey();
@@ -197,8 +197,8 @@ public:
         }
         return TextTerm::EffectPrompt(e,f,look,prompt);
     }
-    virtual int16 GetCharCmd() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
-    virtual int16 GetCharCmd(KeyCmdMode mode);
+    virtual int16 GetCharCmdImpl() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
+    virtual int16 GetCharCmdImpl(KeyCmdMode mode);
     /* inc-p0h1: the Bestow Curse probe scripts its two menus and, for the
        hesitation share, its own timed actions. Off unless the probe env var
        is set, so live play is untouched. */
@@ -1783,7 +1783,7 @@ ScriptKey posixTerm::NextKey() {
     return k;
 }
 
-int16 posixTerm::GetCharCmd(KeyCmdMode mode) {
+int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode) {
     KeySetItem *keyset = theGame->Opt(OPT_ROGUELIKE) ? RoguelikeKeySet : StandardKeySet;
     int16 keyset_start = 0, keyset_delta = 0, keyset_last;
     int16 i, ox, oy, ch;
