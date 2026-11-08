@@ -1344,6 +1344,7 @@ class Game : public Object
       void MemoryStats();
       void WriteHTMLHelp();
       void NewGame(rID mID, bool reincarnate);
+      void NewGameTail(rID mID, Player *pp);
       bool LoadGame(bool backup);
       bool LoadNamedGame(const char *savefile);
       bool SaveGame(Player &p);

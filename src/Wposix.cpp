@@ -308,6 +308,7 @@ public:
 
 private:
     ScriptKey NextKey();
+    ScriptKey BuildAck();
     void AppendKey(const ScriptKey &k);
     void OutOfKeys();
 };
@@ -498,6 +499,20 @@ extern bool RunSaveDump(const char *path);
 extern bool RunRecoverVars(const char *path);
 extern bool RunScriptVariables();
 
+/* While a fixture is being built there is no key script and nobody at the
+   keyboard. A read that finds the script empty is answered with ESC, so an
+   acknowledgment (the arrival box) does not end the run, and is logged to
+   logs/build-acks.log with whether the creation window was open. Phase 7b arms
+   the tripwire that fails a read made inside the window. */
+static bool buildAckMode = false;
+
+/* src/CharFile.cpp: the fixture builder (bead inc-10v7f). -build <file.char>
+   makes the character the file states through the File creation source, saves
+   him and writes his sheet. CharFilePrepare runs before the game exists. */
+extern bool CharFilePrepare(const char *charPath, const char *runDir);
+extern int  RunCharBuild(const char *charPath);
+extern int  RunCharPickTest(const char *charPath, int asks);
+
 /* src/SaveV1.cpp: the build-time order check's oracle. Declared locally for
    the same reason as RunSaveDump. */
 extern bool RunResourceOrder();
@@ -520,6 +535,9 @@ int main(int argc, char *argv[]) {
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
     const char *convertSave = NULL;
+    const char *buildChar = NULL;
+    const char *pickTestChar = NULL;
+    int pickTestAsks = 0;
     int i, retval = 0;
     bool forceHeadless = false;
     unsigned timeout = DEFAULT_TIMEOUT_S;
@@ -588,6 +606,12 @@ int main(int argc, char *argv[]) {
             forceHeadless = true;
         else if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-build") && i + 1 < argc)
+            buildChar = argv[++i];
+        else if (!strcmp(argv[i], "-charpicktest") && i + 1 < argc)
+            pickTestChar = argv[++i];
+        else if (!strcmp(argv[i], "-charasks") && i + 1 < argc)
+            pickTestAsks = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-recovervars") && i + 1 < argc)
             recoverSave = argv[++i];
         else if (!strcmp(argv[i], "-scriptvars"))
@@ -615,6 +639,14 @@ int main(int argc, char *argv[]) {
             }
             convertSave = argv[++i];
         }
+    }
+
+    /* -build reads options: and seed: first: the settings file becomes this
+       run's Options.Dat and the seed must be in the environment before the
+       Game constructor draws from it. */
+    if (buildChar) {
+        CharFilePrepare(buildChar, executablePath);
+        buildAckMode = true;
     }
 
     theGame = new Game();
@@ -662,6 +694,10 @@ int main(int argc, char *argv[]) {
         retval = RunSchemaLoad(schemaLoad) ? 0 : 22;
     } else if (convertSave) {
         retval = RunSaveConvert(convertSave);
+    } else if (pickTestChar) {
+        retval = RunCharPickTest(pickTestChar, pickTestAsks);
+    } else if (buildChar) {
+        retval = RunCharBuild(buildChar);
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         if (loadSave) {
@@ -1591,6 +1627,32 @@ static ScriptKey KeyFromTerminal() {
     return k;
 }
 
+ScriptKey posixTerm::BuildAck() {
+    static int acks = 0;
+    ScriptKey k;
+    char path[1024];
+    FILE *f;
+
+    memset(&k, 0, sizeof(k));
+    k.ch = KY_ESC;
+    acks++;
+    snprintf(path, sizeof(path), "%slogs/build-acks.log",
+        (const char*)IncursionDirectory);
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "ack %d window=%d\n", acks, CreationWindowOpen() ? 1 : 0);
+        fclose(f);
+    }
+    DumpScreen("ack");
+    if (acks > 50) {
+        fprintf(stderr, "BUILD FAILED: more than 50 key reads with no key script; "
+            "see logs/build-acks.log\n");
+        _exit(10);
+    }
+    keysRead++;
+    return k;
+}
+
 ScriptKey posixTerm::NextKey() {
     ScriptKey k;
 
@@ -1612,8 +1674,11 @@ ScriptKey posixTerm::NextKey() {
     for (;;) {
         ScriptKey *e;
 
-        if (!keys || keyNext >= keyCount)
+        if (!keys || keyNext >= keyCount) {
+            if (buildAckMode)
+                return BuildAck();
             OutOfKeys();
+        }
 
         e = &keys[keyNext];
 

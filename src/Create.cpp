@@ -86,8 +86,10 @@ void Player::CommitSkillRanks(const int8 *ranks, const int8 *unspent)
 static bool AttributesFromSource(int16 *attr)
 {
     int32 v[7];
+    /* Four dice keep three (3 to 18); point buy runs 3 to 18 as well. */
     for (int16 i = 0; i != 7; i++)
-        if (!CreationAnswerRoll((CreationKey)(CK_ATTR_STR + i), NULL, v[i]))
+        if (!CreationAnswerRoll((CreationKey)(CK_ATTR_STR + i), NULL, v[i],
+                CreationRange(3, 18)))
             return false;
     for (int16 i = 0; i != 7; i++)
         attr[i] = (int16)v[i];
@@ -169,6 +171,7 @@ static const CreationPickList &YesNoList()
 }
 
 bool Player::AbandonCreation() {
+    CreationMarkStep();
     return SourcedPick(CK_ABANDON, YesNoList(), [&]() {
         return yn("Abandon this character and return to the main menu?") ? 1 : 0; }) != 0;
 }
@@ -652,7 +655,7 @@ static void GrantBeginnerKit(Player *p)
             }
             Item *it = NULL;
             CreationItem made;
-            SourcedItem(CK_BEGINKIT_ITEM, made, [&](CreationItem &io) {
+            if (SourcedItem(CK_BEGINKIT_ITEM, made, [&](CreationItem &io) {
                 it = Item::Create(iID);
                 if (!it)
                     return;
@@ -660,7 +663,8 @@ static void GrantBeginnerKit(Player *p)
                 it->SetQuantity(n);
                 it->IFlags &= (IF_CURSED | IF_BLESSED);
                 CreationDescribeItem(io, it);
-            });
+            }))
+                it = CreationMakeItem(made);
             if (!it)
                 continue;
             p->GainItem(it, true);
@@ -669,7 +673,7 @@ static void GrantBeginnerKit(Player *p)
     if (food)
     {
         food->SetQuantity(SourcedRoll(CK_BEGINKIT_FOOD,
-            []() { return (int32)Dice::Roll(3, 2, 4); }));
+            []() { return (int32)Dice::Roll(3, 2, 4); }, NULL, CreationRange(7, 10)));
         p->GainItem(food, true);
     }
 }
@@ -1226,7 +1230,7 @@ RepeatClass:
 
     {
         PerkSet retained;
-        if (src->AnswerPerks(retained))
+        if (CreationAnswerPerks(retained))
             GrantPerks(retained,this);
     }
 
@@ -1334,14 +1338,18 @@ RepeatAlignment:
            holds them replaces the whole screen (its confirm and abort prompts
            included) and commits them through the same function. */
         int32 ranks[SK_LASTSKILL];
+        CreationRange rankCap[SK_LASTSKILL];
         bool screenRan = false;
+        /* The rank cap the skill screen enforces (Managers.cpp, MaxRanks). */
+        for (int16 i = 0; i != SK_LASTSKILL; i++)
+            rankCap[i] = CreationRange(0, MaxRanks(i));
         SourcedRoll(CK_SKILL_RANKS, ranks, SK_LASTSKILL, SkillSubName,
             [&]() {
                 MyTerm->SkillManager(true);
                 screenRan = true;
                 for (int16 i = 0; i != SK_LASTSKILL; i++)
                     ranks[i] = SkillRanks[i];
-            });
+            }, rankCap);
         if (!screenRan) {
             int8 kept[SK_LASTSKILL], none[6] = { 0, 0, 0, 0, 0, 0 };
             for (int16 i = 0; i != SK_LASTSKILL; i++)
@@ -1397,10 +1405,10 @@ RepeatAlignment:
             * But having just one rock isn't that exciting. */
             if (item->isType(T_MISSILE))
                 item->SetQuantity(SourcedRoll(CK_MISSILE_QUANTITY,
-                    []() { return (int32)(80 + random(20)); }));
+                    []() { return (int32)(80 + random(20)); }, NULL, CreationRange(80, 99)));
             else if (item->isGroup(WG_THROWN))
                 item->SetQuantity(SourcedRoll(CK_THROWN_QUANTITY,
-                    []() { return (int32)(4 + random(4)); }));
+                    []() { return (int32)(4 + random(4)); }, NULL, CreationRange(4, 7)));
             GainItem(item,true);
 SkipThisFocus:;
         }
@@ -1429,7 +1437,7 @@ SkipThisFocus:;
         * balance. Fourty arrows seems roughly like a sensible "full quiver"
         * anyway. */
         ammo->SetQuantity(SourcedRoll(CK_AMMO_QUANTITY,
-            []() { return (int32)(30 + random(11)); }));
+            []() { return (int32)(30 + random(11)); }, NULL, CreationRange(30, 40)));
         ammo->MakeKnown(-1);
         GainItem(ammo,true);
     }
@@ -2194,6 +2202,12 @@ static Item *BuildPerkItem(Perk &pk, Perk &qsrc)
     ASSERT(it->GetHP() == it->MaxHP());
     if (it->isType(T_MISSILE))
         it->SetQuantity(30);
+    /* Item::Create drew the charges of a wand or a staff. The charges the
+       character keeps are the decision, named by the item. */
+    if (it->isType(T_WAND) || it->isType(T_STAFF))
+        it->SetCharges((int8)SourcedRoll(CK_PERK_CHARGES,
+            [&]() { return (int32)it->GetCharges(); }, NAME(pk.p.i.iID),
+            CreationRange(0, 127)));
     return it;
 }
 
@@ -2414,6 +2428,8 @@ MethodI:
         }
 
         for (i=0,j=0;i!=5;i++) {
+            /* The five sets are candidates of the set pick, not decisions. */
+            CreationCandidates candidates;
             if (do_redraw)
                 goto JustDrawIt;
 
@@ -4137,7 +4153,7 @@ GodIsOkay:;
           default: /* no */
               return (int8)max(random(HD)+1,(HD/2));
         }
-    }, NAME(ClassID[c]));
+    }, NAME(ClassID[c]), CreationRange(1, max(1, (int)HD)));
 
     manaRolls[c][Level[c]-1] = (int8)SourcedRoll(CK_MANA_ROLL, [&]() -> int32 {
         switch (Opt(OPT_MAX_MANA)) {
@@ -4146,7 +4162,7 @@ GodIsOkay:;
           default: /* no */
               return max(random(tc->ManaDie)+1,(tc->ManaDie/2));
         }
-    }, NAME(ClassID[c]));
+    }, NAME(ClassID[c]), CreationRange(0, max(1, (int)tc->ManaDie)));
 
     for (i=0;GodIDList[i];i++)
         if (j = (int16)TGOD(GodIDList[i])->GetConst(LEVEL_BLEEDOFF))
@@ -4612,7 +4628,7 @@ ImpCritChoice:
                                 else
                                     name = NAME(wID);
                                 MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
-                                pl.Add(NAME(wID), (int32)wID);
+                                pl.Add(CreationFullName(wID).c_str(), (int32)wID);
                                 RemoveStatiFrom(w); 
                                 delete i; 
                                 Found = true; 
@@ -4682,7 +4698,7 @@ ChooseWeapon:
                                     else
                                         name = NAME(wID);
                                     MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
-                                    pl.Add(NAME(wID), (int32)wID);
+                                    pl.Add(CreationFullName(wID).c_str(), (int32)wID);
                                     RemoveStatiFrom(w); 
                                     delete i; 
                                     Found = true; 
@@ -4734,7 +4750,7 @@ ChooseExotic:
                                         else
                                             name = NAME(wID);
                                         MyTerm->LOption(name,wID,w->Describe(this),TITEM(wID)->HasFlag(IT_NOGEN));
-                                        pl.Add(NAME(wID), (int32)wID);
+                                        pl.Add(CreationFullName(wID).c_str(), (int32)wID);
                                         RemoveStatiFrom(w); 
                                         delete i; 
                                         Found = true; 
@@ -4885,7 +4901,7 @@ void Player::GainAbility(int16 ab, uint32 pa, rID sourceID, int16 statiSource) {
                         goto SkipThisOne;
                 found = true;
                 MyTerm->LOption(NAME(tatID),tatID, TEFF(tatID)->Describe(this));
-                pl.Add(NAME(tatID), (int32)tatID);
+                pl.Add(CreationFullName(tatID).c_str(), (int32)tatID);
 SkipThisOne:;
             }
             if (!found) {
@@ -6943,7 +6959,7 @@ bool Player::ChooseInherentSpell() {
                 L = TEFF(theGame->SpellID(sn))->Level;
                 MyTerm->LOption(Format("%s (level %d)", (const char*)NAME(theGame->SpellID(sn)), (int)L),
                     sn + 1);
-                pl.Add(NAME(theGame->SpellID(sn)), sn + 1);
+                pl.Add(CreationFullName(theGame->SpellID(sn)).c_str(), sn + 1);
                 nSpells++;
             }
 
@@ -7082,7 +7098,7 @@ bool Player::ChooseLucubrationBook() {
         pl.Clear();
         for (i = 0; i < nKinds; i++) {
             MyTerm->LOption(NAME(kinds[i]), i + 1);
-            pl.Add(NAME(kinds[i]), i + 1);
+            pl.Add(CreationFullName(kinds[i]).c_str(), i + 1);
         }
 
         chosen = (int16)SourcedPick(CK_LUCUBRATION_BOOK, pl, [&]() { return (int32)MyTerm->LMenu(MENU_BORDER, "Choose a spellbook to study:", WIN_MENUBOX); });

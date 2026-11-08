@@ -1,0 +1,146 @@
+# orc-barbarian-seed1-opt0822: the character tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+# holds, written by hand from the canonical dump of that file (tools/char_dump.sh).
+# Written for inc-10v7f phase 7a, spec B7: the dump of the build of this file is
+# compared with the dump of the old .sav by tools/check_handwritten_fixture.sh.
+#
+# Read from the dump: the name (Identity), the base attributes (BaseAttr), the
+# perks (the journal's "Starting Perks": Bonus Feat Light Sleeper, Wild Talent
+# Brain Lock), the feats, the hit and mana rolls, the skill ranks, the starting
+# kit and its quantities, and the creation record (formulaSeed, storeSeed,
+# Personality). The old .sav's Options line holds OPT_BEGINKIT=1, so the
+# options are the kit variant of the dated settings file.
+options: tools/fixtures/options-2026-08-22-kit.dat
+seed: 1
+
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Orc
+subrace: Orc
+name: Varag
+surname: the Deathbringer
+class: Barbarian
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Light Sleeper
+perk_type [1]: PERK_TALENT
+perk_spell [1]: Brain Lock
+attr_str: 12
+attr_dex: 12
+attr_con: 12
+attr_int: 15
+attr_wis: 14
+attr_cha: 16
+attr_luc: 15
+alignment: Neutral
+script_roll [Barbarian;EV_153]: 2
+script_roll [Barbarian;EV_153]: 1
+feat: Acrobatic
+feat: Alertness
+hp_roll [Barbarian]: 12
+mana_roll [Barbarian]: 4
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 0
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 1
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 19
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 41
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Barbarian]: 20
+gear_chance [Barbarian;a1]: 32
+script_roll [Barbarian]: 2
+gear_chance [Barbarian;a7]: 88
+kit_item [Barbarian;a8]: greatsword, quantity 1
+kit_item [Barbarian;a9]: loincloth, quantity 1
+kit_item [Barbarian;a10]: gold piece, quantity 21
+gear_stream [Universal Gear]: 21
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 44
+gear_chance [Universal Gear;a6]: 37
+gear_chance [Universal Gear;a7]: 9
+gear_chance [Universal Gear;a10]: 97
+gear_chance [Universal Gear;a14]: 5
+kit_item [Universal Gear;a16]: hide armour, quantity 1
+thrown_quantity: 7
+script_yn [Orc;EV_150]: yes
+# The Beginner's Kit, in the order the old .sav made it (the generation numbers
+# in its dump): the belt potions, then the pack potions, the wand and the food.
+beginkit_item: potion, effect See Invisibility;potion, quantity 5
+beginkit_item: potion, effect Remove Curse;potion, quantity 4
+beginkit_item: potion, effect Cure Disease, quantity 3
+beginkit_item: potion, effect Antitoxin, quantity 4
+beginkit_item: potion, effect Restore Strength, quantity 2
+beginkit_item: potion, effect Restore Constitution, quantity 3
+beginkit_item: potion, effect Restoration, quantity 3
+beginkit_item: potion, effect Detect Stairs, quantity 2
+beginkit_item: wand, effect Identify, charges 50, quantity 1
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_item: none
+beginkit_food: 9
+personality: The Manipulative Plotter
+store_seed: 24
+character_name: Varag the Deathbringer
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

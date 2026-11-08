@@ -127,9 +127,8 @@ Game::Game() : Object(T_GAME) {
 extern hObj excessItems[30];
 
 void Game::NewGame(rID mID, bool reincarnate) {
-    int16 x, y, i;
-    Map *mp; Player *pp;
-    rID dID;
+    int16 i;
+    Player *pp;
 
     T1->SetWin(WIN_SCREEN);
     T1->Clear();
@@ -162,6 +161,17 @@ void Game::NewGame(rID mID, bool reincarnate) {
             return;
     } else if (!pp->Create(false))
         return;
+
+    NewGameTail(mID, pp);
+}
+
+/* Everything NewGame does once Player::Create has returned (spec A1). It is
+   a function of its own so the fixture builder can run it after the File
+   source made the character; the old path calls it and nothing else changed. */
+void Game::NewGameTail(rID mID, Player *pp) {
+    int16 x, y, i;
+    Map *mp;
+    rID dID;
 
     if (mID) {
         mp = new Map;

@@ -15,12 +15,17 @@
 /* ---- the key table ------------------------------------------------------ */
 
 static const char *keyUpper[CK_COUNT] = {
-#define X(n,k) #n,
+#define X(n,k,d) #n,
     CREATION_KEY_LIST(X)
 #undef X
 };
 static const CreationKind keyKind[CK_COUNT] = {
-#define X(n,k) CKIND_##k,
+#define X(n,k,d) CKIND_##k,
+    CREATION_KEY_LIST(X)
+#undef X
+};
+static const char *keyDefault[CK_COUNT] = {
+#define X(n,k,d) d,
     CREATION_KEY_LIST(X)
 #undef X
 };
@@ -40,6 +45,16 @@ const char *CreationKeyName(CreationKey k)
 CreationKind CreationKeyKind(CreationKey k)
 {
     return (k < 0 || k >= CK_COUNT) ? CKIND_ROLL : keyKind[k];
+}
+
+const char *CreationKeyDefault(CreationKey k)
+{
+    return (k < 0 || k >= CK_COUNT || !keyDefault[k]) ? "" : keyDefault[k];
+}
+
+bool CreationKeyIsInput(CreationKey k)
+{
+    return k >= 0 && k < CK_COUNT && keyDefault[k] != NULL;
 }
 
 /* ---- the RInf bindings --------------------------------------------------
@@ -151,7 +166,13 @@ static std::string OrdinalKey(CreationKey k, const CreationContext &c)
     return std::string(keyUpper[k]) + "|" + c.resource + "|" + (const char*)Format("%d", c.event);
 }
 
+CreationContext CreationMakeContext(CreationKey k, const char *sub);
 static CreationContext MakeContext(CreationKey k, const char *sub)
+{
+    return CreationMakeContext(k, sub);
+}
+
+CreationContext CreationMakeContext(CreationKey k, const char *sub)
 {
     CreationContext c;
     c.event = 0;
@@ -176,6 +197,9 @@ struct RecordedDecision {
 static std::vector<RecordedDecision> recorded;
 
 static std::string ContextText(const CreationContext &c)
+    { return CreationContextText(c); }
+
+std::string CreationContextText(const CreationContext &c)
 {
     std::string s;
     if (!c.resource.empty()) s += c.resource;
@@ -192,23 +216,32 @@ static std::string ContextText(const CreationContext &c)
 
 static void Emit(CreationKey k, const CreationContext &c, const std::string &text)
 {
+    if (!CreationKeyIsInput(k))
+        return;
     RecordedDecision d; d.key = k; d.ctx = c; d.text = text;
     recorded.push_back(d);
 }
 
 /* ESC backed creation up (Player::AbandonCreation answered no, then the site
-   calls PopResponse): the step the player left recorded the abandon line, and
-   nothing after it. Drop that line and give its ordinal back, so the .char of
-   a walk that ESCs and picks again holds only the final picks (phase 6c). */
+   calls PopResponse): the step the player left recorded the abandon decision,
+   and nothing after it. AbandonCreation marks where the step began; dropping
+   it gives each ordinal back, so the .char of a walk that ESCs and picks again
+   holds only the final picks (phase 6c). The mark is a position, not a key. */
+static size_t stepMark = 0;
+static bool haveStepMark = false;
+
+void CreationMarkStep()
+{
+    stepMark = recorded.size();
+    haveStepMark = true;
+}
+
 static void DropAbandonedStep()
 {
-    size_t from = recorded.size();
-    while (from != 0 && recorded[from - 1].key != CK_ABANDON)
-        from--;
-    if (from == 0)
+    if (!haveStepMark)
         return;
-    from--;
-    while (recorded.size() > from) {
+    haveStepMark = false;
+    while (recorded.size() > stepMark) {
         const RecordedDecision &d = recorded.back();
         ordinals[OrdinalKey(d.key, d.ctx)] = d.ctx.ordinal;
         recorded.pop_back();
@@ -238,12 +271,28 @@ static std::string QualityName(rID iID, int q)
     return n ? std::string(n) : std::string((const char*)Format("%d", q));
 }
 
+/* The resource's name in full, ";tag" included. NAME() drops the tag, and two
+   resources can share a name without it (the potion "Healing" and the spell
+   "Healing"), so the file states the full name (spec S3). */
+std::string CreationFullName(rID x)
+{
+    if (!x)
+        return "none";
+    Resource *r = RES(x);
+    return std::string(theGame->Modules[r->ModNum]->GetText(r->Name));
+}
+static std::string FullName(rID x) { return CreationFullName(x); }
+
 static std::string ItemText(const CreationItem &it)
 {
-    std::string s = it.iID ? NAME(it.iID) : "none";
-    if (it.eID) s += std::string(", effect ") + NAME(it.eID);
+    std::string s = it.iID ? FullName(it.iID) : "none";
+    if (it.eID) s += std::string(", effect ") + FullName(it.eID);
     if (it.plus) s += Format(", plus %d", (int)it.plus);
     if (it.bane) s += Format(", bane %d", (int)it.bane);
+    if (it.flags & IF_BLESSED) s += ", flag blessed";
+    if (it.flags & IF_CURSED) s += ", flag cursed";
+    if (it.flags & IF_MASTERWORK) s += ", flag masterwork";
+    if (it.flags & IF_RUNIC) s += ", flag runic";
     for (int i = 0; i != 8; i++)
         if (it.q[i]) s += ", quality " + QualityName(it.iID, it.q[i]);
     if (it.quantity) s += Format(", quantity %d", (int)it.quantity);
@@ -253,10 +302,320 @@ static std::string ItemText(const CreationItem &it)
         const char *nm = Lookup(STATI_CONSTNAMES, st.nature);
         s += Format(", stati %s val %d mag %d duration %d",
             nm ? nm : "?", (int)st.val, (int)st.mag, (int)st.duration);
-        if (st.eID) s += std::string(" effect ") + NAME(st.eID);
+        if (st.eID) s += std::string(" effect ") + FullName(st.eID);
     }
     return s;
 }
+
+std::string CreationItemText(const CreationItem &it) { return ItemText(it); }
+
+/* ---- reading the names back ---------------------------------------------- */
+
+enum { FIND_ITEM, FIND_EFFECT };
+
+/* The one resource of `which` kind named `name` across every loaded module.
+   Fails on none and on more than one. */
+static bool FindResource(int which, const std::string &name, rID &out, std::string &err)
+{
+    int count = 0;
+    for (int q = 0; q != MAX_MODULES; q++) {
+        Module *m = theGame->Modules[q];
+        if (!m)
+            continue;
+        int n = (which == FIND_ITEM) ? m->szItm : m->szEff;
+        for (int i = 0; i != n; i++) {
+            rID x = (which == FIND_ITEM) ? m->ItemID((uint16)i) : m->EffectID((uint16)i);
+            if (name == FullName(x)) {
+                out = x;
+                count++;
+            }
+        }
+    }
+    if (count == 0)
+        err = std::string("no ") + (which == FIND_ITEM ? "item" : "effect") +
+            " named \"" + name + "\" in the module";
+    else if (count > 1)
+        err = std::string("\"") + name + "\" names " + (const char*)Format("%d", count) +
+            (which == FIND_ITEM ? " items" : " effects") + ", so it is ambiguous";
+    return count == 1;
+}
+
+static bool TextValFind(TextVal *list, const std::string &name, int32 &val, int &count)
+{
+    count = 0;
+    for (; list->Text; list++)
+        if (name == list->Text) {
+            val = list->Val;
+            count++;
+        }
+    return count == 1;
+}
+
+static bool QualityValue(rID iID, const std::string &name, int16 &q, std::string &err)
+{
+    int t = iID ? TITEM(iID)->IType : 0;
+    TextVal *first = IQ_CONSTNAMES;
+    if (t == T_ARMOUR || t == T_SHIELD)
+        first = AQ_CONSTNAMES;
+    else if (t == T_WEAPON || t == T_MISSILE || t == T_BOW)
+        first = WQ_CONSTNAMES;
+    int32 v; int count;
+    if (TextValFind(first, name, v, count) ||
+        (first != IQ_CONSTNAMES && TextValFind(IQ_CONSTNAMES, name, v, count)))
+        { q = (int16)v; return true; }
+    char *end;
+    long n = strtol(name.c_str(), &end, 10);
+    if (!name.empty() && *end == 0) { q = (int16)n; return true; }
+    err = "no quality named \"" + name + "\" for this item";
+    return false;
+}
+
+static bool ReadInt(const std::string &t, int32 &v)
+{
+    if (t.empty()) return false;
+    char *end;
+    long n = strtol(t.c_str(), &end, 10);
+    if (*end) return false;
+    v = (int32)n;
+    return true;
+}
+
+/* Split the item text at each ", <word> " where <word> starts a field. The
+   first piece is the item's name. */
+static bool SplitItemText(const std::string &text, std::vector<std::string> &pieces)
+{
+    static const char *words[] = { "effect", "plus", "bane", "flag", "quality", "quantity",
+        "charges", "stati", NULL };
+    size_t start = 0, pos = 0;
+    while ((pos = text.find(", ", pos)) != std::string::npos) {
+        bool field = false;
+        for (int w = 0; words[w]; w++) {
+            std::string kw = std::string(words[w]) + " ";
+            if (text.compare(pos + 2, kw.size(), kw) == 0)
+                field = true;
+        }
+        if (field) {
+            pieces.push_back(text.substr(start, pos - start));
+            start = pos + 2;
+        }
+        pos += 2;
+    }
+    pieces.push_back(text.substr(start));
+    return true;
+}
+
+bool CreationItemRead(const std::string &text, CreationItem &it, std::string &err)
+{
+    it = CreationItem();
+    std::vector<std::string> pieces;
+    SplitItemText(text, pieces);
+    std::string name = pieces[0];
+    if (name == "none")
+        return pieces.size() == 1 ? true : (err = "\"none\" takes no fields", false);
+    if (!FindResource(FIND_ITEM, name, it.iID, err))
+        return false;
+    int nq = 0;
+    for (size_t i = 1; i != pieces.size(); i++) {
+        const std::string &f = pieces[i];
+        size_t sp = f.find(' ');
+        std::string word = f.substr(0, sp), rest = f.substr(sp + 1);
+        int32 n;
+        if (word == "effect") {
+            if (!FindResource(FIND_EFFECT, rest, it.eID, err)) return false;
+        } else if (word == "plus" || word == "bane" || word == "quantity" || word == "charges") {
+            if (!ReadInt(rest, n)) { err = word + " wants a whole number, not \"" + rest + "\""; return false; }
+            if (word == "plus") it.plus = (int16)n;
+            else if (word == "bane") it.bane = (int16)n;
+            else if (word == "quantity") it.quantity = n;
+            else it.charges = n;
+        } else if (word == "flag") {
+            if (rest == "blessed") it.flags |= IF_BLESSED;
+            else if (rest == "cursed") it.flags |= IF_CURSED;
+            else if (rest == "masterwork") it.flags |= IF_MASTERWORK;
+            else if (rest == "runic") it.flags |= IF_RUNIC;
+            else { err = "unknown item flag \"" + rest + "\" (blessed, cursed, masterwork, runic)"; return false; }
+        } else if (word == "quality") {
+            if (nq == 8) { err = "more than eight qualities"; return false; }
+            if (!QualityValue(it.iID, rest, it.q[nq], err)) return false;
+            nq++;
+        } else if (word == "stati") {
+            /* stati <NATURE> val V mag M duration D [effect NAME] */
+            CreationStati st; st.nature = 0; st.val = st.mag = st.duration = 0; st.eID = 0;
+            size_t vpos = rest.find(" val ");
+            if (vpos == std::string::npos) { err = "stati wants: <name> val V mag M duration D"; return false; }
+            std::string nat = rest.substr(0, vpos);
+            int32 nv; int count;
+            if (!TextValFind(STATI_CONSTNAMES, nat, nv, count)) {
+                err = "no status named \"" + nat + "\""; return false; }
+            st.nature = (int16)nv;
+            std::string tail = rest.substr(vpos + 5);
+            std::string eff;
+            size_t epos = tail.find(" effect ");
+            if (epos != std::string::npos) { eff = tail.substr(epos + 8); tail.erase(epos); }
+            int a = 0, b = 0, c = 0;
+            if (sscanf(tail.c_str(), "%d mag %d duration %d", &a, &b, &c) != 3) {
+                err = "stati wants: <name> val V mag M duration D"; return false; }
+            st.val = a; st.mag = b; st.duration = c;
+            if (!eff.empty() && !FindResource(FIND_EFFECT, eff, st.eID, err)) return false;
+            it.stati.push_back(st);
+        } else {
+            err = "unknown item field \"" + word + "\"";
+            return false;
+        }
+    }
+    return true;
+}
+
+/* An answered CreationItem becomes the item, through the engine's own item
+   functions: Item::Create, MakeMagical, SetInherentPlus, SetBane, AddQuality,
+   SetQuantity, SetCharges and GainPermStati / GainTempStati. */
+Item *CreationMakeItem(const CreationItem &d)
+{
+    if (!d.iID)
+        return NULL;
+    Item *it = Item::Create(d.iID);
+    if (!it)
+        return NULL;
+    if (d.eID)
+        it->MakeMagical(d.eID, d.plus > 0 ? d.plus : 0);
+    if (it->GetInherentPlus() != d.plus)
+        it->SetInherentPlus((int8)d.plus);
+    if (d.quantity)
+        it->SetQuantity((uint32)d.quantity);
+    it->SetCharges((int8)d.charges);
+    /* The bane goes in first: adding a bane quality to a weapon with none
+       draws a random one. */
+    if (d.bane)
+        it->SetBane(d.bane);
+    for (int i = 0; i != 8; i++)
+        if (d.q[i])
+            it->AddQuality((int8)d.q[i]);
+    it->IFlags = (uint16)((it->IFlags & ~CREATION_ITEM_FLAGS) | d.flags);
+    for (size_t i = 0; i != d.stati.size(); i++) {
+        const CreationStati &st = d.stati[i];
+        if (st.duration)
+            it->GainTempStati(st.nature, NULL, (int16)st.duration, SS_MISC,
+                (int16)st.val, (int16)st.mag, st.eID);
+        else
+            it->GainPermStati(st.nature, NULL, SS_MISC, (int16)st.val,
+                (int16)st.mag, st.eID);
+    }
+    return it;
+}
+
+/* ---- the Perk fields: ONE table, walked by the serializer and the parser --- */
+
+static const char *perkTypeNames[] = { "PERK_NONE", "PERK_ITEM", "PERK_FEAT",
+    "PERK_ABILITY", "PERK_SPELL", "PERK_RESIST", "PERK_IMMUNE", "PERK_TALENT" };
+
+const char *CreationPerkTypeName(int t)
+    { return (t >= 0 && t < 8) ? perkTypeNames[t] : "?"; }
+
+int CreationPerkTypeFromName(const std::string &name)
+{
+    for (int i = 0; i != 8; i++)
+        if (name == perkTypeNames[i])
+            return i;
+    return -1;
+}
+
+static std::string PerkItemWrite(const Perk &p)
+{
+    CreationItem it;
+    it.iID = p.p.i.iID; it.eID = p.p.i.eID;
+    it.plus = p.p.i.Plus; it.bane = p.p.i.Bane;
+    for (int q = 0; q != 8; q++) it.q[q] = p.p.i.q[q];
+    return ItemText(it);
+}
+static bool PerkItemRead(const std::string &t, Perk &p, std::string &err)
+{
+    CreationItem it;
+    if (!CreationItemRead(t, it, err))
+        return false;
+    if (!it.iID) { err = "a perk item is not \"none\""; return false; }
+    p.p.i.iID = it.iID; p.p.i.eID = it.eID;
+    p.p.i.Plus = it.plus; p.p.i.Bane = it.bane;
+    for (int q = 0; q != 8; q++) p.p.i.q[q] = it.q[q];
+    return true;
+}
+
+static std::string PerkFeatWrite(const Perk &p) { return FeatName(p.p.feat); }
+static bool PerkFeatRead(const std::string &t, Perk &p, std::string &err)
+{
+    int found = 0;
+    for (int i = 0; FeatInfo[i].feat; i++)
+        if (t == FeatInfo[i].name) {
+            p.p.feat = (int16)FeatInfo[i].feat;
+            found++;
+        }
+    if (found != 1)
+        err = found ? "feat \"" + t + "\" is ambiguous" : "no feat named \"" + t + "\"";
+    return found == 1;
+}
+
+static std::string PerkAbilityWrite(const Perk &p)
+{
+    return (const char*)Format("%s %d", Lookup(ClassAbilities, p.p.ability.ca_ability),
+        (int)p.p.ability.ability_value);
+}
+static bool PerkAbilityRead(const std::string &t, Perk &p, std::string &err)
+{
+    size_t sp = t.rfind(' ');
+    int32 v, a; int count;
+    if (sp == std::string::npos || !ReadInt(t.substr(sp + 1), v)) {
+        err = "an ability line is: <ability> <value>"; return false; }
+    if (!TextValFind(ClassAbilities, t.substr(0, sp), a, count)) {
+        err = "no class ability named \"" + t.substr(0, sp) + "\""; return false; }
+    p.p.ability.ca_ability = (int16)a;
+    p.p.ability.ability_value = v;
+    return true;
+}
+
+static std::string PerkSpellWrite(const Perk &p) { return FullName(p.p.spell); }
+static bool PerkSpellRead(const std::string &t, Perk &p, std::string &err)
+    { return FindResource(FIND_EFFECT, t, p.p.spell, err); }
+
+static std::string PerkResistWrite(const Perk &p)
+{
+    if (p.p.resist < 0)
+        return std::string("save ") + Lookup(SaveBonusNames, -p.p.resist);
+    return Lookup(DTypeNames, p.p.resist);
+}
+static bool PerkResistRead(const std::string &t, Perk &p, std::string &err)
+{
+    int32 v; int count;
+    if (t.compare(0, 5, "save ") == 0) {
+        if (!TextValFind(SaveBonusNames, t.substr(5), v, count)) {
+            err = "no save bonus named \"" + t.substr(5) + "\""; return false; }
+        p.p.resist = -v;
+        return true;
+    }
+    if (!TextValFind(DTypeNames, t, v, count)) {
+        err = "no damage type named \"" + t + "\""; return false; }
+    p.p.resist = v;
+    return true;
+}
+
+static std::string PerkImmuneWrite(const Perk &p) { return Lookup(DTypeNames, p.p.immune); }
+static bool PerkImmuneRead(const std::string &t, Perk &p, std::string &err)
+{
+    int32 v; int count;
+    if (!TextValFind(DTypeNames, t, v, count)) {
+        err = "no damage type named \"" + t + "\""; return false; }
+    p.p.immune = v;
+    return true;
+}
+
+const CreationPerkField CreationPerkFields[] = {
+    { PERK_ITEM,    CK_PERK_ITEM,    PerkItemWrite,    PerkItemRead },
+    { PERK_FEAT,    CK_PERK_FEAT,    PerkFeatWrite,    PerkFeatRead },
+    { PERK_ABILITY, CK_PERK_ABILITY, PerkAbilityWrite, PerkAbilityRead },
+    { PERK_SPELL,   CK_PERK_SPELL,   PerkSpellWrite,   PerkSpellRead },
+    { PERK_TALENT,  CK_PERK_SPELL,   PerkSpellWrite,   PerkSpellRead },
+    { PERK_RESIST,  CK_PERK_RESIST,  PerkResistWrite,  PerkResistRead },
+    { PERK_IMMUNE,  CK_PERK_IMMUNE,  PerkImmuneWrite,  PerkImmuneRead },
+};
+const int CreationPerkFieldCount = (int)(sizeof(CreationPerkFields) / sizeof(CreationPerkFields[0]));
 
 /* The retained perk set, one named line per field (spec section 3). */
 static void EmitPerks(const PerkSet &set)
@@ -266,53 +625,15 @@ static void EmitPerks(const PerkSet &set)
         if (p.type == PERK_NONE)
             continue;
         CreationContext c = MakeContext(CK_PERK_TYPE, Format("%d", j));
-        static const char *typeName[] = { "PERK_NONE", "PERK_ITEM", "PERK_FEAT",
-            "PERK_ABILITY", "PERK_SPELL", "PERK_RESIST", "PERK_IMMUNE", "PERK_TALENT" };
-        Emit(CK_PERK_TYPE, c, typeName[p.type]);
+        Emit(CK_PERK_TYPE, c, CreationPerkTypeName(p.type));
         Advance(CK_PERK_TYPE, c);
-        switch (p.type) {
-        case PERK_ITEM: {
-            CreationItem it;
-            it.iID = p.p.i.iID; it.eID = p.p.i.eID;
-            it.plus = p.p.i.Plus; it.bane = p.p.i.Bane;
-            for (int q = 0; q != 8; q++) it.q[q] = p.p.i.q[q];
-            CreationContext ic = MakeContext(CK_PERK_ITEM, Format("%d", j));
-            Emit(CK_PERK_ITEM, ic, ItemText(it));
-            Advance(CK_PERK_ITEM, ic);
-            } break;
-        case PERK_FEAT: {
-            CreationContext fc = MakeContext(CK_PERK_FEAT, Format("%d", j));
-            Emit(CK_PERK_FEAT, fc, FeatName(p.p.feat));
-            Advance(CK_PERK_FEAT, fc);
-            } break;
-        case PERK_ABILITY: {
-            CreationContext ac = MakeContext(CK_PERK_ABILITY, Format("%d", j));
-            Emit(CK_PERK_ABILITY, ac, (const char*)Format("%s %d",
-                Lookup(ClassAbilities, p.p.ability.ca_ability),
-                (int)p.p.ability.ability_value));
-            Advance(CK_PERK_ABILITY, ac);
-            } break;
-        case PERK_SPELL:
-        case PERK_TALENT: {
-            CreationContext sc = MakeContext(CK_PERK_SPELL, Format("%d", j));
-            Emit(CK_PERK_SPELL, sc, NAME(p.p.spell));
-            Advance(CK_PERK_SPELL, sc);
-            } break;
-        case PERK_RESIST: {
-            CreationContext rc = MakeContext(CK_PERK_RESIST, Format("%d", j));
-            if (p.p.resist < 0)
-                Emit(CK_PERK_RESIST, rc, std::string("save ") +
-                    Lookup(SaveBonusNames, -p.p.resist));
-            else
-                Emit(CK_PERK_RESIST, rc, Lookup(DTypeNames, p.p.resist));
-            Advance(CK_PERK_RESIST, rc);
-            } break;
-        case PERK_IMMUNE: {
-            CreationContext mc = MakeContext(CK_PERK_IMMUNE, Format("%d", j));
-            Emit(CK_PERK_IMMUNE, mc, Lookup(DTypeNames, p.p.immune));
-            Advance(CK_PERK_IMMUNE, mc);
-            } break;
-        default: break;
+        for (int f = 0; f != CreationPerkFieldCount; f++) {
+            const CreationPerkField &pf = CreationPerkFields[f];
+            if (pf.perkType != p.type)
+                continue;
+            CreationContext fc = MakeContext(pf.key, Format("%d", j));
+            Emit(pf.key, fc, pf.write(p));
+            Advance(pf.key, fc);
         }
     }
 }
@@ -328,15 +649,32 @@ static std::string OptionsBase(const char *path)
     return s;
 }
 
-static std::string OptionsFileName(const char *path)
-{
-    std::string s = OptionsBase(path) + ".options.dat";
-    size_t slash = s.find_last_of("/\\");
-    return slash == std::string::npos ? s : s.substr(slash + 1);
-}
-
 static std::string optionsBytes;
 static bool haveOptions = false;
+
+std::string CreationNormalize(const std::string &label)
+{
+    std::string s;
+    for (size_t i = 0; i != label.size(); i++) {
+        unsigned char c = (unsigned char)label[i];
+        if (c < 32 || c >= 0xF0) {
+            if (c == '\n' || c == '\t') s += ' ';
+            continue;
+        }
+        if (c == '<') {
+            size_t j = i + 1;
+            while (j < label.size() && j - i <= 7 && isalnum((unsigned char)label[j]))
+                j++;
+            if (j < label.size() && label[j] == '>' && j > i + 1) {
+                i = j;
+                continue;
+            }
+        }
+        s += (char)c;
+    }
+    size_t a = s.find_first_not_of(' '), b = s.find_last_not_of(' ');
+    return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
 
 static void WriteCharFile()
 {
@@ -359,13 +697,29 @@ static void WriteCharFile()
         return;
     }
     fprintf(f, "# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made\n");
+    /* The two lines that are data, not decisions (spec 3, B11): the settings
+       file the session ran under, or the changed copy written beside this
+       file, and the session seed. */
+    {
+        const char *opts = getenv("INCURSION_OPTIONS");
+        const char *seed = getenv("INCURSION_SEED");
+        if (haveOptions)
+            fprintf(f, "options: %s\n", (OptionsBase(path) + ".options.dat").c_str());
+        else if (opts && *opts)
+            fprintf(f, "options: %s\n", opts);
+        if (seed && *seed)
+            fprintf(f, "seed: %s\n", seed);
+    }
     for (size_t i = 0; i != recorded.size(); i++) {
         std::string ctx = ContextText(recorded[i].ctx);
+        std::string text = recorded[i].text;
+        if (CreationKeyKind(recorded[i].key) == CKIND_PICK)
+            text = CreationNormalize(text);
         if (ctx.empty())
-            fprintf(f, "%s: %s\n", CreationKeyName(recorded[i].key), recorded[i].text.c_str());
+            fprintf(f, "%s: %s\n", CreationKeyName(recorded[i].key), text.c_str());
         else
             fprintf(f, "%s [%s]: %s\n", CreationKeyName(recorded[i].key),
-                ctx.c_str(), recorded[i].text.c_str());
+                ctx.c_str(), text.c_str());
     }
     fclose(f);
 }
@@ -468,7 +822,8 @@ public:
     }
     void Finish(Player *p, int16 *slot) { CreationAccess::FinishLive(p, slot); }
 
-    bool AnswerRoll(CreationKey, const CreationContext&, int32&) { return false; }
+    bool AnswerRoll(CreationKey, const CreationContext&, int32&,
+        const CreationRange&) { return false; }
     bool AnswerPick(CreationKey, const CreationContext&, const CreationPickList&,
         int32&, std::string&, bool&) { return false; }
 
@@ -501,9 +856,6 @@ public:
         if (haveOptions)
             return;
         haveOptions = true;
-        CreationContext c = MakeContext(CK_OPTIONS_FILE, NULL);
-        Emit(CK_OPTIONS_FILE, c, OptionsFileName(path));
-        Advance(CK_OPTIONS_FILE, c);
     }
     void Close(bool completed)
     {
@@ -521,7 +873,8 @@ public:
     void PopResponse(Player*) {}
     void Finish(Player *p, int16*) { CreationAccess::FinishReplay(p); }
 
-    bool AnswerRoll(CreationKey k, const CreationContext &c, int32 &v)
+    bool AnswerRoll(CreationKey k, const CreationContext &c, int32 &v,
+        const CreationRange&)
         { return ReadBinding(k, c.ordinal, v); }
     bool AnswerPick(CreationKey k, const CreationContext&, const CreationPickList &list,
         int32 &value, std::string &text, bool &inList)
@@ -574,6 +927,7 @@ CreationWindow::CreationWindow() : done(false)
     scopeStack.clear();
     ordinals.clear();
     recorded.clear();
+    haveStepMark = false;
     haveOptions = false;
     optionsBytes.clear();
 }
@@ -606,6 +960,7 @@ void CreationDescribeItem(CreationItem &io, Item *it)
     for (int i = 0; i != 8; i++) io.q[i] = it->GetQuality(i);
     io.quantity = (int32)it->GetQuantity();
     io.charges = it->GetCharges();
+    io.flags = (uint16)(it->IFlags & CREATION_ITEM_FLAGS);
     io.stati.clear();
     StatiIter(it)
         CreationStati st;
@@ -617,12 +972,13 @@ void CreationDescribeItem(CreationItem &io, Item *it)
 
 /* ---- the primitive halves -------------------------------------------------- */
 
-bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v)
+bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v,
+    const CreationRange &range)
 {
     if (!windowOpen || itemDepth > 0)
         return false;
     CreationContext c = MakeContext(k, sub);
-    if (!activeSource->AnswerRoll(k, c, v))
+    if (!activeSource->AnswerRoll(k, c, v, range))
         return false;
     Advance(k, c);
     return true;
@@ -692,21 +1048,30 @@ void CreationNotePerks(const PerkSet &set)
     activeSource->NotePerks(set);
 }
 
+/* While a multi-answer pick asks for its answers one at a time, an empty queue
+   is the end of the answers, not a missing line (the File backend reads it). */
+static int pickManyDepth = 0;
+bool CreationInPickMany() { return pickManyDepth > 0; }
+
 bool CreationAnswerPickMany(CreationKey k, const char *sub, const CreationPickList &list,
     std::vector<int32> &values)
 {
     values.clear();
+    pickManyDepth++;
     for (size_t n = 0; n != list.names.size(); n++) {
         int32 v; std::string text; bool inList;
         if (!CreationAnswerPick(k, sub, list, v, text, inList))
             break;
         if (!inList) {
             values.clear();
+            pickManyDepth--;
             return false;
         }
         values.push_back(v);
     }
-    return !values.empty();
+    pickManyDepth--;
+    /* A source that never runs `live` has answered, even with no value. */
+    return !values.empty() || (windowOpen && activeSource->NeverLive());
 }
 
 void CreationNotePickMany(CreationKey k, const char *sub, const CreationPickList &list,

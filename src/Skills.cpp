@@ -4190,7 +4190,7 @@ void Character::RecalcCraftFormulas() {
 					CreationPickList formulas;
 					static const char *craftName[] = { "Alchemy", "Potion", "Scroll" };
 					for (int16 f = 0; f != c; f++)
-						formulas.Add(NAME(theGame->SpellID(Candidates[f])), f);
+						formulas.Add(CreationFullName(theGame->SpellID(Candidates[f])).c_str(), f);
 					j = (int16)SourcedPick(CK_CRAFT_FORMULA, formulas,
 						[&]() { return (int32)random(c); }, craftName[i / 4]);
 				}

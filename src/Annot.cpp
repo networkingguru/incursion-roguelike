@@ -589,8 +589,11 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
     CreationScope gearScope(CreationWindowOpen() ? NAME(xID) : NULL, 0);
     if (CreationWindowOpen())
       {
-        seed = (int16)SourcedRoll(CK_GEAR_STREAM, [&]() { return (int32)(t % 100); });
-        srand(seed);
+        seed = (int16)SourcedRoll(CK_GEAR_STREAM, [&]() { return (int32)(t % 100); },
+            NULL, CreationRange(0, 99));
+        /* A source that states each later draw does not re-seed (spec B1). */
+        if (CreationSourceNow()->Reseeds())
+          srand(seed);
       }
     
     Player *p;
@@ -628,7 +631,8 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
 
             if (a->u.eq.Chance) {
               int16 roll = (int16)SourcedRoll(CK_GEAR_CHANCE,
-                [&]() { return (int32)(random(100)+1); }, annotSub.c_str());
+                [&]() { return (int32)(random(100)+1); }, annotSub.c_str(),
+                CreationRange(1, 100));
               if (roll > a->u.eq.Chance)
                 { last_given = false; continue; }
               }
@@ -652,7 +656,7 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
                recorded item is the complete one (spec B2, B15). `it` NULL
                means the annotation grants nothing. */
             CreationItem made;
-            SourcedItem(CK_KIT_ITEM, made, [&](CreationItem &io) {
+            if (SourcedItem(CK_KIT_ITEM, made, [&](CreationItem &io) {
             if ((a->u.eq.Flags & GF_RANDOM_ITEM))
               {
                 /*maxlev = a->u.eq.eID / 256;
@@ -774,7 +778,8 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
               if (a->u.eq.Qualities[q])
                 it->AddQuality(a->u.eq.Qualities[q]);
             CreationDescribeItem(io, it);
-            }, annotSub.c_str());
+            }, annotSub.c_str()))
+              it = CreationMakeItem(made);
             if (!it) 
               continue;
 

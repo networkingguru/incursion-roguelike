@@ -8,6 +8,14 @@
 #
 # Usage: tools/compare_creation_walks.sh [--reincarnate] <baseline-binary> [out-dir]
 #        tools/compare_creation_walks.sh logs/phase4/base-incursion-headless logs/phase4/walks
+#        tools/compare_creation_walks.sh --build [out-dir]
+#
+# --build is the round trip of the fixture builder (spec 9, C2; phase 7a). For
+# each walk it records the .char the walk decides (INCURSION_RECORD_CHAR),
+# builds that .char with tools/build_fixture.sh, and compares the walk's
+# canonical dump with the built one outside the ONE allowlist in
+# tools/canon_compare.py. A walk that acts after creation (a level-up in play,
+# a hunger wait) is excluded below, with its reason: phase 8 owns it.
 #
 # --reincarnate runs ONE pair instead: session 1 makes an orc barbarian
 # (tools/keys/chargen-default-save.keys), session 2 reincarnates him from the
@@ -29,15 +37,23 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
 REINC=0
+BUILD=0
 if [ "${1:-}" = "--reincarnate" ]; then REINC=1; shift; fi
-BASE="${1:-}"
-OUT="${2:-logs/phase4/walks}"
+if [ "${1:-}" = "--build" ]; then BUILD=1; shift; fi
+if [ "$BUILD" -eq 1 ]; then
+    BASE="$0"
+    OUT="${1:-logs/phase7/build-walks}"
+else
+    BASE="${1:-}"
+    OUT="${2:-logs/phase4/walks}"
+fi
 NEW="${INCURSION_NEW_BIN:-./incursion-headless}"
-[ -n "$BASE" ] && [ -x "$BASE" ] || { echo "usage: $0 <baseline-binary> [out-dir]" >&2; exit 2; }
+[ -n "$BASE" ] && [ -x "$BASE" ] || { echo "usage: $0 <baseline-binary> [out-dir]  |  $0 --build [out-dir]" >&2; exit 2; }
 [ -x "$NEW" ] || { echo "$NEW is not built" >&2; exit 2; }
 mkdir -p "$OUT"
 
 O22=tools/fixtures/options-2026-08-22.dat
+O22NH=tools/fixtures/options-2026-08-22-noautohide.dat   # OPT_AUTOHIDE off: a ranger hides in the first turn of play otherwise
 
 strip_secs() {
     python3 - "$1" <<'PY'
@@ -104,6 +120,9 @@ WALKS=(
   # three -kit walks run with the Beginner's Kit on.
   "drow-ranger-twf-s1-o22 tools/keys/ranger-twf-gear-save.keys      1  $O22"
   "drow-priest-s1-o22     tools/keys/command-pools.keys             1  $O22"
+  # Phase 7a: a Drow ranger that stops at creation. The Drow gear line "of
+  # random 3 to 4" must build from its stated entries.
+  "drow-ranger-create-s1-o22 tools/keys/p7a-drow-ranger-save.keys   1  $O22NH"
   "drow-mage-hunger-s4-o22 tools/keys/hunger-walk.keys              4  $O22"
   "human-ranger-s1-o22    tools/keys/kit-ranger.keys                1  $O22"
   "drow-ranger-twf-s1-kit tools/keys/ranger-twf-gear-save.keys      1  $KIT"
@@ -131,6 +150,66 @@ WALKS=(
   "human-rogue6-s1-o22    tools/keys/p6c-rogue-level6.keys          1  $O22"
   "orc-barbarian-esc-s1-o22 tools/keys/p6c-esc-walk.keys            1  $O22"
 )
+
+# Walks the round trip leaves out, each with the reason (phase 8 owns them):
+# they play after creation, so the walked character is not the created one.
+after_creation_reason() {   # <walk name> -> reason on stdout, or nothing
+    case "$1" in
+        human-warrior-levelup-s1-o22)  echo "takes a level-up feat in play" ;;
+        deepgnome-s3-o18)              echo "is levelled to 6 in play" ;;
+        orc-rogue-s6-o22)              echo "hides in play" ;;
+        drow-ranger-twf-s1-o22|drow-ranger-twf-s1-kit)
+                                       echo "hides and enters wizard mode in play" ;;
+        human-ranger-s1-o22|human-ranger-s1-kit)
+                                       echo "enters wizard mode in play" ;;
+        gnome-warrior-s1-o22)          echo "wields a pickaxe in play" ;;
+        drow-priest-s1-o22)            echo "takes three Mage levels in play" ;;
+        orc-mage-levelup-learn-s4-o22) echo "learns a spell at a level-up in play" ;;
+        human-rogue6-s1-o22)           echo "is levelled to 6 in play" ;;
+        drow-mage-hunger-s4-o22)       echo "waits out hunger in play" ;;
+        earthsinger-s3-o22)            echo "takes a prestige class in play" ;;
+        xsummon-priest-s5-o22)         echo "summons in play" ;;
+    esac
+}
+
+if [ "$BUILD" -eq 1 ]; then
+    bf=0
+    for row in "${WALKS[@]}"; do
+        set -- $row
+        name="$1"; keys="$2"; seed="$3"; opts="$4"
+        if [ -n "${WALK_FILTER:-}" ] && ! [[ "$name" =~ $WALK_FILTER ]]; then continue; fi
+        why="$(after_creation_reason "$name")"
+        if [ -n "$why" ]; then
+            echo "EXCLUDED $name ($why)"; continue
+        fi
+        run="$OUT/$name-walk"
+        rm -rf "$run"
+        INCURSION_RECORD_CHAR="$ROOT/$OUT/$name.char" INCURSION_OPTIONS="$opts" \
+            INCURSION_BIN="$NEW" INCURSION_RUN_DIR="$ROOT/$run" \
+            tools/headless.sh "$keys" "$seed" > "$OUT/$name-walk.log" 2>&1 </dev/null
+        walkexit=$?
+        sav=$(ls "$run"/save/*.sav 2>/dev/null | head -1)
+        if [ -z "$sav" ] || [ ! -f "$OUT/$name.char" ]; then
+            echo "NOWALK   $name (exit $walkexit)"; bf=1; continue
+        fi
+        INCURSION_OPTIONS="$opts" INCURSION_BIN="$NEW" tools/char_dump.sh "$sav" "$OUT/$name-walk.canon" > /dev/null 2>&1 \
+            || { echo "DUMPFAIL $name (walk)"; bf=1; continue; }
+        rm -rf "$OUT/$name-built"
+        INCURSION_BIN="$NEW" tools/build_fixture.sh "$OUT/$name.char" "$OUT/$name-built" \
+            > "$OUT/$name-build.log" 2>&1
+        if [ $? -ne 0 ]; then
+            echo "BUILDFAIL $name: $(grep -m1 'BUILD FAILED' "$OUT/$name-build.log" || tail -1 "$OUT/$name-build.log")"; bf=1; continue
+        fi
+        INCURSION_OPTIONS="$opts" INCURSION_BIN="$NEW" tools/char_dump.sh "$OUT/$name-built/$name.sav" "$OUT/$name-built.canon" > /dev/null 2>&1 \
+            || { echo "DUMPFAIL $name (built)"; bf=1; continue; }
+        if tools/canon_compare.py "$OUT/$name-walk.canon" "$OUT/$name-built.canon" > "$OUT/$name.diff" 2>&1; then
+            echo "SAME     $name"
+        else
+            echo "DIFF     $name  (see $OUT/$name.diff)"; bf=1
+        fi
+    done
+    exit $bf
+fi
 
 fail=0
 for row in "${WALKS[@]}"; do
