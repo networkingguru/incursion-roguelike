@@ -41,7 +41,6 @@ TOKENS = [
     (re.compile(r"  AoO: -?\d+  FFCount: -?\d+"), "", "attack-of-opportunity and free-form counters: turn counters"),
     (re.compile(r"GallerySlot: -?\d+"), "GallerySlot: -", "gallery slot: a build writes no gallery entry"),
     (re.compile(r"HungerShown: -?\d+"), "HungerShown: -", "hunger display clock"),
-    (re.compile(r"(Nature=HUNGER Val=-?\d+ Mag=-?\d+ )Duration=-?\d+"), r"\1Duration=-", "hunger clock: counts the turns played since creation"),
     (re.compile(r"Flags: statiChanged=\d shownFF=\d"), "Flags:", "display refresh flags"),
     (re.compile(r" 201=1(?= |$)"), "", "OPT_AUTOMORE: the build forces it on (spec A8)"),
     (re.compile(r"LastRest=-?\d+"), "LastRest=-", "rest clock"),

@@ -40,55 +40,10 @@ run_keys() {   # run_keys <name> <keyfile> <options> -> exit status of headless
         tools/headless.sh "$keys" "$SEED" > "$OUT/runs/$name.out" 2>&1
 }
 
-# Names of the race and class menus, read off a screen dump of each menu.
-menu_names() {   # menu_names <name> <keyfile>; prints one name per line
-    run_keys "$1" "$2" "$OPT"
-    cat "$OUT/runs/$1/logs/screens/"*.txt \
-      | grep -oE '\[[a-zA-Z]\] [A-Za-z][A-Za-z'"'"' -]*[A-Za-z]' \
-      | sed -E 's/^\[[a-zA-Z]\] //'
-}
-printf 'a\nn\ny\n@expect "no such text"\n' > "$OUT/keys/list-races.keys"
-RACES=$(menu_names list-races "$OUT/keys/list-races.keys")
-FIRSTRACE=$(echo "$RACES" | head -1)
-printf 'a\nn\ny\n@choose "%s"\n@while "Subraces provide" a\n@while "Choose a skill:" a\n@expect "no such text"\n' \
-    "$FIRSTRACE" > "$OUT/keys/list-classes.keys"
-CLASSES=$(menu_names list-classes "$OUT/keys/list-classes.keys")
-[ -n "$RACES" ] && [ -n "$CLASSES" ] || { echo "could not read race/class menus"; exit 1; }
-
-# The creation tail. Every screen creation can raise is answered by a @while on
-# its title, which does nothing when the screen is not up; the block repeats so
-# that screens arriving in a different order for a different class are all met.
-tail_block() {
-cat <<'EOF'
-@while "attribute sets" a
-@while "Choose a God:" a
-@while "Alignment determines" a
-@while "Choose a" a
-@while "Choose any" a
-@while "entitled to choose" a
-@while "Focus on which" a
-@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
-@while "Allocate Ranks" ENTER y
-@while "wish to worship" y
-@while "personality archetype" a
-@while "Gain A Bonus" a
-EOF
-}
-# Starting spells: the game re-asks until every slot is filled, and SPACE
-# toggles, so a caster's script marks from the bottom of the list upward
-# (UP wraps to the last row first) and confirms. Which pairs are casters is
-# found by trying: a pair that ends on the table is run again with this.
-learn_seq() { echo '@expect "Learn Spells: Level"'; for _ in 1 2 3 4 5 6 7 8 9 10; do echo UP; echo SPACE; done; echo ENTER; echo '@while "Learn Spells: Level" ENTER'; }
-tail_all() {   # tail_all [withlearn]
-    for _ in 1 2 3 4 5; do tail_block; done
-    [ "${1:-}" = learn ] && learn_seq
-    tail_block
-}
-
-head_keys() {   # head_keys <race> <class>
-    printf 'a\nn\ny\n@choose "%s"\n@while "Subraces provide" a\n@while "Choose a skill:" a\n@choose "%s"\n' "$1" "$2"
-}
-
+# The key scripts (head_keys, tail_all, learn_seq) and the menu reading are
+# shared with tools/check_fixture_equivalence.sh.
+. "$ROOT/tools/creation_walks_lib.sh"
+cw_read_menus || { echo "could not read race/class menus"; exit 1; }
 
 declare -a WALKS=()
 classify() {   # classify <name>: ok | refused | failed

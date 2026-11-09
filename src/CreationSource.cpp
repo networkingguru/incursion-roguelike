@@ -15,17 +15,17 @@
 /* ---- the key table ------------------------------------------------------ */
 
 static const char *keyUpper[CK_COUNT] = {
-#define X(n,k,d) #n,
+#define X(n,k,d,r) #n,
     CREATION_KEY_LIST(X)
 #undef X
 };
 static const CreationKind keyKind[CK_COUNT] = {
-#define X(n,k,d) CKIND_##k,
+#define X(n,k,d,r) CKIND_##k,
     CREATION_KEY_LIST(X)
 #undef X
 };
 static const char *keyDefault[CK_COUNT] = {
-#define X(n,k,d) d,
+#define X(n,k,d,r) d,
     CREATION_KEY_LIST(X)
 #undef X
 };
@@ -475,13 +475,13 @@ Item *CreationMakeItem(const CreationItem &d)
         return NULL;
     Item *it;
     {
-        unstatedDraw("overwritten by stated charges and quantity");
+        unstatedDraw("overwritten by stated charges, quantity and flags");
         it = Item::Create(d.iID);
+        if (it && d.eID)
+            it->MakeMagical(d.eID, d.plus > 0 ? d.plus : 0);   /* its only draw is IF_CURSED */
     }
     if (!it)
         return NULL;
-    if (d.eID)
-        it->MakeMagical(d.eID, d.plus > 0 ? d.plus : 0);
     if (it->GetInherentPlus() != d.plus)
         it->SetInherentPlus((int8)d.plus);
     if (d.quantity)
@@ -651,6 +651,14 @@ static std::string OptionsBase(const char *path)
     if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
         s.erase(dot);
     return s;
+}
+
+std::string CreationWalkSavePath()
+{
+    const char *path = getenv("INCURSION_RECORD_CHAR");
+    if (!path || !*path)
+        return std::string();
+    return OptionsBase(path) + ".walk.sav";
 }
 
 static std::string optionsBytes;

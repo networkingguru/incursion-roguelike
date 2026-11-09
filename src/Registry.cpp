@@ -1248,6 +1248,62 @@ failed:
       return true;
 }
 
+/* The walk side of the fixture round trip (tools/check_fixture_equivalence.sh,
+   bead inc-10v7f R1). Writes the character exactly as Game::SaveGame would,
+   to `path`, and leaves the game as it found it: no gallery write, no SaveFile
+   change, and the two fields SaveGame resets (the level statistics and the
+   message queue) restored after the write. It draws no random number. */
+bool Game::SaveRecordedWalk(Player &p, const char *path) {
+      fileHeader fh; int32 i;
+      String desc;
+      GameTimeInfoType savedTime;
+      String savedQueue[8];
+      bool ok = true;
+
+      {
+        String whyNot;
+        if (!SaveV1_CanWrite(*this, whyNot))
+          return false;
+      }
+
+      savedTime = p.GameTimeInfo;
+      for (i = 0; i != 8; i++) {
+          savedQueue[i] = p.MessageQueue[i];
+          p.MessageQueue[i].Empty();
+      }
+
+      desc = p.Named + SC(", ");
+      desc += NAME(p.RaceID);
+      for(i=0;i!=3 && p.ClassID[i];i++)
+          desc += Format("%s %s %d", i ? " /" : "",
+          NAME(p.ClassID[i]), p.Level[i]);
+      desc = desc.Left(63);
+
+      theGame->GetPlayer(0)->StoreLevelStats((uint8)(theGame->GetPlayer(0)->m->Depth));
+
+      try {
+          T1->OpenWrite(path);
+          memset(&fh,0,sizeof(fh));
+          strcpy(fh.Version,SaveSchemaID());
+          fh.Sig = SIGNATURE;
+          fh.numGroups = 1;
+          fh.Compression = SaveV1_Raw() ? 0 : 1;
+          strncpy(fh.Name,desc,71);
+          T1->FWrite(&fh,sizeof(fh));
+          theRegistry->SaveGroupV1(*T1,0);
+          T1->Close();
+      }
+      catch (int error_number) {
+          T1->Close();
+          ok = false;
+      }
+
+      p.GameTimeInfo = savedTime;
+      for (i = 0; i != 8; i++)
+          p.MessageQueue[i] = savedQueue[i];
+      return ok;
+}
+
 bool Game::LoadGame(bool backup) {
     int32 i;
     String Filenames[128], Filedescs[128], fn;

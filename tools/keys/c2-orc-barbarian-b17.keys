@@ -1,0 +1,25 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): an orc barbarian
+# made with the four creation settings of tools/fixtures/options-2026-08-22-b17.dat
+# on (rolled hit points and mana, random gender, Beginner's Kit), SAVED at the
+# end of creation with nothing played. Hits hp_roll, mana_roll, gender, the kit
+# keys, thrown_quantity and the Barbarian script draws. Every menu entry is
+# chosen by name; the attribute set is a prompt, not a menu, and takes the first.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Orc"
+@choose "Orc (Standard)"
+@choose "Barbarian"
+a       # Attributes: the first of the five offered sets
+@choose "Neutral"
+@choose "Alertness"
+@choose "Athletic"
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@choose "The Ambitious Conqueror"
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

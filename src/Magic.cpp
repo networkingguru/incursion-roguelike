@@ -702,6 +702,17 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
 
           return damage;
       };
+      /* In the creation window a damage roll that draws is a stated decision,
+         keyed by the effect's name (inc-10v7f R2). A dice count of 0 draws
+         nothing and stays outside the decision, and so does a roll inside an
+         unstatedDraw scope (it decides no saved fact). Live: the same Roll(),
+         in the same order. */
+      auto dmgRoll = [&]() -> int16 {
+          if (!CreationWindowOpen() || g_unstatedDepth > 0 || e.Dmg.Number == 0)
+              return e.Dmg.Roll();
+          CreationScope effectScope(NAME(e.eID), 0);
+          return (int16)SourcedRoll(CK_EFFECT_ROLL, [&]() -> int32 { return e.Dmg.Roll(); });
+      };
       auto rollDamage = [&]() {
           if (e.MM & MM_MAXIMIZE)
               e.vDmg = max(0,e.Dmg.Number) * abs(e.Dmg.Sides) + e.Dmg.Bonus;
@@ -710,7 +721,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
                   e.Dmg.Sides = -e.Dmg.Sides;
               if (e.Dmg.Number < 0)
                   e.Dmg.Number = 0;
-              e.vDmg = e.Dmg.Roll();
+              e.vDmg = dmgRoll();
           }
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
@@ -738,7 +749,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
           if (e.MM & MM_MAXIMIZE)
               e.vDmg = e.Dmg.Number * e.Dmg.Sides + e.Dmg.Bonus;
           else
-              e.vDmg = e.Dmg.Roll();
+              e.vDmg = dmgRoll();
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
       } else if (e.vCasterLev != oldCasterLev) {

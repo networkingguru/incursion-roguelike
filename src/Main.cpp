@@ -218,6 +218,12 @@ void Game::NewGameTail(rID mID, Player *pp) {
             oItem(excessItems[i])->PlaceAt(pp->m, pp->x, pp->y);
             excessItems[i] = 0;
         }
+
+    {
+        std::string walkSave = CreationWalkSavePath();
+        if (!walkSave.empty() && !SaveRecordedWalk(*pp, walkSave.c_str()))
+            Error("INCURSION_RECORD_CHAR: cannot write %s", walkSave.c_str());
+    }
 }
 
 /* Say, once per session, that the game reached actual play.

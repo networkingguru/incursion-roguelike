@@ -15,7 +15,8 @@
 # builds that .char with tools/build_fixture.sh, and compares the walk's
 # canonical dump with the built one outside the ONE allowlist in
 # tools/canon_compare.py. A walk that acts after creation (a level-up in play,
-# a hunger wait) is excluded below, with its reason: phase 8 owns it.
+# a hunger wait) is excluded below, with its reason: it acts after creation,
+# outside the builder (V7-1).
 #
 # --reincarnate runs ONE pair instead: session 1 makes an orc barbarian
 # (tools/keys/chargen-default-save.keys), session 2 reincarnates him from the
@@ -48,6 +49,8 @@ else
     OUT="${2:-logs/phase4/walks}"
 fi
 NEW="${INCURSION_NEW_BIN:-./incursion-headless}"
+# The round trip of one walk is shared with tools/check_fixture_equivalence.sh.
+. "$ROOT/tools/creation_walks_lib.sh"
 [ -n "$BASE" ] && [ -x "$BASE" ] || { echo "usage: $0 <baseline-binary> [out-dir]  |  $0 --build [out-dir]" >&2; exit 2; }
 [ -x "$NEW" ] || { echo "$NEW is not built" >&2; exit 2; }
 mkdir -p "$OUT"
@@ -151,8 +154,9 @@ WALKS=(
   "orc-barbarian-esc-s1-o22 tools/keys/p6c-esc-walk.keys            1  $O22"
 )
 
-# Walks the round trip leaves out, each with the reason (phase 8 owns them):
-# they play after creation, so the walked character is not the created one.
+# Walks the round trip leaves out, each with the reason: they act after
+# creation, outside the builder (V7-1), so the walked character is not the
+# created one.
 after_creation_reason() {   # <walk name> -> reason on stdout, or nothing
     case "$1" in
         human-warrior-levelup-s1-o22)  echo "takes a level-up feat in play" ;;
@@ -182,31 +186,7 @@ if [ "$BUILD" -eq 1 ]; then
         if [ -n "$why" ]; then
             echo "EXCLUDED $name ($why)"; continue
         fi
-        run="$OUT/$name-walk"
-        rm -rf "$run"
-        INCURSION_RECORD_CHAR="$ROOT/$OUT/$name.char" INCURSION_OPTIONS="$opts" \
-            INCURSION_BIN="$NEW" INCURSION_RUN_DIR="$ROOT/$run" \
-            tools/headless.sh "$keys" "$seed" > "$OUT/$name-walk.log" 2>&1 </dev/null
-        walkexit=$?
-        sav=$(ls "$run"/save/*.sav 2>/dev/null | head -1)
-        if [ -z "$sav" ] || [ ! -f "$OUT/$name.char" ]; then
-            echo "NOWALK   $name (exit $walkexit)"; bf=1; continue
-        fi
-        INCURSION_OPTIONS="$opts" INCURSION_BIN="$NEW" tools/char_dump.sh "$sav" "$OUT/$name-walk.canon" > /dev/null 2>&1 \
-            || { echo "DUMPFAIL $name (walk)"; bf=1; continue; }
-        rm -rf "$OUT/$name-built"
-        INCURSION_BIN="$NEW" tools/build_fixture.sh "$OUT/$name.char" "$OUT/$name-built" \
-            > "$OUT/$name-build.log" 2>&1
-        if [ $? -ne 0 ]; then
-            echo "BUILDFAIL $name: $(grep -m1 'BUILD FAILED' "$OUT/$name-build.log" || tail -1 "$OUT/$name-build.log")"; bf=1; continue
-        fi
-        INCURSION_OPTIONS="$opts" INCURSION_BIN="$NEW" tools/char_dump.sh "$OUT/$name-built/$name.sav" "$OUT/$name-built.canon" > /dev/null 2>&1 \
-            || { echo "DUMPFAIL $name (built)"; bf=1; continue; }
-        if tools/canon_compare.py "$OUT/$name-walk.canon" "$OUT/$name-built.canon" > "$OUT/$name.diff" 2>&1; then
-            echo "SAME     $name"
-        else
-            echo "DIFF     $name  (see $OUT/$name.diff)"; bf=1
-        fi
+        round_trip "$name" "$keys" "$seed" "$opts" "$OUT" || bf=1
     done
     exit $bf
 fi

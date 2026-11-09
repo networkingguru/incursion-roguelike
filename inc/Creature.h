@@ -1425,6 +1425,7 @@ class Player: public Character
   {
     friend void Map::VisionThing(int16 p, Creature *c, bool do_clear);
     friend bool Game::SaveGame(Player &p);
+    friend bool Game::SaveRecordedWalk(Player &p, const char *path);
     friend bool Game::LoadGame(bool backup);
     friend bool Game::LoadNamedGame(const char *savefile);
     friend void HelpCustom(String &helpText, Player *p);

@@ -14,7 +14,8 @@
 # would have to learn about.
 #
 # THE FILES. src/CharFile.cpp (the parser and the File backend), src/Creation
-# Source.cpp (the recorder and its serializers) and tools/build_fixture.sh.
+# Source.cpp (the recorder and its serializers), tools/build_fixture.sh and
+# tools/check_fixture_equivalence.sh (C2, whose coverage list reads the enum).
 #
 # WHAT IT FLAGS (a code line: comments and blank lines are set aside first):
 #   R1  `case CK_<NAME>` -- a switch arm on a key.
@@ -25,7 +26,7 @@
 #       keys. The upper-case PERK_ITEM and its kin are perk TYPE values the
 #       Perk table names; they share a spelling with keys and are not tested.)
 #   R4  `switch (k)`, `switch (key)` or `switch (<x>.key)` -- a switch over a key.
-#   R5  in tools/build_fixture.sh: a CK_ name, or a shell word that is exactly a
+#   R5  in tools/build_fixture.sh and tools/check_fixture_equivalence.sh: a CK_ name, or a shell word that is exactly a
 #       key name in a `case` arm or a string test.
 #
 # fact: the text of src/CharFile.cpp, src/CreationSource.cpp and tools/build_fixture.sh -- read from the working tree by grep and awk; no game run, no seed, no map
@@ -46,6 +47,7 @@ HDR="${NO_PER_KEY_HEADER:-inc/CreationSource.h}"
 CHARFILE="${NO_PER_KEY_CHARFILE:-src/CharFile.cpp}"
 RECORDER="${NO_PER_KEY_RECORDER:-src/CreationSource.cpp}"
 BUILDER="${NO_PER_KEY_BUILDER:-tools/build_fixture.sh}"
+EQUIV="${NO_PER_KEY_EQUIV:-tools/check_fixture_equivalence.sh}"
 
 # The key names, upper case, one per line.
 key_names() {
@@ -112,20 +114,21 @@ run_all() {
     scan_cpp "$CHARFILE"; r=$?; [ $r -gt $rc ] && rc=$r
     scan_cpp "$RECORDER"; r=$?; [ $r -gt $rc ] && rc=$r
     scan_sh "$BUILDER";   r=$?; [ $r -gt $rc ] && rc=$r
+    scan_sh "$EQUIV";     r=$?; [ $r -gt $rc ] && rc=$r
     return $rc
 }
 
 if [ "${1:-}" = "--selftest" ]; then
     T="$(mktemp -d "${TMPDIR:-/tmp}/nopkb.XXXXXX")" || exit 2
     trap 'rm -rf "$T"' EXIT
-    cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"
-    export NO_PER_KEY_CHARFILE="$T/CharFile.cpp" NO_PER_KEY_RECORDER="$T/CreationSource.cpp" NO_PER_KEY_BUILDER="$T/build_fixture.sh"
+    cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"
+    export NO_PER_KEY_CHARFILE="$T/CharFile.cpp" NO_PER_KEY_RECORDER="$T/CreationSource.cpp" NO_PER_KEY_BUILDER="$T/build_fixture.sh" NO_PER_KEY_EQUIV="$T/check_fixture_equivalence.sh"
     out="$("$0" 2>&1)"; rc=$?
     if [ $rc -ne 0 ]; then echo "SELFTEST FAIL: the untouched copies are not green (rc=$rc)"; printf '%s\n' "$out"; exit 1; fi
     echo "selftest: untouched copies green"
     fails=0
     mutate() {   # <rule> <file-in-T> <text to append>
-        cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"
+        cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"
         printf '%s\n' "$3" >> "$T/$2"
         out="$("$0" 2>&1)"; rc=$?
         if [ $rc -eq 1 ] && grep -q "^$1 " <<< "$out"; then
@@ -142,13 +145,15 @@ if [ "${1:-}" = "--selftest" ]; then
     mutate R4 CreationSource.cpp  'static int m4(CreationKey k) { switch (k) { default: return 0; } }'
     mutate R5 build_fixture.sh    'if [ "$X" = "race" ]; then echo; fi'
     mutate R5 build_fixture.sh    'echo CK_RACE'
+    mutate R5 check_fixture_equivalence.sh 'echo CK_RACE'
+    mutate R5 check_fixture_equivalence.sh 'if [ "$k" = "attr_str" ]; then echo; fi'
     [ $fails -eq 0 ] && echo "selftest: PASS" && exit 0
     exit 1
 fi
 
 out="$(run_all)"; rc=$?
 if [ $rc -eq 0 ]; then
-    echo "PASS: no per-key branch in $CHARFILE, $RECORDER, $BUILDER"
+    echo "PASS: no per-key branch in $CHARFILE, $RECORDER, $BUILDER, $EQUIV"
     exit 0
 fi
 printf '%s\n' "$out"

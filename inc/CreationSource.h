@@ -13,7 +13,9 @@
 
      Live    normal play. It answers nothing, so every site runs `live`, and it
              RECORDS what each site decided (into RInf for the gallery, and
-             into a .char file when INCURSION_RECORD_CHAR=<path> is set).
+             into a .char file when INCURSION_RECORD_CHAR=<path> is set, and
+             then also into <path without extension>.walk.sav, a save of the
+             character at the end of game setup, before the first turn).
      Replay  gallery reincarnation. It answers from RInf exactly what RInf
              holds; every other decision is NOT_RECORDED and the site acts as
              Live (spec A6).
@@ -32,8 +34,15 @@
 #include <string>
 #include <vector>
 
-/* X(name, kind, default). Appending a decision is one line here plus the call
-   site. The default is the value `missing` prints for the file author (spec A5);
+/* X(name, kind, default, reach). Appending a decision is one line here plus the
+   call site. `reach` says whether character creation (Player::Create and
+   everything it calls) can reach the decision: REACHED, or NOT_REACHED for a
+   decision made only after creation (a level gained later, training, a tattoo)
+   or by a feat a level-1 character cannot take. The equivalence check
+   (tools/check_fixture_equivalence.sh) reads it at run time and demands that
+   some creation walk hit every REACHED key it can state; it lists the
+   NOT_REACHED keys and demands nothing of them.
+   The default is the value `missing` prints for the file author (spec A5);
    a build never uses it. An empty PICK default means "the first candidate
    offered". A NULL default marks a key a build never asks: the screen choice
    whose result other keys already state (the attribute set letter, the point
@@ -41,85 +50,96 @@
    the `options:` line replaced). The recorder does not
    write it and a .char may not state it. A new decision gets its default
    here, in this one place. */
+/* Why MISSILE_QUANTITY is NOT_REACHED: the branch that draws it (the
+   T_MISSILE case in the Weapon Focus loop, src/Create.cpp near line 1424)
+   dates from when the halfling rock was a missile. The rock is now T_WEAPON
+   (lib/weapons.irh, Item "rock"), and no creation menu offers Weapon Focus in
+   a T_MISSILE item, so the branch is not reached.
+   Why SCRIPT_MENU is NOT_REACHED: the only class-script LMenu runs in the
+   Rogue's EV_ADVANCE at levels 6, 9, 12, 15 and 18 (lib/classes.irh, about
+   lines 2592-2676), and a level-1 character does not advance. The other
+   LMenu calls in lib/*.irh sit in item, spell and ability effects.
+   A walk whose .char states a NOT_REACHED key fails the equivalence check. */
 #define CREATION_KEY_LIST(X) \
-    X(ALTER_OPTIONS,    PICK, "no") \
-    X(EXPLORE_CONTINUE, PICK, "yes") \
-    X(FORMULA_SEED,     ROLL, "1") \
-    X(GENDER,           PICK, "male") \
-    X(NAME,             PICK, "") \
-    X(SURNAME,          PICK, "") \
-    X(RACE,             PICK, "") \
-    X(SUBRACE,          PICK, "") \
-    X(CLASS,            PICK, "") \
-    X(GOD,              PICK, "") \
-    X(ALIGNMENT,        PICK, "") \
-    X(PERSONALITY,      PICK, "") \
-    X(DOMAIN,           PICK, "") \
-    X(DOMAIN_POOL,      PICK, "") \
-    X(CRAFT_FORMULA,    PICK, "") \
-    X(LEVEL_CLASS,      PICK, "") \
-    X(LEVEL_ATTR,       PICK, "") \
-    X(ATTR_STR,         ROLL, "10") \
-    X(ATTR_DEX,         ROLL, "10") \
-    X(ATTR_CON,         ROLL, "10") \
-    X(ATTR_INT,         ROLL, "10") \
-    X(ATTR_WIS,         ROLL, "10") \
-    X(ATTR_CHA,         ROLL, "10") \
-    X(ATTR_LUC,         ROLL, "10") \
-    X(PERK_TYPE,        PICK, "PERK_NONE") \
-    X(PERK_FEAT,        PICK, "") \
-    X(PERK_ABILITY,     PICK, "") \
-    X(PERK_SPELL,       PICK, "") \
-    X(PERK_RESIST,      PICK, "") \
-    X(PERK_IMMUNE,      PICK, "") \
-    X(PERK_ITEM,        ITEM, "none") \
-    X(SKILL_RANKS,      ROLL, "0") \
-    X(HP_ROLL,          ROLL, "1") \
-    X(MANA_ROLL,        ROLL, "1") \
-    X(STORE_SEED,       ROLL, "1") \
-    X(CHARACTER_NAME,   PICK, "") \
-    X(WIZARD_MODE,      ROLL, "0") \
-    X(EXPLORE_MODE,     ROLL, "0") \
-    X(REROLLS,          ROLL, "0") \
-    X(REROLLED_PERKS,   ROLL, "0") \
-    X(STAT_METHOD,      ROLL, "1") \
-    X(GEAR_STREAM,      ROLL, "0") \
-    X(GEAR_CHANCE,      ROLL, "1") \
-    X(KIT_ITEM,         ITEM, "none") \
-    X(BEGINKIT_ITEM,    ITEM, "none") \
-    X(BEGINKIT_FOOD,    ROLL, "7") \
-    X(MISSILE_QUANTITY, ROLL, "80") \
-    X(THROWN_QUANTITY,  ROLL, "4") \
-    X(AMMO_QUANTITY,    ROLL, "30") \
-    X(ABANDON,          PICK, NULL) \
-    X(ATTR_SET,         PICK, NULL) \
-    X(POINTBUY_CONFIRM, PICK, NULL) \
-    X(REROLL_CONFIRM,   PICK, NULL) \
-    X(FEAT,             PICK, "") \
-    X(SKILL_FOCUS,      PICK, "") \
-    X(NATURAL_APTITUDE, PICK, "") \
-    X(STUDY_AREA,       PICK, "") \
-    X(SCHOOL_FOCUS,     PICK, "") \
-    X(IMPCRIT_WEAPON,   PICK, "") \
-    X(FEAT_WEAPON,      PICK, "") \
-    X(EXOTIC_WEAPON,    PICK, "") \
-    X(WEAPON_UNFIT_CONFIRM, PICK, "yes") \
-    X(INHERENT_SPELL,   PICK, "") \
-    X(LUCUBRATION_BOOK, PICK, "") \
-    X(TATTOO,           PICK, "") \
-    X(FAV_ENEMY,        PICK, "") \
-    X(SPECIALIST_SCHOOL, PICK, "") \
-    X(TRAIN_REPLACE,    PICK, "yes") \
-    X(SPELL_LEARN,      PICK, "") \
-    X(OPTIONS_FILE,     PICK, NULL) \
-    X(SCRIPT_ROLL,      ROLL, "1") \
-    X(SCRIPT_YN,        PICK, "no") \
-    X(SCRIPT_CHOICE,    PICK, "") \
-    X(SCRIPT_MENU,      PICK, "") \
-    X(PERK_CHARGES,     ROLL, "30")
+    X(ALTER_OPTIONS,    PICK, "no", REACHED) \
+    X(EXPLORE_CONTINUE, PICK, "yes", REACHED) \
+    X(FORMULA_SEED,     ROLL, "1", REACHED) \
+    X(GENDER,           PICK, "male", REACHED) \
+    X(NAME,             PICK, "", REACHED) \
+    X(SURNAME,          PICK, "", REACHED) \
+    X(RACE,             PICK, "", REACHED) \
+    X(SUBRACE,          PICK, "", REACHED) \
+    X(CLASS,            PICK, "", REACHED) \
+    X(GOD,              PICK, "", REACHED) \
+    X(ALIGNMENT,        PICK, "", REACHED) \
+    X(PERSONALITY,      PICK, "", REACHED) \
+    X(DOMAIN,           PICK, "", REACHED) \
+    X(DOMAIN_POOL,      PICK, "", REACHED) \
+    X(CRAFT_FORMULA,    PICK, "", REACHED) \
+    X(LEVEL_CLASS,      PICK, "", NOT_REACHED) \
+    X(LEVEL_ATTR,       PICK, "", NOT_REACHED) \
+    X(ATTR_STR,         ROLL, "10", REACHED) \
+    X(ATTR_DEX,         ROLL, "10", REACHED) \
+    X(ATTR_CON,         ROLL, "10", REACHED) \
+    X(ATTR_INT,         ROLL, "10", REACHED) \
+    X(ATTR_WIS,         ROLL, "10", REACHED) \
+    X(ATTR_CHA,         ROLL, "10", REACHED) \
+    X(ATTR_LUC,         ROLL, "10", REACHED) \
+    X(PERK_TYPE,        PICK, "PERK_NONE", REACHED) \
+    X(PERK_FEAT,        PICK, "", REACHED) \
+    X(PERK_ABILITY,     PICK, "", REACHED) \
+    X(PERK_SPELL,       PICK, "", REACHED) \
+    X(PERK_RESIST,      PICK, "", REACHED) \
+    X(PERK_IMMUNE,      PICK, "", REACHED) \
+    X(PERK_ITEM,        ITEM, "none", REACHED) \
+    X(SKILL_RANKS,      ROLL, "0", REACHED) \
+    X(HP_ROLL,          ROLL, "1", REACHED) \
+    X(MANA_ROLL,        ROLL, "1", REACHED) \
+    X(STORE_SEED,       ROLL, "1", REACHED) \
+    X(CHARACTER_NAME,   PICK, "", REACHED) \
+    X(WIZARD_MODE,      ROLL, "0", REACHED) \
+    X(EXPLORE_MODE,     ROLL, "0", REACHED) \
+    X(REROLLS,          ROLL, "0", REACHED) \
+    X(REROLLED_PERKS,   ROLL, "0", REACHED) \
+    X(STAT_METHOD,      ROLL, "1", REACHED) \
+    X(GEAR_STREAM,      ROLL, "0", REACHED) \
+    X(GEAR_CHANCE,      ROLL, "1", REACHED) \
+    X(KIT_ITEM,         ITEM, "none", REACHED) \
+    X(BEGINKIT_ITEM,    ITEM, "none", REACHED) \
+    X(BEGINKIT_FOOD,    ROLL, "7", REACHED) \
+    X(MISSILE_QUANTITY, ROLL, "80", NOT_REACHED) \
+    X(THROWN_QUANTITY,  ROLL, "4", REACHED) \
+    X(AMMO_QUANTITY,    ROLL, "30", REACHED) \
+    X(ABANDON,          PICK, NULL, REACHED) \
+    X(ATTR_SET,         PICK, NULL, REACHED) \
+    X(POINTBUY_CONFIRM, PICK, NULL, REACHED) \
+    X(REROLL_CONFIRM,   PICK, NULL, REACHED) \
+    X(FEAT,             PICK, "", REACHED) \
+    X(SKILL_FOCUS,      PICK, "", REACHED) \
+    X(NATURAL_APTITUDE, PICK, "", REACHED) \
+    X(STUDY_AREA,       PICK, "", NOT_REACHED) \
+    X(SCHOOL_FOCUS,     PICK, "", REACHED) \
+    X(IMPCRIT_WEAPON,   PICK, "", NOT_REACHED) \
+    X(FEAT_WEAPON,      PICK, "", REACHED) \
+    X(EXOTIC_WEAPON,    PICK, "", REACHED) \
+    X(WEAPON_UNFIT_CONFIRM, PICK, "yes", REACHED) \
+    X(INHERENT_SPELL,   PICK, "", REACHED) \
+    X(LUCUBRATION_BOOK, PICK, "", NOT_REACHED) \
+    X(TATTOO,           PICK, "", NOT_REACHED) \
+    X(FAV_ENEMY,        PICK, "", REACHED) \
+    X(SPECIALIST_SCHOOL, PICK, "", REACHED) \
+    X(TRAIN_REPLACE,    PICK, "yes", NOT_REACHED) \
+    X(SPELL_LEARN,      PICK, "", REACHED) \
+    X(OPTIONS_FILE,     PICK, NULL, REACHED) \
+    X(SCRIPT_ROLL,      ROLL, "1", REACHED) \
+    X(SCRIPT_YN,        PICK, "no", REACHED) \
+    X(SCRIPT_CHOICE,    PICK, "", REACHED) \
+    X(SCRIPT_MENU,      PICK, "", NOT_REACHED) \
+    X(PERK_CHARGES,     ROLL, "30", REACHED) \
+    X(EFFECT_ROLL,      ROLL, "1", REACHED)
 
 enum CreationKey {
-#define X(n,k,d) CK_##n,
+#define X(n,k,d,r) CK_##n,
     CREATION_KEY_LIST(X)
 #undef X
     CK_COUNT
@@ -242,6 +262,12 @@ CreationSource *CreationSourceNow();
 CreationSource *SetCreationSource(CreationSource *s);   /* returns the old */
 CreationSource &CreationLiveSource();
 CreationSource &CreationReplaySource();
+/* The save of the walked character that Game::NewGameTail writes before the
+   first turn while INCURSION_RECORD_CHAR=<path> is set: <path without its
+   extension>.walk.sav, beside the .char. "" when recording is off (then
+   NewGameTail writes nothing). The fixture round trip dumps this save as the
+   walk side, because the walk's own later save has played turns (R1). */
+std::string CreationWalkSavePath();
 /* src/CharFile.cpp. The File backend; CharFileLoad parses a .char first. */
 CreationSource &CreationFileSource();
 

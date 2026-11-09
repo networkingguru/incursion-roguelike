@@ -3,5 +3,5 @@
 src/Create.cpp	BuildPerkItem	overwritten by stated perk_charges
 src/Create.cpp	NamePerk	a perk item made only to read its name, then deleted
 src/Create.cpp	Player::Create	tripwire probe: a draw the probe makes on purpose
-src/CreationSource.cpp	CreationMakeItem	overwritten by stated charges and quantity
+src/CreationSource.cpp	CreationMakeItem	overwritten by stated charges, quantity and flags
 src/Magic.cpp	TEffect::Power	builds a description string; the rolled value reaches no saved field
