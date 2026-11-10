@@ -20,6 +20,7 @@
 #
 # fact: the character -- a .char recorded now by tools/headless.sh from tools/keys/chargen-default-save.keys at seed 1 under tools/fixtures/options-2026-08-22.dat; every case is a text edit of that file, so no seed decides it (inc-10v7f)
 # fact: the failure text -- the strings src/CharFile.cpp writes after `BUILD FAILED:`, matched here by fixed substrings
+# fact: the save-perk text -- the first perk slot of that same recorded .char, rewritten to `perk_resist [n]: save confusion` (its other lines and its item's charges removed); the text states the perk, so the seed decides nothing about it (inc-10v7f)
 # fact: the label candidates -- the fixed list RunCharPickTest builds (two "Fire Bolt", "<5>Cold Bolt", "Ice Bolt"), not game data
 #
 # Usage: INCURSION_BIN=./incursion-headless tools/check_char_build_failures.sh
@@ -158,6 +159,47 @@ fi
 awk '/^feat_weapon: battleaxe$/ { print "feat_weapon: huge club"; print "weapon_unfit_confirm [size]: no"; next } { print }' \
     "$W/feats.char" > "$W/again-empty.char"
 expect_fail "a refused weapon asked again, queue empty (B4, real site)" 'stated value rejected by the game' "$W/again-empty.char"
+
+# A "save confusion" perk builds (the reader once rejected
+# `perk_resist: save confusion`: SaveBonusNames names "confusion" twice). The
+# text states the perk: the first perk slot of the recorded file is rewritten to
+# `perk_resist [n]: save confusion`, whatever that slot held (and the charges of
+# its item, if it held one), so no seed decides what is built.
+python3 - "$W/good.char" "$W/save.char" <<'PY'
+import re, sys
+lines = open(sys.argv[1]).read().split("\n")
+out, slot, item = [], None, None
+for l in lines:
+    m = re.match(r"^perk_type \[(\d+)\]: (\S+)", l)
+    if m and slot is None:
+        slot = m.group(1)
+        out += ["perk_type [%s]: PERK_RESIST" % slot, "perk_resist [%s]: save confusion" % slot]
+        continue
+    if slot is not None and re.match(r"^perk_[a-z]+ \[%s\]: " % slot, l):
+        im = re.match(r"^perk_item \[%s\]: ([^,]*)" % slot, l)
+        if im:
+            item = im.group(1).split(";")[0].strip()
+        continue
+    out.append(l)
+if slot is None:
+    sys.exit(3)
+if item is not None:   # the charges line of the item that is no longer there
+    for i, l in enumerate(out):
+        if re.match(r"^perk_charges \[%s\]: " % re.escape(item), l):
+            del out[i]
+            break
+open(sys.argv[2], "w").write("\n".join(out))
+PY
+[ $? -eq 0 ] || { echo "INCONCLUSIVE: the recorded .char has no perk slot to rewrite"; exit 2; }
+grep -qx 'perk_resist \[[0-9]*\]: save confusion' "$W/save.char" \
+    || { echo "INCONCLUSIVE: the rewritten .char does not state the save perk"; exit 2; }
+n=$((n + 1))
+build "$W/save.char"
+if [ "$RC" -eq 0 ]; then
+    echo "ok   a stated '$(grep -m1 '^perk_resist' "$W/save.char")' perk builds"
+else
+    echo "FAIL save perk: exit $RC: $ERR" | cut -c1-230; fail=1
+fi
 
 [ $fail -eq 0 ] && { echo "PASS: every bad .char failed as stated"; exit 0; }
 exit 1

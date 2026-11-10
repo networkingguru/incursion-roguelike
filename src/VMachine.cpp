@@ -186,12 +186,21 @@ inline void ClearCandidates()
    become the members that wrap the prompt. */
 static int16 ScriptRandom(int16 mx, const char *f, int l, const char *fn)
 {
-    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return census_random(mx, f, l, fn); });
+    /* random(mx) is genrand_int32() % mx. A negative mx converts to a huge unsigned divisor,
+       so the remainder is the draw itself, cut to 16 bits: any int16 value. A positive mx draws
+       0 .. mx-1, and 0 draws 0. */
+    int32 lo = mx < 0 ? -32768 : 0;
+    int32 hi = mx < 0 ? 32767 : (mx > 0 ? (int32)mx - 1 : 0);
+    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return census_random(mx, f, l, fn); },
+        NULL, CreationRange(lo, hi));
 }
 
 static int16 ScriptDice(int8 n, int8 s)
 {
-    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return Dice::Roll(n, s); });
+    /* n dice of s sides (a die of 0 sides counts 1, as random(0) is 0 and Roll adds 1), no bonus. */
+    int32 top = (int32)n * (s > 0 ? (int32)s : 1);
+    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return Dice::Roll(n, s); },
+        NULL, CreationRange(n > 0 ? (int32)n : 0, top > 0 ? top : 0));
 }
 
 #pragma push_macro("random")

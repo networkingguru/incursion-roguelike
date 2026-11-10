@@ -317,7 +317,7 @@ public:
         return any;
     }
 
-    void NoteRoll(CreationKey, const CreationContext&, int32) {}
+    void NoteRoll(CreationKey, const CreationContext&, int32, const CreationRange&) {}
     void NotePick(CreationKey, const CreationContext&, const std::string&) {}
     void NotePerks(const PerkSet&) {}
     void NoteItem(CreationKey, const CreationContext&, const CreationItem&) {}

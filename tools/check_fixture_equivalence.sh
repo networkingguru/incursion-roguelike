@@ -173,7 +173,7 @@ elapsed=$((SECONDS - t0))
 
 # Coverage. The keys come from the enum; the hits come from the .char files the
 # walks recorded.
-KEYS_IN=$(sed -n 's/^[[:space:]]*X(\([A-Z0-9_]*\),[[:space:]]*[A-Z]*,[[:space:]]*\(.*\),[[:space:]]*\([A-Z_]*\))[[:space:]]*\\\{0,1\}$/\1 \3 \2/p' "$HDR")
+KEYS_IN=$(sed -n 's/^[[:space:]]*X(\([A-Z0-9_]*\),[[:space:]]*[A-Z]*,[[:space:]]*\(.*\),[[:space:]]*\([A-Z_]*\),[[:space:]]*[A-Z]*)[[:space:]]*\\\{0,1\}$/\1 \3 \2/p' "$HDR")
 [ -n "$KEYS_IN" ] || { echo "could not read the key list from $HDR"; exit 2; }
 stale=0; missing=""; nkeys=0; nhit=0; apart=""; later=""
 RAN=$(find "$OUT" -maxdepth 1 -name "*.char" -newer "$START" 2>/dev/null | sort)   # the walks that ran now

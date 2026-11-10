@@ -248,6 +248,8 @@ public:
     void SetMaxKeys(int32 n) { maxKeys = n; }
     void UseTerminal(bool on) { useCurses = on; }
     bool HasKeyScript() { return keys != NULL; }
+    long KeyScriptPosition();
+    void SkipKeys(long n);
 
     /* System-Independant File I/O */
     virtual const char* SaveSubDir()    { return "save"; }
@@ -662,8 +664,23 @@ int main(int argc, char *argv[]) {
     if (getenv("INCURSION_MAX_KEYS"))
         AT1->SetMaxKeys(atoi(getenv("INCURSION_MAX_KEYS")));
 
-    if (keyScript)
+    if (keyScript) {
         AT1->LoadKeyScript(keyScript);
+        /* INCURSION_KEYS_SKIP=<n> drops the first n script entries, so a run
+           that loads a built character plays only what the script did after
+           creation (tools/char_convert.sh; the n comes from
+           Game::NewGameTail, see KeyScriptPosition). */
+        if (getenv("INCURSION_KEYS_SKIP")) {
+            const char *skip = getenv("INCURSION_KEYS_SKIP");
+            char *end = NULL;
+            long n = strtol(skip, &end, 10);
+            if (!*skip || *end || end == skip) {
+                printf("INCURSION_KEYS_SKIP=%s: not a number.\n", skip);
+                exit(2);
+            }
+            AT1->SkipKeys(n);
+        }
+    }
 
     /* The watchdog guards an unattended run. A person sitting at a terminal
        is allowed to think for as long as they like. */
@@ -1295,6 +1312,28 @@ void posixTerm::AppendKey(const ScriptKey &k) {
         keys = bigger;
     }
     keys[keyCount++] = k;
+}
+
+long posixTerm::KeyScriptPosition() {
+    if (!keys)
+        return -1;
+    if (keyNext < keyCount) {
+        ScriptKey *e = &keys[keyNext];
+        if ((e->ch == SK_WHILE || e->ch == SK_UNTIL || e->ch == SK_CURSOR) &&
+            e->bodyPos != 0)
+            return -2;
+    }
+    return keyNext;
+}
+
+void posixTerm::SkipKeys(long n) {
+    if (n < 0 || n > keyCount) {
+        printf("INCURSION_KEYS_SKIP=%ld: the key script has %ld entries.\n",
+            n, (long)keyCount);
+        exit(2);
+    }
+    memmove(keys, keys + n, (keyCount - n) * sizeof(ScriptKey));
+    keyCount -= (int32)n;
 }
 
 void posixTerm::LoadKeyScript(const char *fn) {

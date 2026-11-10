@@ -15,17 +15,17 @@
 /* ---- the key table ------------------------------------------------------ */
 
 static const char *keyUpper[CK_COUNT] = {
-#define X(n,k,d,r) #n,
+#define X(n,k,d,r,u) #n,
     CREATION_KEY_LIST(X)
 #undef X
 };
 static const CreationKind keyKind[CK_COUNT] = {
-#define X(n,k,d,r) CKIND_##k,
+#define X(n,k,d,r,u) CKIND_##k,
     CREATION_KEY_LIST(X)
 #undef X
 };
 static const char *keyDefault[CK_COUNT] = {
-#define X(n,k,d,r) d,
+#define X(n,k,d,r,u) d,
     CREATION_KEY_LIST(X)
 #undef X
 };
@@ -55,6 +55,18 @@ const char *CreationKeyDefault(CreationKey k)
 bool CreationKeyIsInput(CreationKey k)
 {
     return k >= 0 && k < CK_COUNT && keyDefault[k] != NULL;
+}
+
+enum { CKU_SEEN = 0, CKU_UNSEEN = 1 };
+static const bool keyUnseen[CK_COUNT] = {
+#define X(n,k,d,r,u) CKU_##u == CKU_UNSEEN,
+    CREATION_KEY_LIST(X)
+#undef X
+};
+
+bool CreationKeyIsUnseen(CreationKey k)
+{
+    return k >= 0 && k < CK_COUNT && keyUnseen[k];
 }
 
 /* ---- the RInf bindings --------------------------------------------------
@@ -193,6 +205,7 @@ static void Advance(CreationKey k, const CreationContext &c)
 
 struct RecordedDecision {
     CreationKey key; CreationContext ctx; std::string text;
+    CreationRange range;   /* a roll's inclusive range; unset for the rest */
 };
 static std::vector<RecordedDecision> recorded;
 
@@ -214,11 +227,14 @@ std::string CreationContextText(const CreationContext &c)
     return s;
 }
 
-static void Emit(CreationKey k, const CreationContext &c, const std::string &text)
+static void Emit(CreationKey k, const CreationContext &c, const std::string &text,
+    const CreationRange *range = NULL)
 {
     if (!CreationKeyIsInput(k))
         return;
     RecordedDecision d; d.key = k; d.ctx = c; d.text = text;
+    if (range)
+        d.range = *range;
     recorded.push_back(d);
 }
 
@@ -349,6 +365,20 @@ static bool TextValFind(TextVal *list, const std::string &name, int32 &val, int 
             count++;
         }
     return count == 1;
+}
+
+/* The first row of that name: Lookup() answers a value with the first row that
+   holds it, so the first row of a name is the one the writer's text came from.
+   SaveBonusNames names "confusion" twice (SN_CONF, and SA_CONF, a stati flag
+   no perk holds). Tracked in inc-10v7f. */
+static bool TextValFindFirst(TextVal *list, const std::string &name, int32 &val)
+{
+    for (; list->Text; list++)
+        if (name == list->Text) {
+            val = list->Val;
+            return true;
+        }
+    return false;
 }
 
 static bool QualityValue(rID iID, const std::string &name, int16 &q, std::string &err)
@@ -589,7 +619,7 @@ static bool PerkResistRead(const std::string &t, Perk &p, std::string &err)
 {
     int32 v; int count;
     if (t.compare(0, 5, "save ") == 0) {
-        if (!TextValFind(SaveBonusNames, t.substr(5), v, count)) {
+        if (!TextValFindFirst(SaveBonusNames, t.substr(5), v)) {
             err = "no save bonus named \"" + t.substr(5) + "\""; return false; }
         p.p.resist = -v;
         return true;
@@ -734,6 +764,24 @@ static void WriteCharFile()
                 ctx.c_str(), text.c_str());
     }
     fclose(f);
+    /* Beside the .char: the range of each roll whose value a dump shows only
+       through its result. One tab-separated line each: key, context, ordinal
+       in that (key, context) queue, lowest, highest. A roll the site gave no
+       range is written with lowest > highest, and the search refuses it. */
+    std::string rp = OptionsBase(path) + ".rolls";
+    FILE *rf = fopen(rp.c_str(), "w");
+    if (!rf) {
+        Error("INCURSION_RECORD_CHAR: cannot write %s", rp.c_str());
+        return;
+    }
+    for (size_t i = 0; i != recorded.size(); i++) {
+        if (!CreationKeyIsUnseen(recorded[i].key))
+            continue;
+        fprintf(rf, "%s\t%s\t%d\t%d\t%d\n", CreationKeyName(recorded[i].key),
+            ContextText(recorded[i].ctx).c_str(), recorded[i].ctx.ordinal,
+            (int)recorded[i].range.lo, (int)recorded[i].range.hi);
+    }
+    fclose(rf);
 }
 
 /* ---- private Player state the gallery entry needs ------------------------ */
@@ -839,10 +887,11 @@ public:
     bool AnswerPick(CreationKey, const CreationContext&, const CreationPickList&,
         int32&, std::string&, bool&) { return false; }
 
-    void NoteRoll(CreationKey k, const CreationContext &c, int32 v)
+    void NoteRoll(CreationKey k, const CreationContext &c, int32 v,
+        const CreationRange &range)
     {
         WriteBinding(k, c.ordinal, v);
-        Emit(k, c, (const char*)Format("%d", (int)v));
+        Emit(k, c, (const char*)Format("%d", (int)v), &range);
     }
     void NotePick(CreationKey k, const CreationContext &c, const std::string &text)
     {
@@ -910,7 +959,7 @@ public:
         return true;
     }
 
-    void NoteRoll(CreationKey, const CreationContext&, int32) {}
+    void NoteRoll(CreationKey, const CreationContext&, int32, const CreationRange&) {}
     void NotePick(CreationKey, const CreationContext&, const std::string&) {}
     void NotePerks(const PerkSet&) {}
     void NoteItem(CreationKey, const CreationContext&, const CreationItem&) {}
@@ -1003,12 +1052,12 @@ bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v,
     return true;
 }
 
-void CreationNoteRoll(CreationKey k, const char *sub, int32 v)
+void CreationNoteRoll(CreationKey k, const char *sub, int32 v, const CreationRange &range)
 {
     if (!windowOpen || itemDepth > 0)
         return;
     CreationContext c = MakeContext(k, sub);
-    activeSource->NoteRoll(k, c, v);
+    activeSource->NoteRoll(k, c, v, range);
     Advance(k, c);
 }
 

@@ -389,6 +389,12 @@ public:
        INCURSION_PAD_HELP override the headless check and a keyboard-only
        machine use to see the controller ? screen. */
     virtual bool PadAttached() { return false; }
+
+    /* Where a key script stands: the number of script entries consumed so
+       far (bead inc-10v7f, phase 11e). -1 when no script plays; -2 when the
+       script stands inside a pass of a @while/@until/@cursorto body, where
+       the rest of the script cannot start afresh. */
+    virtual long KeyScriptPosition() { return -1; }
     bool PadHelpActive();
 
     /* Window Handling (TextTerm.cpp) */

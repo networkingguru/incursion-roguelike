@@ -16,8 +16,67 @@ Exit: 0 the dumps match outside the allowlist; 1 they differ (the first lines
 that differ are printed); 2 bad usage or an unreadable file.
 """
 import difflib
+import os
 import re
 import sys
+
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def code_only(text):
+    """The C++ text with its comments blanked: a line inside `/* ... */` or after
+    `//` states nothing the build does. String and character literals are kept
+    whole, so a `//` inside one does not start a comment."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append(re.sub(r"[^\n]", " ", text[i:j]))   # keep the newlines
+            i = j
+        elif text.startswith("//", i):
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            out.append(" " * (j - i))
+            i = j
+        elif c in "\"'":
+            j = i + 1
+            while j < n and text[j] != c and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            out.append(text[i:j + 1])
+            i = j + 1
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def build_forced_options():
+    """The options `-build` forces in the run's Options.Dat, read from the build
+    code (src/CharFile.cpp, lines `bytes[OPT_X] = N;`) and the option numbers
+    (inc/Defines.h). Returns [(number, value, name)]. Fails (exit 2) when the
+    code names none or a name has no number: a comparison that silently stopped
+    dropping the forced option would show it as a difference, and one that
+    silently dropped nothing else would be a lie, so neither is allowed."""
+    try:
+        code = open(os.path.join(_ROOT, "src", "CharFile.cpp"), errors="replace").read()
+        defs = open(os.path.join(_ROOT, "inc", "Defines.h"), errors="replace").read()
+    except OSError as e:
+        print("canon_compare: cannot read the build code: %s" % e, file=sys.stderr)
+        sys.exit(2)
+    out = []
+    for name, val in re.findall(r"bytes\[(OPT_\w+)\]\s*=\s*(\d+)\s*;", code_only(code)):
+        m = re.search(r"^#define\s+%s\s+(\d+)\b" % name, defs, re.M)
+        if not m:
+            print("canon_compare: build code forces %s, which inc/Defines.h does not number" % name, file=sys.stderr)
+            sys.exit(2)
+        out.append((int(m.group(1)), int(val), name))
+    if not out:
+        print("canon_compare: src/CharFile.cpp forces no option (no `bytes[OPT_X] = N;`)", file=sys.stderr)
+        sys.exit(2)
+    return out
+
 
 # Whole sections dropped, by their "=== name ===" heading prefix.
 DROP_SECTIONS = [
@@ -42,7 +101,9 @@ TOKENS = [
     (re.compile(r"GallerySlot: -?\d+"), "GallerySlot: -", "gallery slot: a build writes no gallery entry"),
     (re.compile(r"HungerShown: -?\d+"), "HungerShown: -", "hunger display clock"),
     (re.compile(r"Flags: statiChanged=\d shownFF=\d"), "Flags:", "display refresh flags"),
-    (re.compile(r" 201=1(?= |$)"), "", "OPT_AUTOMORE: the build forces it on (spec A8)"),
+    # The options -build forces, named by build_forced_options(): one entry per `bytes[OPT_X] = N;`.
+    *[(re.compile(r" %d=%d(?= |$)" % (num, val)), "", "%s: the build forces it to %d (spec A8)" % (name, val))
+      for num, val, name in build_forced_options()],
     (re.compile(r"LastRest=-?\d+"), "LastRest=-", "rest clock"),
     (re.compile(r"GenStats: .*$"), "GenStats:", "provenance: the generator's note of the depth range it made the item for"),
     (re.compile(r" Age=-?\d+"), "", "item age: a torch burns while a key script plays a turn"),

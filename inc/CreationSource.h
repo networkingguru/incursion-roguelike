@@ -34,8 +34,9 @@
 #include <string>
 #include <vector>
 
-/* X(name, kind, default, reach). Appending a decision is one line here plus the
-   call site. `reach` says whether character creation (Player::Create and
+/* X(name, kind, default, reach, seen). Appending a decision is one line here plus the
+   call site. `seen` is SEEN, or UNSEEN for a ROLL whose value a dump shows only
+   through its result (the char tools search it; see CreationKeyIsUnseen). `reach` says whether character creation (Player::Create and
    everything it calls) can reach the decision: REACHED, or NOT_REACHED for a
    decision made only after creation (a level gained later, training, a tattoo)
    or by a feat a level-1 character cannot take. The equivalence check
@@ -61,85 +62,85 @@
    LMenu calls in lib/*.irh sit in item, spell and ability effects.
    A walk whose .char states a NOT_REACHED key fails the equivalence check. */
 #define CREATION_KEY_LIST(X) \
-    X(ALTER_OPTIONS,    PICK, "no", REACHED) \
-    X(EXPLORE_CONTINUE, PICK, "yes", REACHED) \
-    X(FORMULA_SEED,     ROLL, "1", REACHED) \
-    X(GENDER,           PICK, "male", REACHED) \
-    X(NAME,             PICK, "", REACHED) \
-    X(SURNAME,          PICK, "", REACHED) \
-    X(RACE,             PICK, "", REACHED) \
-    X(SUBRACE,          PICK, "", REACHED) \
-    X(CLASS,            PICK, "", REACHED) \
-    X(GOD,              PICK, "", REACHED) \
-    X(ALIGNMENT,        PICK, "", REACHED) \
-    X(PERSONALITY,      PICK, "", REACHED) \
-    X(DOMAIN,           PICK, "", REACHED) \
-    X(DOMAIN_POOL,      PICK, "", REACHED) \
-    X(CRAFT_FORMULA,    PICK, "", REACHED) \
-    X(LEVEL_CLASS,      PICK, "", NOT_REACHED) \
-    X(LEVEL_ATTR,       PICK, "", NOT_REACHED) \
-    X(ATTR_STR,         ROLL, "10", REACHED) \
-    X(ATTR_DEX,         ROLL, "10", REACHED) \
-    X(ATTR_CON,         ROLL, "10", REACHED) \
-    X(ATTR_INT,         ROLL, "10", REACHED) \
-    X(ATTR_WIS,         ROLL, "10", REACHED) \
-    X(ATTR_CHA,         ROLL, "10", REACHED) \
-    X(ATTR_LUC,         ROLL, "10", REACHED) \
-    X(PERK_TYPE,        PICK, "PERK_NONE", REACHED) \
-    X(PERK_FEAT,        PICK, "", REACHED) \
-    X(PERK_ABILITY,     PICK, "", REACHED) \
-    X(PERK_SPELL,       PICK, "", REACHED) \
-    X(PERK_RESIST,      PICK, "", REACHED) \
-    X(PERK_IMMUNE,      PICK, "", REACHED) \
-    X(PERK_ITEM,        ITEM, "none", REACHED) \
-    X(SKILL_RANKS,      ROLL, "0", REACHED) \
-    X(HP_ROLL,          ROLL, "1", REACHED) \
-    X(MANA_ROLL,        ROLL, "1", REACHED) \
-    X(STORE_SEED,       ROLL, "1", REACHED) \
-    X(CHARACTER_NAME,   PICK, "", REACHED) \
-    X(WIZARD_MODE,      ROLL, "0", REACHED) \
-    X(EXPLORE_MODE,     ROLL, "0", REACHED) \
-    X(REROLLS,          ROLL, "0", REACHED) \
-    X(REROLLED_PERKS,   ROLL, "0", REACHED) \
-    X(STAT_METHOD,      ROLL, "1", REACHED) \
-    X(GEAR_STREAM,      ROLL, "0", REACHED) \
-    X(GEAR_CHANCE,      ROLL, "1", REACHED) \
-    X(KIT_ITEM,         ITEM, "none", REACHED) \
-    X(BEGINKIT_ITEM,    ITEM, "none", REACHED) \
-    X(BEGINKIT_FOOD,    ROLL, "7", REACHED) \
-    X(MISSILE_QUANTITY, ROLL, "80", NOT_REACHED) \
-    X(THROWN_QUANTITY,  ROLL, "4", REACHED) \
-    X(AMMO_QUANTITY,    ROLL, "30", REACHED) \
-    X(ABANDON,          PICK, NULL, REACHED) \
-    X(ATTR_SET,         PICK, NULL, REACHED) \
-    X(POINTBUY_CONFIRM, PICK, NULL, REACHED) \
-    X(REROLL_CONFIRM,   PICK, NULL, REACHED) \
-    X(FEAT,             PICK, "", REACHED) \
-    X(SKILL_FOCUS,      PICK, "", REACHED) \
-    X(NATURAL_APTITUDE, PICK, "", REACHED) \
-    X(STUDY_AREA,       PICK, "", NOT_REACHED) \
-    X(SCHOOL_FOCUS,     PICK, "", REACHED) \
-    X(IMPCRIT_WEAPON,   PICK, "", NOT_REACHED) \
-    X(FEAT_WEAPON,      PICK, "", REACHED) \
-    X(EXOTIC_WEAPON,    PICK, "", REACHED) \
-    X(WEAPON_UNFIT_CONFIRM, PICK, "yes", REACHED) \
-    X(INHERENT_SPELL,   PICK, "", REACHED) \
-    X(LUCUBRATION_BOOK, PICK, "", NOT_REACHED) \
-    X(TATTOO,           PICK, "", NOT_REACHED) \
-    X(FAV_ENEMY,        PICK, "", REACHED) \
-    X(SPECIALIST_SCHOOL, PICK, "", REACHED) \
-    X(TRAIN_REPLACE,    PICK, "yes", NOT_REACHED) \
-    X(SPELL_LEARN,      PICK, "", REACHED) \
-    X(OPTIONS_FILE,     PICK, NULL, REACHED) \
-    X(SCRIPT_ROLL,      ROLL, "1", REACHED) \
-    X(SCRIPT_YN,        PICK, "no", REACHED) \
-    X(SCRIPT_CHOICE,    PICK, "", REACHED) \
-    X(SCRIPT_MENU,      PICK, "", NOT_REACHED) \
-    X(PERK_CHARGES,     ROLL, "30", REACHED) \
-    X(EFFECT_ROLL,      ROLL, "1", REACHED)
+    X(ALTER_OPTIONS,    PICK, "no", REACHED, SEEN) \
+    X(EXPLORE_CONTINUE, PICK, "yes", REACHED, SEEN) \
+    X(FORMULA_SEED,     ROLL, "1", REACHED, SEEN) \
+    X(GENDER,           PICK, "male", REACHED, SEEN) \
+    X(NAME,             PICK, "", REACHED, SEEN) \
+    X(SURNAME,          PICK, "", REACHED, SEEN) \
+    X(RACE,             PICK, "", REACHED, SEEN) \
+    X(SUBRACE,          PICK, "", REACHED, SEEN) \
+    X(CLASS,            PICK, "", REACHED, SEEN) \
+    X(GOD,              PICK, "", REACHED, SEEN) \
+    X(ALIGNMENT,        PICK, "", REACHED, SEEN) \
+    X(PERSONALITY,      PICK, "", REACHED, SEEN) \
+    X(DOMAIN,           PICK, "", REACHED, SEEN) \
+    X(DOMAIN_POOL,      PICK, "", REACHED, SEEN) \
+    X(CRAFT_FORMULA,    PICK, "", REACHED, SEEN) \
+    X(LEVEL_CLASS,      PICK, "", NOT_REACHED, SEEN) \
+    X(LEVEL_ATTR,       PICK, "", NOT_REACHED, SEEN) \
+    X(ATTR_STR,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_DEX,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_CON,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_INT,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_WIS,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_CHA,         ROLL, "10", REACHED, SEEN) \
+    X(ATTR_LUC,         ROLL, "10", REACHED, SEEN) \
+    X(PERK_TYPE,        PICK, "PERK_NONE", REACHED, SEEN) \
+    X(PERK_FEAT,        PICK, "", REACHED, SEEN) \
+    X(PERK_ABILITY,     PICK, "", REACHED, SEEN) \
+    X(PERK_SPELL,       PICK, "", REACHED, SEEN) \
+    X(PERK_RESIST,      PICK, "", REACHED, SEEN) \
+    X(PERK_IMMUNE,      PICK, "", REACHED, SEEN) \
+    X(PERK_ITEM,        ITEM, "none", REACHED, SEEN) \
+    X(SKILL_RANKS,      ROLL, "0", REACHED, SEEN) \
+    X(HP_ROLL,          ROLL, "1", REACHED, SEEN) \
+    X(MANA_ROLL,        ROLL, "1", REACHED, SEEN) \
+    X(STORE_SEED,       ROLL, "1", REACHED, SEEN) \
+    X(CHARACTER_NAME,   PICK, "", REACHED, SEEN) \
+    X(WIZARD_MODE,      ROLL, "0", REACHED, SEEN) \
+    X(EXPLORE_MODE,     ROLL, "0", REACHED, SEEN) \
+    X(REROLLS,          ROLL, "0", REACHED, SEEN) \
+    X(REROLLED_PERKS,   ROLL, "0", REACHED, SEEN) \
+    X(STAT_METHOD,      ROLL, "1", REACHED, SEEN) \
+    X(GEAR_STREAM,      ROLL, "0", REACHED, SEEN) \
+    X(GEAR_CHANCE,      ROLL, "1", REACHED, SEEN) \
+    X(KIT_ITEM,         ITEM, "none", REACHED, SEEN) \
+    X(BEGINKIT_ITEM,    ITEM, "none", REACHED, SEEN) \
+    X(BEGINKIT_FOOD,    ROLL, "7", REACHED, SEEN) \
+    X(MISSILE_QUANTITY, ROLL, "80", NOT_REACHED, SEEN) \
+    X(THROWN_QUANTITY,  ROLL, "4", REACHED, SEEN) \
+    X(AMMO_QUANTITY,    ROLL, "30", REACHED, SEEN) \
+    X(ABANDON,          PICK, NULL, REACHED, SEEN) \
+    X(ATTR_SET,         PICK, NULL, REACHED, SEEN) \
+    X(POINTBUY_CONFIRM, PICK, NULL, REACHED, SEEN) \
+    X(REROLL_CONFIRM,   PICK, NULL, REACHED, SEEN) \
+    X(FEAT,             PICK, "", REACHED, SEEN) \
+    X(SKILL_FOCUS,      PICK, "", REACHED, SEEN) \
+    X(NATURAL_APTITUDE, PICK, "", REACHED, SEEN) \
+    X(STUDY_AREA,       PICK, "", NOT_REACHED, SEEN) \
+    X(SCHOOL_FOCUS,     PICK, "", REACHED, SEEN) \
+    X(IMPCRIT_WEAPON,   PICK, "", NOT_REACHED, SEEN) \
+    X(FEAT_WEAPON,      PICK, "", REACHED, SEEN) \
+    X(EXOTIC_WEAPON,    PICK, "", REACHED, SEEN) \
+    X(WEAPON_UNFIT_CONFIRM, PICK, "yes", REACHED, SEEN) \
+    X(INHERENT_SPELL,   PICK, "", REACHED, SEEN) \
+    X(LUCUBRATION_BOOK, PICK, "", NOT_REACHED, SEEN) \
+    X(TATTOO,           PICK, "", NOT_REACHED, SEEN) \
+    X(FAV_ENEMY,        PICK, "", REACHED, SEEN) \
+    X(SPECIALIST_SCHOOL, PICK, "", REACHED, SEEN) \
+    X(TRAIN_REPLACE,    PICK, "yes", NOT_REACHED, SEEN) \
+    X(SPELL_LEARN,      PICK, "", REACHED, SEEN) \
+    X(OPTIONS_FILE,     PICK, NULL, REACHED, SEEN) \
+    X(SCRIPT_ROLL,      ROLL, "1", REACHED, UNSEEN) \
+    X(SCRIPT_YN,        PICK, "no", REACHED, SEEN) \
+    X(SCRIPT_CHOICE,    PICK, "", REACHED, SEEN) \
+    X(SCRIPT_MENU,      PICK, "", NOT_REACHED, SEEN) \
+    X(PERK_CHARGES,     ROLL, "30", REACHED, SEEN) \
+    X(EFFECT_ROLL,      ROLL, "1", REACHED, UNSEEN)
 
 enum CreationKey {
-#define X(n,k,d,r) CK_##n,
+#define X(n,k,d,r,u) CK_##n,
     CREATION_KEY_LIST(X)
 #undef X
     CK_COUNT
@@ -151,6 +152,13 @@ const char    *CreationKeyName(CreationKey k);   /* lower case: "attr_str" */
 CreationKind   CreationKeyKind(CreationKey k);
 const char    *CreationKeyDefault(CreationKey k);   /* the X-macro default ("" if NULL) */
 bool           CreationKeyIsInput(CreationKey k);   /* false: observed, never stated */
+/* A ROLL whose value a dump shows only through its result: a script's draw and
+   an effect's damage roll. It is the fifth column of CREATION_KEY_LIST
+   (UNSEEN; every other key is SEEN). The recorder writes the inclusive range of
+   each such roll beside the .char (<name>.rolls, bead inc-10v7f phase 11g), and
+   tools/char_roll_search.py searches that range for the value that rebuilds an
+   old save. The column is the game's; a tool holds no key name. */
+bool           CreationKeyIsUnseen(CreationKey k);
 
 /* The inclusive range a ROLL site's own code fixes (a die, a rank cap, a
    quantity span). The default holds no range. Live and Replay ignore it; the
@@ -245,7 +253,8 @@ public:
     virtual bool AnswerItem(CreationKey k, const CreationContext &c,
         CreationItem &it) = 0;
 
-    virtual void NoteRoll(CreationKey k, const CreationContext &c, int32 v) = 0;
+    virtual void NoteRoll(CreationKey k, const CreationContext &c, int32 v,
+        const CreationRange &range) = 0;
     virtual void NotePick(CreationKey k, const CreationContext &c,
         const std::string &text) = 0;
     virtual void NotePerks(const PerkSet &set) = 0;
@@ -348,7 +357,8 @@ bool CreationInsideLive();
    NOT_RECORDED; a successful Answer or a Note advances the ordinal. */
 bool CreationAnswerRoll(CreationKey k, const char *sub, int32 &v,
     const CreationRange &range = CreationRange());
-void CreationNoteRoll(CreationKey k, const char *sub, int32 v);
+void CreationNoteRoll(CreationKey k, const char *sub, int32 v,
+    const CreationRange &range = CreationRange());
 bool CreationAnswerPick(CreationKey k, const char *sub,
     const CreationPickList &list, int32 &value, std::string &text, bool &inList);
 void CreationNotePick(CreationKey k, const char *sub, const std::string &text);
@@ -383,7 +393,7 @@ int32 SourcedRoll(CreationKey k, Live live, const char *sub = NULL,
         CreationLiveDepth inside;
         v = (int32)live();
     }
-    CreationNoteRoll(k, sub, v);
+    CreationNoteRoll(k, sub, v, range);
     return v;
 }
 
@@ -428,7 +438,7 @@ void SourcedRoll(CreationKey k, int32 *vals, int16 n, const char *(*subName)(int
         live();
     }
     for (i = 0; i != n; i++)
-        CreationNoteRoll(k, subName(i), vals[i]);
+        CreationNoteRoll(k, subName(i), vals[i], ranges ? ranges[i] : CreationRange());
 }
 
 /* A table that decides a set of choices (the spell table). `live(out)` fills

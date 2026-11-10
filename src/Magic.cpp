@@ -711,7 +711,14 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
           if (!CreationWindowOpen() || g_unstatedDepth > 0 || e.Dmg.Number == 0)
               return e.Dmg.Roll();
           CreationScope effectScope(NAME(e.eID), 0);
-          return (int16)SourcedRoll(CK_EFFECT_ROLL, [&]() -> int32 { return e.Dmg.Roll(); });
+          /* Dice::Roll(): |Number| dice of Sides (0 sides counts 1), then the bonus; a
+             positive Number floors at 0, a negative one subtracts the bonus and caps at 0. */
+          int32 dice = abs((int32)e.Dmg.Number), face = e.Dmg.Sides > 0 ? (int32)e.Dmg.Sides : 1;
+          int32 lo = dice, hi = dice * face;
+          if (e.Dmg.Number > 0) { lo = max(0, lo + e.Dmg.Bonus); hi = max(0, hi + e.Dmg.Bonus); }
+          else { lo = min(0, lo - e.Dmg.Bonus); hi = min(0, hi - e.Dmg.Bonus); }
+          return (int16)SourcedRoll(CK_EFFECT_ROLL, [&]() -> int32 { return e.Dmg.Roll(); },
+              NULL, CreationRange(lo, hi));
       };
       auto rollDamage = [&]() {
           if (e.MM & MM_MAXIMIZE)

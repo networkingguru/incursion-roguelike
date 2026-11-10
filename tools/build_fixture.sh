@@ -23,7 +23,7 @@
 # INCURSION_SEED, INCURSION_RECORD_CHAR and every other INCURSION_* variable is
 # removed before the binary starts, so a stray variable in the caller's shell
 # cannot change the character. The seed comes from the file. The one variable
-# kept is INCURSION_TRIPWIRE_PROBE (a test hook, see below).
+# kept are INCURSION_TRIPWIRE_PROBE (a test hook, see below) and INCURSION_MAP_STREAM.
 #
 # Exit: 0 built; 2 bad usage; 10 the build failed (the BUILD FAILED line is on
 # stderr); any other code is the binary's.
@@ -60,8 +60,11 @@ ln -sfn "$ROOT/lib" "$RUN/lib"
 CLEAN=()
 # INCURSION_TRIPWIRE_PROBE is the one exception: tools/check_fixture_tripwires.sh
 # sets it to insert a fault and prove a tripwire fires. Unset it changes nothing.
+# INCURSION_MAP_STREAM is the other: tools/char_arrive.sh sets it so the build makes
+# the map the walk made (src/Main.cpp, Game::NewGameTail). Unset it changes nothing.
 while IFS= read -r v; do
     [ "$v" = INCURSION_TRIPWIRE_PROBE ] && continue
+    [ "$v" = INCURSION_MAP_STREAM ] && continue
     CLEAN+=(-u "$v")
 done < <(env | sed -n 's/^\(INCURSION[A-Z0-9_]*\)=.*/\1/p')
 

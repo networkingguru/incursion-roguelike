@@ -14,8 +14,10 @@
 # would have to learn about.
 #
 # THE FILES. src/CharFile.cpp (the parser and the File backend), src/Creation
-# Source.cpp (the recorder and its serializers), tools/build_fixture.sh and
-# tools/check_fixture_equivalence.sh (C2, whose coverage list reads the enum).
+# Source.cpp (the recorder and its serializers), tools/build_fixture.sh,
+# tools/check_fixture_equivalence.sh (C2, whose coverage list reads the enum),
+# tools/fill_chars.sh and tools/char_rekey.sh (the fill and rekey tools of spec
+# A5, which take their line or key from the build or the command line).
 #
 # WHAT IT FLAGS (a code line: comments and blank lines are set aside first):
 #   R1  `case CK_<NAME>` -- a switch arm on a key.
@@ -26,10 +28,15 @@
 #       keys. The upper-case PERK_ITEM and its kin are perk TYPE values the
 #       Perk table names; they share a spelling with keys and are not tested.)
 #   R4  `switch (k)`, `switch (key)` or `switch (<x>.key)` -- a switch over a key.
-#   R5  in tools/build_fixture.sh and tools/check_fixture_equivalence.sh: a CK_ name, or a shell word that is exactly a
+#   R6  a second list of key names: a line of the header or of a scanned C++ file
+#       that names a key as a one-argument `X(NAME)`, as a list macro would
+#       (the table rows `X(NAME, KIND, ...)` are the one list). A property of a
+#       key, such as UNSEEN, is a column of CREATION_KEY_LIST.
+#   R5  in the four shell files (build_fixture, check_fixture_equivalence, fill_chars,
+#       char_rekey): a CK_ name, or a shell word that is exactly a
 #       key name in a `case` arm or a string test.
 #
-# fact: the text of src/CharFile.cpp, src/CreationSource.cpp and tools/build_fixture.sh -- read from the working tree by grep and awk; no game run, no seed, no map
+# fact: the text of src/CharFile.cpp, src/CreationSource.cpp and the four shell files -- read from the working tree by grep and awk; no game run, no seed, no map
 # fact: the key names -- read from the CREATION_KEY_LIST X-macro in inc/CreationSource.h by sed at run time, so a new key is covered the moment it is added
 # fact: which patterns count as a branch -- R1 to R5 above, fixed in this file
 #
@@ -48,6 +55,8 @@ CHARFILE="${NO_PER_KEY_CHARFILE:-src/CharFile.cpp}"
 RECORDER="${NO_PER_KEY_RECORDER:-src/CreationSource.cpp}"
 BUILDER="${NO_PER_KEY_BUILDER:-tools/build_fixture.sh}"
 EQUIV="${NO_PER_KEY_EQUIV:-tools/check_fixture_equivalence.sh}"
+FILL="${NO_PER_KEY_FILL:-tools/fill_chars.sh}"
+REKEY="${NO_PER_KEY_REKEY:-tools/char_rekey.sh}"
 
 # The key names, upper case, one per line.
 key_names() {
@@ -94,6 +103,17 @@ scan_cpp() {   # <file> -> prints hits, returns 1 when any
     return $bad
 }
 
+scan_list() {   # <file>: R6, a second list of key names
+    local f="$1" hits keys alt
+    [ -f "$f" ] || { echo "INCONCLUSIVE: $f is not there"; return 2; }
+    keys="$(key_names)"
+    [ -n "$keys" ] || { echo "INCONCLUSIVE: no keys found in $HDR"; return 2; }
+    alt="$(printf '%s\n' "$keys" | paste -sd'|' -)"
+    hits="$(code_lines "$f" | grep -E "X\((${alt})\)")" || true
+    [ -n "$hits" ] && { echo "R6 second list of key names in $f:"; printf '%s\n' "$hits" | sed 's/^/  /'; return 1; }
+    return 0
+}
+
 scan_sh() {   # <file>
     local f="$1" bad=0 hits keys alt code
     [ -f "$f" ] || { echo "INCONCLUSIVE: $f is not there"; return 2; }
@@ -112,23 +132,28 @@ scan_sh() {   # <file>
 run_all() {
     local rc=0 r
     scan_cpp "$CHARFILE"; r=$?; [ $r -gt $rc ] && rc=$r
+    scan_list "$HDR";      r=$?; [ $r -gt $rc ] && rc=$r
+    scan_list "$CHARFILE"; r=$?; [ $r -gt $rc ] && rc=$r
+    scan_list "$RECORDER"; r=$?; [ $r -gt $rc ] && rc=$r
     scan_cpp "$RECORDER"; r=$?; [ $r -gt $rc ] && rc=$r
     scan_sh "$BUILDER";   r=$?; [ $r -gt $rc ] && rc=$r
     scan_sh "$EQUIV";     r=$?; [ $r -gt $rc ] && rc=$r
+    scan_sh "$FILL";      r=$?; [ $r -gt $rc ] && rc=$r
+    scan_sh "$REKEY";     r=$?; [ $r -gt $rc ] && rc=$r
     return $rc
 }
 
 if [ "${1:-}" = "--selftest" ]; then
     T="$(mktemp -d "${TMPDIR:-/tmp}/nopkb.XXXXXX")" || exit 2
     trap 'rm -rf "$T"' EXIT
-    cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"
-    export NO_PER_KEY_CHARFILE="$T/CharFile.cpp" NO_PER_KEY_RECORDER="$T/CreationSource.cpp" NO_PER_KEY_BUILDER="$T/build_fixture.sh" NO_PER_KEY_EQUIV="$T/check_fixture_equivalence.sh"
+    cp "$HDR" "$T/CreationSource.h"; cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"; cp "$FILL" "$T/fill_chars.sh"; cp "$REKEY" "$T/char_rekey.sh"
+    export NO_PER_KEY_HEADER="$T/CreationSource.h" NO_PER_KEY_CHARFILE="$T/CharFile.cpp" NO_PER_KEY_RECORDER="$T/CreationSource.cpp" NO_PER_KEY_BUILDER="$T/build_fixture.sh" NO_PER_KEY_EQUIV="$T/check_fixture_equivalence.sh" NO_PER_KEY_FILL="$T/fill_chars.sh" NO_PER_KEY_REKEY="$T/char_rekey.sh"
     out="$("$0" 2>&1)"; rc=$?
     if [ $rc -ne 0 ]; then echo "SELFTEST FAIL: the untouched copies are not green (rc=$rc)"; printf '%s\n' "$out"; exit 1; fi
     echo "selftest: untouched copies green"
     fails=0
     mutate() {   # <rule> <file-in-T> <text to append>
-        cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"
+        cp "$HDR" "$T/CreationSource.h"; cp "$CHARFILE" "$T/CharFile.cpp"; cp "$RECORDER" "$T/CreationSource.cpp"; cp "$BUILDER" "$T/build_fixture.sh"; cp "$EQUIV" "$T/check_fixture_equivalence.sh"; cp "$FILL" "$T/fill_chars.sh"; cp "$REKEY" "$T/char_rekey.sh"
         printf '%s\n' "$3" >> "$T/$2"
         out="$("$0" 2>&1)"; rc=$?
         if [ $rc -eq 1 ] && grep -q "^$1 " <<< "$out"; then
@@ -143,17 +168,23 @@ if [ "${1:-}" = "--selftest" ]; then
     mutate R3 CharFile.cpp        'static const char *m3 = "attr_str";'
     mutate R3 CreationSource.cpp  'static const char *m3b = "gear_stream";'
     mutate R4 CreationSource.cpp  'static int m4(CreationKey k) { switch (k) { default: return 0; } }'
+    mutate R6 CreationSource.h    '#define CREATION_UNSEEN_KEY_LIST(X) X(SCRIPT_ROLL) X(EFFECT_ROLL)'
+    mutate R6 CreationSource.cpp  'static int m6[] = { 0 }; /* */ int m6b() { return X(GOD); }'
     mutate R5 build_fixture.sh    'if [ "$X" = "race" ]; then echo; fi'
     mutate R5 build_fixture.sh    'echo CK_RACE'
     mutate R5 check_fixture_equivalence.sh 'echo CK_RACE'
     mutate R5 check_fixture_equivalence.sh 'if [ "$k" = "attr_str" ]; then echo; fi'
+    mutate R5 fill_chars.sh       'echo CK_RACE'
+    mutate R5 fill_chars.sh       'if [ "$k" = "attr_str" ]; then echo; fi'
+    mutate R5 char_rekey.sh       'echo CK_RACE'
+    mutate R5 char_rekey.sh       '  race) echo ;;'
     [ $fails -eq 0 ] && echo "selftest: PASS" && exit 0
     exit 1
 fi
 
 out="$(run_all)"; rc=$?
 if [ $rc -eq 0 ]; then
-    echo "PASS: no per-key branch in $CHARFILE, $RECORDER, $BUILDER, $EQUIV"
+    echo "PASS: no per-key branch in $CHARFILE, $RECORDER, $BUILDER, $EQUIV, $FILL, $REKEY"
     exit 0
 fi
 printf '%s\n' "$out"
