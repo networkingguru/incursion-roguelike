@@ -1,5 +1,5 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 13:17 from 0d299d88.
+# Recorded 2026-11-10 12:11 from 3e5542a5.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
 keys	tools/keys/dive-depth-4.keys
@@ -13,53 +13,54 @@ findings	0
 died	5
 threat_frozen	0
 prompt_stop_seed	seed-1	depth=4 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-14	depth=4 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-16	depth=4 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-18	depth=4 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-38	depth=4 prompt=Do you want to stop searching (light damage: a human)? [yn]
-prompt_stop_seed	seed-4	depth=4 prompt=Do you want to stop searching (soaking: a human)? [yn]
-prompt_stop_seed	seed-9	depth=4 prompt=You die... Die? [yn]
-prompt_stop	7
-prompt_stop_other	2
+prompt_stop_seed	seed-19	depth=4 prompt=Do you want to stop searching (entangling)? [yn]
+prompt_stop_seed	seed-23	depth=4 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-31	depth=4 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-36	depth=4 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-37	depth=4 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-6	depth=4 prompt=Do you want to stop searching (soaking: a clawed halfling)? [yn]
+prompt_stop_seed	seed-8	depth=4 prompt=Paralyzed: pray, magic, wait 10/20/30, or d for sheet? [pmd123]
+prompt_stop	8
+prompt_stop_other	3
 turns_sessions	40
-turns_median	892
-turns_seed	seed-1	204
-turns_seed	seed-10	356
-turns_seed	seed-11	1840
+turns_median	372
+turns_seed	seed-1	240
+turns_seed	seed-10	1840
+turns_seed	seed-11	356
 turns_seed	seed-12	1834
-turns_seed	seed-13	603
-turns_seed	seed-14	443
-turns_seed	seed-15	1840
-turns_seed	seed-16	94
-turns_seed	seed-17	1840
-turns_seed	seed-18	180
-turns_seed	seed-19	372
+turns_seed	seed-13	356
+turns_seed	seed-14	372
+turns_seed	seed-15	372
+turns_seed	seed-16	1834
+turns_seed	seed-17	774
+turns_seed	seed-18	1834
+turns_seed	seed-19	660
 turns_seed	seed-2	356
-turns_seed	seed-20	1840
+turns_seed	seed-20	356
 turns_seed	seed-21	356
-turns_seed	seed-22	356
-turns_seed	seed-23	1840
+turns_seed	seed-22	1834
+turns_seed	seed-23	331
 turns_seed	seed-24	356
-turns_seed	seed-25	1840
+turns_seed	seed-25	356
 turns_seed	seed-26	1840
 turns_seed	seed-27	1840
-turns_seed	seed-28	1632
+turns_seed	seed-28	1840
 turns_seed	seed-29	1840
-turns_seed	seed-3	356
-turns_seed	seed-30	356
-turns_seed	seed-31	372
-turns_seed	seed-32	1181
-turns_seed	seed-33	1840
-turns_seed	seed-34	1840
-turns_seed	seed-35	1840
-turns_seed	seed-36	356
-turns_seed	seed-37	356
-turns_seed	seed-38	1241
-turns_seed	seed-39	372
-turns_seed	seed-4	420
+turns_seed	seed-3	1840
+turns_seed	seed-30	1840
+turns_seed	seed-31	337
+turns_seed	seed-32	356
+turns_seed	seed-33	356
+turns_seed	seed-34	356
+turns_seed	seed-35	372
+turns_seed	seed-36	56
+turns_seed	seed-37	228
+turns_seed	seed-38	1840
+turns_seed	seed-39	1834
+turns_seed	seed-4	356
 turns_seed	seed-40	356
-turns_seed	seed-5	1834
-turns_seed	seed-6	1840
-turns_seed	seed-7	1834
-turns_seed	seed-8	1840
-turns_seed	seed-9	240
+turns_seed	seed-5	1840
+turns_seed	seed-6	372
+turns_seed	seed-7	356
+turns_seed	seed-8	160
+turns_seed	seed-9	1225
