@@ -23,3 +23,13 @@ History: docs/rules-history/engine-data-knowledge.md#save-schema-append-only-sup
 A character in this game can sell NOTHING except gems. NEVER raise loot resale, selling gear, or a sell-for-gold loop as a design risk, an exploit, or a question, in god design or anywhere else. An item still has a gold value (`SacrificeValue()`); only selling does not exist.
 Why: the owner ruled that selling is not a mechanic, and raising it wastes his time.
 History: docs/rules-history/engine-data-knowledge.md#nothing-is-sellable-except-gems. Bead inc-vpf9.
+
+## epic-saves-are-disposable
+Only saves from master matter: the other players build from master. A save written by an epic build (such as `inc-pu6v`) is a playtest save and is disposable, Brian's own play saves in `~/Games/Incursion/save` included. A change MAY break an epic save. When a change breaks Brian's epic play saves, delete them from `~/Games/Incursion/save` at once, without asking; this overrides `brian-plays-from-his-own-folder` for that deletion only. MUST NOT add a converter, choose a tag or resource position, keep a fixture, or ask Brian anything to keep an epic save loading. When an epic and master collide on a save number or resource position, the epic moves (see `inc-cjos0`).
+Why: the owner playtests the epic only, and protecting its saves costs work and his time for nothing.
+History: docs/rules-history/engine-data-knowledge.md#epic-saves-are-disposable. Bead inc-1macr.
+
+## map-scale-is-ten-feet-per-square
+One map square is 10 FEET, not d20's 5 feet. Convert every feet figure at 10 feet per square: in a Desc, a design number, a bead, or a proposal to Brian. Evidence: `src/Social.cpp:900` ("10 feet (1 square)"); a torch is `Light Range: 4` (40 feet) and a brass lantern `Light Range: 6` (60 feet), `lib/mundane.irh:628-638`, the d20 full reach (bright plus shadowy) of each; the Sunblade's 60-foot light is `lval: 6`. When a Desc gives feet and the script gives a square radius (`lval`, `NewField` radius, `Light Range`, `vRange`), the script's squares times 10 is the true reach.
+Why: the d20 default of 5 feet per square halves or doubles every converted range, and sessions keep falling back to it.
+History: docs/rules-history/engine-data-knowledge.md#map-scale-is-ten-feet-per-square. Bead inc-t5ex2.
