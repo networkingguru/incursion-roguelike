@@ -102,11 +102,36 @@ inline int16 PoisonDC(rID xID)
 inline bool mID_isMType(rID mID, uint32 mt)
   { return TMON(mID)->isMType(mID,mt); }
   
+/* upstream: a script's SetPVal changes only the current event's copy, never
+   the module's shared effect resource (the in-place write is in 7b8504a3 and
+   misbehaves identically on Win32). Observed; inc-q4kjl; not sent. */
 inline void SetPVal(EventInfo &e, int16 b, int16 n=0, int16 s=0)
   { if (e.EMagic) {
+      if (e.EMagic != &e.EMagicCopy) {
+        e.EMagicCopy = *e.EMagic;
+        e.EMagic = &e.EMagicCopy;
+        }
       e.EMagic->pval.Number = (int8)n;
       e.EMagic->pval.Sides = (int8)s;
       e.EMagic->pval.Bonus = (int8)b;
+      }
+    /* inc-q4kjl: INCURSION_PVAL_PROBE=<path> appends one line per call:
+       the effect, the values written, the SHARED resource's pval after. */
+    const char *pp = getenv("INCURSION_PVAL_PROBE");
+    if (pp && *pp) {
+      FILE *f = fopen(pp,"a");
+      if (f) {
+        TEffect *te = e.eID ? TEFF(e.eID) : NULL;
+        EffectValues *sh = te ? te->Vals(e.efNum) : NULL;
+        fprintf(f,"PVAL_PROBE effect=%s wrote=%dd%d%+d shared=",
+          NAME(e.eID),(int)n,(int)s,(int)b);
+        if (sh)
+          fprintf(f,"%dd%d%+d\n",(int)sh->pval.Number,(int)sh->pval.Sides,
+            (int)sh->pval.Bonus);
+        else
+          fprintf(f,"none\n");
+        fclose(f);
+        }
       }
   }
 

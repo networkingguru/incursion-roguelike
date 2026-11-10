@@ -2020,6 +2020,18 @@ EvReturn Magic::Illusion(EventInfo &e)
             e.EYVal = e.ETarget ? e.ETarget->y : e.EActor->y;
             }
             
+          /* inc-q4kjl: INCURSION_PVAL_PROBE=<path> also records the challenge
+             rating an illusory creature is made with, and the caster's
+             Illusion skill that its script derives it from. */
+          if (getenv("INCURSION_PVAL_PROBE") && *getenv("INCURSION_PVAL_PROBE")) {
+            FILE *pf = fopen(getenv("INCURSION_PVAL_PROBE"),"a");
+            if (pf) {
+              fprintf(pf,"ILLUSION_CR effect=%s enCR=%d skill=%d\n",
+                NAME(e.eID),(int)e.vDmg,(int)e.EActor->SkillLevel(SK_ILLUSION));
+              fclose(pf);
+              }
+            }
+
           XTHROW(EV_ENGEN,e,
             xe.enFlags = EN_ILLUSION; /* HACKFIX */
             xe.enFlags |= TEFF(e.eID)->HasFlag(EF_MULTIPLE) ? 0 : EN_SINGLE;

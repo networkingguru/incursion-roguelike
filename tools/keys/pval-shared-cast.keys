@@ -1,0 +1,38 @@
+# inc-q4kjl: cast Mage Armour once. Read by tools/check_pval_shared.sh.
+#
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-seed4-gate.sav \
+#   INCURSION_PVAL_PROBE=<path> tools/headless.sh tools/keys/pval-shared-cast.keys 4
+#
+# THE CHARACTER. Kethad, Priest 1 / Mage 1, who knows Mage Armour (arcane). His
+# script's EV_CALC_EFFECT handler calls SetPVal, which is what the probe sees.
+# A hostile creature stands beside him, and he cannot take armour off while
+# threatened, so wizard mode genocides everything first. He wears ring mail,
+# which cancels the spell, so the keys take it off (inventory slot j, as
+# tools/keys/cast-rules-noarmor.keys does).
+# Ignore Spell Failure (the 6th wizard switch) makes the cast certain.
+s
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*5
+SPACE
+@dump:switches
+ESC
+i
+j
+SPACE
+ESC
+@until "HP:" ESC
+@dump:noarmor
+m
+@dump:cast-menu
+@choose "Mage Armour"
+@until "HP:" ESC
+@dump:after-cast
+v
+@dump:msgs
+ESC
+@dump:end
