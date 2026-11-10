@@ -47,8 +47,7 @@ skill SK_WILDERNESS 5
 ability CA_HIDE_IN_PLAIN_SIGHT 1
 ability CA_GRWA 2
 slot SL_GRWA @ flask
-sacval 1 0 11
-sacval 1 9 77
-sacval 1 10 5
-sacval 1 11 1001
-sacval 1 12 2001
+sacval 9 0 11
+sacval 9 9 77
+sacval 9 11 1001
+sacval 9 12 2001

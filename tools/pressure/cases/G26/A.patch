@@ -1,12 +1,8 @@
 diff --git a/inc/Defines.h b/inc/Defines.h
-index 22911b6..de99a23 100644
+index 4e0e3b93..6642fd47 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
-@@ -5080,10 +5080,11 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
- // end family: lim_char_level
- // no-family
- #define MAX_CORRIDOR_LENGTH 8192
-+#define GRW_SAC_A 10
+@@ -5101,7 +5101,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
  #define ANNOT_INITIAL_SIZE 50
  // end no-family
  // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
@@ -15,3 +11,17 @@ index 22911b6..de99a23 100644
  // end family: lim_sac_cats
  // family: namelist internal
  
+diff --git a/lib/religion.irh b/lib/religion.irh
+index d75fee0b..a4427219 100644
+--- a/lib/religion.irh
++++ b/lib/religion.irh
+@@ -3696,7 +3696,8 @@ God "Mara"
+           MA_CHOICE1      5
+           MA_CHOICE1      5
+           MA_CHOICE1      5
+-          MA_CHOICE2      SAC_ABOMINATION,
++          MA_CHOICE2      SAC_ABOMINATION
++          MA_CHOICE1      6,
+       * GOD_RELATIONS
+           REL_DEFAULT   1     0
+           $"Hesani"     0     0

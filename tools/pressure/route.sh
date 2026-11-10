@@ -36,7 +36,9 @@
 # is resolved ONLY from the case's committed resolution, <case-dir>/resolve/<path> (one file per conflicted path; the
 # format is in tools/pressure/resolve_conflict.py); a conflict with no resolution, or a resolution that does not fit,
 # FAILS the case. A case with a resolve/ dir merges the base into each bead before finish_bead.sh runs, so the route
-# resolves the conflict wherever it arises.
+# resolves the conflict wherever it arises. When the resolved merge commit is refused by the pre-commit fast checks (two
+# sides chose one stored number), a works run does what a developer does: tools/move_branch_values.py, stage, commit the
+# merge (that refusal is the case's mover recovery, judged by recover-named); a refuse run records the refusal.
 #
 # What each landing runs (D5, owner ruling 2026-11-08: build only where a save is loaded). LAND_KIND is `source` (the
 # three source checks that need no binary, no build) or `full` (build or module-only rebuild, 74-fixture compare, content, witness):
@@ -207,9 +209,12 @@ patch_bead() {
 
 # merge_in <worktree> <base> <logfile>: `git merge --no-edit <base>` in a bead worktree. A conflict is resolved from
 # $CASE/resolve/ (tools/pressure/resolve_conflict.py) and the merge committed; with no resolution it stays a conflict
-# (rc 1, the log says CONFLICT) and the case fails. rc 0 merged (cleanly or by resolution), 1 conflict unresolved.
+# (rc 1, the log says CONFLICT) and the case fails. rc 0 merged (cleanly or by resolution), 1 conflict unresolved,
+# 3 resolved but the pre-commit checks refused the merge commit: the merge stays in progress, the refusal output is
+# in the log and in MERGE_REFUSED_LOG (<log>-commit.log), and `land` decides what follows (premerge_refused).
+MERGE_REFUSED_LOG=""
 merge_in() {
-    local w="$1" b="$2" lf="$3" rc
+    local w="$1" b="$2" lf="$3" rc crc cl="${3%.log}-commit.log"
     git -C "$w" merge --no-edit "$b" > "$lf" 2>&1; rc=$?
     [ $rc -eq 0 ] && return 0
     if [ -z "$(git -C "$w" diff --name-only --diff-filter=U)" ]; then return $rc; fi
@@ -217,8 +222,52 @@ merge_in() {
         echo "route: FAIL: CONFLICT merging $b, and $CASE has no resolve/ directory with a resolution" >> "$lf"; return 1
     fi
     python3 "$HERE/resolve_conflict.py" "$w" "$CASE/resolve" >> "$lf" 2>&1 || { echo "route: CONFLICT is unresolved" >> "$lf"; return 1; }
-    git -C "$w" commit --no-edit >> "$lf" 2>&1 || return 1
+    git -C "$w" commit --no-edit > "$cl" 2>&1; crc=$?
+    if slow_failed "$cl" "$crc"; then wait_load_guard; git -C "$w" commit --no-edit > "$cl" 2>&1; crc=$?; fi
+    cat "$cl" >> "$lf"
+    if [ $crc -ne 0 ]; then MERGE_REFUSED_LOG="$cl"; return 3; fi
     echo "route: the conflict was resolved from $CASE/resolve" >> "$lf"
+    return 0
+}
+
+# close_open_merge <worktree>: a merge left open by merge_in rc 3 is committed with the mover's changes inside it. The
+# evidence commit that follows is an ordinary commit, because the AC check reads non-merge commits only.
+close_open_merge() {
+    git -C "$1" rev-parse -q --verify MERGE_HEAD > /dev/null || return 0
+    git -C "$1" add -A && git -C "$1" commit -q --no-edit
+}
+
+# premerge_refused <bead> <base> <merge-log> <refusal-log>: the resolved merge commit was refused (merge_in rc 3).
+# A refuse run records the refusal (kind refused, destination not advanced) and aborts the merge. A works run runs the
+# unchanged mover in the bead worktree, stages its changes and commits the merge; a second refusal fails the landing.
+# rc 0 the merge is committed, 1 the step is recorded as failed.
+premerge_refused() {
+    local id="$1" base="$2" lf="$3" cl="$4" w out moved line rlf rc cc
+    w="$(wt "$id")"
+    if [ "$EXPECT" = refuse ]; then
+        git -C "$w" merge --abort >> "$lf" 2>&1
+        record "merge $base into $id" "$cl" 1 "$base" "$base" "$(sha "$base")" 0
+        return 1
+    fi
+    rlf="$LOG/recover-$id.log"
+    out="$( cd "$w" && python3 tools/move_branch_values.py 2>&1 )"
+    printf '%s\n' "$out" > "$rlf"
+    line=""
+    [ -z "$RECOVER_RE" ] || line="$(grep -v KNOWN "$cl" | grep -m1 -E "$RECOVER_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"
+    [ -n "$line" ] || line="$(grep -m1 -E '^[[:space:]]*FAIL: family |^stati |^[a-z_0-9]+ [A-Za-z_0-9]+ .* -> ' "$cl" | sed 's/^[[:space:]]*//' | cut -c1-200)"
+    RECOVERED_LINE="${line:-$(decide "$cl")}"
+    cc="$LOG/premerge-$id-$LAND_N-recommit.log"
+    { git -C "$w" add -A && git -C "$w" commit --no-edit -q; } > "$cc" 2>&1; rc=$?
+    if slow_failed "$cc" "$rc"; then
+        wait_load_guard
+        { git -C "$w" add -A && git -C "$w" commit --no-edit -q; } > "$cc" 2>&1; rc=$?
+    fi
+    if [ $rc -ne 0 ]; then
+        RECOVERED_LINE=""
+        record "merge $base into $id (commit after the mover)" "$cc" 1 "$base" "$id" "$(sha "$id")" 0
+        return 1
+    fi
+    echo "route: the merge commit of $id was refused; the mover's diff was added and the merge committed" >> "$lf"
     return 0
 }
 
@@ -242,7 +291,10 @@ land() {
     if [ -d "$CASE/resolve" ] && [ -d "$(wt "$id")" ]; then
         # a case with a deliberate conflict merges the base here, so the driver can resolve it (finish_bead.sh then finds it merged)
         merge_in "$(wt "$id")" "$base" "$LOG/premerge-$id-$LAND_N.log"; rc=$?
-        if [ $rc -ne 0 ]; then
+        if [ $rc -eq 3 ]; then
+            premerge_refused "$id" "$base" "$LOG/premerge-$id-$LAND_N.log" "$MERGE_REFUSED_LOG"; rc=$?
+            [ $rc -eq 0 ] || { LAND_RC=$rc; return $rc; }
+        elif [ $rc -ne 0 ]; then
             record "merge $base into $id" "$LOG/premerge-$id-$LAND_N.log" "$rc" "$base" "$id" "$(sha "$id")" 0
             LAND_RC=$rc; return $rc
         fi
@@ -438,6 +490,7 @@ E)
     mw="$(wt "$BEAD_M")"
     mlf="$LOG/merge-$BEAD_M.log"; t0=$(now)
     merge_in "$mw" master "$mlf"; mrc=$?
+    [ $mrc -eq 3 ] && mrc=0   # resolved, commit refused: the merge stays open for the mover below, then mbead_commit
     record "merge master into $BEAD_M" "$mlf" "$mrc" master "$BEAD_M" "$(sha "$BEAD_M")" $(( $(now) - t0 ))
     [ $mrc -eq 0 ] || finish_from_failure
     mvlf="$LOG/mover-$BEAD_M.log"; t0=$(now)
@@ -456,9 +509,10 @@ E)
         echo "route: the mover changed files in the merge bead: $MOVED_LINE"
     fi
     mbead_commit() { # <logfile>
+        close_open_merge "$mw" || return 1
         if [ "$MBEAD_MODE" = mover ]; then
             git -C "$mw" add -A \
-              && git -C "$mw" commit -q -m "tools: $BEAD_M moved colliding stored values (tools/move_branch_values.py)" \
+              && git -C "$mw" commit -q --allow-empty -m "tools: $BEAD_M moved colliding stored values (tools/move_branch_values.py)" \
                    -m "AC1: the case oracle loads every fixture in the merged epic and compares its field values" \
                    -m "Generated by the unchanged mover; no hand edit."
         else
@@ -504,6 +558,7 @@ R)
         start_bead "$mb" inc-pu6v || finish_from_failure
         mw="$(wt "$mb")"; mlf="$LOG/merge-$mb.log"; t0=$(now)
         merge_in "$mw" master "$mlf"; mrc=$?
+        [ $mrc -eq 3 ] && mrc=0   # resolved, commit refused: the merge stays open for the mover below
         record "merge master into $mb" "$mlf" "$mrc" master "$mb" "$(sha "$mb")" $(( $(now) - t0 ))
         [ $mrc -eq 0 ] || finish_from_failure
         mvlf="$LOG/mover-$mb.log"; t0=$(now)
@@ -523,12 +578,12 @@ R)
         fi
         mlog="$LOG/commit-$mb.log"
         if [ "$mode" = mover ]; then
-            { git -C "$mw" add -A \
-              && git -C "$mw" commit -q -m "tools: $mb moved colliding stored values (tools/move_branch_values.py)" \
+            { close_open_merge "$mw" && git -C "$mw" add -A \
+              && git -C "$mw" commit -q --allow-empty -m "tools: $mb moved colliding stored values (tools/move_branch_values.py)" \
                    -m "AC1: the case oracle loads every fixture in the merged epic and compares its field values" \
                    -m "Generated by the unchanged mover; no hand edit."; } > "$mlog" 2>&1; mrc=$?
         else
-            git -C "$mw" commit -q --allow-empty -m "tools: $mb merges master into the epic for $CASE_NAME" \
+            close_open_merge "$mw" && git -C "$mw" commit -q --allow-empty -m "tools: $mb merges master into the epic for $CASE_NAME" \
                 -m "AC1: the case oracle loads every fixture in the merged epic and compares its field values" > "$mlog" 2>&1; mrc=$?
         fi
         record "commit $mb" "$mlog" "$mrc" "$mb" "$mb" "$(sha "$mb")" 0

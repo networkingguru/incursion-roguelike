@@ -43,8 +43,7 @@ feat SK_GRWB
 ability CA_HIDE_IN_PLAIN_SIGHT 1
 ability CA_GRWB 3
 slot SL_GRWB @ flask;retired
-sacval 1 0 11
-sacval 1 9 78
-sacval 1 10 6
-sacval 1 11 1002
-sacval 1 12 2002
+sacval 9 0 11
+sacval 9 9 78
+sacval 9 11 1002
+sacval 9 12 2002

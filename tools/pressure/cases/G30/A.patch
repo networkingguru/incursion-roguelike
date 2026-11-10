@@ -192,7 +192,7 @@ diff --git a/inc/Defines.h b/inc/Defines.h
  // end family: opt
  // no-family
  
-@@ -5094,14 +5104,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+@@ -5094,14 +5104,14 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
  #define MAX_GODS           25
  // end family: lim_gods
  // family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL
@@ -201,7 +201,6 @@ diff --git a/inc/Defines.h b/inc/Defines.h
  // end family: lim_char_level
  // no-family
  #define MAX_CORRIDOR_LENGTH 8192
-+#define GRW_SAC_A 10
  #define ANNOT_INITIAL_SIZE 50
  // end no-family
  // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
@@ -481,6 +480,20 @@ index 3b90b14..49c190c 100644
    {
      Image: red GLYPH_LDEVIL; Size: SZ_MEDIUM; 
      CR: OPT_CR(7,7); HD: 6; Hit: +6; Def: 15; Mov: 150%; Spd: 125%;
+diff --git a/lib/religion.irh b/lib/religion.irh
+index d75fee0b..a4427219 100644
+--- a/lib/religion.irh
++++ b/lib/religion.irh
+@@ -3696,7 +3696,8 @@ God "Mara"
+           MA_CHOICE1      5
+           MA_CHOICE1      5
+           MA_CHOICE1      5
+-          MA_CHOICE2      SAC_ABOMINATION,
++          MA_CHOICE2      SAC_ABOMINATION
++          MA_CHOICE1      6,
+       * GOD_RELATIONS
+           REL_DEFAULT   1     0
+           $"Hesani"     0     0
 diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
 index 75a1ff4..4ac5287 100644
 --- a/src/FeatTab.cpp
