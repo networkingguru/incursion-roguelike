@@ -394,12 +394,83 @@ static bool LoadSaveForReport(const char *path, fileHeader &fhdr) {
    an unknown name or a refused call exits 2 naming the line. Spec language: tools/pressure/plant.sh header. */
 extern const char *V1FamName(const char *fam, long value);
 extern bool V1FamValue(const char *fam, const char *name, long &value);
+extern const char *V1StatSlotFam(long stati, bool mag);
+extern const char *V1AtFam(const char *key, long idx);
+extern std::vector<std::pair<const char*, int> > V1FieldClaims(const char *field);
 
 static bool PlantNumber(const char *t, long &v) {
     char *e = NULL;
     v = strtol(t, &e, 10);
     return e && *t && !*e;
 }
+
+/* A status's val or mag in a spec: a number, a name of the family the `val-of` / `mag-of` marks give that status, or
+   names joined by `|` (a bits family). inc-cjos0 9f-pre P2. */
+static bool PlantSlotValue(long stati, bool mag, const std::string &tok, long &out, std::string &why) {
+    if (PlantNumber(tok.c_str(), out)) return true;
+    const char *slot = mag ? "mag" : "val";
+    const char *fam = V1StatSlotFam(stati, mag);
+    if (!fam) { why = std::string("status ") + V1FamName("stati", stati) + " names no family for its " + slot + ", so " + tok + " is not a number"; return false; }
+    out = 0;
+    size_t at = 0;
+    for (;;) {
+        size_t bar = tok.find('|', at);
+        std::string one = tok.substr(at, bar == std::string::npos ? std::string::npos : bar - at);
+        long v;
+        if (!V1FamValue(fam, one.c_str(), v)) { why = std::string("no ") + fam + " name " + one + " for the " + slot + " of status " + V1FamName("stati", stati); return false; }
+        out |= v;
+        if (bar == std::string::npos) return true;
+        at = bar + 1;
+    }
+}
+
+/* A value in a spec: a number, or names of the given families joined by `|` (a bits family takes several, an ordinal
+   family one). The first family that has the name wins. */
+static bool PlantNamed(const std::vector<const char*> &fams, const std::string &tok, long &out, std::string &why) {
+    if (PlantNumber(tok.c_str(), out)) return true;
+    out = 0;
+    size_t at = 0;
+    for (;;) {
+        size_t bar = tok.find('|', at);
+        std::string one = tok.substr(at, bar == std::string::npos ? std::string::npos : bar - at);
+        long v = 0;
+        bool found = false;
+        for (size_t k = 0; k != fams.size() && !found; k++) found = V1FamValue(fams[k], one.c_str(), v);
+        if (!found) { why = "no name " + one + " in the family of this field"; return false; }
+        out |= v;
+        if (bar == std::string::npos) return true;
+        at = bar + 1;
+    }
+}
+
+/* A glyph word in a spec (inc-cjos0 9f-pre P5a): GLYPH_NAME[/FORE[/BACK]]. FORE and BACK are names of family colour; FORE
+   may also be a COL_ name, packed with GLYPH_FORE() as Magic.cpp:2032 packs a field spell's cval, so a COL_ value
+   overflows into the back nibble exactly as it does in the game. */
+static bool PlantGlyph(const std::string &tok, long &out, std::string &why) {
+    std::vector<std::string> part;
+    size_t at = 0;
+    for (;;) {
+        size_t sl = tok.find('/', at);
+        part.push_back(tok.substr(at, sl == std::string::npos ? std::string::npos : sl - at));
+        if (sl == std::string::npos) break;
+        at = sl + 1;
+    }
+    long id = 0, c = 0;
+    if (part.size() > 3 || !V1FamValue("glyph", part[0].c_str(), id)) { why = "glyph <GLYPH_NAME>[/<FORE>[/<BACK>]]: no glyph name " + part[0]; return false; }
+    out = GLYPH_ID(id);
+    if (part.size() > 1) {
+        if (V1FamValue("colour", part[1].c_str(), c) || V1FamValue("col", part[1].c_str(), c)) out |= GLYPH_FORE(c);
+        else { why = "no colour or COL_ name " + part[1]; return false; }
+    }
+    if (part.size() > 2) {
+        if (V1FamValue("colour", part[2].c_str(), c)) out |= GLYPH_BACK(c);
+        else { why = "no colour name " + part[2]; return false; }
+    }
+    return true;
+}
+
+/* The Field the last `set field FType` line planted. */
+static Field *plantedField = NULL;
 
 struct DumpPlanter {
     static bool HasTableEntry(long n) {
@@ -424,6 +495,17 @@ struct DumpPlanter {
     static void Ability(Player *p, int i, long v) { p->Abilities[i] = (uint8)v; }
     static void Slot(Player *p, int i, Item *it) { p->Inv[i] = it->myHandle; }
     static void MonKills(Player *p, int i, long v) { p->JournalInfo.numMonOfType[MaIndex(i)] = (int)v; }
+    /* `set player`: false when the player has no such member or the index is out of range (9f-pre P3) */
+    static bool PlayerField(Player *p, const std::string &f, long idx, long val) {
+        if (f == "Personality") p->Personality = (uint32)val;
+        else if (f == "Proficiencies") p->Proficiencies |= (uint32)val;
+        else if (f == "QuickKeys_Type" && idx < MAX_QKEYS) p->QuickKeys[idx].Type = (int16)val;
+        else if (f == "QuickKeys_MM" && idx < MAX_QKEYS) p->QuickKeys[idx].MM |= (uint32)val;
+        else if (f == "MMArray" && idx < MAX_SPELLS) p->MMArray[idx] |= (uint32)val;
+        else if (f == "IntStudy" && idx < STUDY_LAST) p->IntStudy[idx] = (uint8)val;
+        else return false;
+        return true;
+    }
     static void IFlags(Item *it, long bits) { it->IFlags = (uint16)(it->IFlags | bits); }
     static void Known(Item *it, long bits) { it->Known = (uint16)(it->Known | bits); }
 };
@@ -441,6 +523,8 @@ static std::string PlantName(const std::vector<std::string> &w) {
 
 /* Monsters planted by `monster` lines, so `template` and `target` lines find them by resource. */
 static std::vector<std::pair<rID, Monster*> > plantedMonsters;
+/* Features, doors and traps planted by this spec, so a `set` line finds the last. */
+static std::vector<Feature*> plantedFeatures;
 
 /* A free cell near the player: in bounds, not solid, no creature, no feature, not the player's own. */
 static bool PlantCell(Player *p, int &cx, int &cy) {
@@ -521,6 +605,22 @@ static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::s
         for (size_t i = 0; i != plantedMonsters.size(); i++) if (plantedMonsters[i].first == mr) mn = plantedMonsters[i].second;
         if (!mr || !mn) { why = "no monster " + mname + " planted earlier in this spec"; return false; }
         std::string what = PlantJoin(w, 1, at);
+        std::string hostOpt[3];   /* quality=, quantity=, hostility= of a `target` line (9f-pre P5a) */
+        if (verb == "target") {
+            size_t sp = what.find(' ');
+            std::string rest = sp == std::string::npos ? "" : what.substr(sp + 1);
+            what = what.substr(0, sp);
+            while (!rest.empty()) {
+                size_t nx = rest.find(' ');
+                std::string o = rest.substr(0, nx);
+                rest = nx == std::string::npos ? "" : rest.substr(nx + 1);
+                size_t eq = o.find('=');
+                std::string key = o.substr(0, eq);
+                int k = key == "quality" ? 0 : key == "quantity" ? 1 : key == "hostility" ? 2 : -1;
+                if (eq == std::string::npos || k < 0) { why = "target <TYPE> [quality=NAME] [quantity=NAME] [hostility=NAME] @ <monster>"; return false; }
+                hostOpt[k] = o.substr(eq + 1);
+            }
+        }
         if (verb == "template") {
             rID tr = PlantResource(what, T_TTEMPLATE);
             if (!tr) { why = "no template resource named " + what; return false; }
@@ -533,6 +633,15 @@ static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::s
         tg.data.Creature.c = p->myHandle;
         tg.priority = 30;
         tg.why.Set((TargetWhyType)v);
+        if (hostOpt[0].size() || hostOpt[1].size() || hostOpt[2].size()) {
+            /* WasSeenAndHostile.h and IsAllyOfEnemy.hAlly are the same Hostility, first in the union */
+            if (tg.why.type != TargetWasSeenAndHostile && tg.why.type != TargetIsAllyOfEnemy) { why = "quality= quantity= hostility= need TargetWasSeenAndHostile or TargetIsAllyOfEnemy"; return false; }
+            Hostility &h = tg.why.type == TargetWasSeenAndHostile ? tg.why.data.WasSeenAndHostile.h : tg.why.data.IsAllyOfEnemy.hAlly;
+            long hv;
+            if (hostOpt[0].size()) { if (!V1FamValue("hostility_qual", hostOpt[0].c_str(), hv)) { why = "no hostility quality " + hostOpt[0]; return false; } h.quality = (HostilityQual)hv; }
+            if (hostOpt[1].size()) { if (!V1FamValue("hostility_quant", hostOpt[1].c_str(), hv)) { why = "no hostility quantity " + hostOpt[1]; return false; } h.quantity = (HostilityQuant)hv; }
+            if (hostOpt[2].size()) { if (!V1FamValue("hostility_why_type", hostOpt[2].c_str(), hv)) { why = "no hostility why type " + hostOpt[2]; return false; } h.why.type = (HostilityWhyType)hv; }
+        }
         if (!mn->ts.addTarget(tg)) { why = "the target system refused the target"; return false; }
         return true;
     }
@@ -593,6 +702,116 @@ static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::s
         Feature *ft = new Feature(r);
         ft->PlaceAt(p->m, cx, cy);
         if (!p->m->FFeatureAt(cx, cy)) { why = "the map did not take " + nm; return false; }
+        plantedFeatures.push_back(ft);
+        return true;
+    }
+    if (verb == "door" || verb == "trap") {
+        /* the game's own constructors, as Effects.cpp:2119 and :2145 call them: a Door has DoorFlags, a Trap TrapFlags */
+        std::string nm = PlantJoin(w, 1, w.size());
+        int cx, cy;
+        if (verb == "door") {
+            rID r = PlantResource(nm, T_TFEATURE);
+            if (!r || TFEAT(r)->FType != T_DOOR) { why = "no door feature resource named " + nm; return false; }
+            if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+            Door *d = new Door(r);
+            d->PlaceAt(p->m, cx, cy);
+            if (!p->m->FFeatureAt(cx, cy)) { why = "the map did not take " + nm; return false; }
+            plantedFeatures.push_back(d);
+            return true;
+        }
+        rID r = PlantResource(nm, T_TEFFECT);
+        if (!r) { why = "no effect resource named " + nm + " for a trap"; return false; }
+        if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+        Trap *tr = new Trap(FIND("trap"), r);
+        tr->PlaceAt(p->m, cx, cy);
+        if (!p->m->FFeatureAt(cx, cy)) { why = "the map did not take " + nm; return false; }
+        plantedFeatures.push_back(tr);
+        return true;
+    }
+    if (verb == "set") {
+        /* set <player|monster|item|feature|door|trap|field> <Field>[<index>] <value|NAME|A|B>: a saved member that a
+           family mark claims (`field-of`, `index-of`, `elem-of`), set by name. A bits family is ORed in, an ordinal
+           family assigned. The object is the player, or the last one of that kind this spec planted. */
+        if (w.size() != 4) { why = "set <player|monster|item|feature|door|trap|field> <Field>[<index>] <value>"; return false; }
+        const std::string &kind = w[1];
+        std::string field = w[2], idxTok;
+        size_t br = field.find('[');
+        if (br != std::string::npos) {
+            if (field[field.size() - 1] != ']') { why = "bad index in " + w[2]; return false; }
+            idxTok = field.substr(br + 1, field.size() - br - 2);
+            field = field.substr(0, br);
+        }
+        std::vector<std::pair<const char*, int> > claims = V1FieldClaims(field.c_str());
+        if (claims.empty()) { why = "no family claims a saved field named " + field; return false; }
+        std::vector<const char*> fams;
+        int mode = claims[0].second;
+        if (mode >= 100) { why = field + " is part of a Target: use the target verb (quality=, quantity=, hostility=)"; return false; }
+        if (field == "ov_GlyphImage") { why = "ov_GlyphImage is an effect overlay: no verb draws one"; return false; }
+        for (size_t k = 0; k != claims.size(); k++) if (claims[k].second == mode) fams.push_back(claims[k].first);
+        long idx = 0;
+        if (mode == 0 && !idxTok.empty()) {
+            /* a scalar of an array of records (QuickKeys_Type[3]): the index is a number */
+            if (!PlantNumber(idxTok.c_str(), idx) || idx < 0) { why = "bad index " + idxTok; return false; }
+        } else if (mode != 0 && mode != 3) {
+            if (idxTok.empty() && field != "Qualities") { why = field + " is an array: " + field + "[<index>]"; return false; }   /* AddQuality picks the slot */
+            std::string iw;
+            if (mode == 1 && !PlantNamed(fams, idxTok, idx, iw)) { why = "index " + iw; return false; }
+            if (mode == 2 && !idxTok.empty() && !PlantNumber(idxTok.c_str(), idx)) {
+                rID sr = FIND(idxTok.c_str());   /* MMArray and Spells are indexed by spell number: a spell name is that */
+                if (!sr || !theGame->Get(sr) || !theGame->Get(sr)->isType(T_TEFFECT) || theGame->SpellNum(sr) < 0)
+                    { why = "bad index " + idxTok; return false; }
+                idx = theGame->SpellNum(sr);
+            }
+            if (idx < 0) { why = "bad index " + idxTok; return false; }
+        }
+        long val = 0;
+        if (mode == 3) { if (!PlantGlyph(w[3], val, why)) return false; }
+        else if (mode == 1) { if (!PlantNumber(w[3].c_str(), val) || val < 0 || val > 255) { why = "an index-of field takes a count 0..255"; return false; } }
+        else if (!PlantNamed(fams, w[3], val, why)) return false;
+        Thing *th = NULL;
+        if (kind == "monster") { if (plantedMonsters.empty()) { why = "no monster planted earlier in this spec"; return false; } th = plantedMonsters.back().second; }
+        else if (kind == "item") { if (plantedItems.empty()) { why = "no item planted earlier in this spec"; return false; } th = plantedItems.back().second; }
+        else if (kind == "feature" || kind == "door" || kind == "trap") {
+            for (size_t k = plantedFeatures.size(); k-- && !th; )
+                if (kind == "feature" || (kind == "door" ? plantedFeatures[k]->Type == T_DOOR : plantedFeatures[k]->Type == T_TRAP)) th = plantedFeatures[k];
+            if (!th) { why = "no " + kind + " planted earlier in this spec"; return false; }
+        }
+        else if (kind != "player" && kind != "field") { why = "set kind is player, monster, item, feature, door, trap or field"; return false; }
+        if (kind == "field") {
+            if (field == "Image" || field == "Color") {   /* the field the last FType line planted (NewField sets no Color) */
+                bool live = false;
+                for (int i = 0; p->m->Fields[i]; i++) if (p->m->Fields[i] == plantedField) live = true;
+                if (!live) { why = "no field planted earlier in this spec: set field FType first"; return false; }
+                if (field == "Image") plantedField->Image = (Glyph)val; else plantedField->Color = (int8)val;
+                return true;
+            }
+            if (field != "FType") { why = "the kind field has the members FType, Image and Color only"; return false; }
+            int cx, cy;
+            if (!PlantCell(p, cx, cy)) { why = "no free cell beside the player"; return false; }
+            p->m->NewField((int32)val, cx, cy, 1, GLYPH_VALUE(GLYPH_FLOOR2, WHITE), -1, 0, NULL);   /* the game's own call, as RemoveProbe.cpp:66 */
+            for (int i = 0; p->m->Fields[i]; i++) plantedField = p->m->Fields[i];
+            return true;
+        }
+        if (kind == "player") {
+            if (DumpPlanter::PlayerField(p, field, idx, val)) return true;
+            if (field == "Spells") { why = "Spells: use `spell <spell resource name> <SP_A|SP_B>`"; return false; }
+            else if (field == "godFlags") { why = "godFlags: use `god <god resource> flags <GS_A|GS_B>`"; return false; }
+            why = "the player has no plantable member " + field + " (or the index is out of range)";
+            return false;
+        }
+        if (field == "Image") th->Image = (Glyph)val;
+        else if (field == "SecretSavedGlyph" && kind == "door") ((Door*)th)->SecretSavedGlyph = (Glyph)val;
+        else if (field == "Flags") th->Flags |= (uint32)val;
+        else if (field == "LastMoveDir" && kind == "monster") ((Monster*)th)->LastMoveDir = (int8)val;
+        else if (field == "StateFlags" && kind == "monster") ((Monster*)th)->StateFlags |= (int16)val;
+        else if (field == "DoorFlags" && kind == "door") ((Door*)th)->DoorFlags |= (int8)val;
+        else if (field == "TrapFlags" && kind == "trap") ((Trap*)th)->TrapFlags |= (uint8)val;
+        else if (field == "Qualities" && kind == "item") {
+            Item *it = (Item*)th;
+            if (!it->isQItem()) { why = "the item is not a QItem: it holds no qualities"; return false; }
+            it->AddQuality((int8)val);   /* the game's own call */
+        }
+        else { why = "the " + kind + " has no plantable member " + field; return false; }
         return true;
     }
     if (verb == "terrain" || verb == "region") {
@@ -611,15 +830,21 @@ static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::s
         return true;
     }
     if (verb == "god") {
-        if (w.size() < 4 || !PlantNumber(w[w.size() - 1].c_str(), v)) { why = "god <god resource> <favour|anger|flags> <value>"; return false; }
+        if (w.size() < 4) { why = "god <god resource> <favour|anger|flags> <value|GS_NAME[|GS_NAME]>"; return false; }
         const std::string &field = w[w.size() - 2];
+        bool gsNames = field == "flags" && !PlantNumber(w[w.size() - 1].c_str(), v);
+        if (gsNames) {   /* names of family gs: the game's own setGodFlags, which ORs the bits in */
+            std::vector<const char*> gf(1, "gs");
+            if (!PlantNamed(gf, w[w.size() - 1], v, why)) return false;
+        } else if (!PlantNumber(w[w.size() - 1].c_str(), v)) { why = "god <god resource> <favour|anger|flags> <value|GS_NAME[|GS_NAME]>"; return false; }
         std::string nm = PlantJoin(w, 1, w.size() - 2);
         rID r = PlantResource(nm, T_TGOD);
         if (!r) { why = "no god resource named " + nm; return false; }
         int g = theGame->GodNum(r);
         if (g < 0 || g >= MAX_GODS) { why = "god " + nm + " is outside the arrays of this build"; return false; }
         if (field != "favour" && field != "anger" && field != "flags") { why = "god field is favour, anger or flags"; return false; }
-        DumpPlanter::God(p, g, field, v);
+        if (gsNames) p->setGodFlags(r, (uint16)v);
+        else DumpPlanter::God(p, g, field, v);
         return true;
     }
     if (verb == "dungeon") {
@@ -680,16 +905,28 @@ static bool PlantLine(Player *p, const std::vector<std::string> &w, std::string 
     if (verb == "status") {
         std::vector<std::string> sw(w);
         long srcv = SS_MISC;
+        rID eidv = 0;
+        for (size_t k = 2; k < sw.size(); k++)
+            if (sw[k].compare(0, 4, "eid=") == 0) {   /* the resource name is the rest of the line: it may hold spaces */
+                std::string nm = sw[k].substr(4);
+                for (size_t j = k + 1; j < sw.size(); j++) nm += " " + sw[j];
+                eidv = FIND(nm.c_str());
+                if (!eidv || !theGame->Get(eidv)) { why = "no resource named " + nm; return false; }
+                sw.resize(k);
+                break;
+            }
         if (sw.size() > 2 && sw.back().compare(0, 4, "src=") == 0) {
             if (!V1FamValue("ss", sw.back().c_str() + 4, srcv)) { why = "no status source named " + sw.back().substr(4); return false; }
             sw.pop_back();
         }
-        if (sw.size() < 2 || sw.size() > 4) { why = "status <STATI_NAME> [val] [mag] [src=SS_NAME]"; return false; }
+        if (sw.size() < 2 || sw.size() > 4) { why = "status <STATI_NAME> [val] [mag] [src=SS_NAME] [eid=<resource name>]"; return false; }
         if (!V1FamValue("stati", sw[1].c_str(), v)) { why = "no status named " + sw[1]; return false; }
         long val = -1, mag = -1;
-        if (sw.size() > 2 && !PlantNumber(sw[2].c_str(), val)) { why = "val is not a number"; return false; }
-        if (sw.size() > 3 && !PlantNumber(sw[3].c_str(), mag)) { why = "mag is not a number"; return false; }
-        p->GainPermStati((int16)v, NULL, (int8)srcv, (int16)val, (int16)mag);
+        if (sw.size() > 2 && !PlantSlotValue(v, false, sw[2], val, why)) return false;
+        if (sw.size() > 3 && !PlantSlotValue(v, true, sw[3], mag, why)) return false;
+        SetSilence();   /* StatiOn of BLINDNESS, SLEEPING and others prints a message that waits for a key; a planter has none */
+        p->GainPermStati((int16)v, NULL, (int8)srcv, (int16)val, (int16)mag, eidv);
+        UnsetSilence();
         if (!p->HasStati((int16)v)) { why = "the engine did not give the status"; return false; }
         return true;
     }
@@ -751,13 +988,20 @@ static bool PlantLine(Player *p, const std::vector<std::string> &w, std::string 
         return true;
     }
     if (verb == "spell") {
-        if (w.size() < 2) { why = "spell <spell resource name>"; return false; }
-        std::string nm = PlantName(w);
+        if (w.size() < 2) { why = "spell <spell resource name> [SP_NAME[|SP_NAME]]"; return false; }
+        long spf = SP_KNOWN;
+        std::vector<std::string> sw(w);
+        if (sw.size() > 2 && sw.back().compare(0, 3, "SP_") == 0) {   /* names of family sp_flag: GainSpell takes the flags */
+            std::vector<const char*> sf(1, "sp_flag");
+            if (!PlantNamed(sf, sw.back(), spf, why)) return false;
+            sw.pop_back();
+        }
+        std::string nm = PlantName(sw);
         rID r = FIND(nm.c_str());
         if (!r || !theGame->Get(r) || !theGame->Get(r)->isType(T_TEFFECT) || theGame->SpellNum(r) < 0)
             { why = "no spell resource named " + nm; return false; }
-        p->GainSpell(r, SP_KNOWN);
-        if (!(p->getSpellFlags(r) & SP_KNOWN)) { why = "the engine did not learn the spell"; return false; }
+        p->GainSpell(r, (int16)spf);
+        if ((p->getSpellFlags(r) & spf) != spf) { why = "the engine did not learn the spell"; return false; }
         return true;
     }
     if (verb == "feat") {
@@ -785,8 +1029,19 @@ static bool PlantLine(Player *p, const std::vector<std::string> &w, std::string 
         return true;
     }
     if (verb == "option") {
-        if (w.size() != 3) { why = "option <OPT_NAME> <value>"; return false; }
-        fprintf(stderr, "incursion -dump: plant: option %s skipped: options live in Options.Dat, not in a save\n", w[1].c_str());
+        /* inc-cjos0 9f-pre P5b: only the blocks a save carries come back on load (Player.cpp LoadOptions); every other
+           option is decided by Options.Dat, so a value planted there would never reach the game */
+        if (w.size() != 3) { why = "option <OPT_NAME> <value|NAME>"; return false; }
+        if (strncmp(w[1].c_str(), "OPT_", 4) || !V1FamValue("opt", w[1].c_str(), v) || v < 0 || v >= OPT_LAST)
+            { why = "no option named " + w[1]; return false; }
+        if (v / 100 != 1 && v / 100 != 5 && v / 100 != 8)
+            { why = "option " + w[1] + " is in block " + std::to_string((long)(v / 100 * 100)) + ": Options.Dat decides this option on load, so a save cannot carry it"; return false; }
+        const char *vf = V1AtFam("Player.Options", v);
+        std::vector<const char*> vfams;
+        if (vf) vfams.push_back(vf);
+        if (!PlantNamed(vfams, w[2], a, why)) { if (!vf) why = "option " + w[1] + " names no value family, so " + w[2] + " is not a number"; return false; }
+        if (a < -128 || a > 127) { why = "an option holds one signed byte, -128..127"; return false; }
+        p->Options[v] = (int8)a;
         return true;
     }
     if (verb == "var") {

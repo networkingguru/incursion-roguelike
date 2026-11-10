@@ -141,6 +141,7 @@ class Overlay
 
 			void ShowGlyphs();
 			friend class Map;
+			friend class Registry;   /* -schematest and -schemaload (src/SaveV1.cpp) read the glyph arrays */
 	};
 
 struct MTerrain 

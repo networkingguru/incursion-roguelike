@@ -2,7 +2,10 @@
 # gate: none heavy; builds scratch trees with larger limits (a few minutes); run by hand (inc-cjos0 phase 7f)
 # fact: save content -- the file `incursion-headless -schematest` writes (a fixed set of populated objects built in code); no seed, no key script, no options file, no module data enters
 # fact: the larger limits -- this script raises EVERY limit that a family mark of inc/Defines.h calls `grows` (read from the marks, 19 names today, MA_COUNT and SK_COUNT through the limits they are made of) by 3 (MAX_SAC_CATS by 2) in a scratch copy of the tree under test and drops that copy's struct-size pins and the SkillInfo row-count pin (the pins only say the layout or the table did not grow)
-# fact: the dumped arrays -- both scratch trees (the reference and the grown one) get the same extra printf lines for the arrays of the limits in the -schemaload Player dump; the tree under test is not edited
+# fact: the dumped arrays -- both scratch trees (the reference and the grown one) get the same extra printf lines for the arrays of the limits in the -schemaload Player, Game and Map dump; the table of arrays (label, limits, printf line) is the AGTABLE heredoc below; the tree under test is not edited
+# fact: the Game and Map record -- the file `incursion-headless -schematest` writes as game.sav (theGame with its MDataSeg slot 0, three dungeons and a Map with its overlay glyphs, all built in code with nonzero values); no seed, no key script, no options file
+# fact: the arrays the file leaves empty -- the reference tree's dump must hold at least one nonzero entry of every array of the table, else the check exits 2 (UNMEASURED) naming the array
+# fact: the limit-to-array tie -- every limit a family mark calls `grows` must name an array of the table or an entry of the allow list (AGTABLE heredoc, with its reason), else the check exits 2 naming the limit
 # fact: the saved values the larger build must find -- read from the tree under test loading its own file (the same dump lines), then moved by the rule of spec 6.1 (a row keeps its columns; the last two SacVals columns stay last)
 # fact: the build flags -- BACKEND=posix, EXTRA_CXXFLAGS=-O0 for speed; the same source and defines in every scratch tree but the one planted change
 #
@@ -31,7 +34,69 @@ GROW_SAC=2   # MAX_SAC_CATS grows by this much; the other limits grow by 3 (make
 [ -n "${GROW_ONLY:-}" ] && case ",$GROW_ONLY," in *,MAX_SAC_CATS,*) ;; *) GROW_SAC=0 ;; esac
 export GROW_SAC
 
-# make_tree <dir> <mutation>   mutation: none | ref (no larger limits) | exact (the old exact-count V1Array) | flat (a flat copy of rows)
+# The table of arrays: (label in the dump, the grows limits that size it, class, the printf line injected into
+# the scratch trees or None when the tree under test already prints it). Written once; make_tree, the
+# nonzero check, the tie check and per_limit all read it.
+cat > "$W/agtable.py" <<'PY'
+import os
+def _p(arr, cnt, lims):
+    lab = "Character." + arr.replace(".", "_")
+    return (lab, lims, "player",
+            'for (long gi = 0; gi != (long)(%s); gi++) if (pl->%s[gi]) printf("field %s[%%ld]=%%ld\\n", gi, (long)pl->%s[gi]);' % (cnt, arr, lab, arr))
+def _g(arr, lims, body):
+    return ("Game." + arr, lims, "game", body)
+def _m(arr, lims, cnt):
+    return ("Map." + arr, lims, "map",
+            'for (long gi = 0; gi != (long)(%s); gi++) if (mp->ov.%s[gi]) printf("field Map.%s[%%ld]=%%ld\\n", gi, (long)mp->ov.%s[gi]);' % (cnt, arr[3:], arr, arr[3:]))
+ARRAYS = [
+    ("Character.KAttr", ["ATTR_LAST"], "player", None),
+    ("Character.hpRolls", ["MAX_CHAR_LEVEL"], "player", None),
+    ("Character.manaRolls", ["MAX_CHAR_LEVEL"], "player", None),
+    ("Character.GainAttr", [], "player", None),
+    ("Character.SacVals", ["MAX_SAC_CATS", "MAX_GODS"], "player", None),
+    ("Player.Options", ["OPT_LAST"], "player", None),
+    _p("Attr", "ATTR_LAST", ["ATTR_LAST"]),
+    _p("Inv", "NUM_SLOTS", ["SL_LAST", "NUM_SLOTS"]),
+    _p("SkillRanks", "SK_COUNT", ["SK_HIGH_END", "SK_COUNT"]),
+    _p("Feats", "(FEATBITS_LAST/8)+1", ["FEATBITS_LAST"]),
+    _p("Abilities", "CA_LAST", ["CA_LAST"]),
+    _p("IntStudy", "STUDY_LAST", ["STUDY_LAST"]),
+    _p("Spells", "MAX_SPELLS+1", ["MAX_SPELLS"]),
+    _p("MMArray", "MAX_SPELLS", ["MAX_SPELLS"]),
+    _p("MaxDepths", "MAX_DUNGEONS", ["MAX_DUNGEONS"]),
+    _p("JournalInfo.numMonOfType", "MA_COUNT", ["MA_HIGH_END", "MA_COUNT"]),
+    _p("FavourLev", "MAX_GODS", ["MAX_GODS"]),
+    _p("TempFavour", "MAX_GODS", ["MAX_GODS"]),
+    _p("Anger", "MAX_GODS", ["MAX_GODS"]),
+    _p("FavPenalty", "MAX_GODS", ["MAX_GODS"]),
+    _p("PrayerTimeout", "MAX_GODS", ["MAX_GODS"]),
+    _p("AngerThisTurn", "MAX_GODS", ["MAX_GODS"]),
+    _p("lastPulse", "MAX_GODS", ["MAX_GODS"]),
+    _p("godFlags", "MAX_GODS", ["MAX_GODS"]),
+    _g("MDataSegSize", ["MAX_MODULES"],
+       'for (long gi = 0; gi != (long)(MAX_MODULES); gi++) if (gp->MDataSegSize[gi]) printf("field Game.MDataSegSize[%ld]=%lu\\n", gi, (unsigned long)gp->MDataSegSize[gi]);'),
+    _g("MDataSeg", ["MAX_MODULES"],
+       'for (long gi = 0; gi != (long)(MAX_MODULES); gi++) if (gp->MDataSeg[gi]) for (unsigned long gb = 0; gb != (unsigned long)gp->MDataSegSize[gi]; gb++) if (gp->MDataSeg[gi][gb]) printf("field Game.MDataSeg[%ld][%lu]=%d\\n", gi, gb, (int)(unsigned char)gp->MDataSeg[gi][gb]);'),
+    _g("DungeonID", ["MAX_DUNGEONS"],
+       'for (long gi = 0; gi != (long)(MAX_DUNGEONS); gi++) if (gp->DungeonID[gi]) printf("field Game.DungeonID[%ld]=%lu\\n", gi, (unsigned long)gp->DungeonID[gi]);'),
+    _g("DungeonSize", ["MAX_DUNGEONS"],
+       'for (long gi = 0; gi != (long)(MAX_DUNGEONS); gi++) if (gp->DungeonSize[gi]) printf("field Game.DungeonSize[%ld]=%ld\\n", gi, (long)gp->DungeonSize[gi]);'),
+    _g("DungeonLevels", ["MAX_DUNGEONS"],
+       'for (long gi = 0; gi != (long)(MAX_DUNGEONS); gi++) if (gp->DungeonLevels[gi]) for (long gb = 0; gb <= (long)gp->DungeonSize[gi]; gb++) if (gp->DungeonLevels[gi][gb]) printf("field Game.DungeonLevels[%ld][%ld]=%ld\\n", gi, gb, (long)gp->DungeonLevels[gi][gb]);'),
+    _m("ov_GlyphX", ["MAX_OVERLAY_GLYPHS"], "MAX_OVERLAY_GLYPHS"),
+    _m("ov_GlyphY", ["MAX_OVERLAY_GLYPHS"], "MAX_OVERLAY_GLYPHS"),
+    _m("ov_GlyphImage", ["MAX_OVERLAY_GLYPHS"], "MAX_OVERLAY_GLYPHS"),
+]
+# Limits marked `grows` that size no saved array. Each carries its reason.
+ALLOW = {
+    "FT_LAST": "a feat number is a stored VALUE (the bit it sets in Character.Feats, sized by FEATBITS_LAST); FT_LAST sizes no array, so a larger FT_LAST changes no saved byte",
+}
+_drop = [x for x in os.environ.get("ARRAY_GROWTH_DROP", "").split(",") if x]
+ARRAYS = [a for a in ARRAYS if a[0] not in _drop]
+PY
+export PYTHONPATH="$W"
+
+# make_tree <dir> <mutation>   mutation: none | ref (no larger limits) | exact (the old exact-count V1Array) | flat (a flat copy of rows) | glyph (ov_GlyphX read from the ov_GlyphY values)
 # Copies the tracked source of the tree under test (working-tree text, so an uncommitted edit counts),
 # raises the limits, drops the struct-size pins, applies the one planted change.
 make_tree() {
@@ -102,18 +167,19 @@ for gen in ("gen_record_layout.py", "save_pad_rows.py", "gen_family_names.py", "
 tab = os.path.join(dest, "src", "Tables.cpp")
 rw(tab, lambda x: x.replace("sizeof(SkillInfo[0]) == SK_COUNT + 1", "sizeof(SkillInfo[0]) <= SK_COUNT + 1", 1))
 sv = os.path.join(dest, "src", "SaveV1.cpp")
-# Extra dump lines (nonzero entries only, like the lines above them) for the arrays of the other limits.
+# Extra dump lines (nonzero entries only, like the lines above them) for the arrays of the table that the tree
+# under test does not print itself: the Player ones before the Player anchor, the Game and Map ones before the
+# Game and Map anchor.
+import agtable
 anchor = '              printf("field Player.cAutoBuff=%d\\n", (int)pl->cAutoBuff);'
-extra = "".join('              for (long gi = 0; gi != (long)(%s); gi++) if (pl->%s[gi]) printf("field Character.%s[%%ld]=%%ld\\n", gi, (long)pl->%s[gi]);\n'
-                % (cnt, arr, arr.replace(".", "_"), arr)
-                for arr, cnt in (("Attr", "ATTR_LAST"), ("Inv", "NUM_SLOTS"), ("SkillRanks", "SK_COUNT"),
-                                 ("Feats", "(FEATBITS_LAST/8)+1"), ("Abilities", "CA_LAST"), ("IntStudy", "STUDY_LAST"),
-                                 ("Spells", "MAX_SPELLS+1"), ("MMArray", "MAX_SPELLS"), ("MaxDepths", "MAX_DUNGEONS"),
-                                 ("JournalInfo.numMonOfType", "MA_COUNT"), ("FavourLev", "MAX_GODS"),
-                                 ("TempFavour", "MAX_GODS"), ("Anger", "MAX_GODS"), ("FavPenalty", "MAX_GODS"),
-                                 ("PrayerTimeout", "MAX_GODS"), ("AngerThisTurn", "MAX_GODS"), ("lastPulse", "MAX_GODS"),
-                                 ("godFlags", "MAX_GODS")))
+extra = "".join("              " + cpp + "\n" for _l, _x, cls, cpp in agtable.ARRAYS if cls == "player" and cpp)
 assert rw(sv, lambda x: x.replace(anchor, extra + anchor, 1)), "dump anchor gone"
+ganchor = '              printf("field %s.present=1\\n", o->Type == T_GAME ? "Game" : "Map");'
+gblock = "".join("                  " + cpp + "\n" for _l, _x, cls, cpp in agtable.ARRAYS if cls == "game" and cpp)
+mblock = "".join("                  " + cpp + "\n" for _l, _x, cls, cpp in agtable.ARRAYS if cls == "map" and cpp)
+inject = ("              if (o->Type == T_GAME)\n                {\n                  Game *gp = (Game*)o;\n" + gblock +
+          "                }\n              else\n                {\n                  Map *mp = (Map*)o;\n" + mblock + "                }\n")
+assert rw(sv, lambda x: x.replace(ganchor, inject + ganchor, 1)), "game/map dump anchor gone"
 # The DEBUG coverage map pins padding offsets that the larger arrays move; like the size pins, they
 # only say the layout changed on purpose. Without this the larger tree cannot WRITE a save (red 3).
 cov = "if (v1CovFindings != covBefore)"
@@ -121,6 +187,11 @@ assert rw(sv, lambda x: x.replace(cov, "if (0 && v1CovFindings != covBefore)", 1
 if mut == "exact":
     old = "if (c > count || es != (uint32)elemSize)"
     assert rw(sv, lambda x: x.replace(old, "if (c != count || es != (uint32)elemSize)", 1)), "mutation site gone"
+elif mut == "glyph":
+    # the reader puts the saved ov_GlyphY values into GlyphX: a new array lands in the wrong place
+    mp = os.path.join(dest, "inc", "Map.h")
+    old = 'FIELD_ARRAY("ov_GlyphX", ov.GlyphX,'
+    assert rw(mp, lambda x: x.replace(old, 'FIELD_ARRAY("ov_GlyphX", ov.GlyphY,', 1)), "mutation site gone"
 elif mut == "flat":
     a = "uint8 *d = dst + (size_t)r * rowLen * es;"
     b = "memcpy(d + (size_t)(rowLen - tail) * es,"
@@ -137,9 +208,11 @@ build() {
     ( cd "$1" && BACKEND=posix EXTRA_CXXFLAGS=-O0 ./build_macos.sh > "$2" 2>&1 ) && [ -x "$1/incursion-headless" ]
 }
 
-# dump <binary-dir> <file>  -> the "field Character.* / Player.Options" lines of -schemaload, sorted
+# dump <binary-dir> <file>  -> the array lines of -schemaload for the character file and the game file next to it, sorted
 dump() {
-    ( cd "$1" && ./incursion-headless -schemaload "$2" -timeout 120 < /dev/null 2> "$W/load.err" ) | grep -E '^field (Character\.[A-Za-z_]+|Player\.Options)\[' | LC_ALL=C sort
+    for f in "$2" "$(dirname "$2")/game.sav"; do
+        ( cd "$1" && ./incursion-headless -schemaload "$f" -timeout 120 < /dev/null 2> "$W/load.err" ) | grep -E '^field (Character\.[A-Za-z_]+|Player\.Options|Game\.[A-Za-z]+|Map\.[A-Za-z_]+)\['
+    done | LC_ALL=C sort
 }
 
 # expect <A dump file> <A SacVals row length> <B SacVals row length>
@@ -162,6 +235,46 @@ print("\n".join(out))
 PY
 }
 
+# tie_check: every limit a family mark calls `grows` names an array of the table or the allow list (exit 2 if not)
+tie_check() {
+    python3 - "$ROOT" <<'PY'
+import os, re, sys
+import agtable
+src = open(os.path.join(sys.argv[1], "inc", "Defines.h"), encoding="latin-1").read()
+names = []
+for ln in src.split("\n"):
+    if re.match(r"//\s*family:", ln):
+        names += re.findall(r"\bgrows\s+(\w+)", ln)
+mapped = set(l for a in agtable.ARRAYS for l in a[1])
+bad = [n for n in names if n not in mapped and n not in agtable.ALLOW]
+if not names:
+    print("UNMEASURED: no `grows` mark found in inc/Defines.h"); sys.exit(2)
+for n in bad:
+    print("UNMEASURED: the limit %s is marked `grows` and names no dumped array and no allow-list entry (tools/check_array_growth.sh, AGTABLE)" % n)
+sys.exit(2 if bad else 0)
+PY
+}
+
+# need_nonzero <dump>: every array of the table holds a nonzero entry in the reference dump (exit 2 naming the first that does not)
+need_nonzero() {
+    python3 - "$1" <<'PY'
+import sys
+import agtable
+lines = open(sys.argv[1]).read().split("\n")
+bad = []
+for lab, lims, _c, _x in agtable.ARRAYS:
+    n = sum(1 for x in lines if x.startswith("field %s[" % lab))
+    print("  %s: %d nonzero" % (lab, n))
+    if not n:
+        bad.append(lab)
+for lab in bad:
+    print("UNMEASURED: the array %s holds no nonzero entry in the file the reference tree wrote; the schematest leaves it empty, so a wrong placement would not show" % lab)
+sys.exit(2 if bad else 0)
+PY
+}
+
+tie_check || exit 2
+[ "${1:-}" = "--tie" ] && { echo "tie ok"; exit 0; }
 FAILED=0
 fail() { echo "FAIL: $1"; FAILED=1; }
 ok() { echo "ok: $1"; }
@@ -182,9 +295,8 @@ SAV="$W/a/e.sav"
 dump "$W/ref" "$SAV" > "$W/a.dump"
 NA="$(wc -l < "$W/a.dump" | tr -d ' ')"
 [ "$NA" -gt 100 ] || { fail "the reference tree printed only $NA array lines for its own file"; exit 1; }
-for k in hpRolls manaRolls GainAttr SacVals KAttr Options; do
-    grep -q "\.$k\[" "$W/a.dump" || { fail "the dump holds no $k line; the check would prove nothing"; exit 1; }
-done
+need_nonzero "$W/a.dump" > "$W/nonzero.txt"; NZ=$?
+if [ "$NZ" != 0 ]; then grep UNMEASURED "$W/nonzero.txt"; exit 2; fi
 ROWLEN_A="$(sed -n 's/^#define MAX_SAC_CATS *\([0-9]*\).*/\1/p' inc/Defines.h | head -1)"
 ROWLEN_A=$((ROWLEN_A + 2))
 ROWLEN_B=$((ROWLEN_A + GROW_SAC))
@@ -192,7 +304,9 @@ expect "$W/a.dump" "$ROWLEN_A" "$ROWLEN_B" | LC_ALL=C sort > "$W/want.dump"
 
 # loads <tree> <file> -> 0 and the dump in $W/got.dump when the load worked
 loads() {
-    ( cd "$1" && ./incursion-headless -schemaload "$2" -timeout 120 < /dev/null > /dev/null 2> "$W/load.err" ) || return 1
+    for f in "$2" "$(dirname "$2")/game.sav"; do
+        ( cd "$1" && ./incursion-headless -schemaload "$f" -timeout 120 < /dev/null > /dev/null 2> "$W/load.err" ) || return 1
+    done
     dump "$1" "$2" > "$W/got.dump"
 }
 refused() { # <tree> <file> <label>   0 when the load failed with a corrupt-file error
@@ -200,25 +314,18 @@ refused() { # <tree> <file> <label>   0 when the load failed with a corrupt-file
     [ $? != 0 ] && grep -q -i "corrupt" "$W/load.err"
 }
 
-# per_limit: one line per grown limit, from the list make_tree wrote and the lines the reference dump holds
+# per_limit: one line per grown limit, from the list make_tree wrote, the table and the lines the reference dump holds
 per_limit() {
     python3 - "$W/grown/grown.txt" "$W/a.dump" <<'PY'
 import re, sys
-ARR = {"SL_LAST": ["Inv"], "NUM_SLOTS": ["Inv"], "MA_HIGH_END": ["JournalInfo_numMonOfType"], "MA_COUNT": ["JournalInfo_numMonOfType"],
-       "ATTR_LAST": ["KAttr", "Attr"], "SK_HIGH_END": ["SkillRanks"], "SK_COUNT": ["SkillRanks"], "FEATBITS_LAST": ["Feats"],
-       "CA_LAST": ["Abilities"], "STUDY_LAST": ["IntStudy"], "OPT_LAST": ["Options"], "MAX_DUNGEONS": ["MaxDepths"],
-       "MAX_SPELLS": ["Spells", "MMArray"], "MAX_CHAR_LEVEL": ["hpRolls", "manaRolls"], "MAX_SAC_CATS": ["SacVals"],
-       "MAX_GODS": ["SacVals", "FavourLev", "TempFavour", "Anger", "FavPenalty", "PrayerTimeout", "AngerThisTurn", "lastPulse", "godFlags"]}
+import agtable
 lines = open(sys.argv[2]).read().split("\n")
 for ln in open(sys.argv[1]):
     name = ln.split()[0]
-    names = ARR.get(name, [])
-    n = {a: sum(1 for x in lines if re.match(r"field (Character|Player)\.%s\[" % a, x)) for a in names}
+    names = [a[0] for a in agtable.ARRAYS if name in a[1]]
+    n = {a: sum(1 for x in lines if x.startswith("field %s[" % a)) for a in names}
     seen = ", ".join("%s %d" % (a, c) for a, c in n.items() if c)
-    empty = [a for a, c in n.items() if not c]
-    how = ("values compared in " + seen) if seen else "loaded only (no value of its arrays is in the dump)"
-    if seen and empty:
-        how += "; empty in the file: " + ", ".join(empty)
+    how = ("values compared in " + seen) if seen else ("allowed, sizes no saved array: " + agtable.ALLOW[name] if name in agtable.ALLOW else "NO ARRAY")
     print("ok: %s: %s" % (ln.strip(), how))
 PY
 }
@@ -228,6 +335,7 @@ if [ "$MODE" = check ]; then
         ok "a save from the tree under test loads in a tree with larger limits"
         if diff -q "$W/want.dump" "$W/got.dump" > /dev/null; then
             ok "every saved value landed where it belongs ($NA lines; SacVals total and maximum in the last two columns)"
+            echo "nonzero entries per dumped array in the reference:"; cat "$W/nonzero.txt"
             per_limit
         else
             diff "$W/want.dump" "$W/got.dump" | head -10
@@ -243,10 +351,12 @@ if [ "$MODE" = check ]; then
 fi
 
 # --selftest: build the grown tree and the two planted changes at once.
-mkdir -p "$W/exact" "$W/flat"
-make_tree "$W/exact" exact && make_tree "$W/flat" flat || { echo "SELFTEST FAIL: could not make the planted trees"; exit 1; }
+mkdir -p "$W/exact" "$W/flat" "$W/glyph"
+make_tree "$W/exact" exact && make_tree "$W/flat" flat && make_tree "$W/glyph" glyph || { echo "SELFTEST FAIL: could not make the planted trees"; exit 1; }
 build "$W/exact" "$W/exact.log" & P2=$!
 build "$W/flat" "$W/flat.log" & P3=$!
+build "$W/glyph" "$W/glyph.log" & P4=$!
+wait $P4 || { tail -20 "$W/glyph.log"; echo "SELFTEST FAIL: glyph tree"; exit 1; }
 wait $P2 || { tail -20 "$W/exact.log"; echo "SELFTEST FAIL: exact tree"; exit 1; }
 wait $P3 || { tail -20 "$W/flat.log"; echo "SELFTEST FAIL: flat tree"; exit 1; }
 ST=0
@@ -276,6 +386,20 @@ if [ -s "$W/b/e.sav" ]; then
 else
     st_fail "red 3: the grown tree wrote no file"
 fi
+# red 4: a reader that puts a new array's values in the wrong place (ov_GlyphX read from the ov_GlyphY values) is caught, with the array named
+if loads "$W/glyph" "$SAV"; then
+    if diff -q "$W/want.dump" "$W/got.dump" > /dev/null; then st_fail "red 4: the misplaced Map array was not noticed"
+    else st_ok "red 4: a misplaced Map array differs ($(diff "$W/want.dump" "$W/got.dump" | grep -o 'field Map\.[A-Za-z_]*' | sort -u | tr '\n' ' '))"; fi
+else st_fail "red 4: the glyph tree refused the save instead of misplacing values"; fi
+# red 5: a table that lacks the arrays of a grows limit exits 2 naming the limit
+OUT5="$(ARRAY_GROWTH_DROP=Game.MDataSeg,Game.MDataSegSize "$0" --tie 2>&1)"; RC5=$?
+if [ "$RC5" = 2 ] && [[ "$OUT5" == *MAX_MODULES* ]]; then st_ok "red 5: a limit with no array in the table exits 2 naming MAX_MODULES"
+else st_fail "red 5: exit $RC5: $OUT5"; fi
+# red 6: a dump with no entry of one array exits 2 naming the array
+grep -v '^field Game\.DungeonSize\[' "$W/a.dump" > "$W/empty.dump"
+OUT6="$(need_nonzero "$W/empty.dump" 2>&1)"; RC6=$?
+if [ "$RC6" = 2 ] && [[ "$OUT6" == *"UNMEASURED: the array Game.DungeonSize"* ]]; then st_ok "red 6: an array the file leaves empty exits 2 naming Game.DungeonSize"
+else st_fail "red 6: exit $RC6"; fi
 echo "elapsed: $((SECONDS - START)) s"
 [ "$ST" = 0 ] && echo "SELFTEST PASS" || echo "SELFTEST FAILED"
 exit "$ST"

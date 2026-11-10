@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1579,6 +1579,7 @@
+ // family: pa stored ordinal u32 field-of Character.Personality
+ 
+ #define PA_AMBITIOUS_CONQUERER         0
++#define PA_GRWA 16
+ #define PA_CHARMING_SCOUNDREL          1
+ #define PA_CRAZED_PSYCHOPATH           2
+ #define PA_DISCIPLINED_EXPERT          3

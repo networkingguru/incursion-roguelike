@@ -67,6 +67,34 @@ CLASS (one per family on every open mark; the end mark carries none):
                                             member value >= it, and
                                             tools/move_branch_values.py takes a
                                             free value below it or refuses.
+  val-of <STATI>[+<STATI>]  (stored only) Status.val of each named status holds a member of
+                                            this family (BLINDNESS holds a BLIND_ value).
+  mag-of <STATI>[+<STATI>]  (stored only) the same for Status.mag. Each name MUST be a member
+                                            of family stati, and one (status, slot) MUST
+                                            have one family; either breach exits 1. A comma
+                                            ends a class, so `+` joins the names. The
+                                            observer and the planter read these (inc-cjos0).
+  field-of <Scope.Field>[+<Scope.Field>]  (stored only) the saved scalar member(s) whose whole value is a member of this
+                                            family. A name is the observer's scope path with every `#N` dropped, a dot,
+                                            then the field name (Creature.LastMoveDir, Thing.Flags, Envelope.Type for the
+                                            record type byte). index-of <Scope.Array>: the array INDEX is the family value
+                                            (IntStudy). elem-of <Scope.Array>: each element holds the value (Qualities,
+                                            godFlags, Spells, MMArray). One field MUST have one family; two families may
+                                            share it only when each says `shares <other>` (wq and aq share Qualities).
+                                            The observer prints the name, the planter's `set` verb refuses a field no family
+                                            claims (inc-cjos0 9f-pre P3).
+  glyph-of <Scope.Field>[+...]  (stored only, on glyph_word) the saved field, or each element of the saved array, holds
+                                            a whole glyph word: id in bits 0-11 (family glyph), fore color in bits 12-15
+                                            and back color in bits 16-19 (family colour), bits 20-31 unused. The observer
+                                            decodes it `(GLYPH_X/fore=RED/back=BLACK)` and `/hi=0x..` for a bit above 19.
+  word-of <Scope.Blob>@<byte>[+...]  (stored only) a saved byte blob holds one 32-bit little-endian word of this family
+                                            at that byte offset (the Hostility fields inside Target t_why_data). The
+                                            observer prints it as its own line, only for a why type that carries one.
+  at-of <Scope.Array>[<NAME>][+...]  (stored only) the element of a saved array at the index NAME holds a member of this
+                                            family (Player.Options[OPT_DIFFICULTY] holds a DIFF_ value). NAME MUST be a member
+                                            of the family another family's `index-of` gives that same array (family opt), and
+                                            one (array, NAME) MUST have one family. The observer prints the value's name
+                                            beside the element and the planter's `option` verb reads it (inc-cjos0 9f-pre P5b).
 A mark with no class, a bad class, a bad shape or a bad width exits 1 naming
 the line. Every block of one family MUST carry the same class, shape and width.
 A `sentinel`, `grows` or `bound` clause MUST name a member of the same family.
@@ -127,12 +155,15 @@ Exit:  0 clean   1 unmarked define, duplicate, bad alias, or bad class
 IMPORT. load_families(defines=None) returns (families, problems). families maps
 a family name to {"class": "internal"|"stored", "shape": str|None, "width":
 str|None, "sentinels": [NAME], "bounds": [NAME], "grows": [NAME],
-"members": [(name, value, file, line)]}.
+"val_of": [STATI], "mag_of": [STATI], "field_of"/"index_of"/"elem_of": [Scope.Field], "at_of": [Scope.Array[NAME]], "shares": [family], "members": [(name, value, file, line)]}.
 problems is the list of FAIL lines (empty when the marks are sound).
 tools/check_stored_values.py imports it.
 
 # fact: the define values -- read from the text of inc/ and src/ files; no game run, no seed
 # fact: each define's family and class -- read from the marks in those same texts; no randomness
+# fact: which statuses a family's val or mag holds -- the val-of and mag-of attributes of those same marks, checked against family stati; no game run, no seed
+# fact: which names the saved fields have -- the string literals of the FIELD_* and V1EmbedBegin* macros and ARCHIVE_CLASS blocks in inc/ and src/; no game run, no seed
+# fact: which saved field a family fills -- the field-of, index-of and elem-of attributes of those same marks; no game run, no seed
 # fact: which names share a value -- computed from those values and marks
 # fact: enumerator values -- counted from the enum text as the compiler counts; no build, no seed
 # fact: constants outside every block -- read from the text of inc/ and src/ against tools/define_baseline.txt; no game run, no seed
@@ -270,6 +301,11 @@ KNOWN = re.compile(r"(?://|/\*).*?\bknown\s+collision\s*:\s*([A-Za-z0-9_.-]+)")
 COMMENT_ONLY = re.compile(r"^\s*(?://|/\*)")
 FAM_NAME = re.compile(r"[A-Za-z_][\w-]*")
 IDENT = re.compile(r"[A-Za-z_]\w*")
+KEY_LIST = re.compile(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:@\d+)?(?:\+[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:@\d+)?)*")
+AT_ONE = r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\[[A-Za-z_]\w*\]"
+AT_LIST = re.compile(AT_ONE + r"(?:\+" + AT_ONE + r")*")
+FAM_LIST = re.compile(r"[A-Za-z_][\w-]*(?:\+[A-Za-z_][\w-]*)*")
+IDENT_LIST = re.compile(r"[A-Za-z_]\w*(?:\+[A-Za-z_]\w*)*")   # `+` joins names: a comma ends a class
 FUNC_DEFINE = re.compile(r"\s*#\s*define\s+([A-Za-z_]\w*)\(")
 SHAPES = ("ordinal", "bits", "enum")
 WIDTHS = ("u8", "i8", "u16", "i16", "u32", "i32")
@@ -281,7 +317,8 @@ def parse_class(fam, rest, no):
     """rest: the tokens after the family name. Return (spec, problem). spec is
     {"class","shape","width","sentinels"}; problem is a message or None."""
     spec = {"class": None, "shape": None, "width": None, "sentinels": [], "bounds": [],
-            "grows": []}
+            "grows": [], "val_of": [], "mag_of": [], "field_of": [], "index_of": [],
+            "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []}
     if not rest:
         return spec, ("line %d: family %s has no class. " % (no, fam)) + HOW % (fam, fam)
     if rest[0] == "internal":
@@ -302,11 +339,30 @@ def parse_class(fam, rest, no):
                       "u32 or i32)" % (no, fam, rest[2] if len(rest) > 2 else ""))
     tail = rest[3:]
     while tail:
+        if tail[0] in ("val-of", "mag-of") and len(tail) >= 2 and IDENT_LIST.fullmatch(tail[1]):
+            spec[tail[0].replace("-", "_")] += tail[1].split("+")
+            tail = tail[2:]
+            continue
+        if tail[0] in ("field-of", "index-of", "elem-of", "glyph-of", "word-of") and len(tail) >= 2 and KEY_LIST.fullmatch(tail[1]) \
+                and all(("@" in k) == (tail[0] == "word-of") for k in tail[1].split("+")):   # only word-of takes a byte offset, and it must
+            spec[tail[0].replace("-", "_")] += tail[1].split("+")
+            tail = tail[2:]
+            continue
+        if tail[0] == "at-of" and len(tail) >= 2 and AT_LIST.fullmatch(tail[1]):
+            spec["at_of"] += tail[1].split("+")
+            tail = tail[2:]
+            continue
+        if tail[0] == "shares" and len(tail) >= 2 and FAM_LIST.fullmatch(tail[1]):
+            spec["shares"] += tail[1].split("+")
+            tail = tail[2:]
+            continue
         if tail[0] not in ("sentinel", "bound", "grows") or len(tail) < 2 \
                 or not IDENT.fullmatch(tail[1]):
             return spec, ("line %d: family %s has a bad word '%s' after its width "
-                          "(only 'sentinel <NAME>', 'grows <NAME>' or 'bound <NAME>' may "
-                          "follow)" % (no, fam, " ".join(tail)))
+                          "(only 'sentinel <NAME>', 'grows <NAME>', 'bound <NAME>', "
+                          "'val-of <STATI>[+<STATI>]', 'mag-of <STATI>[+<STATI>]', "
+                          "'field-of|index-of|elem-of|glyph-of|word-of <Scope.Field>[+...]', 'at-of <Scope.Array>[<NAME>][+...]' or 'shares <family>' "
+                          "may follow)" % (no, fam, " ".join(tail)))
         if tail[0] == "bound" and rest[1] == "bits":
             return spec, ("line %d: family %s is a bits family, so 'bound %s' has no "
                           "meaning (use shape ordinal or enum)" % (no, fam, tail[1]))
@@ -564,7 +620,9 @@ def scan_all(files):
         for no, fam, spec in specs:
             d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
                                       "sentinels": [], "bounds": [], "grows": [], "members": [],
-                                      "marks": [], "rows": [], "first": None})
+                                      "marks": [], "rows": [], "first": None,
+                                      "val_of": [], "mag_of": [], "field_of": [],
+                                      "index_of": [], "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []})
             d["marks"].append((path, no))
             if spec["class"] is None:
                 continue  # already reported as a bad mark
@@ -584,14 +642,80 @@ def scan_all(files):
                 d["bounds"].append((s, path, no))
             for s in spec["grows"]:
                 d["grows"].append((s, path, no))
+            for s in spec["val_of"]:
+                d["val_of"].append((s, path, no))
+            for s in spec["mag_of"]:
+                d["mag_of"].append((s, path, no))
+            for kind in ("field_of", "index_of", "elem_of", "glyph_of", "word_of", "at_of", "shares"):
+                for s in spec[kind]:
+                    d[kind].append((s, path, no))
         for no, name, value, kind, fams_here, alias, known in placed:
             for fam in fams_here:
                 d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
                                           "sentinels": [], "bounds": [], "grows": [], "members": [],
-                                          "marks": [], "rows": [], "first": None})
+                                          "marks": [], "rows": [], "first": None,
+                                          "val_of": [], "mag_of": [], "field_of": [],
+                                          "index_of": [], "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []})
                 d["rows"].append((no, name, value, kind, alias, known, path))
                 d["members"].append((name, value, rel(path), no))
     multi_files = multi
+    # val-of / mag-of: the statuses whose val or mag holds a member of the family (inc-cjos0 9f-pre P2)
+    stati_val = {m[0]: m[1] for m in fams.get("stati", {}).get("members", [])}
+    claims = {}
+    for fam, d in sorted(fams.items()):
+        for slot in ("val", "mag"):
+            for s, path, no in d[slot + "_of"]:
+                if s not in stati_val:
+                    problems.append("FAIL: %s: family %s says '%s-of %s' but %s is not a member of "
+                                    "family stati" % (where(path, no, multi_files), fam, slot, s, s))
+                    continue
+                other = claims.setdefault((stati_val[s], slot), (fam, s))
+                if other[0] != fam:
+                    problems.append("FAIL: %s: the %s %s is claimed by both family %s and family %s "
+                                    "(one family per status and slot)"
+                                    % (where(path, no, multi_files), s, slot, other[0], fam))
+    # field-of / index-of / elem-of: one saved field, one family, unless both families say `shares` (9f-pre P3)
+    field_claims = {}
+    for fam, d in sorted(fams.items()):
+        for kind in FIELD_ATTRS:
+            for key, path, no in d[kind]:
+                other = field_claims.setdefault(key, (fam, kind))
+                if other[0] == fam:
+                    if other[1] != kind:
+                        problems.append("FAIL: %s: family %s claims %s as both %s and %s"
+                                        % (where(path, no, multi_files), fam, key,
+                                           other[1].replace("_", "-"), kind.replace("_", "-")))
+                    continue
+                theirs = fams[other[0]]
+                if other[0] in [x for x, _p, _n in d["shares"]] and fam in [x for x, _p, _n in theirs["shares"]]:
+                    continue
+                problems.append("FAIL: %s: the field %s is claimed by both family %s and family %s "
+                                "(one family per saved field; two share one only when each says "
+                                "'shares <other>')" % (where(path, no, multi_files), key, other[0], fam))
+        for s, path, no in d["shares"]:
+            if s not in fams:
+                problems.append("FAIL: %s: family %s says 'shares %s' but there is no family %s"
+                                % (where(path, no, multi_files), fam, s, s))
+    # at-of: the array must have an index-of family, NAME must be its member, and (array, NAME) has one family (9f-pre P5b)
+    index_fam = {}
+    for fam, d in sorted(fams.items()):
+        for key, _p, _n in d["index_of"]:
+            index_fam.setdefault(key, fam)
+    at_claims = {}
+    for fam, d in sorted(fams.items()):
+        for key, path, no in d["at_of"]:
+            arr, idx = key[:-1].split("[")
+            ifam = index_fam.get(arr)
+            if ifam is None:
+                problems.append("FAIL: %s: family %s says 'at-of %s' but no family says 'index-of %s', so %s has no names"
+                                % (where(path, no, multi_files), fam, key, arr, idx))
+            elif idx not in {m[0] for m in fams[ifam]["members"]}:
+                problems.append("FAIL: %s: family %s says 'at-of %s' but %s is not a member of family %s (the index-of family of %s)"
+                                % (where(path, no, multi_files), fam, key, idx, ifam, arr))
+            other = at_claims.setdefault(key, fam)
+            if other != fam:
+                problems.append("FAIL: %s: the element %s is claimed by both family %s and family %s (one family per element)"
+                                % (where(path, no, multi_files), key, other, fam))
     for fam, d in sorted(fams.items()):
         names = {m[0] for m in d["members"]}
         for s, path, no in d["sentinels"]:
@@ -627,7 +751,63 @@ def scan_all(files):
         d["sentinels"] = [s for s, _p, _n in d["sentinels"]]
         d["bounds"] = [s for s, _p, _n in d["bounds"]]
         d["grows"] = [s for s, _p, _n in d["grows"]]
+        d["val_of"] = [s for s, _p, _n in d["val_of"]]
+        d["mag_of"] = [s for s, _p, _n in d["mag_of"]]
+        for kind in ("field_of", "index_of", "elem_of", "glyph_of", "word_of", "at_of", "shares"):
+            d[kind] = [s for s, _p, _n in d[kind]]
     return fams, problems, multi
+
+
+# Names a field-of / index-of / elem-of mark may use that no FIELD_ macro declares. Each needs the reason here.
+FIELD_ATTRS = ("field_of", "index_of", "elem_of", "glyph_of", "word_of")
+SAVED_FIELD_ALLOW = {
+    # a script variable's type byte: one byte per variable inside the Game segment's Variables blob
+    # (v1PutU8(d->DataType), src/SaveV1.cpp); the observer prints each variable's line under this name (V1FvVariable)
+    "Game.ScriptVariable",
+    # the record's type byte: the writer emits it with v1PutU8(o->Type) in the record envelope (src/SaveV1.cpp), not a
+    # FIELD_ macro, and the observer prints it as its own line under this name (V1FvRec)
+    "Envelope.Type",
+}
+FIELD_LIT = re.compile(r'\b(?:FIELD_[A-Z0-9_]+|V1EmbedBegin(?:_AT)?)\s*\(\s*"([^"]+)"')
+ARCHIVE_BLOCK = re.compile(r'ARCHIVE_CLASS\(\s*(\w+)\s*,.*?END_ARCHIVE', re.S)
+
+
+def saved_field_problems(fams, root=ROOT):
+    """FAIL lines for a field-of / index-of / elem-of name that no saved field matches (9f-pre P3). The saved fields
+    are the string literals of the FIELD_* and V1EmbedBegin* macros in inc/ and src/. A name Class.Field must have
+    Field declared inside ARCHIVE_CLASS(Class ...) .. END_ARCHIVE; a longer name Class.Embed.Field needs Class to be
+    an archive class and every later part to be a declared literal. SAVED_FIELD_ALLOW names the rest."""
+    text = ""
+    for sub in ("inc", "src"):
+        for dp, _dn, fns in os.walk(os.path.join(root, sub)):
+            for fn in sorted(fns):
+                if fn.endswith((".h", ".cpp")):
+                    with open(os.path.join(dp, fn), encoding="latin-1") as f:
+                        text += f.read() + "\n"
+    literals = set(FIELD_LIT.findall(text))
+    classes = {}
+    for m in ARCHIVE_BLOCK.finditer(text):
+        classes.setdefault(m.group(1), set()).update(FIELD_LIT.findall(m.group(0)))
+    problems = []
+    for fam, d in sorted(fams.items()):
+        for kind in FIELD_ATTRS + ("at_of",):
+            for key in d.get(kind, []):
+                key = re.sub(r"\[\w+\]$", "", key)   # at-of Player.Options[OPT_X]: the saved field is the array
+                parts = key.split("@")[0].split(".")
+                if key.split("@")[0] in SAVED_FIELD_ALLOW:
+                    continue
+                if len(parts) < 2 or parts[0] not in classes:
+                    why = "%s is not a class with an ARCHIVE_CLASS block" % parts[0]
+                elif len(parts) == 2 and parts[1] not in classes[parts[0]]:
+                    why = "no FIELD_ macro in class %s declares %s" % (parts[0], parts[1])
+                else:
+                    gone = [x for x in parts[1:] if x not in literals]
+                    why = ("no FIELD_ or V1EmbedBegin macro declares %s" % ", ".join(gone)) if gone else None
+                if why:
+                    problems.append("FAIL: family %s says '%s %s' but %s (a saved field is a FIELD_ macro name, "
+                                    "or on SAVED_FIELD_ALLOW in tools/check_define_dups.py)"
+                                    % (fam, kind.replace("_", "-"), key, why))
+    return problems
 
 
 def load_families(defines=None, files=None):
@@ -639,7 +819,10 @@ def load_families(defines=None, files=None):
     fams, problems, _multi = scan_all(files)
     out = {f: {"class": d["class"], "shape": d["shape"], "width": d["width"],
                "sentinels": list(d["sentinels"]), "bounds": list(d["bounds"]),
-               "grows": list(d["grows"]), "members": list(d["members"])}
+               "grows": list(d["grows"]), "val_of": list(d["val_of"]), "mag_of": list(d["mag_of"]),
+               "field_of": list(d["field_of"]), "index_of": list(d["index_of"]),
+               "elem_of": list(d["elem_of"]), "glyph_of": list(d["glyph_of"]), "word_of": list(d["word_of"]), "at_of": list(d["at_of"]), "shares": list(d["shares"]),
+               "members": list(d["members"])}
            for f, d in fams.items()}
     return out, problems
 
@@ -848,7 +1031,8 @@ def check(defines, others=(), loose=None):
     try:
         fams, bad_msgs, multi = scan_all(files)
         if loose is not None:
-            bad_msgs = list(bad_msgs) + loose_problems(loose[0], defines, loose[1], loose[2])
+            bad_msgs = list(bad_msgs) + loose_problems(loose[0], defines, loose[1], loose[2]) \
+                + saved_field_problems(fams)
     except Unmeasurable as e:
         return 2, ["check_define_dups: UNMEASURED: %s" % e]
     except OSError as e:
@@ -1059,6 +1243,114 @@ def selftest():
         assert c == 1 and "names 2 bounds" in m, (c, m)
         fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % (n[0] - 3))])
         assert problems == [] and fams["a"]["bounds"] == ["A_LAST"], (problems, fams)
+        # val-of / mag-of (inc-cjos0 9f-pre P2): a stored family names the statuses whose val or mag
+        # holds its members; each must be a member of family stati, and a (status, slot) has one family
+        st = fam("stati", "#define BLINDNESS 3\n#define SLEEPING 7\n#define ASLEEP 7 /* alias of SLEEPING */\n",
+                 "stored ordinal u8")
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of BLINDNESS"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % n[0])])
+        assert problems == [] and fams["vb"]["val_of"] == ["BLINDNESS"] and fams["vb"]["mag_of"] == [], (problems, fams)
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of BLINDNESS+SLEEPING mag-of BLINDNESS"))
+        assert c == 0, (c, m)
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of NOPE"))
+        assert c == 1 and "val-of NOPE" in m and "not a member of family stati" in m, (c, m)
+        c, m = run(fam("vb", "#define VB_A 1\n", stored + " mag-of BLINDNESS"))
+        assert c == 1 and "mag-of BLINDNESS" in m and "not a member of family stati" in m, (c, m)
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of BLINDNESS")
+                   + fam("vc", "#define VC_A 1\n", stored + " val-of BLINDNESS"))
+        assert c == 1 and "BLINDNESS val is claimed by both" in m, (c, m)
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of SLEEPING")
+                   + fam("vc", "#define VC_A 1\n", stored + " val-of ASLEEP"))
+        assert c == 1 and "val is claimed by both" in m, (c, m)   # an alias is the same status
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of BLINDNESS")
+                   + fam("vc", "#define VC_A 1\n", stored + " mag-of BLINDNESS"))
+        assert c == 0, (c, m)   # the other slot is free
+        c, m = run(st + "// family: vb internal val-of BLINDNESS\n#define VB_A 1\n// end family: vb\n")
+        assert c == 1 and "is internal" in m, (c, m)
+        c, m = run(st + fam("vb", "#define VB_A 1\n", stored + " val-of"))
+        assert c == 1 and "bad word" in m, (c, m)
+        # field-of / index-of / elem-of (inc-cjos0 9f-pre P3): a saved field has one family unless both say `shares`
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " field-of Creature.Dir"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % n[0])])
+        assert problems == [] and fams["fa"]["field_of"] == ["Creature.Dir"], (problems, fams)
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " elem-of Item.Q+Item.R index-of Item.S"))
+        assert c == 0, (c, m)
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " field-of Creature.Dir")
+                   + fam("fb", "#define FB_A 1\n", stored + " field-of Creature.Dir"))
+        assert c == 1 and "Creature.Dir is claimed by both" in m, (c, m)   # red: two families, one field
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " elem-of Item.Q")
+                   + fam("fb", "#define FB_A 1\n", stored + " field-of Item.Q"))
+        assert c == 1 and "Item.Q is claimed by both" in m, (c, m)   # a different attribute is the same field
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " elem-of Item.Q shares fb")
+                   + fam("fb", "#define FB_A 1\n", stored + " elem-of Item.Q shares fa"))
+        assert c == 0, (c, m)   # both say so: allowed
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " elem-of Item.Q shares fb")
+                   + fam("fb", "#define FB_A 1\n", stored + " elem-of Item.Q"))
+        assert c == 1 and "claimed by both" in m, (c, m)   # only one says so: refused
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " elem-of Item.Q shares nope"))
+        assert c == 1 and "no family nope" in m, (c, m)
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " field-of"))
+        assert c == 1 and "bad word" in m, (c, m)
+        c, m = run("// family: fa internal field-of Creature.Dir\n#define FA_A 1\n// end family: fa\n")
+        assert c == 1 and "is internal" in m, (c, m)
+        # glyph-of / word-of (inc-cjos0 9f-pre P5a): the same one-family-per-field rule, and a word-of offset names a byte
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " glyph-of Item.Q+Item.R word-of Item.B@8"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % n[0])])
+        assert fams["fa"]["glyph_of"] == ["Item.Q", "Item.R"] and fams["fa"]["word_of"] == ["Item.B@8"], fams
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " glyph-of Item.Q")
+                   + fam("fb", "#define FB_A 1\n", stored + " field-of Item.Q"))
+        assert c == 1 and "Item.Q is claimed by both" in m, (c, m)   # red: a glyph field is one family's
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " word-of Item.B@0")
+                   + fam("fb", "#define FB_A 1\n", stored + " word-of Item.B@0"))
+        assert c == 1 and "Item.B@0 is claimed by both" in m, (c, m)   # red: one word, two families
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " word-of Item.B@0")
+                   + fam("fb", "#define FB_A 1\n", stored + " word-of Item.B@4"))
+        assert c == 0, (c, m)   # two offsets of one blob are two words
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " glyph-of"))
+        assert c == 1 and "bad word" in m, (c, m)
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " word-of Item.B"))
+        assert c == 1 and "bad word" in m, (c, m)   # red: a blob word with no byte offset
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " glyph-of Item.B@4"))
+        assert c == 1 and "bad word" in m, (c, m)   # red: an offset on a field that is not a blob
+        # at-of (inc-cjos0 9f-pre P5b): an element of an index-of array holds a value family; the index must be a member
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " index-of Item.S")
+                   + fam("fb", "#define FB_A 1\n", stored + " at-of Item.S[FA_A]+Item.S[FA_B]"))
+        assert c == 1 and "FA_B is not a member of family fa" in m, (c, m)   # red: an unknown index name
+        c, m = run(fam("fa", "#define FA_A 1\n#define FA_B 2\n", stored + " index-of Item.S")
+                   + fam("fb", "#define FB_A 1\n", stored + " at-of Item.S[FA_A]+Item.S[FA_B]"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % n[0])])
+        assert fams["fb"]["at_of"] == ["Item.S[FA_A]", "Item.S[FA_B]"], fams
+        c, m = run(fam("fb", "#define FB_A 1\n", stored + " at-of Item.S[FA_A]"))
+        assert c == 1 and "no family says 'index-of Item.S'" in m, (c, m)   # red: the array has no index family
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " index-of Item.S")
+                   + fam("fb", "#define FB_A 1\n", stored + " at-of Item.S[FA_A]")
+                   + fam("fc", "#define FC_A 1\n", stored + " at-of Item.S[FA_A]"))
+        assert c == 1 and "Item.S[FA_A] is claimed by both" in m, (c, m)   # red: one element, two families
+        c, m = run(fam("fa", "#define FA_A 1\n", stored + " index-of Item.S") + fam("fb", "#define FB_A 1\n", stored + " at-of Item.S"))
+        assert c == 1 and "bad word" in m, (c, m)   # red: no index name
+        # saved_field_problems: a claimed name must match a FIELD_ / V1EmbedBegin literal (9f-pre P3)
+        sroot = os.path.join(tmp, "sroot")
+        os.makedirs(os.path.join(sroot, "inc"), exist_ok=True)
+        os.makedirs(os.path.join(sroot, "src"), exist_ok=True)
+        with open(os.path.join(sroot, "inc", "k.h"), "w") as f:
+            f.write('class Foo { ARCHIVE_CLASS(Foo,Bar,r)\n FIELD_I8("Dir", Dir);\n FIELD_OBJ("ts", ts);\n END_ARCHIVE };\n'
+                    'class Baz { ARCHIVE_CLASS(Baz,Bar,r)\n FIELD_I8("Other", o);\n END_ARCHIVE };\n')
+        with open(os.path.join(sroot, "src", "k.cpp"), "w") as f:
+            f.write('void g() { r.V1EmbedBegin_AT("t", i, &t, 4); FIELD_I32("t_type", x); }\n')
+        def sf(key, kind="field_of"):
+            return saved_field_problems({"fa": {"field_of": [], "index_of": [], "elem_of": [], kind: [key]}}, sroot)
+        assert sf("Foo.Dir") == [] and sf("Foo.ts.t.t_type") == [] and sf("Envelope.Type") == []
+        assert "Foo.Dirr" in sf("Foo.Dirr")[0] and "declares Dirr" in sf("Foo.Dirr")[0]   # red: a misspelt field
+        assert "declares Dir" in sf("Baz.Dir")[0]   # red: a field of another class
+        assert "not a class" in sf("Nope.Dir")[0]   # red: no such class
+        assert "declares tt" in sf("Foo.ts.tt.t_type")[0]   # red: a misspelt embed
+        assert len(sf("Foo.Dirr", "elem_of")) == 1 and len(sf("Foo.Dirr", "index_of")) == 1
+        assert sf("Foo.Dir", "glyph_of") == [] and sf("Foo.ts.t.t_type@4", "word_of") == []
+        assert len(sf("Foo.Dirr", "glyph_of")) == 1 and len(sf("Foo.Dirr@4", "word_of")) == 1   # red: a misspelt field
         # a function-like macro inside a STORED family is refused, naming file:line and
         # family; in an internal family or a no-family block it is left alone (F07)
         c, m = run(fam("a", "#define A_X 1\n#define A_F() 1\n", stored))

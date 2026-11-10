@@ -161,7 +161,7 @@ typedef signed int        hObj;
 #define CAN_CAST_IT     1       /* player can, monsters won't */
 #define CANNOT_CAST_IT  -1      /* No one can: invalid target */
 // end family: istarget_ret
-// family: dir stored ordinal i8
+// family: dir stored ordinal i8 field-of Creature.LastMoveDir val-of CHARGING
 
 
 #define FIRST_DIR 0
@@ -315,7 +315,7 @@ typedef signed int        hObj;
 
 #define LUC LUCK
 // end no-family
-// family: f_flag stored bits u32
+// family: f_flag stored bits u32 field-of Thing.Flags
 
 #define F_SOLID          0x0001 /* Prevents Travel            */
 #define F_XSOLID         0x0002 /* Prevents Ethereal Travel   */
@@ -495,7 +495,7 @@ typedef signed int        hObj;
 #define AB_INNATE    4
 #define AB_EFFECT    5
 // end family: ab
-// family: an stored ordinal u8
+// family: an internal
 
 #define AN_SPELLS     1 /* Spellbook Spells */
 #define AN_INNATE     2 /* Innate Abilities */
@@ -695,7 +695,7 @@ typedef signed int        hObj;
 #define SA_STUN        0x00100000
 #define SA_REST        0x00200000
 // end family: sa
-// family: sn stored ordinal i16
+// family: sn stored ordinal i16 val-of SAVE_BONUS
 /* etc. */
 
 /* And the Numbers */
@@ -1106,7 +1106,7 @@ typedef signed int        hObj;
 #define DF_FEAR   0x08000000
 #define DF_SUBD   0x10000000
 // end family: df_dmg
-// family: ad stored ordinal i8 sentinel AD_LAST_PHYSICAL
+// family: ad stored ordinal i8 sentinel AD_LAST_PHYSICAL val-of IMMUNITY+RESIST+HEAL_TIMEOUT
 
 
 #define AD_NORM    0    /* ordinary physical */
@@ -1197,7 +1197,7 @@ typedef signed int        hObj;
 // no-family
 #define is_wepdmg(a) (a == AD_SLASH || a == AD_PIERCE || a == AD_BLUNT)
 // end no-family
-// family: attack stored ordinal i16
+// family: attack stored ordinal i16 val-of SPEC_TIMEOUT+SUSPEND_ATTK
  
 
 /* The monster attack codes: there are five kinds of attack
@@ -1414,7 +1414,7 @@ typedef signed int        hObj;
 #define QUEUE_BLAST_MSG    6
 #define QUEUE_DISBELIEF_MSG 7
 // end family: queue
-// family: ts stored bits u8
+// family: ts stored bits u8 field-of Trap.TrapFlags
 
 #define TS_FOUND    0x0001
 #define TS_DISARMED 0x0002
@@ -1422,7 +1422,7 @@ typedef signed int        hObj;
 #define TS_SEARCHED 0x0008
 #define TS_NORESET  0x0010
 // end family: ts
-// family: ms stored bits u16
+// family: ms stored bits u16 field-of Creature.StateFlags
 
 #define MS_PEACEFUL    0x0001 /* No hostility toward anyone who didn't attack first */
 #define MS_GUARDING    0x0002
@@ -1576,7 +1576,7 @@ typedef signed int        hObj;
 #define TT_ASTRAL     0x4000
 #define TT_ETHEREAL   0x8000
 // end family: tt
-// family: pa stored ordinal u32
+// family: pa stored ordinal u32 field-of Character.Personality
 
 #define PA_AMBITIOUS_CONQUERER         0
 #define PA_CHARMING_SCOUNDREL          1
@@ -1623,7 +1623,7 @@ typedef signed int        hObj;
 #define SZ_GARGANTUAN 7
 #define SZ_COLLOSAL   8
 // end family: sz
-// family: per stored bits u16
+// family: per stored bits u16 val-of NONDETECTION
 
 #define PER_VISUAL  0x0001
 #define PER_INFRA   0x0002
@@ -1713,7 +1713,7 @@ typedef signed int        hObj;
 #define ELUC_FOUNTAIN  5
 #define ELUC_MAEVE     6
 // end family: ex_luc
-// family: ma stored ordinal u8 grows MA_HIGH_END
+// family: ma stored ordinal u8 grows MA_HIGH_END val-of DETECTING
 /* Monster types 1..73 are fixed; MA_LAST_REAL (74) and the group types 75..129
    (MA_LAST 130) are frozen values and never rise. A new real monster type takes
    the next number from MA_HIGH_FIRST (131) up to 255 and raises MA_HIGH_END by
@@ -1962,7 +1962,7 @@ typedef signed int        hObj;
 #define TM_DESCENT  0x0100 /* Half-Dragon, Half-Fiend, etc. */
 #define TM_PLANAR   0x0200 /* Aqueous, Flame, Celestial, Anarchic */
 // end family: tm
-// family: al stored bits u16
+// family: al stored bits u16 val-of ALIGNMENT
 
 #define AL_LAWFUL     0x0001
 #define AL_CHAOTIC    0x0002
@@ -1973,7 +1973,7 @@ typedef signed int        hObj;
 #define AL_NONGOOD    0x0040
 #define AL_NONEVIL    0x0080
 // end family: al
-// family: attr stored ordinal i8 grows ATTR_LAST
+// family: attr stored ordinal i8 grows ATTR_LAST val-of ADJUST_DMG
 
 #define A_STR 0
 #define A_DEX 1
@@ -2058,7 +2058,7 @@ typedef signed int        hObj;
 #define EN_HEAVY     3
 #define EN_EXTREME   4
 // end family: encumb
-// family: sc stored bits i16, sc_all internal
+// family: sc stored bits i16 val-of BONUS_SCHOOL_CASTING_LEVEL mag-of SCHOOL_FOCUS, sc_all internal
 
 #define SC_ABJ       0x00000001
 #define SC_ARC       0x00000002
@@ -2082,7 +2082,7 @@ typedef signed int        hObj;
 #define SC_LIGHT     0x00020000
 #define SC_DARKNESS  0x00040000
 // end family: sc_all
-// family: sp_flag stored bits u16
+// family: sp_flag stored bits u16 elem-of Character.Spells
 
 /* Spell Knowledge Flags */
 #define SP_KNOWN     0x0001
@@ -2394,7 +2394,7 @@ typedef signed int        hObj;
 #define ATTR_VAL     10000
 #define CLEV_VAL     11000
 // end family: val_base
-// family: wg stored bits u32
+// family: wg stored bits u32 field-of Character.Proficiencies
 
 
 
@@ -2422,7 +2422,7 @@ typedef signed int        hObj;
 #define WG_MARMOUR        0x40000000
 #define WG_HARMOUR        0x80000000
 // end family: wg
-// family: wq stored ordinal i8 sentinel WQ_LAST
+// family: wq stored ordinal i8 sentinel WQ_LAST elem-of QItem.Qualities shares aq
 
 #define WQ_HOLY          1
 #define WQ_UNHOLY        2
@@ -2488,7 +2488,7 @@ typedef signed int        hObj;
 
 #define WQ_LAST          64
 // end family: wq
-// family: aq stored ordinal i8 sentinel AQ_LAST
+// family: aq stored ordinal i8 sentinel AQ_LAST elem-of QItem.Qualities shares wq
 
 #define AQ_LIGHT_FOR     1
 #define AQ_MEDIUM_FOR    2
@@ -2560,7 +2560,7 @@ typedef signed int        hObj;
 #define AQ_TRUELAST      81  /* alias of IQ_WROUGHT */
 #define WQ_TRUELAST      81  /* alias of IQ_WROUGHT */
 // end family: wq, aq
-// family: ws stored ordinal i16
+// family: ws stored ordinal i16 val-of WEP_SKILL
 
 
 #define WS_NOT_PROF      0
@@ -2571,7 +2571,7 @@ typedef signed int        hObj;
 #define WS_HIGH_MASTERY  5
 #define WS_GRAND_MASTERY 6
 // end family: ws
-// family: df_door stored bits u8
+// family: df_door stored bits u8 field-of Door.DoorFlags
 
 #define DF_VERTICAL 0x01
 #define DF_OPEN     0x02
@@ -2930,7 +2930,7 @@ typedef signed int        hObj;
 #define FT_LUCUBRATION         363
 #define FT_LAST                364
 // end family: ft
-// family: mm stored bits u32
+// family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
 
 #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
 #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */
@@ -2961,7 +2961,7 @@ typedef signed int        hObj;
 #define MM_VOCALIZE      0x04000000  /* No verbal component */
 #define MM_WARP          0x08000000  /* Pass through Walls */
 // end family: mm
-// family: study stored ordinal u8 grows STUDY_LAST
+// family: study stored ordinal u8 grows STUDY_LAST index-of Character.IntStudy
 
 #define STUDY_CASTING     1
 #define STUDY_BARDIC      2
@@ -3184,7 +3184,7 @@ typedef signed int        hObj;
 #define BLINDNESS     3
 #define BLIND         3  /* alias of BLINDNESS */
 // end family: stati
-// family: val_blind stored ordinal i16
+// family: val_blind stored ordinal i16 val-of BLINDNESS
   #define BLIND_UNWANTED        0
   #define BLIND_EYES_CLOSED     1
 // end family: val_blind
@@ -3195,7 +3195,7 @@ typedef signed int        hObj;
 #define SLEEPING      7
 #define ASLEEP        7  /* alias of SLEEPING */
 // end family: stati
-// family: val_sleep stored ordinal i16
+// family: val_sleep stored ordinal i16 val-of SLEEPING
   #define SLEEP_MAGIC   1
   #define SLEEP_NATURAL 2
   #define SLEEP_FATIGUE 3
@@ -3206,7 +3206,7 @@ typedef signed int        hObj;
 #define AGG_MON       8
 #define PARALYSIS     9
 // end family: stati
-// family: val_para stored ordinal i16
+// family: val_para stored ordinal i16 val-of PARALYSIS
   #define PARA_HELD   0
   #define PARA_HYPNOTIZED 1
   #define PARA_DAZED 2
@@ -3214,7 +3214,7 @@ typedef signed int        hObj;
 // family: stati stored ordinal u8
 #define AFRAID        10
 // end family: stati
-// family: val_fear stored ordinal i16
+// family: val_fear stored ordinal i16 val-of AFRAID
   #define FEAR_MAGIC    0
   #define FEAR_PANIC    1
   #define FEAR_MANA     2
@@ -3225,7 +3225,7 @@ typedef signed int        hObj;
 // family: stati stored ordinal u8
 #define STUCK         11
 // end family: stati
-// family: val_stuck stored ordinal i16
+// family: val_stuck stored ordinal i16 val-of STUCK
     #define STUCK_STICKY  1
     #define STUCK_PINNED  2
     #define STUCK_WEAPON  3
@@ -3273,7 +3273,7 @@ typedef signed int        hObj;
 #define SPRINTING     60
 #define GRABBED       62
 // end family: stati
-// family: val_grabbed stored ordinal i16
+// family: val_grabbed internal
   #define GR_GRABBED   1
   #define GR_GRAPPLED  2
   #define GR_SWALLOWED 3
@@ -3288,7 +3288,7 @@ typedef signed int        hObj;
 #define GRAPPLING     64
 #define HIDING        65
 // end family: stati
-// family: val_hiding stored ordinal i16
+// family: val_hiding stored ordinal i16 val-of HIDING
   #define HI_SHADOWS   1 /* rogues */
   #define HI_CEILING   2 /* lurker above, darkmantle, etc. */
   #define HI_UNDER     3 /* hide under objects */
@@ -3305,7 +3305,7 @@ typedef signed int        hObj;
 #define TRACKING      73 /* Rangers */
 #define ILLUSION      74
 // end family: stati
-// family: val_illusion stored bits i16
+// family: val_illusion internal
   #define IL_SPECTRAL 1
   #define IL_IMPROVED 2
   #define IL_ADVANCED 4
@@ -3319,7 +3319,7 @@ typedef signed int        hObj;
 #define TUMBLING      76
 #define SINGING       77  
 // end family: stati
-// family: val_singing stored ordinal i16
+// family: val_singing stored ordinal i16 val-of SINGING
   #define BARD_COURAGE    1
   #define BARD_FASCINATE  2
   #define BARD_COUNTER    3
@@ -3339,7 +3339,7 @@ typedef signed int        hObj;
 #define GENERATION    84
 #define ELEVATED      85
 // end family: stati
-// family: val_elevated stored ordinal i16
+// family: val_elevated stored ordinal i16 val-of ELEVATED
   #define ELEV_TREE    1
   #define ELEV_CEILING 2   
 // end family: val_elevated
@@ -3354,7 +3354,7 @@ typedef signed int        hObj;
 #define ANC_MEM       93
 #define ENGULFED      94
 // end family: stati
-// family: val_engulfed stored ordinal i16
+// family: val_engulfed stored ordinal i16 val-of ENGULFED+ENGULFER
   #define EG_SWALLOW  1   
   #define EG_ENGULF   2
 // end family: val_engulfed
@@ -3366,7 +3366,7 @@ typedef signed int        hObj;
 
 #define INVIS         100
 // end family: stati
-// family: val_invis stored ordinal i16
+// family: val_invis stored ordinal i16 val-of INVIS
   #define INV_NORMAL   1
   #define INV_IMPROVED 2
 // end family: val_invis
@@ -3374,7 +3374,7 @@ typedef signed int        hObj;
 #define SEE_INVIS     101
 #define PHASED        102
 // end family: stati
-// family: val_phased stored ordinal i16
+// family: val_phased stored ordinal i16 val-of PHASED
   #define PHASE_MATERIAL     0
   #define PHASE_VORTEX       1
   #define PHASE_ASTRAL       2
@@ -3414,7 +3414,7 @@ typedef signed int        hObj;
 #define WATER_WALKING 130
 #define REFLECTING    131 /* General "block area magic" stati */
 // end family: stati
-// family: val_reflecting stored ordinal i16
+// family: val_reflecting internal
   #define REF_REFLECT   1 /* turn beam back to origin -- Shield of Reflection */
   #define REF_TURNING   2 /* turn percent of magic back -- Spell Turning */
   #define REF_ABSORB    3 /* absorb physical magic -- Rod of Absorbtion */
@@ -3428,7 +3428,7 @@ typedef signed int        hObj;
 #define PREPARED      136 /* Contingency */
 #define CHARMED       137 /* Three levels of charm in Incursion, in Val: */
 // end family: stati
-// family: val_charmed stored ordinal i16
+// family: val_charmed stored ordinal i16 val-of CHARMED
 #define   CH_CHARM    1   /*   No longer attacks you (charm person) */
 #define   CH_CALMED   2   /*   Won't attack if you have not yet. */
 #define   CH_ALLY     3   /*   Will fight on your behalf */
@@ -3446,7 +3446,7 @@ typedef signed int        hObj;
 #define MANIFEST      144
 #define MISS_CHANCE   145
 // end family: stati
-// family: val_miss stored ordinal i16
+// family: val_miss stored ordinal i16 val-of MISS_CHANCE
   #define MISS_RANGED  1
   #define MISS_FULL    2
 // end family: val_miss
@@ -3539,7 +3539,7 @@ typedef signed int        hObj;
 #define HOME_REGION       224
 #define GAZE_REFLECTION   225
 // end family: stati
-// family: val_gaze_reflection stored ordinal i16
+// family: val_gaze_reflection stored ordinal i16 val-of GAZE_REFLECTION
   #define GR_REFLECT      1
   #define GR_IMMUNE       2
 // end family: val_gaze_reflection
@@ -3593,7 +3593,7 @@ typedef signed int        hObj;
 #define IsAdjustStati(n) (((n) >= ADJUST) && ((n) <= ADJUST_LUCK))
 #define IsAbilityStati(n) (((n) >= WEP_SKILL) && ((n) <= EXTRA_FEAT))
 // end no-family
-// family: ta stored ordinal i16
+// family: ta stored ordinal i16 val-of ANIMAL_COMPANION+HAS_ANIMAL
 
 #define TA_ENEMY     1
 #define TA_ALLY      2 /* Touch-healing spells */
@@ -3806,7 +3806,7 @@ typedef signed int        hObj;
 #define EA_SLAYING  18 /* Slay Living, PW Kill, Disintegrate, etc. */
 #define EA_DETECT   20  /* Misc1 = Below; Misc2 = Range (or 0 = board) */
 // end family: ea
-// family: det stored bits i16
+// family: det internal
   #define DET_VISIBLE      0x01 /* Highlighted targets become visible */     
   #define DET_VALUABLE     0x02 /* Sort by value in gold */
   #define DET_REVEAL       0x04 /* Show text descsribing found targets */
@@ -3932,7 +3932,7 @@ typedef signed int        hObj;
 #define COL_SONIC    28
 #define COL_SILVERY  29
 // end family: col
-// family: fi stored bits u32
+// family: fi stored bits u32 field-of Map.Fields.Element.FType
 
 /* Field types are sorted in order of glyph
    precedance, so a square in fields 6 and 9
@@ -4397,7 +4397,7 @@ typedef signed int        hObj;
 #define SAC_DEFAULT      (-102)
 #define SAC_UNWORTHY     (-103)    
 // end family: sac
-// family: gs stored bits u16
+// family: gs stored bits u16 elem-of Character.godFlags
 
 #define GS_INVOLVED      0x0001
 #define GS_FORSAKEN      0x0002
@@ -4548,7 +4548,7 @@ typedef signed int        hObj;
 #define WIN_MESSAGE2 25
 #define WIN_LAST     26
 // end family: win
-// family: qky stored ordinal i16
+// family: qky stored ordinal i16 field-of Player.QuickKeys.QuickKey.QuickKeys_Type
 
 #define QKY_SPELL    1
 #define QKY_ITEM     2
@@ -4564,7 +4564,7 @@ typedef signed int        hObj;
 #define MAX_PATH_LENGTH 1024
 #define MAX_PARTS       16
 // end no-family
-// family: opt stored ordinal u16
+// family: opt stored ordinal u16 index-of Player.Options
 
 
 
@@ -4587,7 +4587,7 @@ typedef signed int        hObj;
 #define OPT_TRANSGRESS_HINTS    116
 #define OPT_DIFFICULTY          117
 // end family: opt
-// family: val_difficulty stored ordinal i8
+// family: val_difficulty stored ordinal i8 at-of Player.Options[OPT_DIFFICULTY]
 #define   DIFF_EXPLORE          0
 #define   DIFF_TRAINING         1
 #define   DIFF_BASELINE         2
@@ -4707,7 +4707,7 @@ typedef signed int        hObj;
 #define OPT_WIND_FONT           433
 #define OPT_SOFT_PALETTE        434
 // end family: opt
-// family: val_palette stored ordinal i8
+// family: val_palette stored ordinal i8 at-of Player.Options[OPT_SOFT_PALETTE]
 /* Values OPT_SOFT_PALETTE may hold. The options file (Player::LoadOptions)
    stores one byte per option and is not versioned, so 0 and 1 MUST keep the
    meanings they had when this was a plain OFF/ON switch. Append new palettes
@@ -4723,7 +4723,7 @@ typedef signed int        hObj;
 #define OPT_LIGHT_EXPLORED      435
 #define OPT_LIGHT_BRIGHT        436
 // end family: opt
-// family: val_light_step stored ordinal i8
+// family: val_light_step stored ordinal i8 at-of Player.Options[OPT_LIGHT_EXPLORED]+Player.Options[OPT_LIGHT_BRIGHT]
 /* The shared step scale both options use, ordered as the menu reads it:
    darkest to brightest, with the middle step reproducing the picture exactly
    as it was before either option existed. */
@@ -4757,7 +4757,7 @@ typedef signed int        hObj;
    existing generation, and never lower OPT_GEN_CURRENT. */
 #define OPT_SETTINGS_GEN        437
 // end family: opt
-// family: opt_gen stored ordinal i8
+// family: opt_gen stored ordinal i8 at-of Player.Options[OPT_SETTINGS_GEN]
 #define OPT_GEN_NONE            0   /* written before this field existed */
 #define OPT_GEN_LIGHT_TRIM      1   /* added OPT_LIGHT_EXPLORED, OPT_LIGHT_BRIGHT */
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
@@ -4825,7 +4825,7 @@ typedef signed int        hObj;
 #define LITERAL_CHAR1(value) ~(value >> 8)
 #define LITERAL_CHAR2(value) (value & 0xFF)
 // end family: textcode
-// family: colour stored ordinal i8
+// family: colour stored ordinal i8 field-of Map.Fields.Element.Color
 
 /* Colours known by the game engine. */
 
@@ -4874,7 +4874,7 @@ typedef signed int        hObj;
 /* inc-cjos0: a saved map grid holds each tile's glyph word as it is packed
    here (src/SaveV1.cpp copies the word raw), so the widths, shifts and masks
    below are stored values. Changing one changes what every saved glyph means. */
-// family: glyph_word stored ordinal u32
+// family: glyph_word stored ordinal u32 glyph-of Thing.Image+Door.SecretSavedGlyph+Map.Fields.Element.Image+Map.ov_GlyphImage
 #define GLYPH_ID_BITS			12
 #define GLYPH_FORE_BITS			COLOUR_BITS
 #define GLYPH_BACK_BITS			COLOUR_BITS  /* alias of GLYPH_FORE_BITS */

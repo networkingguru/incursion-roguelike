@@ -1,0 +1,2 @@
+# P33: side A's new sp_flag member SP_GRWA (= 0x1), planted by name
+spell Endure Fire SP_GRWA

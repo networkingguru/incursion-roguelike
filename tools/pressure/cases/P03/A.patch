@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1249,6 +1249,7 @@
+ 
+ 
+ #define A_PUNC    1   /* Punch                   */
++#define A_GRWA 115
+ #define A_KICK    2   /* Kick                     */
+ #define A_BASH    4   /* Bash (Bludgeon)          */
+ #define A_GRAB    5   /* Grab                    */

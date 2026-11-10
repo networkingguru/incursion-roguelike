@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1972,6 +1972,7 @@
+ #define AL_NONCHAOTIC 0x0020
+ #define AL_NONGOOD    0x0040
+ #define AL_NONEVIL    0x0080
++#define AL_GRWB 0x100
+ // end family: al
+ // family: attr stored ordinal i8 grows ATTR_LAST val-of ADJUST_DMG
+ 

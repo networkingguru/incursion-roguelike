@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2933,6 +2933,7 @@
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
+ 
+ #define MM_AMPLIFY       0x00000001  /* Penetrates magic resistance */
++#define MM_GRWA 0x10000000
+ #define MM_AUGMENT       0x00000002  /* Summoned creatures stronger */
+ #define MM_ANCHOR        0x00000004  /* Extended duration */
+ #define MM_BIND          0x00000008  /* Will not harm you */

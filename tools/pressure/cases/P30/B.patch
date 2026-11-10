@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3955,6 +3955,7 @@
+ #define FI_OBVIOUS    0x00004000
+ #define FI_SIZE       0x00008000
+ #define FI_DARKNESS   0x00010000
++#define FI_GRWB 0x20000
+ // end family: fi
+ // family: por internal
+ 

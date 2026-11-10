@@ -18,7 +18,7 @@
 /* ww: this would be a class, but disjoint unions are too annoying to do 
  * correctly in C++, and it would be a pain to unserialize later ...
  * actually, everything here used to be a class, but I gave up ... */
-// family: hostility_why_type stored enum i32
+// family: hostility_why_type stored enum i32 word-of Creature.ts.t.why.t_why_data@8
 typedef enum {
     HostilityDefault,
     HostilityFeud,      // MA_ELF, MA_DROW
@@ -62,7 +62,7 @@ typedef struct HostilityWhy {
   String        & Dump();
 } HostilityWhy;
 
-// family: hostility_qual stored enum i32
+// family: hostility_qual stored enum i32 word-of Creature.ts.t.why.t_why_data@0
 typedef enum {
     Neutral,      // I will ignore you unless you hurt me
     Enemy,        // I will attack you now
@@ -70,7 +70,7 @@ typedef enum {
 } HostilityQual; 
 // end family: hostility_qual
 
-// family: hostility_quant stored enum i32
+// family: hostility_quant stored enum i32 word-of Creature.ts.t.why.t_why_data@4
 typedef enum {
     Apathy        = 0,    // "I don't care": only for Neutral above
     Minimal       = 1,
@@ -128,7 +128,7 @@ typedef struct TargetWhy {
   void                  Set(TargetWhyType _type);
 } TargetWhy; 
 
-// family: target_type stored enum i32
+// family: target_type stored enum i32 field-of Creature.ts.t.t_type
 typedef enum {
     TargetInvalid,  // should never been seen!
 

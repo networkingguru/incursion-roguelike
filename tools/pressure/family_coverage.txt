@@ -1,0 +1,32 @@
+# Stored families that have no positive pressure case (tools/check_family_cases.py, inc-cjos0 9f-pre P6a).
+# One line per family: `<family> <reason>`. A family that gains a case MUST lose its line.
+# Map groups are those of logs/phase9/9fpre-family-map.md.
+sc every free bit of its i16 word (9-15) is held by a member of internal family sc_all (SC_THE.. in the same marks), so a new member collides in sc_all at its own landing and tools/move_branch_values.py moves it onto another sc_all bit (reported to the main session)
+df_door full width (8 of 8 bits held): any new member repeats a held value, so the landing refuses on the duplicate before the mover runs (P26, expect refuse, observed on route M)
+ms one free bit (0x80): the second side takes the same bit, so the landing of B refuses on the duplicate before the mover runs (P25, expect refuse)
+sp_flag full width (16 of 16 bits held): any new member repeats a held value, so the landing refuses on the duplicate before the mover runs (P33, expect refuse)
+sk_high_first sentinel only (fixes where skills start in the shared feat/skill space, no stored member): covered by the refusals N03-lastskill, N06-sk and N08
+t_type framing: the record type byte of every record; a new T_ member needs a new record class, and every planted object already carries its type
+target_type the planter writes Target.type as TargetEnemy only (src/Dump.cpp target verb), so a new TargetXxx enumerator cannot be planted
+lim_dungeons map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+lim_modules map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+lim_spells map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+lim_overlay_glyphs map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+ma_count map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+ma_high_first map group 1d (not stored itself, defines the index to type mapping): a pressure case for it is a later brief
+sk_count map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+featbits map group 1d (length only): covered by tools/check_array_growth.sh; a pressure case for it is a later brief
+glyph_word map group 1e (packed glyph word): a pressure case for it is a later brief
+glyph map group 1e (low 12 bits of a glyph word): a pressure case for it is a later brief
+colour map group 1e (nibbles of a glyph word, Field.Color): a pressure case for it is a later brief
+col map group 1e (overflow of the fore nibble): a pressure case for it is a later brief
+val_difficulty map group 1f (options): a pressure case for it is a later brief
+val_palette map group 1f (options, Options.Dat decides on load): a pressure case for it is a later brief
+val_light_step map group 1f (options, Options.Dat decides on load): a pressure case for it is a later brief
+opt_gen map group 1f (options, Options.Dat decides on load): a pressure case for it is a later brief
+hostility_why_type map group 1g (bytes inside the t_why_data blob): a pressure case for it is a later brief
+hostility_qual map group 1g (bytes inside the t_why_data blob): a pressure case for it is a later brief
+hostility_quant map group 1g (bytes inside the t_why_data blob): a pressure case for it is a later brief
+dt map group 1g (type byte of a script variable inside the Variables blob): a pressure case for it is a later brief
+v1_kind map group 1g (file framing, the kind byte after every tag): a pressure case for it is a later brief
+v1_pool map group 1g (file framing, the pool byte of a memory-segment row): a pressure case for it is a later brief

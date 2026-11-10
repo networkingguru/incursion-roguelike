@@ -11,7 +11,7 @@
 enum btype { SYS_OBJ, LOC_VAR, MOD_FUNC, GLOB_VAR, MEM_VAR, MEM_FUNC, 
              RES_VAR, SYS_FUNC, RES_MEM, RES_FUNC, ANY };
 
-// family: dt stored ordinal u8
+// family: dt stored ordinal u8 field-of Game.ScriptVariable
 #define DT_VOID     1
 #define DT_INT32    2
 #define DT_HOBJ     3

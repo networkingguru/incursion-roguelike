@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1421,6 +1421,7 @@
+ #define TS_NODISARM 0x0004
+ #define TS_SEARCHED 0x0008
+ #define TS_NORESET  0x0010
++#define TS_GRWB 0x20
+ // end family: ts
+ // family: ms stored bits u16 field-of Creature.StateFlags
+ 

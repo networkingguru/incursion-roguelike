@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2430,6 +2430,7 @@
+ #define WQ_LAWFUL        4
+ #define WQ_BALANCE       5
+ #define WQ_CORROSIVE     6
++#define WQ_GRWB 82
+ #define WQ_FLAMING       7
+ #define WQ_SHOCKING      8
+ #define WQ_FROST         9

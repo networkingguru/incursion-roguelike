@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2574,6 +2574,7 @@
+ // family: df_door stored bits u8 field-of Door.DoorFlags
+ 
+ #define DF_VERTICAL 0x01
++#define DF_GRWA 0x1
+ #define DF_OPEN     0x02
+ #define DF_STUCK		0x04
+ #define DF_LOCKED		0x08

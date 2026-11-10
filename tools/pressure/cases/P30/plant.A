@@ -1,0 +1,2 @@
+# P30: side A's new fi member FI_GRWA (= 0x20000), planted by name
+set field FType FI_GRWA

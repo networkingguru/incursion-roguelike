@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2564,6 +2564,7 @@
+ 
+ 
+ #define WS_NOT_PROF      0
++#define WS_GRWA 7
+ #define WS_PROFICIENT    1
+ #define WS_FOCUSED       2
+ #define WS_SPECIALIST    3

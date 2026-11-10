@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3448,6 +3448,7 @@
+ // end family: stati
+ // family: val_miss stored ordinal i16 val-of MISS_CHANCE
+   #define MISS_RANGED  1
++  #define MISS_GRWA 3
+   #define MISS_FULL    2
+ // end family: val_miss
+ // family: stati stored ordinal u8

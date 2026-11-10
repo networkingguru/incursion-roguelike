@@ -313,7 +313,7 @@ static int v1FrameDepth;
    the owner (the last V1ProbeScope) plus "." and the name of each embed opened
    since. An indexed name is "<name>#<i>". */
 
-// family: t_type stored ordinal u8, t_all internal
+// family: t_type stored ordinal u8 field-of Envelope.Type, t_all internal
 #define V1_REC_NAMES 200   /* record type byte of the name table; no T_ value is this large */
 // end family: t_type, t_all
 
@@ -4772,6 +4772,8 @@ bool Registry::V1RunSchemaTest(const char *outDir)
           pl->BAttr[i] = (int16)(10 + i);
         for (i = 0; i != ATTR_LAST; i++)
           pl->KAttr[i] = (int16)(300 + i);
+        for (i = 0; i != ATTR_LAST; i++)
+          pl->Attr[i] = (int16)(500 + i);   /* tools/check_array_growth.sh compares these */
         for (i = 0; i != SK_COUNT; i++)
           pl->SkillRanks[i] = (int8)(i % 20);
         for (i = 0; i != (FEATBITS_LAST/8)+1; i++)
@@ -5686,6 +5688,116 @@ bool Registry::V1RunSchemaTest(const char *outDir)
       ok = ok && grpOk;
     }
 
+    /* group 6 (inc-cjos0 9f-pre P4): game.sav holds the Game record and one Map
+       with the arrays whose limits may grow (MAX_MODULES, MAX_DUNGEONS,
+       MAX_OVERLAY_GLYPHS), each with nonzero values.
+       tools/check_array_growth.sh compares them. WRITE ONLY: a load would
+       overwrite theGame. */
+    {
+      bool grpOk = true;
+      v1CovFindings = 0;
+      Registry *regK = new Registry();
+      String pk;
+      pk = Format("%s/game.sav", outDir);
+      Map *gmap = NULL;
+      Game &gm = *theGame;
+      char   *segSave = gm.MDataSeg[0];
+      uint32  segSizeSave = gm.MDataSegSize[0];
+      rID     dIDSave[3];
+      int16   dSizeSave[3];
+      hObj   *dLevSave[3];
+      for (i = 0; i != 3; i++)
+        { dIDSave[i] = gm.DungeonID[i]; dSizeSave[i] = gm.DungeonSize[i]; dLevSave[i] = gm.DungeonLevels[i]; }
+
+      try
+        {
+          theRegistry = regK;
+          regK->RegisterObject(theGame, true);
+
+          size_t np = (size_t)gm.NumPlayers();
+          size_t seg0 = (size_t)mod->szDataSeg;
+          size_t seg1 = seg0 + sizeof(MonMem) * (size_t)mod->szMon * np;
+          size_t segTotal = seg1 + sizeof(ItemMem) * (size_t)mod->szItm * np +
+                            sizeof(EffMem) * (size_t)mod->szEff * np +
+                            sizeof(RegMem) * (size_t)mod->szReg * np;
+          gm.MDataSegSize[0] = (uint32)segTotal;
+          gm.MDataSeg[0] = (char*) malloc(segTotal);
+          if (!gm.MDataSeg[0])
+            throw EMEMORY;
+          memset(gm.MDataSeg[0], 0, segTotal);
+          for (j = 0; j != 3 && (uint32)j < (uint32)mod->szMon; j++)
+            {
+              MonMem *mm = (MonMem*)(gm.MDataSeg[0] + seg0 + sizeof(MonMem) * (size_t)j * np);
+              mm->Battles = (unsigned)(3 + j);
+              mm->Kills = (unsigned)(5 + j);
+              mm->Seen = 1;
+            }
+          for (j = 0; j != 3 && (uint32)j < (uint32)mod->szItm; j++)
+            {
+              ItemMem *im = (ItemMem*)(gm.MDataSeg[0] + seg1 + sizeof(ItemMem) * (size_t)j * np);
+              im->Known = 1;
+              im->ProfLevel = (unsigned)(1 + j);
+            }
+
+          for (i = 0; i != 3; i++)
+            {
+              gm.DungeonID[i] = mod->DungeonID((uint16)i);
+              gm.DungeonSize[i] = (int16)(4 + i);
+              gm.DungeonLevels[i] = (hObj*) malloc(sizeof(hObj) * (size_t)(gm.DungeonSize[i] + 1));
+              if (!gm.DungeonLevels[i])
+                throw EMEMORY;
+              for (j = 0; j <= gm.DungeonSize[i]; j++)
+                gm.DungeonLevels[i][j] = (hObj)(1000 + 10 * i + j);
+            }
+
+          size_t mapSz = typeSize((int8)T_MAP);
+          gmap = (Map*) malloc(mapSz);
+          if (!gmap)
+            throw EMEMORY;
+          memset((void*)gmap, 0, mapSz);
+          new((Object*)gmap) Map(regK);
+          gmap->Type = T_MAP;
+          gmap->myHandle = regK->RegisterObject(gmap);
+          gmap->ov.Activate();
+          for (i = 0; i != MAX_OVERLAY_GLYPHS; i++)
+            gmap->ov.AddGlyph((int16)(i + 1), (int16)(2 * i + 1), (Glyph)(0x01000000u + (uint32)i));
+
+          memset(&fh, 0, sizeof(fh));
+          fh.Sig = SIGNATURE;
+          strcpy(fh.Version, SaveSchemaID());
+          strncpy(fh.Name, "schematest game", 71);
+          fh.numGroups = 1;
+          fh.Compression = SaveV1_Raw() ? 0 : 1;
+          T1->OpenWrite(pk);
+          T1->FWrite(&fh, sizeof(fh));
+          regK->SaveGroupV1(*T1, 0);
+          T1->Close();
+        }
+      catch (int error_number)
+        {
+          fprintf(stderr, "incursion -schematest: game.sav: %s\n",
+                  Lookup(FileErrors, error_number));
+          grpOk = false;
+        }
+      theRegistry = savedReg;
+      /* theGame goes back to what LoadModules left. The Map is leaked, like regK. */
+      free(gm.MDataSeg[0]);
+      gm.MDataSeg[0] = segSave;
+      gm.MDataSegSize[0] = segSizeSave;
+      for (i = 0; i != 3; i++)
+        {
+          free(gm.DungeonLevels[i]);
+          gm.DungeonID[i] = dIDSave[i]; gm.DungeonSize[i] = dSizeSave[i]; gm.DungeonLevels[i] = dLevSave[i];
+        }
+      if (v1CovFindings)
+        {
+          printf("%ld coverage findings\n", v1CovFindings);
+          grpOk = false;
+        }
+      printf("SCHEMATEST GROUP game %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
     /* inc-cjos0 phase 7f-2: the skill number helpers and the array lengths
        they size, printed for tools/check_skill_numbers.sh to assert. The one
        self-check here is the round trip SkillByIndex(SkillIndex(n)) == n. */
@@ -5840,6 +5952,13 @@ bool Registry::V1RunSchemaLoad(const char *path)
                 if (pl->Options[i])
                   printf("field Player.Options[%d]=%d\n", (int)i, (int)pl->Options[i]);
               printf("field Player.cAutoBuff=%d\n", (int)pl->cAutoBuff);
+              continue;
+            }
+          if (o->Type == T_GAME || o->Type == T_MAP)
+            {
+              /* The Game and Map arrays whose limits may grow are printed by
+                 lines tools/check_array_growth.sh plants before this one. */
+              printf("field %s.present=1\n", o->Type == T_GAME ? "Game" : "Map");
               continue;
             }
           if (!o->isItem())
@@ -6357,26 +6476,14 @@ static std::string v1FvInt(const uint8 *p, size_t sz, bool sgn)
 # define FAMNAMES_MEASURED 0
 #endif
 
-struct V1FamTab { const char *fam; const struct FamName *rows; int n; };
-#if FAMNAMES_MEASURED
-static const V1FamTab v1FamTabs[] = {
-    { "stati", FamNames_stati, FamNames_stati_n }, { "ss", FamNames_ss, FamNames_ss_n },
-    { "ft", FamNames_ft, FamNames_ft_n },          { "sk", FamNames_sk, FamNames_sk_n },
-    { "attr", FamNames_attr, FamNames_attr_n },    { "ca", FamNames_ca, FamNames_ca_n },
-    { "sl", FamNames_sl, FamNames_sl_n },          { "ma", FamNames_ma, FamNames_ma_n },
-    { "kn", FamNames_kn, FamNames_kn_n },          { "if_flag", FamNames_if_flag, FamNames_if_flag_n },
-    { "target_why_type", FamNames_target_why_type, FamNames_target_why_type_n },
-};
-#endif
-
 /* The name the current build gives <value> in family <fam>, or NULL (no table, or no name). */
 const char *V1FamName(const char *fam, long value)
   {
 #if FAMNAMES_MEASURED
-    for (size_t t = 0; t != sizeof(v1FamTabs) / sizeof(v1FamTabs[0]); t++)
-      if (!strcmp(v1FamTabs[t].fam, fam))
-        for (int i = 0; i != v1FamTabs[t].n; i++)
-          if (v1FamTabs[t].rows[i].value == value) return v1FamTabs[t].rows[i].name;
+    for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+      if (!strcmp(v1FamTabsGen[t].fam, fam))
+        for (int i = 0; i != v1FamTabsGen[t].n; i++)
+          if (v1FamTabsGen[t].rows[i].value == value) return v1FamTabsGen[t].rows[i].name;
 #else
     (void)fam; (void)value;
 #endif
@@ -6387,23 +6494,234 @@ const char *V1FamName(const char *fam, long value)
 bool V1FamValue(const char *fam, const char *name, long &value)
   {
 #if FAMNAMES_MEASURED
-    for (size_t t = 0; t != sizeof(v1FamTabs) / sizeof(v1FamTabs[0]); t++)
-      if (!strcmp(v1FamTabs[t].fam, fam))
-        for (int i = 0; i != v1FamTabs[t].n; i++)
-          if (!strcmp(v1FamTabs[t].rows[i].name, name)) { value = v1FamTabs[t].rows[i].value; return true; }
+    for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+      if (!strcmp(v1FamTabsGen[t].fam, fam))
+        for (int i = 0; i != v1FamTabsGen[t].n; i++)
+          if (!strcmp(v1FamTabsGen[t].rows[i].name, name)) { value = v1FamTabsGen[t].rows[i].value; return true; }
 #else
     (void)fam; (void)name; (void)value;
 #endif
     return false;
   }
 
-/* "(NAME)", or "(?)" for a value with no name; "" when the build has no tables at all. */
+/* "(NAME)", or "(?)" for a value with no name, "(NOFAM:<fam>)" for a family with no table; "" when the build has no tables at all. */
 static std::string v1FamShow(const char *fam, long value)
   {
     if (!FAMNAMES_MEASURED) return "";
+    bool has = false;
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+      if (!strcmp(v1FamTabsGen[t].fam, fam)) has = true;
+#endif
+    if (!has) return std::string("(NOFAM:") + fam + ")"; /* a family with no table: a misspelt name, never "(?)" */
     const char *n = V1FamName(fam, value);
     return n ? std::string("(") + n + ")" : "(?)";
   }
+
+/* inc-cjos0 9f-pre P2: the family a status's val (or mag) holds, from the `val-of` / `mag-of` marks; NULL when the
+   status holds a plain number there. */
+const char *V1StatSlotFam(long stati, bool mag)
+  {
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1StatSlotsGen) / sizeof(v1StatSlotsGen[0]); t++)
+      if (v1StatSlotsGen[t].stati == stati) return mag ? v1StatSlotsGen[t].magFam : v1StatSlotsGen[t].valFam;
+#else
+    (void)stati; (void)mag;
+#endif
+    return NULL;
+  }
+
+/* Whether the family is a bits family. */
+static bool v1FamIsBits(const char *fam)
+  {
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+      if (!strcmp(v1FamTabsGen[t].fam, fam)) return v1FamTabsGen[t].bits != 0;
+#else
+    (void)fam;
+#endif
+    return false;
+  }
+
+/* The value of a status's val or mag in family <fam>: "(NAME)", "(A|B)" for a bits family, "(?)" when no name or no
+   exact decomposition fits. -1 (the GainPermStati default, no value given) and an empty bit set print no name. */
+static std::string v1FamShowSlot(const char *fam, long value)
+  {
+    if (!FAMNAMES_MEASURED) return "";
+    if (!v1FamIsBits(fam)) {
+      if (value == -1 && !V1FamName(fam, value)) return "";
+      return v1FamShow(fam, value);
+    }
+    bool has = false;
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+      if (!strcmp(v1FamTabsGen[t].fam, fam)) {
+        has = true;
+        if (value == -1 || value == 0) return "";
+        unsigned long rest = (unsigned long)value & 0xFFFFUL;   /* val and mag are 16 bits wide */
+        std::string names;
+        for (int i = 0; i != v1FamTabsGen[t].n && rest; i++) {
+          unsigned long b = (unsigned long)v1FamTabsGen[t].rows[i].value;
+          if (b == 0 || (b & (b - 1)) || !(rest & b)) continue;   /* a member that is one bit and is still unnamed */
+          if (!names.empty()) names += '|';
+          names += v1FamTabsGen[t].rows[i].name;
+          rest &= ~b;
+        }
+        return rest ? std::string("(?)") : "(" + names + ")";
+      }
+#endif
+    (void)has;
+    return std::string("(NOFAM:") + fam + ")";
+  }
+
+/* inc-cjos0 9f-pre P3: the families whose `field-of` / `index-of` / `elem-of` marks claim a saved field. <key> is the
+   scope path without the record prefix and without any `#N`, then the field name (Creature.LastMoveDir). mode 0 = the
+   field's value, 1 = the array index, 2 = each array element. Empty when no family claims the field. */
+static std::vector<const char*> v1FieldFams(const std::string &key, int mode)
+  {
+    std::vector<const char*> out;
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FieldFamsGen) / sizeof(v1FieldFamsGen[0]); t++)
+      if (v1FieldFamsGen[t].key && v1FieldFamsGen[t].mode == mode && key == v1FieldFamsGen[t].key)
+        out.push_back(v1FieldFamsGen[t].fam);
+#else
+    (void)key; (void)mode;
+#endif
+    return out;
+  }
+
+/* inc-cjos0 9f-pre P5b: the family an `at-of` mark gives the element at <idx> of the saved array <key> (Player.Options),
+   or NULL. */
+const char *V1AtFam(const char *key, long idx)
+  {
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1AtFamsGen) / sizeof(v1AtFamsGen[0]); t++)
+      if (v1AtFamsGen[t].key && v1AtFamsGen[t].idx == idx && !strcmp(v1AtFamsGen[t].key, key)) return v1AtFamsGen[t].fam;
+#else
+    (void)key; (void)idx;
+#endif
+    return NULL;
+  }
+
+/* Every (family, mode) whose field ends in <field>: the planter's `set` verb asks which families claim a name. */
+std::vector<std::pair<const char*, int> > V1FieldClaims(const char *field)
+  {
+    std::vector<std::pair<const char*, int> > out;
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FieldFamsGen) / sizeof(v1FieldFamsGen[0]); t++)
+      {
+        if (!v1FieldFamsGen[t].key) continue;
+        const char *dot = strrchr(v1FieldFamsGen[t].key, '.');
+        if (!strcmp(dot ? dot + 1 : v1FieldFamsGen[t].key, field))
+          out.push_back(std::make_pair(v1FieldFamsGen[t].fam, v1FieldFamsGen[t].mode));
+      }
+#else
+    (void)field;
+#endif
+    return out;
+  }
+
+/* The key of a field line: <scope> is "hN:tT/Scope.Embed#3.Embed", <name> the table name. */
+static std::string v1FvKey(const std::string &scope, const std::string &name)
+  {
+    size_t sl = scope.find('/');
+    std::string k = sl == std::string::npos ? scope : scope.substr(sl + 1), out;
+    for (size_t i = 0; i < k.size(); i++)
+      {
+        if (k[i] == '#') { while (i + 1 < k.size() && isdigit((unsigned char)k[i + 1])) i++; continue; }
+        out += k[i];
+      }
+    return out + "." + name;
+  }
+
+/* "(NAME)", "(A|B)", "(?)" or "" for a stored value <raw> (the storage bytes, unsigned) of <bytes> bytes, in one of
+   <fams> (the first that names it wins). The family's own width decides the decoding: a bits family reads the BIT
+   PATTERN, so the sign bit of an I8 or I16 member is a flag (DF_PICKED 0x80), and a set bit outside the family's width
+   is "(?)". An ordinal family reads the value signed when the family is signed. -1 and an empty bit set print nothing;
+   an unnamed 0 prints nothing when <empty0> (an array element: 0 is an empty slot). */
+static std::string v1FamShowField(const std::vector<const char*> &fams, unsigned long long raw, size_t bytes, bool empty0)
+  {
+    if (!FAMNAMES_MEASURED || fams.empty()) return "";
+    std::string firstMiss, ordNames;
+    bool quiet = false;
+    for (size_t k = 0; k != fams.size(); k++)
+      {
+        const char *fam = fams[k];
+        const V1FamTab *tab = NULL;
+#if FAMNAMES_MEASURED
+        for (size_t t = 0; t != sizeof(v1FamTabsGen) / sizeof(v1FamTabsGen[0]); t++)
+          if (!strcmp(v1FamTabsGen[t].fam, fam)) tab = &v1FamTabsGen[t];
+#endif
+        if (!tab) return std::string("(NOFAM:") + fam + ")";
+        unsigned long long wmask = tab->wbits >= 64 ? ~0ULL : ((1ULL << tab->wbits) - 1);
+        if (tab->bits)
+          {
+            if (raw == 0) return "";
+            unsigned long long rest = raw;
+            std::string names;
+            for (int i = 0; i != tab->n && rest; i++)
+              {
+                unsigned long long b = (unsigned long long)(unsigned long)tab->rows[i].value & wmask;
+                if (b == 0 || (b & (b - 1)) || !(rest & b)) continue;   /* only a member that is one bit */
+                if (!names.empty()) names += '|';
+                names += tab->rows[i].name;
+                rest &= ~b;
+              }
+            if (!rest) return "(" + names + ")";
+            firstMiss = "(?)";
+            continue;
+          }
+        long sv = (long)raw;
+        if (tab->sgn && bytes < 8)
+          { unsigned long long sb = 1ULL << (bytes * 8 - 1); sv = (long)((raw ^ sb) - sb); }
+        const char *nm = V1FamName(fam, sv);
+        /* two families that share one field (wq and aq: the item's kind says which) all show, `WQ_LAWFUL/AQ_FIRE_RES` */
+        if (nm) { if (ordNames.empty()) ordNames = nm; else if (ordNames.find(nm) == std::string::npos) ordNames += std::string("/") + nm; continue; }
+        if (sv == -1 || (sv == 0 && empty0)) { if (ordNames.empty()) quiet = true; continue; }
+        firstMiss = "(?)";
+      }
+    if (!ordNames.empty()) return "(" + ordNames + ")";
+    if (quiet && firstMiss.empty()) return "";
+    return firstMiss;
+  }
+
+/* inc-cjos0 9f-pre P5a: a glyph word a `glyph-of` mark claims prints `(GLYPH_X/fore=RED/back=BLACK)`: the id (family
+   glyph, bits 0-11), the fore and back colors (family colour, bits 12-15 and 16-19), and `/hi=0x..` for a bit above 19
+   (no field defines one). An id below GLYPH_FIRST prints as its character, `'k'`. A part with no name prints `?`. An all-zero word prints nothing. The glyph grids `glyphs`
+   and `memw` are blobs and stay hashed. */
+static std::string v1GlyphShow(unsigned long long raw)
+  {
+    if (!FAMNAMES_MEASURED || raw == 0) return "";
+    uint32 w = (uint32)raw;
+    long gid = (long)GLYPH_ID_VALUE(w);
+    char cb[16];   /* an id below GLYPH_FIRST is a literal character (src/Wposix.cpp:327), not a member of family glyph */
+    if (gid < GLYPH_FIRST) { if (gid > 32 && gid < 127) snprintf(cb, sizeof(cb), "'%c'", (char)gid); else snprintf(cb, sizeof(cb), "char=0x%02lx", gid); }
+    const char *id = gid < GLYPH_FIRST ? cb : V1FamName("glyph", gid);
+    const char *fo = V1FamName("colour", (long)GLYPH_FORE_VALUE(w));
+    const char *ba = V1FamName("colour", (long)GLYPH_BACK_VALUE(w));
+    std::string out = std::string("(") + (id ? id : "?") + "/fore=" + (fo ? fo : "?") + "/back=" + (ba ? ba : "?");
+    if (w >> (GLYPH_ID_BITS + GLYPH_ATTR_BITS))
+      { char b[24]; snprintf(b, sizeof(b), "/hi=0x%x", (unsigned)(w >> (GLYPH_ID_BITS + GLYPH_ATTR_BITS))); out += b; }
+    return out + ")";
+  }
+
+/* inc-cjos0 9f-pre P5a: the `word-of` marks of a blob field: (byte offset, family) of each 32-bit word. */
+static std::vector<std::pair<int, const char*> > v1WordFams(const std::string &key)
+  {
+    std::vector<std::pair<int, const char*> > out;
+#if FAMNAMES_MEASURED
+    for (size_t t = 0; t != sizeof(v1FieldFamsGen) / sizeof(v1FieldFamsGen[0]); t++)
+      if (v1FieldFamsGen[t].key && v1FieldFamsGen[t].mode >= 100 && key == v1FieldFamsGen[t].key)
+        out.push_back(std::make_pair(v1FieldFamsGen[t].mode - 100, v1FieldFamsGen[t].fam));
+#else
+    (void)key;
+#endif
+    return out;
+  }
+
+static std::string v1FvStatScope;   /* the Status record whose nature the walk saw last */
+static long v1FvWhyType = -1;       /* the t_why_type the walk saw last: it says what the t_why_data bytes hold */
+static long v1FvStatNature = -1;
 
 /* Which family names the INDEX of a saved array, or its bits. 0 = not a typed-index array. */
 static const char *v1FvIndexFam(const std::string &name)
@@ -6465,8 +6783,29 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
                 bool sgn = kind == K_I8 || kind == K_I16 || kind == K_I32 || kind == K_H;
                 val = v1FvInt(p + pos, fx, sgn);
                 kn = kind == K_H ? "h" : (sgn ? "int" : "uint");
-                if (scope.find(".Status#") != std::string::npos && (row.name == "nature" || row.name == "src"))
-                  val += v1FamShow(row.name == "nature" ? "stati" : "ss", atol(val.c_str()));
+                if (scope.find(".Status#") != std::string::npos)
+                  {
+                    if (row.name == "nature") { v1FvStatScope = scope; v1FvStatNature = atol(val.c_str()); }
+                    if (row.name == "nature" || row.name == "src")
+                      val += v1FamShow(row.name == "nature" ? "stati" : "ss", atol(val.c_str()));
+                    else if ((row.name == "val" || row.name == "mag") && scope == v1FvStatScope)
+                      {
+                        /* the family of this slot comes from the `val-of` / `mag-of` marks of the status's nature */
+                        const char *sf = V1StatSlotFam(v1FvStatNature, row.name == "mag");
+                        if (sf) val += v1FamShowSlot(sf, atol(val.c_str()));
+                      }
+                  }
+                else
+                  {
+                    /* a member a `field-of` mark claims prints the name beside its number (inc-cjos0 9f-pre P3) */
+                    std::string fkey = v1FvKey(scope, row.name);
+                    std::vector<const char*> ff = v1FieldFams(fkey, 0);
+                    unsigned long long rawv = 0;
+                    memcpy(&rawv, p + pos, fx);
+                    if (!ff.empty()) val += v1FamShowField(ff, rawv, fx, false);
+                    else if (!v1FieldFams(fkey, 3).empty()) val += v1GlyphShow(rawv);   /* a `glyph-of` mark */
+                    if (row.name == "t_why_type") v1FvWhyType = (long)(int32)rawv;
+                  }
               }
             pos += fx;
             fprintf(f, "%s %s %s %s%s\n", scope.c_str(), row.name.c_str(), kn, mem.c_str(), val.c_str());
@@ -6521,8 +6860,17 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
         /* A typed array (index = a status, skill, ability, slot, ...; Feats = one byte of feat bits) prints the
            name beside each element, and when it is long prints each NONZERO element, not a hash per 32. */
         const char *ifam = intEl ? v1FvIndexFam(row.name) : NULL;
+        std::string akey = intEl ? v1FvKey(scope, row.name) : std::string();
+        if (!ifam && intEl)
+          { std::vector<const char*> xi = v1FieldFams(akey, 1); if (!xi.empty()) ifam = xi[0]; }   /* an `index-of` mark */
+        std::vector<const char*> efams = intEl ? v1FieldFams(akey, 2) : std::vector<const char*>();   /* an `elem-of` mark */
+        bool glyphArr = intEl && es == 4 && !v1FieldFams(akey, 3).empty();   /* an array of glyph words (`glyph-of`) */
+        /* a long array an `index-of` mark claims (Player.Options) keeps its hash lines too; the nonzero elements follow them
+           with the index name and, where an `at-of` mark names one, the name of the value (inc-cjos0 9f-pre P5b) */
+        bool idxLong = intEl && n > 64 && ifam && !v1FvIndexFam(row.name);
+        bool elemLong = (!efams.empty() || glyphArr) && n > 64;   /* a long array keeps its hash lines; the nonzero elements follow them */
         bool featArr = intEl && row.name == "Feats";
-        bool typed = ifam || featArr;
+        bool typed = (ifam && !idxLong) || featArr || glyphArr || (!efams.empty() && !elemLong);
         uint32 step = (n <= 64 || typed) ? 1 : 32;   /* a long array logs a hash per 32 elements: a moved element still shows */
         if (step != 1)
           {
@@ -6552,6 +6900,10 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
                       if (ev & (1ULL << b)) { if (!names.empty()) names += '|'; const char *fn = V1FamName("ft", (long)i * 8 + b); names += fn ? fn : "?"; }
                     if (FAMNAMES_MEASURED && !names.empty()) val += "(" + names + ")";
                   }
+                else if (glyphArr)
+                  val += v1GlyphShow(ev);
+                else if (!efams.empty())
+                  val += v1FamShowField(efams, ev, es, true);
                 else if (FAMNAMES_MEASURED)
                   {
                     const char *nm = V1FamName(ifam, !strcmp(ifam, "sk") ? (long)SkillByIndex((int)i)
@@ -6560,6 +6912,49 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
                   }
               }
             fprintf(f, "%s %s%s %s %s%s\n", scope.c_str(), row.name.c_str(), idx, (step == 1 && intEl) ? "uint" : "arr", mem.c_str(), val.c_str());
+          }
+        if (elemLong)
+          for (uint32 i = 0; i != n; i++)
+            {
+              unsigned long long ev = 0;
+              memcpy(&ev, a + (size_t)i * es, es);
+              if (ev == 0) continue;
+              fprintf(f, "%s %s[%u] uint %s%s%s\n", scope.c_str(), row.name.c_str(), i, mem.c_str(),
+                      v1FvInt(a + (size_t)i * es, es, false).c_str(),
+                      (glyphArr ? v1GlyphShow(ev) : v1FamShowField(efams, ev, es, true)).c_str());
+            }
+        if (idxLong)
+          for (uint32 i = 0; i != n; i++)
+            {
+              unsigned long long ev = 0;
+              memcpy(&ev, a + (size_t)i * es, es);
+              if (ev == 0) continue;
+              const char *nm = V1FamName(ifam, (long)i);
+              std::string show = !FAMNAMES_MEASURED ? "" : nm ? std::string("(@") + nm + ")" : std::string("(?)");
+              const char *vf = V1AtFam(akey.c_str(), (long)i);
+              if (vf) { std::vector<const char*> one(1, vf); show += v1FamShowField(one, ev, es, false); }
+              fprintf(f, "%s %s[%u] uint %s%s%s\n", scope.c_str(), row.name.c_str(), i, mem.c_str(),
+                      v1FvInt(a + (size_t)i * es, es, true).c_str(), show.c_str());
+            }
+        /* inc-cjos0 9f-pre P5a: the Hostility inside t_why_data (quality at byte 0, quantity at 4, why type at 8 of the
+           20 bytes) when the why type carries one: WasSeenAndHostile and IsAllyOfEnemy both put a Hostility first */
+        if (es == 1 && n == 20 && row.name == "t_why_data")
+          {
+            long wsh = -1, iae = -1;
+            V1FamValue("target_why_type", "TargetWasSeenAndHostile", wsh);
+            V1FamValue("target_why_type", "TargetIsAllyOfEnemy", iae);
+            std::vector<std::pair<int, const char*> > wf = v1WordFams(v1FvKey(scope, row.name));
+            std::string base = mem.substr(0, mem.size() - 1);
+            if (v1FvWhyType >= 0 && (v1FvWhyType == wsh || v1FvWhyType == iae))
+              for (size_t k = 0; k != wf.size(); k++)
+                {
+                  if (wf[k].first < 0 || wf[k].first + 4 > (int)n) continue;
+                  unsigned long long wv = 0;
+                  memcpy(&wv, a + wf[k].first, 4);
+                  std::vector<const char*> one(1, wf[k].second);
+                  fprintf(f, "%s %s@%d int %s@%d=%s%s\n", scope.c_str(), row.name.c_str(), wf[k].first, base.c_str(), wf[k].first,
+                          v1FvInt(a + wf[k].first, 4, true).c_str(), v1FamShowField(one, wv, 4, false).c_str());
+                }
           }
       }
   }
@@ -6603,6 +6998,11 @@ void V1FvVariable(Module *mod, DebugInfo *d, int32 value)
       { snprintf(b, sizeof(b), "%d", (int)value); val = b; }
     std::string on = owner;   /* the value file is space-separated: an owner name keeps no spaces */
     for (size_t i = 0; i != on.size(); i++) if (on[i] == ' ') on[i] = '_';
+    { /* the variable's type byte, named by the family a `field-of Game.ScriptVariable` mark gives (dt): inc-cjos0 9f-pre P5a */
+      std::vector<const char*> tf = v1FieldFams("Game.ScriptVariable", 0);
+      std::string dn = tf.empty() ? std::string() : v1FamShowField(tf, (unsigned long long)(uint8)d->DataType, 1, false);
+      if (dn.size() > 2) val += "[dt=" + dn.substr(1, dn.size() - 2) + "]";   /* "(DT_INT)" -> "[dt=DT_INT]" */
+    }
     fprintf(f, "h128:t1/Game.ScriptVariable %s.%.31s %s %s\n", on.c_str(), d->Ident, kn, val.c_str());
     fflush(f);
   }
@@ -6618,6 +7018,11 @@ void V1FvRec(size_t start, uint8 type, uint32 handle)
     snprintf(rec, sizeof(rec), "h%u:t%u", (unsigned)handle, (unsigned)type);
     size_t mi = 0;
     memset(v1FvRowLen, 0, sizeof(v1FvRowLen));
+    { /* the record's type byte is a saved value with no table row: one line, named by the `field-of Envelope.Type` mark */
+      std::vector<const char*> tf = v1FieldFams("Envelope.Type", 0);
+      if (!tf.empty())
+        fprintf(f, "%s Envelope Type uint Type=%u%s\n", rec, (unsigned)type, v1FamShowField(tf, type, 1, false).c_str());
+    }
     if (len < 9 || !v1FvWalk(f, p + 9, len - 9, rec, NULL, mi) || mi != v1FvMembers.size())
       fprintf(f, "%s MALFORMED-RECORD x x\n", rec);
     fflush(f);

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1110,6 +1110,7 @@
+ 
+ 
+ #define AD_NORM    0    /* ordinary physical */
++#define AD_GRWA 95
+ #define AD_FIRE    1    /* fire damage */
+ #define AD_COLD    2    /* frost damage */
+ #define AD_ACID    3    /* acid/corrosive damage */

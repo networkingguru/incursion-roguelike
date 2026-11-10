@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3328,6 +3328,7 @@
+   #define BARD_PHOENIX    6
+   #define BARD_MASS       7
+   #define BARD_SPELLBREAK 8
++  #define BARD_GRWB 9
+ // end family: val_singing
+ // family: stati stored ordinal u8
+ #define ANIMAL_EMP_TRIED 78
