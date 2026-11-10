@@ -1361,8 +1361,13 @@ Wizard / Scroll Spell "Phantasmal Force" : EA_ILLUSION
       a failure ends the illusion at once. The caster can stop
       concentrating from the Cancel menu, which also ends the illusion."; 
     Flags: EF_DLONG, EF_SHOWNAME;
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Lists:
@@ -3009,8 +3014,13 @@ Wizard / Scroll Spell "Improved Phantasmal Force" : EA_ILLUSION
       by a failed check or from the Cancel menu, the illusion lasts 2 more
       rounds and then winks out."; 
     Flags: EF_DLONG, EF_SHOWNAME;
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Lists:
@@ -4720,8 +4730,13 @@ Wizard / Scroll Spell "Spectral Force" : EA_ILLUSION
       a failure ends concentration. When concentration ends, by a failed
       check or from the Cancel menu, the illusion lasts 4 more rounds and
       then winks out."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG;
@@ -6581,8 +6596,13 @@ Wizard Spell "Improved Spectral Force" : EA_ILLUSION
       level), and a failure ends concentration. When concentration ends,
       by a failed check or from the Cancel menu, the illusion lasts 4 more
       rounds and then winks out."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG, EF_SHOWNAME;
@@ -6712,8 +6732,13 @@ Wizard Spell "Shadow Monsters" : EA_ILLUSION
       inanimate source such as a trap, and this damage brings their current
       hit points to less than 80~ of their total, they are dispelled and
       cease to exist with regard to all characters."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG, EF_SHOWNAME, EF_IMONSTERS;
@@ -6729,8 +6754,13 @@ Wizard Spell "Shadow Magic" : EA_ILLUSION
       chance to disbelieve. All creatures suffer 30~ of the duplicated spell's
       normal damage; creatures who fail the disbelief check also suffer the
       remaining 70~ as psychosomatic damage."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_IBLAST;
@@ -7926,8 +7956,13 @@ Wizard Spell "Advanced Illusion" : EA_ILLUSION
       a failure ends concentration. When concentration ends, by a failed
       check or from the Cancel menu, the illusion lasts 4 more rounds and
       then winks out."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG, EF_SHOWNAME;
@@ -8153,8 +8188,13 @@ Wizard Spell "Demi-Shadow Monsters" : EA_ILLUSION
       50~ if their normal damage on disbelieving characters and can suffer
       up to 50~ of their total hit points from disbelievers before being
       dispelled."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG, EF_SHOWNAME, EF_IMONSTERS;
@@ -9133,8 +9173,13 @@ Wizard Spell "Shades" : EA_ILLUSION
       70~ if their normal damage on disbelieving characters and can suffer
       up to 70~ of their total hit points from disbelievers before being
       dispelled."; 
-    On Event PRE(EV_MAGIC_HIT) {
+    On Event EV_CALC_EFFECT {
+      if (GetHandle(EActor) == NULL_OBJ)
+        return NOTHING;
       SetPVal(e,max(1, (EActor->SkillLevel(SK_ILLUSION)/2)));
+      return NOTHING;
+      },
+    PRE(EV_MAGIC_HIT) {
       return NOTHING;
       };
     Flags: EF_DLONG, EF_SHOWNAME, EF_IMONSTERS;

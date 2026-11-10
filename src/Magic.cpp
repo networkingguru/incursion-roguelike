@@ -251,10 +251,11 @@ String & TEffect::Power(int8 Mod, Creature *Caster, rID spID, Item *it)
         e.efNum = i;
         if (Caster)
           Caster->CalcEffect(e);
+        /* inc-q4kjl: a script's SetPVal leaves its value in e.EMagic, not in ef. */
         if (Mod)
-          d = ef->pval.LevelAdjust(Mod,Mod);
+          d = e.EMagic->pval.LevelAdjust(Mod,Mod);
         else
-          d = ef->pval.LevelAdjust(e.vCasterLev,Mod);
+          d = e.EMagic->pval.LevelAdjust(e.vCasterLev,Mod);
           
         if (Caster) { 
           if (ef->eval == EA_BLAST || ef->eval == EA_DRAIN)
@@ -299,8 +300,8 @@ String & TEffect::Power(int8 Mod, Creature *Caster, rID spID, Item *it)
                 percent = true;
               if (printed)
                 str += ", ";
-              if (ef->pval.LevelAdjust(Mod,Mod).Sides == 1 ||
-                  ef->pval.LevelAdjust(Mod,Mod).Sides == 0)
+              if (e.EMagic->pval.LevelAdjust(Mod,Mod).Sides == 1 ||
+                  e.EMagic->pval.LevelAdjust(Mod,Mod).Sides == 0)
                 str += Format("%+d%s",d.Roll() * (percent?5:1),
                   percent ? "~" : ""); 
               else 
@@ -687,8 +688,14 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
       } else if (TEFF(e.eID)->Vals((int8)efNum)->eval == EA_BLAST)
           e.DType = TEFF(e.eID)->Vals((int8)efNum)->xval;
 
+      /* inc-q4kjl: after a script's SetPVal, e.EMagic is the event's own copy
+         and holds the power value; the module's resource keeps the original. */
+      auto curPval = [&]() -> Dice& {
+          return e.EMagic == &e.EMagicCopy ? e.EMagicCopy.pval
+              : TEFF(e.eID)->Vals((int8)efNum)->pval;
+      };
       auto damageDice = [&]() -> Dice {
-          Dice damage = TEFF(e.eID)->Vals((int8)efNum)->pval.LevelAdjust(e.vCasterLev,
+          Dice damage = curPval().LevelAdjust(e.vCasterLev,
               ((e.EItem && e.EItem->isItem())) ? e.EItem->GetPlus() : 0);
           if (e.isSpell || (e.isItem && e.EItem->isType(T_SCROLL))) {
               if (e.EMagic->eval == EA_BLAST || e.EMagic->eval == EA_DRAIN)
@@ -720,6 +727,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
 
       Dice od = e.Dmg;
       const int16 oldCasterLev = e.vCasterLev;
+      const int32 oldVDmg = e.vDmg;
 
       e.vChainMax = e.vCasterLev/4;
 
@@ -732,7 +740,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
       e.vDmg based on new e.Dmg, but otherwise let EV_CALC_EFFECT set
       e.vDmg on its own and don't overwrite. */
       if (!(od == e.Dmg)) {
-          e.Dmg = TEFF(e.eID)->Vals((int8)efNum)->pval.LevelAdjust(e.vCasterLev,
+          e.Dmg = curPval().LevelAdjust(e.vCasterLev,
               ((e.EItem && e.EItem->isItem())) ? e.EItem->GetPlus() : 0);
           if (e.MM & MM_MAXIMIZE)
               e.vDmg = e.Dmg.Number * e.Dmg.Sides + e.Dmg.Bonus;
@@ -740,7 +748,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
               e.vDmg = e.Dmg.Roll();
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
-      } else if (e.vCasterLev != oldCasterLev) {
+      } else if (e.vCasterLev != oldCasterLev || e.EMagic == &e.EMagicCopy) {
           /* upstream: EV_CALC_EFFECT caster-level changes must reach damage.
              Plain control flow misbehaves identically on Win32. Observed via
              tools/check_music_choir.sh; inc-s3bb, not sent. */
@@ -751,7 +759,9 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
           }
           if (!(od == damage)) {
               e.Dmg = damage;
-              rollDamage();
+              /* A script that set e.vDmg itself keeps its value. */
+              if (e.vCasterLev != oldCasterLev || e.vDmg == oldVDmg)
+                  rollDamage();
           }
       }
       if (getenv("INCURSION_MUSIC_CHOIR_PROBE") && e.eID == FIND("Chain Lightning"))

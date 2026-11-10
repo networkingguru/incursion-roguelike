@@ -141,6 +141,8 @@ struct EventInfo {
        changes. */
     void UserDefinedCopy(EventInfo &e) {
         memcpy(this,&e,sizeof(EventInfo));
+        if (e.EMagic == &e.EMagicCopy)
+          EMagic = &EMagicCopy;
         /* Blank out the Strings using memset, as they contain
         pointers to string buffers that properly belong to
         the other EventInfo's Strings. */
@@ -327,6 +329,9 @@ struct EventInfo {
     rID    chResult,
         chSource;
     bool (*chCriteria)(EventInfo &e, rID tID);
+    /* inc-q4kjl: SetPVal's private copy of *EMagic; EMagic points here
+       after a script changes the power value. Keep it LAST. */
+    EffectValues EMagicCopy;
 
 };
 
