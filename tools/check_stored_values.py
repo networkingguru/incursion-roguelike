@@ -42,6 +42,21 @@ values and file:line, when:
      read from the base's family, else compiled on the base tree (a limit
      that sat in a no-family block there). A new member of the family MAY take
      the value the limit had on the base: that value is not held (rule 3);
+ 10. (shape bits) a tree-only name holds several bits and is not exactly the OR
+     of named smaller masks. A new flag takes one free bit, as the mover gives
+     it. Base names are not tested (KN_IDENTIFIED 0x60 overlaps KN_ARTI 0x20
+     and KN_RUSTPROOF 0x40 on master and passes);
+ 11. (families sk and ft, spec 6.2) a tree-only skill is not in
+     SK_HIGH_FIRST .. SK_HIGH_END-1, or is above 999; a tree-only feat is above
+     799; a tree-only feat or skill holds a number the other family holds.
+     Feats and skills share one number space in a save. Skills 1-48 and base
+     feats are not tested;
+ 12. (gap 8) a FIELD_ARRAY or FIELD_ARRAY_ROWS count in inc/ or src/ is neither
+     an expression of `grows` limits nor frozen. A frozen count is a literal or an
+     unmarked constant; its value MUST equal the value at the same site (file and
+     member) on the base. A new site passes and is frozen from then on. A count that
+     is no constant (a variable, a sizeof) is not compared. The fix names the site,
+     the old and new value: mark the limit `grows` (spec 6.1) or restore it;
   8. inc/SaveLegacyTags.h differs from the base ref's copy. That table
      describes files already written; a branch never edits it. A base that has
      no such file freezes nothing.
@@ -88,6 +103,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_define_dups as cdd  # noqa: E402
@@ -214,6 +230,98 @@ def overlap_problems(fam, t):
     return out
 
 
+def new_bits_problems(fam, t, b):
+    """Rule 10 for one stored bits family t; b is the base's family dict (may be {}).
+    A tree-only member takes one bit, or is exactly the OR of named smaller masks
+    (an aggregate). Members the base holds are not tested (KN_IDENTIFIED 0x60)."""
+    width = t["width"]
+    skip = set(t["sentinels"]) | set(t.get("grows", []))
+    have = {m[0] for m in b.get("members", [])}
+    mem = {}
+    for m in t["members"]:
+        mem.setdefault(m[0], m)
+    pats = {n: pattern(m[1], width) for n, m in mem.items() if n not in skip}
+    out = []
+    for name, m in sorted(mem.items()):
+        if name in have or name in skip:
+            continue
+        p = pats[name]
+        if p & (p - 1) == 0:
+            continue
+        acc = 0
+        for n, q in pats.items():
+            if n != name and q and q != p and q & p == q:
+                acc |= q
+        if acc != p:
+            out.append("FAIL: family %s %s = 0x%X at %s is a new member that holds several "
+                       "bits and is not the OR of named members. Fix: take one free bit "
+                       "(tools/move_branch_values.py gives the lowest); a new mask is "
+                       "allowed only as exactly the OR of smaller masks of the family"
+                       % (fam, name, m[1], where(m)))
+    return out
+
+
+SKILL_CEILING = 999    # spec 6.2: new skills take 800..999
+FEAT_CEILING = 799     # feats stay below the first high skill
+
+
+def space_problems(base, tree):
+    """Rules 11 and 12: the feat and skill number space (spec 6.2, R14). A saved Feats bit and
+    a saved SkillRanks row are keyed by one number. Only tree-only members are tested; skills
+    1-48 and the feats of the base stay as they are. Return FAIL lines."""
+    def new_members(fam):
+        t = tree.get(fam)
+        if t is None or t["class"] != "stored":
+            return None, {}, {}
+        skip = set(t["sentinels"]) | set(t.get("grows", []))
+        have = {m[0] for m in base.get(fam, {}).get("members", [])}
+        allm, new = {}, {}
+        for m in t["members"]:
+            if m[0] in skip:
+                continue
+            allm.setdefault(m[0], m)
+            if m[0] not in have:
+                new.setdefault(m[0], m)
+        return t, allm, new
+    sk, sk_all, sk_new = new_members("sk")
+    ft, ft_all, ft_new = new_members("ft")
+    out = []
+    if sk is not None:
+        first = end = None
+        for d in tree.values():
+            for m in d["members"]:
+                if m[0] == "SK_HIGH_FIRST":
+                    first = first if first is not None else m[1]
+                if m[0] == "SK_HIGH_END" and d is sk:
+                    end = end if end is not None else m
+        if first is None or end is None:
+            out.append("FAIL: family sk cannot be tested: SK_HIGH_FIRST or SK_HIGH_END is not "
+                       "in the tree. Fix: keep both names (spec 6.2)")
+        else:
+            for name, m in sorted(sk_new.items()):
+                if not first <= m[1] < end[1] or m[1] > SKILL_CEILING:
+                    out.append("FAIL: family sk %s = %d at %s is outside the new-skill band "
+                               "%d .. SK_HIGH_END-1 (SK_HIGH_END = %d), at most %d. Fix: take the "
+                               "next number from SK_HIGH_FIRST and raise SK_HIGH_END by one "
+                               "(a skill outside the band reads and writes the empty rank row)"
+                               % (name, m[1], where(m), first, end[1], SKILL_CEILING))
+    if ft is not None:
+        for name, m in sorted(ft_new.items()):
+            if m[1] > FEAT_CEILING:
+                out.append("FAIL: family ft %s = %d at %s is in the shared feat/skill space above "
+                           "the feat ceiling %d. Fix: take a feat number below %d; 800 and up "
+                           "belong to skills" % (name, m[1], where(m), FEAT_CEILING, FEAT_CEILING + 1))
+    for fam_a, new_a, all_b, fam_b in (("ft", ft_new, sk_all, "sk"), ("sk", sk_new, ft_all, "ft")):
+        for name, m in sorted(new_a.items()):
+            for hn, hm in sorted(all_b.items()):
+                if hm[1] == m[1]:
+                    out.append("FAIL: family %s %s = %d at %s and family %s %s = %d at %s share "
+                               "one number in the shared feat/skill space. Fix: give the new "
+                               "one a number no %s holds"
+                               % (fam_a, name, m[1], where(m), fam_b, hn, hm[1], where(hm), fam_b))
+    return out
+
+
 def bound_problems(fam, t, b):
     """Rule 7 for one stored family t; b is the base's family dict (may be {})."""
     out = []
@@ -317,10 +425,12 @@ def compare(base, tree, problems, retired):
                            % (fam, name, b[1], where(b), width, shape))
         if shape == "bits":
             out += overlap_problems(fam, t)
+            out += new_bits_problems(fam, t, base.get(fam, {}))
         out += bound_problems(fam, t, base.get(fam, {}))
         for name, m, hn, hv, why in family_collisions(t, base.get(fam, {}), ret):
             out.append("FAIL: family %s tree-only %s = %d at %s reuses the value "
                        "of %s = %d (%s)" % (fam, name, m[1], where(m), hn, hv, why))
+    out += space_problems(base, tree)
     return out, ncomp
 
 
@@ -460,6 +570,9 @@ def extract_base(ref, dest, root=None):
         raise Unmeasured("cannot extract base %s: %s" % (ref, t.stderr.decode()[-300:]))
 
 
+ARRAY_SITES = ({}, {})  # (base, tree) FIELD_ARRAY sites of the last measure() call
+
+
 def measure(ref, root=None, use_compiler=True, retired_path=None):
     """Read the base ref and the tree at root. Return (base, tree, problems,
     retired, kept): the inputs of compare(). Raises Unmeasured. The base is
@@ -473,6 +586,8 @@ def measure(ref, root=None, use_compiler=True, retired_path=None):
         base, _ignored = read_families(tmp, False)
         tree, problems = read_families(root, True)
         kept = 0
+        global ARRAY_SITES
+        ARRAY_SITES = (read_array_sites(tmp), read_array_sites(root))
         if use_compiler:
             with concurrent.futures.ThreadPoolExecutor(2) as ex:
                 fb = ex.submit(apply_compiler, base, tmp)
@@ -489,6 +604,9 @@ def run(ref):
     try:
         base, tree, problems, retired, kept = measure(ref, ROOT, True, RETIRED)
         msgs, ncomp = compare(base, tree, problems, retired)
+        grows_names = {g for d in tree.values() if d["class"] == "stored" for g in d["grows"]}
+        arr, nsites, nfrozen = array_problems(ARRAY_SITES[0], ARRAY_SITES[1], grows_names)
+        msgs += arr
         legacy = legacy_table_problem(ref, ROOT)
         if legacy:
             msgs.append(legacy)
@@ -497,11 +615,165 @@ def run(ref):
             print("\n".join(msgs), file=sys.stderr)
             return 1
         print("check_stored_values: PASS (%d stored families, %d base names compared "
-              "against %s, %d tree values from source text)" % (nfam, ncomp, ref, kept))
+              "against %s, %d tree values from source text; %d saved-array counts, %d frozen "
+              "and compared)" % (nfam, ncomp, ref, kept, nsites, nfrozen))
         return 0
     except Unmeasured as e:
         print("check_stored_values: UNMEASURED: %s" % e, file=sys.stderr)
         return 2
+
+
+ARRAY_MACRO = re.compile(r"\bFIELD_ARRAY(_ROWS)?\s*\(")
+# the count arguments: FIELD_ARRAY(name,p,elem,count); FIELD_ARRAY_ROWS(name,p,elem,rows,rowLen,..)
+ARRAY_COUNTS = {"": (("count", 3),), "_ROWS": (("rows", 3), ("rowLen", 4))}
+DEFINE_LINE = re.compile(r"\s*#\s*define\s+([A-Za-z_]\w*)\s+(.+)$")
+CONST_LINE = re.compile(r"\bstatic\s+const(?:expr)?\s+(?:[A-Za-z_]\w*\s+)+([A-Za-z_]\w*)\s*=\s*"
+                        r"([^;]+);|\bconst(?:expr)?\s+(?:[A-Za-z_]\w*\s+)+([A-Za-z_]\w*)\s*=\s*([^;]+);")
+
+
+def source_texts(root, needle=None):
+    """{relative path: text without comments} of inc/ and src/ (.h, .cpp); with needle, only
+    the files that contain it."""
+    out = {}
+    for sub in ("inc", "src"):
+        top = os.path.join(root, sub)
+        for dp, _dn, fns in os.walk(top):
+            for fn in sorted(fns):
+                if fn.endswith((".h", ".cpp")):
+                    path = os.path.join(dp, fn)
+                    with open(path, errors="replace") as f:
+                        raw = f.read()
+                    if needle is None or needle in raw:
+                        out[os.path.relpath(path, root)] = cdd.strip_comments(raw)
+    return out
+
+
+def define_env(texts):
+    """{NAME: int} of every integer #define, enumerator and const of the tree, resolved
+    across files by repeated passes. A name the text evaluator cannot resolve is left out."""
+    env, pending = {}, []
+    for rel in sorted(texts):
+        text = texts[rel]
+        for no, line in cdd.logical_lines(text):
+            m = DEFINE_LINE.match(line)
+            if m and "(" not in m.group(1):
+                pending.append((no, m.group(1), m.group(2)))
+        for m in CONST_LINE.finditer(text):
+            n, e = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+            pending.append((0, n, e))
+        try:
+            for _no, name, value, kind in cdd.read_defines(text, strict=False):
+                if kind == "enum":
+                    env.setdefault(name, value)
+        except Exception:  # a file the text evaluator cannot read gives no enumerators
+            pass
+    for _ in range(8):
+        left = []
+        for no, name, body in pending:
+            if name in env:
+                continue
+            try:
+                env[name] = cdd.evaluate(cdd.to_python(cdd.tokens(body), no), env, no, name)
+            except Exception:  # an expression the text evaluator cannot read
+                left.append((no, name, body))
+        if len(left) == len(pending):
+            break
+        pending = left
+    return env
+
+
+def split_args(text, start):
+    """text[start] is just past the `(` of a macro. Return (args, end) split at top-level commas."""
+    depth, args, cur, i = 1, [], [], start
+    while i < len(text):
+        c = text[i]
+        if c == '"':
+            j = i + 1
+            while j < len(text) and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            cur.append(text[i:j + 1])
+            i = j + 1
+            continue
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            if depth == 0:
+                args.append("".join(cur).strip())
+                return args, i
+        elif c == "," and depth == 1:
+            args.append("".join(cur).strip())
+            cur = []
+            i += 1
+            continue
+        cur.append(c)
+        i += 1
+    return args, i
+
+
+def read_array_sites(root):
+    """Return {(file, member expression, count role): {"expr", "idents", "line", "value"}} for
+    every FIELD_ARRAY and FIELD_ARRAY_ROWS call in inc/ and src/. value() gives the count, or
+    None when it is no constant (a variable, a sizeof): such a site cannot be compared. The
+    defines of the tree are read only when a count names one."""
+    warnings.simplefilter("ignore", SyntaxWarning)  # the text evaluator reads odd literals
+    lazy = []
+
+    def env():
+        if not lazy:
+            lazy.append(define_env(source_texts(root)))
+        return lazy[0]
+
+    def valuer(expr, line, what):
+        def value():
+            try:
+                toks = cdd.tokens(expr)
+                names = [t for t in toks if re.fullmatch(r"[A-Za-z_]\w*", t)]
+                return cdd.evaluate(cdd.to_python(toks, line), env() if names else {}, line, what)
+            except Exception:  # an expression the text evaluator cannot read
+                return None
+        return value
+    sites = {}
+    for rel, text in sorted(source_texts(root, "FIELD_ARRAY").items()):
+        for m in ARRAY_MACRO.finditer(text):
+            ls = text.rfind("\n", 0, m.start()) + 1
+            if text[ls:m.start()].lstrip().startswith("#"):
+                continue  # the macro's own definition
+            args, _end = split_args(text, m.end())
+            roles = ARRAY_COUNTS[m.group(1) or ""]
+            line = text.count("\n", 0, m.start()) + 1
+            if len(args) <= roles[-1][1]:
+                raise Unmeasured("%s:%d: cannot read the FIELD_ARRAY call" % (rel, line))
+            for role, k in roles:
+                key = (rel, args[1], role)
+                while key in sites:  # a repeated member in one file
+                    key = key[:2] + (key[2] + "'",)
+                sites[key] = dict(expr=args[k], line=line, value=valuer(args[k], line, args[1]),
+                                  idents=set(re.findall(r"[A-Za-z_]\w*", args[k])))
+    return sites
+
+
+def array_problems(bsites, tsites, grows_names):
+    """Gap 8: a saved array's count is a `grows` limit (or an expression of them), or it is
+    frozen. Return (FAIL lines, number of sites, number of frozen sites compared)."""
+    out, frozen = [], 0
+    for key, c in sorted(tsites.items()):
+        if c["idents"] & grows_names:
+            continue
+        cv = c["value"]()
+        b = bsites.get(key)
+        bv = b["value"]() if b is not None else None
+        if cv is None or bv is None:
+            continue  # a variable count, or a new site: frozen from now on
+        frozen += 1
+        if bv != cv:
+            out.append("FAIL: array member %s (%s) at %s:%d has count %d (%s), base %d (%s). A "
+                       "saved array's count is frozen unless it is a `grows` limit. Fix: mark "
+                       "the limit `grows` (spec 6.1) or restore %d"
+                       % (key[1], key[2], key[0], c["line"], cv, c["expr"],
+                          bv, b["expr"], bv))
+    return out, len(tsites), frozen
+
 
 
 def selftest():
@@ -563,6 +835,14 @@ def selftest():
                                     "#define F_NM 0x0300\n", bits))[0] == 0  # an aggregate passes
         assert go(bb, bb + fam("f", "#define F_N 0x0100\n#define F_M 0x0100 /* alias */\n",
                                bits))[0] == 0  # equal masks are aliases (check_define_dups)
+        # rule 10: a new member of a bits family takes one free bit, or exactly the OR of named bits (F04)
+        c, m = go(bb, bb + fam("f", "#define F_N 0x0300\n", bits))
+        assert c == 1 and "F_N = 0x300" in m and "one free bit" in m, (c, m)
+        c, m = go(bb, bb + fam("f", "#define F_N 0x0600\n", bits))
+        assert c == 1 and "F_N = 0x600" in m, (c, m)
+        assert go(bb, bb + fam("f", "#define F_N 0x0100\n", bits))[0] == 0
+        kb = fam("k", "#define K_A 0x20\n#define K_B 0x40\n#define K_AB 0x60\n", bits)
+        assert go(kb, kb)[0] == 0  # an aggregate already on the base passes
         # rule 7: a bound is an exclusive limit; the mark must keep it (F05)
         bd = "stored ordinal u16 bound B_LAST"
         bz = fam("o", "#define B_X 1\n#define B_Y 2\n#define B_LAST 4\n", bd)
@@ -592,6 +872,44 @@ def selftest():
         c, m = go(gb, fam("g", "#define G_X 1\n#define G_NEW 3\n#define G_LAST 3\n", gw)
                   .replace("G_NEW 3", "G_NEW 1"))
         assert c == 1 and "tree-only G_NEW = 1" in m, (c, m)  # a stored value still collides
+        # a frozen value of a family with a `grows` limit: a branch that raises it is refused
+        sk = "stored ordinal i16 grows SK_HIGH_END"
+        hf = fam("sk_high_first", "#define SK_HIGH_FIRST 800\n", "stored ordinal i16 sentinel SK_HIGH_FIRST")
+        sb = fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n#define SK_HIGH_END 800\n", sk) + hf
+        assert go(sb, sb)[0] == 0
+        c, m = go(sb, fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 50\n#define SK_HIGH_END 800\n", sk) + hf)
+        assert c == 1 and "SK_LASTSKILL changed: base 49" in m and "tree 50" in m, (c, m)
+        assert go(sb, fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n#define SK_NEW 800\n"
+                                "#define SK_HIGH_END 801\n", sk) + hf)[0] == 0
+        # rule 10: a new skill takes a number from SK_HIGH_FIRST to SK_HIGH_END-1, at most 999 (N08)
+        def sktree(new, end):
+            return fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n%s#define SK_HIGH_END %d\n"
+                       % (new, end), sk) + hf
+        c, m = go(sb, sktree("#define SK_OUT 801\n", 801))
+        assert c == 1 and "SK_OUT = 801" in m and "outside" in m and "SK_HIGH_END" in m, (c, m)
+        c, m = go(sb, sktree("#define SK_OUT 800\n", 800))
+        assert c == 1 and "SK_OUT = 800" in m and "outside" in m, (c, m)
+        c, m = go(sb, sktree("#define SK_OUT 5\n", 800))
+        assert c == 1 and "SK_OUT = 5" in m and "outside" in m, (c, m)
+        c, m = go(sb, sktree("".join("#define SK_N%d %d\n" % (i, 800 + i) for i in range(201)), 1001))
+        assert c == 1 and "SK_N200 = 1000" in m and "999" in m, (c, m)
+        assert go(sb, sktree("#define SK_A 800\n#define SK_B 801\n", 802))[0] == 0
+        c, m = go(sb.replace("SK_HIGH_END 800", "SK_HI 800"), sb.replace("SK_HIGH_END 800", "SK_HI 800"))
+        assert c == 1 and "SK_HIGH_END" in m and "cannot" in m, (c, m)
+        # rule 11: a new feat stays below 800 (the skills' numbers) and shares no value with a skill (N09)
+        ftm = "stored ordinal u16 grows FT_LAST"
+        fb = fam("ft", "#define FT_X 1\n#define FT_LAST 364\n", ftm)
+
+        def fttree(new, last):
+            return fam("ft", "#define FT_X 1\n%s#define FT_LAST %d\n" % (new, last), ftm)
+        assert go(sb + fb, sb + fb)[0] == 0
+        assert go(sb + fb, sb + fttree("#define FT_NEW 799\n", 800))[0] == 0
+        c, m = go(sb + fb, sb + fttree("#define FT_NEW 800\n", 801))
+        assert c == 1 and "FT_NEW = 800" in m and "shared feat/skill space" in m, (c, m)
+        c, m = go(sb + fb, sktree("#define SK_NEW 800\n", 801) + fttree("#define FT_NEW 800\n", 801))
+        assert c == 1 and "FT_NEW = 800" in m and "SK_NEW" in m and "shared feat/skill space" in m, (c, m)
+        c, m = go(sb + fb, sb + fttree("#define FT_NEW 49\n", 364))  # a skill's low number
+        assert c == 1 and "FT_NEW = 49" in m and "shared feat/skill space" in m and "SK_LASTSKILL" in m, (c, m)
         # the base held the limit in a no-family block: its value comes from the compiler
         nf = "// no-family\n#define MAX_G 25\n// end no-family\n"
         bt, _ = read_families(tree_of(nf), False)
@@ -701,6 +1019,34 @@ def selftest():
                 pass
         finally:
             ROOT = keep
+        # rule 12: a saved array's count is a `grows` limit, or frozen against the base (gap 8)
+        def arrays(base_defs, base_arr, tree_defs, tree_arr):
+            def root(defs, arr):
+                d = tree_of(defs)
+                with open(os.path.join(d, "inc", "Arr.h"), "w") as f:
+                    f.write(arr)
+                return d
+            br, tr = root(base_defs, base_arr), root(tree_defs, tree_arr)
+            tfams, _ = read_families(tr, False)
+            names = {g for d in tfams.values() if d["class"] == "stored" for g in d["grows"]}
+            msgs, _n, _f = array_problems(read_array_sites(br), read_array_sites(tr), names)
+            print("  %s" % (("RED   " + msgs[0][:100]) if msgs else "GREEN"))
+            return "\n".join(msgs)
+        lim = lambda v: fam("lim", "#define G_MAX %d\n" % v, "stored ordinal u16 grows G_MAX")
+        nof = lambda v: "// no-family\n#define N_ROWS %d\n// end no-family\n" % v
+        arr = lambda cnt: "void F() { FIELD_ARRAY(7, Rows, sizeof(int), %s); }\n" % cnt
+        m = arrays(lim(8), arr(7), lim(8), arr(6))
+        assert "Rows" in m and "count 6" in m and "base 7" in m and "`grows`" in m, m
+        m = arrays(lim(8) + nof(8), arr("N_ROWS"), lim(8) + nof(9), arr("N_ROWS"))
+        assert "Rows" in m and "count 9" in m and "base 8" in m, m
+        assert arrays(lim(8), arr("G_MAX"), lim(9), arr("G_MAX")) == ""      # a grows limit rises
+        assert arrays(lim(8), arr("G_MAX+1"), lim(9), arr("G_MAX+1")) == ""
+        assert arrays(lim(8) + nof(8), arr("N_ROWS"), lim(8) + nof(8), arr("N_ROWS")) == ""
+        assert arrays(lim(8), "", lim(8), arr(5)) == ""                       # a new literal site
+        rows = lambda a, b: ("void F() { FIELD_ARRAY_ROWS(8, Tab, sizeof(int), %s, %s, TabRow, 0); }\n"
+                             % (a, b))
+        m = arrays(lim(8), rows(3, "G_MAX"), lim(9), rows(4, "G_MAX"))
+        assert "Tab" in m and "rows" in m and "count 4" in m and "base 3" in m, m
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("check_stored_values: selftest PASS (text values only; the compiler is skipped)")

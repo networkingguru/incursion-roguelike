@@ -1,2 +1,2 @@
-# N12: B's save: the renamed field under the retired name
+# N12: B moves the Ac8Old write below Ac8Source (one site)
 resave

@@ -239,7 +239,7 @@ void Map::GenEncounterStats(Term *t)
     int16 CR, enc, i, j, mt; EventInfo e;
     String eStat;
     int32 mID_count[2048],
-          mType_count[MA_LAST];
+          mType_count[MA_LAST + (MA_HIGH_END - MA_HIGH_FIRST)];
     rID first_mID;
     t->ChangeDirectory(".");
     t->SetWin(WIN_SCREEN);
@@ -250,7 +250,7 @@ void Map::GenEncounterStats(Term *t)
     
     first_mID = theGame->Modules[0]->MonsterID(0);
     memset(mID_count,0,2048*4);
-    memset(mType_count,0,MA_LAST*4);
+    memset(mType_count,0,sizeof(mType_count));
     eStat = "";
     for (CR=1;CR!=16;CR++) {
       for (enc=0;enc!=500;enc++) {       
@@ -277,8 +277,8 @@ void Map::GenEncounterStats(Term *t)
             mn->AddTemplate(EncMem[i].tID2);
           if (EncMem[i].tID3)
             mn->AddTemplate(EncMem[i].tID3);
-          for (mt=0;mt!=MA_LAST;mt++)
-            if (mn->isMType(mt))
+          for (mt=0;mt!=MaAllCount();mt++)
+            if (mn->isMType(MaAllType(mt)))
               mType_count[mt]++;
           delete mn;
           }
@@ -297,15 +297,16 @@ void Map::GenEncounterStats(Term *t)
           (const char*)Pluralize(NAME(theGame->Modules[0]->MonsterID(i)))));
       }
     FPrint(t,"\n\n----");
-    for (mt=0;mt!=MA_LAST;mt++)
+    for (mt=0;mt!=MaAllCount();mt++)
       {
         FPrint(t,Format("%d %s",mType_count[mt],
-          (const char*)Pluralize(Lookup(MTypeNames,mt))));
+          (const char*)Pluralize(Lookup(MTypeNames,MaAllType(mt)))));
       }
       
-    for (i=0;i!=MA_LAST;i++)
-      if (LookupOnly(MTypeNames,i))
+    for (int ik=0;ik!=MaAllCount();ik++)
+      if (LookupOnly(MTypeNames,MaAllType(ik)))
         {
+          i = MaAllType(ik);
           rID monList[4096]; int16 n;
           n = 0;
           for (int16 q=0;q!=1;q++)
@@ -1786,11 +1787,13 @@ void Player::Dump()
                       GetGroupCR(PHD_MAGIC),   MaxGroupCR(PHD_MAGIC)));
     /* upstream: show each command type's own usage and cap. Shared display
        hides mixed powers on Win32 too. Observed, inc-sgre, not sent. */
-    for (int16 type = 1; type < MA_LAST; ++type)
+    for (int k = 1; k < MaAllCount(); ++k) {
+        int16 type = (int16)MaAllType(k);
         if (HasStati(COMMAND_ABILITY, type))
             T1->SWrite(Format("  PHD_COMMAND %s %d / %d\n",
                 (const char*)String(Lookup(MTypeNames, type)).Lower(),
                 XCRtoCR(GetCommandXCR(type)), MaxCommandCR(type)));
+    }
     T1->SWrite(XPrint("  PHD_UNDEAD  <Num> / <Num>\n",
                       GetGroupCR(PHD_UNDEAD), MaxGroupCR(PHD_UNDEAD)));
     }

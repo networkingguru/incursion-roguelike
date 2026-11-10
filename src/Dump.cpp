@@ -423,7 +423,7 @@ struct DumpPlanter {
     static void MaxDepth(Player *p, int i, long d) { p->MaxDepths[i] = (int16)d; }
     static void Ability(Player *p, int i, long v) { p->Abilities[i] = (uint8)v; }
     static void Slot(Player *p, int i, Item *it) { p->Inv[i] = it->myHandle; }
-    static void MonKills(Player *p, int i, long v) { p->JournalInfo.numMonOfType[i] = (int)v; }
+    static void MonKills(Player *p, int i, long v) { p->JournalInfo.numMonOfType[MaIndex(i)] = (int)v; }
     static void IFlags(Item *it, long bits) { it->IFlags = (uint16)(it->IFlags | bits); }
     static void Known(Item *it, long bits) { it->Known = (uint16)(it->Known | bits); }
 };
@@ -547,7 +547,7 @@ static bool PlantGrowthLine(Player *p, const std::vector<std::string> &w, std::s
     if (verb == "monkills") {
         if (w.size() != 3 || !PlantNumber(w[2].c_str(), v) || v < 0) { why = "monkills <MA_NAME> <count>"; return false; }
         long ma = 0;
-        if (!V1FamValue("ma", w[1].c_str(), ma) || ma < 0 || ma >= MA_LAST_REAL) { why = "no monster type named " + w[1]; return false; }
+        if (!V1FamValue("ma", w[1].c_str(), ma) || !IsRealMonType((int)ma)) { why = "no monster type named " + w[1]; return false; }
         DumpPlanter::MonKills(p, (int)ma, v);
         return true;
     }

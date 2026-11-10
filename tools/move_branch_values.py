@@ -31,8 +31,12 @@ the shape of the family:
 Then, in each family that moved a name, every `sentinel <NAME>` of the mark is
 rewritten to max+1 of the merged family (ordinal and enum families; a bits
 sentinel has no meaning and is left). A `grows <NAME>` limit (spec 6.1) is no
-stored value: it stays out of the merged family, and when a moved value reaches
-it, it is raised to max+1 and never lowered. A bound that is also `grows`
+stored value: it stays out of the merged family. A moved value in such a family
+takes the first free index at or above the base's limit (so the index range grows
+by one per moved value), and the limit is raised to (largest moved index + 1) and
+never lowered. A base member at or above the base limit (A_HIT.., SL_ARCHERY) is no
+index: it is never counted, and a move that would reach one is REFUSED naming the
+family, the limit and that member. A bound that is also `grows`
 (OPT_LAST) is raised the same way instead of refusing. Two moved names never take one value. A
 new value that does not fit the storage width is REFUSED naming bead inc-xm3nq.
 A value written as an expression (`FT_FIRST + 3`) is rewritten to the literal;
@@ -80,6 +84,16 @@ def where_of(m):
 
 # ---------------------------------------------------------------- planning
 
+def grow_limit(bfam, tvals, grows):
+    """The base's value of the family's `grows` limit (the tree's when the base lacks
+    it), or None when the family has no `grows` limit with a value."""
+    if not grows:
+        return None
+    bv = {m[0]: m[1] for m in bfam.get("members", [])}
+    vals = [bv[g] if g in bv else tvals[g][1] for g in grows if g in bv or g in tvals]
+    return max(vals) if vals else None
+
+
 def plan(base, tree, retired):
     """Return a list of moves. A move is a dict: fam, name, old, new, file, line,
     shape, sentinel (bool). Raises Refused."""
@@ -120,6 +134,46 @@ def plan(base, tree, retired):
                 moves.append(dict(fam=fam, name=name, old=names[name][1], new=new,
                                   file=names[name][2], line=names[name][3],
                                   shape=shape, sentinel=False))
+            continue
+        glim = grow_limit(base.get(fam, {}), tvals, grows)
+        if glim is not None:
+            # A `grows` family: a moved value takes the first free index at or above
+            # the base's limit. A base member at or above that limit (A_HIT.., SL_ARCHERY)
+            # is no index: it is reserved, and reaching one refuses.
+            taken = set(merged)
+            reserved = {m[1]: m[0] for m in base.get(fam, {}).get("members", [])
+                        if m[0] not in sent and m[0] not in grows and m[1] >= glim}
+            top = -1
+            for name in order:
+                new = glim
+                while new in taken:
+                    if new in reserved:
+                        raise Refused("family %s: no free index at or above the limit %s = %d "
+                                      "for %s; the next one is the reserved member %s = %d "
+                                      "(bead inc-cjos0)" % (fam, ",".join(sorted(grows)),
+                                                            glim, name, reserved[new], new))
+                    new += 1
+                if new in reserved:
+                    raise Refused("family %s: the next free index %d for %s is the reserved "
+                                  "member %s above the limit %s = %d (bead inc-cjos0)"
+                                  % (fam, new, name, reserved[new], ",".join(sorted(grows)),
+                                     glim))
+                if not csv.fits(new, shape, width):
+                    raise Refused("family %s: %s would take %d, which does not fit %s "
+                                  "(bead inc-xm3nq)" % (fam, name, new, width))
+                taken.add(new)
+                top = max(top, new)
+                moves.append(dict(fam=fam, name=name, old=names[name][1], new=new,
+                                  file=names[name][2], line=names[name][3],
+                                  shape=shape, sentinel=False))
+            for g in sorted(grows):
+                m = tvals.get(g)
+                if m is not None and m[1] < top + 1:
+                    if not csv.fits(top + 1, shape, width):
+                        raise Refused("family %s: the limit %s would take %d, which does not "
+                                      "fit %s (bead inc-xm3nq)" % (fam, g, top + 1, width))
+                    moves.append(dict(fam=fam, name=g, old=m[1], new=top + 1, file=m[2],
+                                      line=m[3], shape=shape, sentinel=True, grows=True))
             continue
         bounds = [tvals[b][1] for b in t.get("bounds", []) if b in tvals and b not in grows]
         lim = min(bounds) if bounds else None
@@ -534,6 +588,31 @@ def selftest():
              want=fam("o", "#define O_X 1\n#define O_Y 2\n#define O_Z 3\n#define O_LAST 4\n",
                       gbd),
              grep=["o O_Z 2 -> 3", "o O_LAST 3 -> 4"])
+        sk = "stored ordinal i16 grows SK_HIGH_END"
+        hf = fam("sk_high_first", "#define SK_HIGH_FIRST 800\n",
+                 "stored ordinal i16 sentinel SK_HIGH_FIRST")
+        case("the skill shape: a colliding high skill moves, SK_HIGH_END rises, SK_LASTSKILL stays",
+             fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n#define SK_GRWA 800\n"
+                       "#define SK_HIGH_END 801\n", sk) + hf,
+             fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n#define SK_GRWA 800\n"
+                       "#define SK_GRWB 800\n#define SK_HIGH_END 801\n", sk) + hf,
+             want=fam("sk", "#define SK_X 1\n#define SK_LASTSKILL 49\n#define SK_GRWA 800\n"
+                            "#define SK_GRWB 801\n#define SK_HIGH_END 802\n", sk) + hf,
+             grep=["sk SK_GRWB 800 -> 801", "sk SK_HIGH_END 801 -> 802"])
+        at = "stored ordinal i8 grows T_LAST"
+        case("gap 6: a grows family takes the first free index, not past a reserved member",
+             fam("at", "#define T_X 1\n#define T_Y 2\n#define T_LAST 3\n#define T_HIT 50\n"
+                       "#define T_MAG 55\n", at),
+             fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 2\n#define T_LAST 3\n"
+                       "#define T_HIT 50\n#define T_MAG 55\n", at),
+             want=fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 3\n#define T_LAST 4\n"
+                            "#define T_HIT 50\n#define T_MAG 55\n", at),
+             grep=["at T_Z 2 -> 3", "at T_LAST 3 -> 4"])
+        case("gap 6: a move that reaches a reserved member refuses",
+             fam("at", "#define T_X 1\n#define T_Y 2\n#define T_LAST 3\n#define T_HIT 4\n", at),
+             fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 2\n#define T_W 2\n"
+                       "#define T_LAST 3\n#define T_HIT 4\n", at),
+             code=1, grep=["family at", "T_LAST = 3", "reserved member T_HIT = 4"])
         print("case: no-op on master")
         d, defs = mkrepo(b, fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n"))
         g(d, "checkout", "-q", "master")

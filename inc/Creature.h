@@ -35,9 +35,32 @@ static inline int SkillByIndex(int i) {
     if (i >= SK_LASTSKILL && i < SK_COUNT) return SK_HIGH_FIRST + (i - SK_LASTSKILL);
     return 0;
 }
+/* Monster types: 1..MA_LAST_REAL-1 (fixed) and MA_HIGH_FIRST..MA_HIGH_END-1
+   (new real types). MaIndex maps a real type to its slot in arrays of length
+   MA_COUNT, JournalInfo.numMonOfType among them: 1..73 to themselves,
+   MA_HIGH_FIRST+k to MA_LAST_REAL+k, anything else (a group type too) to 0.
+   MaByIndex is the inverse. MaAllCount/MaAllType walk every type number a
+   loop visits, group types 1..MA_LAST-1 first, then the high real types. */
+static inline bool IsRealMonType(int n) {
+    return (n >= 1 && n < MA_LAST_REAL) || (n >= MA_HIGH_FIRST && n < MA_HIGH_END);
+}
+static inline int MaIndex(int n) {
+    if (n >= 1 && n < MA_LAST_REAL) return n;
+    if (n >= MA_HIGH_FIRST && n < MA_HIGH_END) return MA_LAST_REAL + (n - MA_HIGH_FIRST);
+    return 0;
+}
+static inline int MaByIndex(int i) {
+    if (i >= 1 && i < MA_LAST_REAL) return i;
+    if (i >= MA_LAST_REAL && i < MA_COUNT) return MA_HIGH_FIRST + (i - MA_LAST_REAL);
+    return 0;
+}
+static inline int MaAllCount() { return MA_LAST + (MA_HIGH_END - MA_HIGH_FIRST); }
+static inline int MaAllType(int k) { return k < MA_LAST ? k : MA_HIGH_FIRST + (k - MA_LAST); }
 static inline int32 SpellVersionPack(int16 sp, int16 srcCode) {
     return (int32)(((srcCode & 0x7) << 12) | (sp & 0xFFF));
 }
+static_assert(MAX_SPELLS <= 4096,
+  "SpellVersionPack keeps a spell index in 12 bits (sp & 0xFFF); MAX_SPELLS may not pass 4096");
 static inline int16 SpellVersionSpell(int32 ver) {
     return (int16)(ver & 0xFFF);
 }
@@ -1331,7 +1354,7 @@ typedef struct JournalInfoType
     String bestItem;
     int    bestItemVal;
     int    numMonSeen;
-    int    numMonOfType[MA_LAST_REAL];
+    int    numMonOfType[MA_COUNT];
   } JournalInfo;
 
 // ww: I want to keep track of how much time we spend on each level, using
@@ -1712,7 +1735,7 @@ class Player: public Character
       FIELD_I32("JournalInfo_bestMonsterVal", JournalInfo.bestMonsterVal);
       FIELD_I32("JournalInfo_bestItemVal", JournalInfo.bestItemVal);
       FIELD_I32("JournalInfo_numMonSeen", JournalInfo.numMonSeen);
-      FIELD_ARRAY("JournalInfo_numMonOfType", JournalInfo.numMonOfType, sizeof(int), MA_LAST_REAL);
+      FIELD_ARRAY("JournalInfo_numMonOfType", JournalInfo.numMonOfType, sizeof(int), MA_COUNT);
       r.V1EmbedEnd();
       FIELD_ARRAY("RecentVerbs", RecentVerbs, sizeof(int16), 5);
       r.V1EmbedBegin("GameTimeInfo", &GameTimeInfo, sizeof(GameTimeInfo));

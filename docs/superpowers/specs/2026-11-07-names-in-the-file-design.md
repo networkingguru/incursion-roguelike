@@ -220,10 +220,17 @@ fixed, as B2 says, and a branch moves.
 A limit that sizes a saved array may grow, on master or on a branch, and
 must never shrink. The list is every named constant or literal that sets
 the length of a saved array: `FT_LAST` (through the `Feats` bit array),
-`SK_LASTSKILL`, `ATTR_LAST`, `CA_LAST`, `STUDY_LAST`, `MAX_SPELLS`,
-`MAX_GODS`, `MAX_DUNGEONS`, `MA_LAST_REAL`, `OPT_LAST`, `NUM_SLOTS`,
+`SK_COUNT`, `ATTR_LAST`, `CA_LAST`, `STUDY_LAST`, `MAX_SPELLS`,
+`MAX_GODS`, `MAX_DUNGEONS`, `MA_COUNT`, `OPT_LAST`, `NUM_SLOTS`,
 `MAX_MODULES`, `MAX_OVERLAY_GLYPHS`, `MAX_CHAR_LEVEL`, `MAX_SAC_CATS`, and
 the literal lengths. `logs/phase7f/survey.md` lists each array.
+
+Amendment (phase 9c, inc-cjos0): `SK_LASTSKILL`, `SK_LAST` and
+`MA_LAST_REAL` are frozen values, not `grows` limits. Skills 1-48 and real
+monster types 1-73 never move. A new skill takes the next number from 800
+and raises `SK_HIGH_END`; a new real monster type takes the next number
+from 131 and raises `MA_HIGH_END`. `SK_COUNT` and `MA_COUNT` follow from
+those, and they size the saved arrays (`SkillRanks`, `numMonOfType`).
 
 - The reader (`Registry::V1Array`, `src/SaveV1.cpp:3198`, and
   `V1ArrayWiden16`) accepts a saved array shorter than the current one and

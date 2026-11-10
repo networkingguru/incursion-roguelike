@@ -780,33 +780,42 @@ enum {
    dump already carries scalars, so scalar macros are no-ops there and the
    STR/BLOB/OBJ macros perform exactly the legacy Serialize/Block calls they
    replace), the v1 write, the v1 read, and the DEBUG coverage map. */
-#define FIELD_U8(name,m) (r.V1Mem(#m), r.V1Field((name), K_U8, &(m), sizeof(m)))
-#define FIELD_I8(name,m) (r.V1Mem(#m), r.V1Field((name), K_I8, &(m), sizeof(m)))
-#define FIELD_U16(name,m) (r.V1Mem(#m), r.V1Field((name), K_U16, &(m), sizeof(m)))
-#define FIELD_I16(name,m) (r.V1Mem(#m), r.V1Field((name), K_I16, &(m), sizeof(m)))
-#define FIELD_U32(name,m) (r.V1Mem(#m), r.V1Field((name), K_U32, &(m), sizeof(m)))
-#define FIELD_I32(name,m) (r.V1Mem(#m), r.V1Field((name), K_I32, &(m), sizeof(m)))
-#define FIELD_H(name,m) (r.V1Mem(#m), r.V1Field((name), K_H, &(m), sizeof(m)))
-#define FIELD_RID(name,m)  (r.V1Mem(#m), r.V1Rid((name), (m)))
-#define FIELD_RID_AT(name,i,m)  (r.V1Mem(#m), r.V1Rid_AT((name), (i), (m)))
-#define FIELD_STR(name,m)  do { r.V1Mem(#m); if (r.V1Active()) r.V1Str((name),(m)); \
+/* The saved name MUST be a string literal: tools/check_save_names.py reads literal names only (inc-cjos0). A pointer fails here; an array variable is refused by that tool. */
+template<size_t N> constexpr const char *V1LiteralName(const char (&s)[N]) { return s; }
+template<class T> struct V1IsPtr { static const bool v = false; };
+template<class T> struct V1IsPtr<T *> { static const bool v = true; };
+template<class T> struct V1IsPtr<T *const> { static const bool v = true; };
+template<class T> struct V1IsPtr<T &> : V1IsPtr<T> { };
+template<bool B> struct V1PtrOnly { };
+template<> struct V1PtrOnly<true> { typedef const char *type; };
+template<class T> typename V1PtrOnly<V1IsPtr<T>::v>::type V1LiteralName(T &&) = delete;
+#define FIELD_U8(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U8, &(m), sizeof(m)))
+#define FIELD_I8(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I8, &(m), sizeof(m)))
+#define FIELD_U16(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U16, &(m), sizeof(m)))
+#define FIELD_I16(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I16, &(m), sizeof(m)))
+#define FIELD_U32(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U32, &(m), sizeof(m)))
+#define FIELD_I32(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I32, &(m), sizeof(m)))
+#define FIELD_H(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_H, &(m), sizeof(m)))
+#define FIELD_RID(name,m)  (r.V1Mem(#m), r.V1Rid(V1LiteralName(name), (m)))
+#define FIELD_RID_AT(name,i,m)  (r.V1Mem(#m), r.V1Rid_AT(V1LiteralName(name), (i), (m)))
+#define FIELD_STR(name,m)  do { r.V1Mem(#m); if (r.V1Active()) r.V1Str(V1LiteralName(name),(m)); \
                                else (m).Serialize(r); } while (0)
-#define FIELD_BLOB(name,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob((name),(void**)&(p),(sz)); \
+#define FIELD_BLOB(name,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob(V1LiteralName(name),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_BLOB_AT(name,i,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob_AT((name),(i),(void**)&(p),(sz)); \
+#define FIELD_BLOB_AT(name,i,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob_AT(V1LiteralName(name),(i),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_ARRAY(name,p,elem,count) (r.V1Mem(#p), r.V1Array((name),(p),(elem),(count)))
+#define FIELD_ARRAY(name,p,elem,count) (r.V1Mem(#p), r.V1Array(V1LiteralName(name),(p),(elem),(count)))
 /* An array of rows. savedRowLen is the row length the file records (a named
    field beside the array); tail is the count of trailing columns that keep
    their meaning when a row grows. See Registry::V1ArrayRows. */
 #define FIELD_ARRAY_ROWS(name,p,elem,rows,rowLen,savedRowLen,tail) \
-  (r.V1Mem(#p), r.V1ArrayRows((name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail)))
-#define FIELD_OBJ(name,m)  do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
+  (r.V1Mem(#p), r.V1ArrayRows(V1LiteralName(name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail)))
+#define FIELD_OBJ(name,m)  do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin(V1LiteralName(name),&(m),sizeof(m)); \
                                (m).FieldsV1(r); r.V1EmbedEnd(); } \
                                else (m).Serialize(r); } while (0)
-#define FIELD_EMBED(name,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin((name),&(m),sizeof(m)); \
+#define FIELD_EMBED(name,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin(V1LiteralName(name),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
-#define FIELD_EMBED_AT(name,i,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin_AT((name),(i),&(m),sizeof(m)); \
+#define FIELD_EMBED_AT(name,i,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin_AT(V1LiteralName(name),(i),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
 #define FIELD_SKIP(m)     r.V1Cover(&(m), sizeof(m))
 

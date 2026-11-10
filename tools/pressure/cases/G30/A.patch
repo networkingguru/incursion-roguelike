@@ -77,7 +77,6 @@ index bfb9807..66f6ca3 100644
  	};
  
 diff --git a/inc/Defines.h b/inc/Defines.h
-index 22911b6..7e2d155 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
 @@ -346,6 +346,7 @@ typedef signed int        hObj;
@@ -111,7 +110,7 @@ index 22911b6..7e2d155 100644
  
  /* Hack -- see Monster::Inventory() */
  #define SL_ARCHERY   50
-@@ -2000,8 +2003,9 @@ typedef signed int        hObj;
+@@ -2017,8 +2020,9 @@ typedef signed int        hObj;
  #define A_MAN         37   /* Temporary Mana Adjust */
  #define A_FAT         38   /* Maximum Fatigue Points */
  #define A_COV         39   /* Armour Coverage Level */
@@ -122,24 +121,19 @@ index 22911b6..7e2d155 100644
  
  #define A_HIT 50 /* Universal +toHit */
  #define A_AID 51 /* Add to A_HIT, A_DEF, A_SAV & A_MAG */
-@@ -2167,6 +2171,7 @@ typedef signed int        hObj;
+@@ -2184,9 +2188,10 @@ typedef signed int        hObj;
  #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
  #define SK_LASTSKILL  49
  #define SK_LAST       49  /* alias of SK_LASTSKILL */
 +#define SK_GRWA 800
  #define SK_ANY -1
- // end family: sk
- /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
-@@ -2179,7 +2184,7 @@ typedef signed int        hObj;
- #define SK_HIGH_FIRST 800
- // end family: sk_high_first
- // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+ /* SK_HIGH_END is one past the last high skill. */
 -#define SK_HIGH_END   800
 +#define SK_HIGH_END   801
- // end family: sk_high_end
- // family: sk_count stored ordinal i16 grows SK_COUNT
- #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
-@@ -2345,8 +2350,9 @@ typedef signed int        hObj;
+ // end family: sk
+ /* Skills 1-48 are fixed; SK_LASTSKILL (49) and SK_LAST are frozen values and
+    never rise. A new skill takes the next number from SK_HIGH_FIRST up to 999
+@@ -2363,8 +2368,9 @@ typedef signed int        hObj;
  #define CA_ACROBATIC_FIGHTING 139
  #define CA_GRANT_ITEM        140
  #define CA_MASTER_ARTISAN    141
@@ -150,7 +144,7 @@ index 22911b6..7e2d155 100644
  // end family: ca
  // family: phd internal
  
-@@ -2903,6 +2909,7 @@ typedef signed int        hObj;
+@@ -2921,6 +2927,7 @@ typedef signed int        hObj;
  #define FT_ZEN_DEFENSE         358
  #define FT_WILD_SHAPE_MASTERY  359
  #define FT_WEAPON_HIGH_MASTERY 360
@@ -158,7 +152,7 @@ index 22911b6..7e2d155 100644
  #define FT_WEAPON_GRAND_MASTERY 361
  /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
     so existing feat numbers stored in saves are unchanged. */
-@@ -2910,7 +2917,7 @@ typedef signed int        hObj;
+@@ -2928,7 +2935,7 @@ typedef signed int        hObj;
  /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
     numbers stored in saves are unchanged. */
  #define FT_LUCUBRATION         363
@@ -167,7 +161,7 @@ index 22911b6..7e2d155 100644
  // end family: ft
  // family: mm stored bits u32
  
-@@ -3559,12 +3566,13 @@ typedef signed int        hObj;
+@@ -3577,12 +3584,13 @@ typedef signed int        hObj;
     the illusion (creature, item or terrain creator) and eID the cast's spell, so
     the +4 disbelief bonus applies only to the illusion that cast made. */
  #define ILLUS_SPOTTED     249
@@ -182,7 +176,7 @@ index 22911b6..7e2d155 100644
  // end family: stati
  // no-family
    
-@@ -4014,6 +4022,7 @@ typedef signed int        hObj;
+@@ -4032,6 +4040,7 @@ typedef signed int        hObj;
                         SS_SHLD -- ww: tower shield in CalcValues() */
  #define SS_BODY  14 /* from your current body (polymorph/race) */
  #define SS_TMPL  15 /* from your current template */
@@ -190,7 +184,7 @@ index 22911b6..7e2d155 100644
  // end family: ss
  // family: na internal
                           /* long sword        kobold         Asmodeus         */
-@@ -4581,6 +4590,7 @@ typedef signed int        hObj;
+@@ -4599,6 +4608,7 @@ typedef signed int        hObj;
  #define OPT_ELUDE_DEATH         119
  #define OPT_NO_ALLY_TRANS       120       
  #define OPT_NATURAL_SPEED       121
@@ -198,7 +192,7 @@ index 22911b6..7e2d155 100644
  // end family: opt
  // no-family
  
-@@ -5076,14 +5086,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+@@ -5094,14 +5104,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
  #define MAX_GODS           25
  // end family: lim_gods
  // family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL
@@ -280,12 +274,13 @@ diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
 index b67de67..ac3f2a7 100644
 --- a/inc/SaveRetiredNames.h
 +++ b/inc/SaveRetiredNames.h
-@@ -16,7 +16,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+@@ -16,7 +16,8 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
  };
  
  static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
 -  /* grw slot A */
 +  { "Character", "RageCount", "RageCounter" },
++  { "Game.ScriptVariable", "Dance_of_Ruin.vrock_count", "Dance_of_Ruin.vrock_total" },
    { NULL, NULL, NULL }
  };
  
@@ -537,11 +532,12 @@ diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
 index a33610d..4238c44 100644
 --- a/tools/retired_field_names.txt
 +++ b/tools/retired_field_names.txt
-@@ -3,6 +3,6 @@
+@@ -3,6 +3,7 @@
  #          rename <scope> <old> <new>  the reader matches either name
  # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
  # A retired name is never reused.
 -# grw slot A
 +rename Character RageCount RageCounter
++rename Game.ScriptVariable Dance_of_Ruin.vrock_count Dance_of_Ruin.vrock_total
  Character SpellsU16
  # grw slot B

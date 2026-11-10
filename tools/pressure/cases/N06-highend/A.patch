@@ -1,13 +1,12 @@
 diff --git a/inc/Defines.h b/inc/Defines.h
-index e5fec5b..5f0e1fa 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
-@@ -2180,7 +2180,7 @@ typedef signed int        hObj;
- #define SK_HIGH_FIRST 800
- // end family: sk_high_first
- // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+@@ -2187,7 +2187,7 @@ typedef signed int        hObj;
+ #define SK_AC8_P 800
+ #define SK_ANY -1
+ /* SK_HIGH_END is one past the last high skill. */
 -#define SK_HIGH_END   801
 +#define SK_HIGH_END   800
- // end family: sk_high_end
- // family: sk_count stored ordinal i16 grows SK_COUNT
- #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
+ // end family: sk
+ /* Skills 1-48 are fixed; SK_LASTSKILL (49) and SK_LAST are frozen values and
+    never rise. A new skill takes the next number from SK_HIGH_FIRST up to 999

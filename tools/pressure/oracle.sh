@@ -9,7 +9,7 @@
 #              sources equal a tree already built reuses that binary and recompiles only the module (see below)
 #   defdups    python3 tools/check_define_dups.py
 #   stored     python3 tools/check_stored_values.py --base <frozen master SHA>
-#   savenames  python3 tools/check_save_names.py
+#   savenames  python3 tools/check_save_names.py --base <frozen master SHA>
 #   fieldnames tools/check_field_names.sh
 #   compat     every tools/fixtures/chars/*.sav through tools/pressure/field_values.sh, compared with
 #              compare_values.py against the baseline value files recorded from the frozen master build; one
@@ -118,7 +118,7 @@ run_step() { # <name> <cmd...>
 }
 run_step defdups python3 tools/check_define_dups.py
 run_step stored python3 tools/check_stored_values.py --base "$BASE_SHA"
-run_step savenames python3 tools/check_save_names.py
+run_step savenames python3 tools/check_save_names.py --base "$BASE_SHA"
 if [ "$LANDING" = source ]; then
     # check_field_names.sh runs incursion-headless -schematest, so it needs the build a source landing does not make
     echo "oracle: fieldnames SKIPPED -- it runs the built binary; a source landing builds none"

@@ -23,6 +23,11 @@ Narrow bookkeeping rules, each printed under its own word and none a failure (in
   retired   (A7) a field missing after whose (scope, name) is a `<scope> <name>` row of that same file: branch B
             retired it, so it is expected to be gone. A missing field with no such row still fails.
 
+  regrouped (9c3b) a long array's value file prints a hash per 32 entries, `Name[a..b]`, and a `Name{bytes}` helper row
+            (es=<entry size>:<hex of every entry>; read, never compared). A group key missing after (the array grew,
+            so the last group's bounds moved) passes when the after side's entries a..b hash to the same value. An entry
+            changed, or past the end of the after array, fails.
+
   tools/pressure/compare_values.py --selftest
 runs every rule on made-up value files, and a planted real change of each kind must still exit 1. Exit 0 pass, 1 fail.
 
@@ -51,6 +56,39 @@ def load(path):
             seen[(scope, field)] = n + 1
             rows[(scope, field, n)] = (kind, value)
     return rows
+
+
+def fnv_hash(raw):
+    """The v1FvHash of src/SaveV1.cpp: FNV-1a 64 over the bytes."""
+    h = 1469598103934665603
+    for b in raw:
+        h = ((h ^ b) * 1099511628211) & 0xFFFFFFFFFFFFFFFF
+    return "%016x" % h
+
+
+def split_bytes(rows):
+    """Take the `Name{bytes}` helper rows out of `rows`: {(scope, Name, n): (es, raw)}. They are not fields the game holds."""
+    out = {}
+    for k in [k for k in rows if k[1].endswith("{bytes}")]:
+        kind, value = rows.pop(k)
+        m = re.fullmatch(r"es=(\d+):([0-9a-f]*)", value)
+        if kind == "bytes" and m and len(m.group(2)) % 2 == 0:
+            out[(k[0], k[1][:-len("{bytes}")], k[2])] = (int(m.group(1)), bytes.fromhex(m.group(2)))
+    return out
+
+
+def regrouped(k, kind, value, abytes):
+    """9c3b: a before group `Name[a..b]` whose key is gone after. Returns (ok, why) comparing entries a..b of the
+    after array; None when the key is not such a group or the after side has no bytes for the array."""
+    m = re.fullmatch(r"(\w+)\[(\d+)\.\.(\d+)\]", k[1])
+    v = re.search(r"len=(\d+) h=([0-9a-f]{16})$", value)
+    if kind != "arr" or not m or not v or (k[0], m.group(1), 0) not in abytes:
+        return None
+    es, raw = abytes[(k[0], m.group(1), 0)]
+    lo, hi = int(m.group(2)), int(m.group(3))
+    if fnv_hash(raw[lo * es:(hi + 1) * es]) != v.group(2):   # an entry past the end makes the slice short, so the hash differs
+        return False, "an entry of %d..%d holds another value or is gone (the after array has %d entries)" % (lo, hi, len(raw) // es)
+    return True, "entries %d..%d keep their values" % (lo, hi)
 
 
 def shape_line(scope, field):
@@ -207,6 +245,9 @@ def selftest():
         G = "h1:t1/Game"
         REN = {"INCURSION_PRESSURE_RENAMES": "barbazu>barbazu;grw|flask>flask;retired"}
         GROWS = {"INCURSION_PRESSURE_GROWS": "1"}
+        H4, H5 = fnv_hash(bytes([1, 2, 3, 4])), fnv_hash(bytes([1, 2, 3, 4, 5]))
+        Z = "00" * 896   # entries 0..895 are empty
+        RAW5, RAW5C = Z + "0102030405", Z + "0102090405"
         cases = [
             # (name, before, after, expected rc, expected word)
             ("A1 ok", [C + " hpRollsRow uint hpRollsRow=11", C + " hpRolls[0][10] int hpRolls=5"],
@@ -238,6 +279,11 @@ def selftest():
             ("A9 shape grows ok", [G + ".MDataSeg.Segment#0 PoolNames blob h=1"], [G + ".MDataSeg.Segment#0 PoolNames blob h=2"], 0, "shape", GROWS),
             ("A9 shape, lib unchanged", [G + ".MDataSeg.Segment#0 PoolNames blob h=1"], [G + ".MDataSeg.Segment#0 PoolNames blob h=2"], 1, "changed"),
             ("A9 pool shrank", [G + ".MDataSeg.Segment#0 PoolLengths blob PoolLengths=5"], [G + ".MDataSeg.Segment#0 PoolLengths blob PoolLengths=4"], 1, "changed", GROWS),
+            ("C3b grew", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..900] arr Options=len=5 h=" + H5, C + " Options{bytes} bytes es=1:" + RAW5], 0, "regrouped"),
+            ("C3b split", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..898] arr Options=len=3 h=x", C + " Options[899..900] arr Options=len=2 h=y", C + " Options{bytes} bytes es=1:" + RAW5], 0, "regrouped"),
+            ("C3b value changed", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..900] arr Options=len=5 h=x", C + " Options{bytes} bytes es=1:" + RAW5C], 1, "changed"),
+            ("C3b entry gone", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..897] arr Options=len=2 h=x", C + " Options{bytes} bytes es=1:" + Z + "0102"], 1, "changed"),
+            ("C3b no bytes", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..900] arr Options=len=5 h=" + H5], 1, "missing"),
             ("A4 not in table", [C + " Other uint Other=1"], [C + " Other2 uint Other=1"], 1, "missing"),
         ]
         for name, b, a, rc, word, *env in cases:
@@ -262,6 +308,7 @@ def main(argv):
     except (OSError, ValueError) as e:
         print("compare_values: %s" % e, file=sys.stderr)
         return 2
+    bbytes, abytes = split_bytes(before), split_bytes(after)
     if not before or not after:
         print("compare_values: an input has no rows", file=sys.stderr)
         return 2
@@ -278,6 +325,11 @@ def main(argv):
     for k in sorted(before):
         tag = "%s %s" % (k[0], k[1])
         if k not in after:
+            rg = regrouped(k, before[k][0], before[k][1], abytes)
+            if rg is not None:
+                print("%s %s: %s" % ("regrouped" if rg[0] else "changed  ", tag, rg[1]))
+                bad += 0 if rg[0] else 1
+                continue
             nf = fren.get((bare_scope(k[0]), k[1]))
             if nf is not None and (k[0], nf, k[2]) in after:
                 k2 = (k[0], nf, k[2])

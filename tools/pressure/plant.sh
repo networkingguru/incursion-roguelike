@@ -61,6 +61,9 @@ trap 'rm -rf "$SB"' EXIT
 mkdir -p "$SB/save" "$SB/logs"
 ln -sfn "$BIND/mod" "$SB/mod"
 ln -sfn "$BIND/lib" "$SB/lib"
+# a spec written before a rename names the old resource: follow it when this tree holds only the new name
+python3 "$HERE/plant_rename.py" "$BIND/lib/program.i" "$SPEC" > "$SB/spec" || exit 2
+SPEC="$SB/spec"
 INCURSIONPATH="$SB/" INCURSION_PLANT="$SPEC" INCURSION_PLANT_OUT="$SB/planted.sav" \
     "$BIND/incursion-headless" -dump "$SAVE" >"$SB/plant.out" 2>"$SB/plant.err"
 st=$?

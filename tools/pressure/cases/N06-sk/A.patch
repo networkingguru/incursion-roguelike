@@ -1,8 +1,7 @@
 diff --git a/inc/Defines.h b/inc/Defines.h
-index 22911b6..2087249 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
-@@ -2165,8 +2165,8 @@ typedef signed int        hObj;
+@@ -2182,8 +2182,8 @@ typedef signed int        hObj;
  #define SK_USE_MAGIC  47
  #define SK_WILDERNESS 48
  #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
@@ -11,5 +10,5 @@ index 22911b6..2087249 100644
 +#define SK_LASTSKILL  48
 +#define SK_LAST       48  /* alias of SK_LASTSKILL */
  #define SK_ANY -1
- // end family: sk
- /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
+ /* SK_HIGH_END is one past the last high skill. */
+ #define SK_HIGH_END   800

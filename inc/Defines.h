@@ -1713,7 +1713,13 @@ typedef signed int        hObj;
 #define ELUC_FOUNTAIN  5
 #define ELUC_MAEVE     6
 // end family: ex_luc
-// family: ma stored ordinal u8 sentinel MA_LAST grows MA_LAST_REAL
+// family: ma stored ordinal u8 grows MA_HIGH_END
+/* Monster types 1..73 are fixed; MA_LAST_REAL (74) and the group types 75..129
+   (MA_LAST 130) are frozen values and never rise. A new real monster type takes
+   the next number from MA_HIGH_FIRST (131) up to 255 and raises MA_HIGH_END by
+   one. MA_COUNT is the length of every array indexed by MaIndex(). IsRealMonType
+   and MaIndex live in inc/Creature.h. A new type at 74 is refused by
+   tools/check_stored_values.py: MA_LAST_REAL stays 74 and 74 is held. */
 
 
 #define MA_ALL          0
@@ -1844,7 +1850,18 @@ typedef signed int        hObj;
 #define MA_CHOICE4      128
 #define MA_CHOICE5      129
 #define MA_LAST         130
+#define MA_HIGH_END     131
 // end family: ma
+/* Each name has a family of its own, as for the skills: MA_COUNT equals
+   MA_LAST_REAL and MA_HIGH_END equals MA_HIGH_FIRST until the first high type
+   exists. MA_HIGH_END sits in family ma so the value mover raises it when it
+   renumbers a type. */
+// family: ma_high_first stored ordinal u8 sentinel MA_HIGH_FIRST
+#define MA_HIGH_FIRST 131
+// end family: ma_high_first
+// family: ma_count stored ordinal u16 grows MA_COUNT
+#define MA_COUNT      (MA_LAST_REAL + (MA_HIGH_END - MA_HIGH_FIRST))
+// end family: ma_count
 // family: mn internal
 
 
@@ -2100,7 +2117,7 @@ typedef signed int        hObj;
 #define SP_SRC_PRIMAL 3
 #define SP_SRC_BARDIC 4
 // end family: sp_src
-// family: sk stored ordinal i16 grows SK_LASTSKILL grows SK_LAST
+// family: sk stored ordinal i16 grows SK_HIGH_END
 
 /* The SpellVersionPack/SpellVersionSpell/SpellVersionSrcCode/
    SpellSrcCodeKind/SpellKindSrcCode helpers live in inc/Creature.h, near the
@@ -2168,19 +2185,20 @@ typedef signed int        hObj;
 #define SK_LASTSKILL  49
 #define SK_LAST       49  /* alias of SK_LASTSKILL */
 #define SK_ANY -1
+/* SK_HIGH_END is one past the last high skill. */
+#define SK_HIGH_END   800
 // end family: sk
-/* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
-   up to 999 and raises SK_HIGH_END by one. SK_COUNT is the length of every
-   array indexed by SkillIndex(). IsSkill/SkillIndex live in inc/Creature.h.
-   Each name has a family of its own: SK_COUNT equals SK_LASTSKILL and
+/* Skills 1-48 are fixed; SK_LASTSKILL (49) and SK_LAST are frozen values and
+   never rise. A new skill takes the next number from SK_HIGH_FIRST up to 999
+   and raises SK_HIGH_END by one. SK_COUNT is the length of every array indexed
+   by SkillIndex(). IsSkill/SkillIndex live in inc/Creature.h. SK_HIGH_END sits
+   in family sk so the value mover raises it when it renumbers a skill. Each
+   other name has a family of its own: SK_COUNT equals SK_LASTSKILL and
    SK_HIGH_END equals SK_HIGH_FIRST until the first high skill exists, and a
    family may not hold two names with one value unless one is an alias. */
 // family: sk_high_first stored ordinal i16 sentinel SK_HIGH_FIRST
 #define SK_HIGH_FIRST 800
 // end family: sk_high_first
-// family: sk_high_end stored ordinal i16 grows SK_HIGH_END
-#define SK_HIGH_END   800
-// end family: sk_high_end
 // family: sk_count stored ordinal i16 grows SK_COUNT
 #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
 // end family: sk_count

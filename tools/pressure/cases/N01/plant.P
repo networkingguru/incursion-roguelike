@@ -1,3 +1,2 @@
-# N01: two statuses that share the stored value 234, planted by name in P's own build
-status MAGIC_AURA 17 0
+# N01: SOCIAL_MOD, planted by name in P's own build
 status SOCIAL_MOD 29 0

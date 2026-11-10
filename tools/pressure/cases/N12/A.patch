@@ -2,11 +2,11 @@ diff --git a/inc/Creature.h b/inc/Creature.h
 index 26d1d6f..02fedd8 100644
 --- a/inc/Creature.h
 +++ b/inc/Creature.h
-@@ -1249,8 +1249,6 @@ class Character: public Creature
+@@ -1249,8 +1249,7 @@ class Character: public Creature
        FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
        FIELD_U16("desiredAlign", desiredAlign);
        FIELD_U32("Proficiencies", Proficiencies);
--      uint32 ac8Old = 17;
+       uint32 ac8Old = 17;
 -      FIELD_U32("Ac8Old", ac8Old);
        uint32 ac8Source = 29;
        FIELD_U32("Ac8Source", ac8Source);

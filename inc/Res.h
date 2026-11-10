@@ -408,7 +408,7 @@ class TMonster: public Resource
       return false; 
     } 
 
-    uint8 MTypeCache[(MA_LAST/8) + 1];
+    uint8 MTypeCache[(MA_HIGH_END/8) + 1];
     const inline bool isMType(rID tmid, uint32 mtype) 
     {
       if (mtype >= 256)
@@ -1319,6 +1319,8 @@ class Game : public Object
     public: /* Debugging Hack; 'private' later */
       int16 Day;
       uint32 Turn; String SaveFile;
+      static_assert(MAX_MODULES <= 255,
+        "an rID keeps module index + 1 in its top byte (xID >> 24); MAX_MODULES may not pass 255");
       static Module *Modules[MAX_MODULES];
       char   *MDataSeg[MAX_MODULES];
       uint32 MDataSegSize[MAX_MODULES];

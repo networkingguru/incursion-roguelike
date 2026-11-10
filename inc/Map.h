@@ -125,6 +125,8 @@ class Overlay
 			int16 GlyphY[MAX_OVERLAY_GLYPHS];
 			Glyph GlyphImage[MAX_OVERLAY_GLYPHS];
 			int16 GlyphCount;
+			static_assert(MAX_OVERLAY_GLYPHS <= 32767,
+			  "GlyphCount is an int16 and travels as K_I16; MAX_OVERLAY_GLYPHS may not pass 32767");
 			hObj m;
 		public:
 			Overlay(hObj _m) { Active=false;m=_m; }

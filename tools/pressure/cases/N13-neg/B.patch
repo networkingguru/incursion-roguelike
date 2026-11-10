@@ -1,13 +1,11 @@
 diff --git a/inc/Creature.h b/inc/Creature.h
-index b27f25e..fcbdd39 100644
 --- a/inc/Creature.h
 +++ b/inc/Creature.h
-@@ -1258,6 +1258,8 @@ class Character: public Creature
+@@ -1279,6 +1279,7 @@
+       FIELD_U32("Proficiencies", Proficiencies);
+       uint32 ac8LeftValue = 17;
        r.V1EmbedBegin("Ac8Left", &ac8LeftValue, sizeof(ac8LeftValue));
-       FIELD_U32("value", ac8LeftValue);
++      FIELD_U32("value", ac8LeftValue);
+       FIELD_U32("anchor", ac8LeftValue);
        /* ac8 left tail */
-+      uint32 ac8LeftNew = 73;
-+      FIELD_U32("value", ac8LeftNew);
        r.V1EmbedEnd();
-       /* Load-direction fixups, below every field they read (wire format,
-          load-direction ordering). Both are guarded by V1Active(): on the v0

@@ -9,7 +9,7 @@
 # SkillIndex and SkillByIndex agree with the rule at 0, 1, 48, 49, 363, 799, 800 and 999 for the
 # tree's SK_HIGH_END; SK_COUNT is SK_LASTSKILL plus the high block; Character::Feats holds a bit for
 # every number to 999 (125 elements); SkillRanks has SK_COUNT elements; SK_COUNT fits the gallery
-# record's SkillRanks[100].
+# record's SkillRanks[100]; SK_LASTSKILL stays 49 (a frozen value).
 #
 # Usage: tools/check_skill_numbers.sh              (exit 0 pass, 1 fail, 2 could not measure)
 #        tools/check_skill_numbers.sh --selftest   (proves red on planted wrong engine output; needs no binary)
@@ -33,6 +33,7 @@ verify() {
         [[ "$v" =~ ^[0-9]+$ ]] || { echo "FAIL: unreadable constants line: $line"; return 1; }
     done
     [ "$C" -eq $((L + HE - HF)) ] || { echo "FAIL: SK_COUNT $C != SK_LASTSKILL $L + (SK_HIGH_END $HE - SK_HIGH_FIRST $HF)"; bad=1; }
+    [ "$L" -eq 49 ] || { echo "FAIL: SK_LASTSKILL is $L, it is a frozen 49 (a new skill takes 800 up and raises SK_HIGH_END)"; bad=1; }
     [ "$HF" -eq 800 ] || { echo "FAIL: SK_HIGH_FIRST is $HF, the ruling says 800"; bad=1; }
     [ "$HE" -ge "$HF" ] && [ "$HE" -le 1000 ] || { echo "FAIL: SK_HIGH_END $HE is outside $HF..1000"; bad=1; }
     [ "$C" -le 100 ] || { echo "FAIL: SK_COUNT $C passes the gallery SkillRanks[100]"; bad=1; }
@@ -105,6 +106,8 @@ GOOD
     mut "SkillRanks not SK_COUNT"    's/SkillRanks=49/SkillRanks=48/'
     mut "SK_COUNT past gallery"      's/SK_COUNT=49/SK_COUNT=101/'
     mut "SK_COUNT not the sum"       's/SK_COUNT=49/SK_COUNT=50/'
+    # a self-consistent tree whose only fault is SK_LASTSKILL 50: skill 49 real, SkillRanks 50
+    mut "SK_LASTSKILL raised"        's/SK_LASTSKILL=49 SK_HIGH_FIRST=800 SK_HIGH_END=800 SK_COUNT=49/SK_LASTSKILL=50 SK_HIGH_FIRST=800 SK_HIGH_END=800 SK_COUNT=50/;s/SkillRanks=49/SkillRanks=50/;s/^\(SKILLNUMBERS n=49 \).*/\1IsSkill=1 SkillIndex=49 SkillByIndex=49/'
     mut "SK_HIGH_FIRST moved"        's/SK_HIGH_FIRST=800/SK_HIGH_FIRST=700/'
     mut "engine round trip failed"   's/GROUP skillnumbers PASS/GROUP skillnumbers FAIL/'
     mut "probe line missing"         '/^SKILLNUMBERS n=363 /d'

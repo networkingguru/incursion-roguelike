@@ -2328,9 +2328,58 @@ void SaveV1_SegmentFields(Registry &r, Game &g, int slot)
     sp->sizeTarget = &g.MDataSegSize[slot];
   }
 
+/* A saved variable whose name its owner lost may sit under the other side of a
+   `rename Game.ScriptVariable <Owner>.<old> <Owner>.<new>` row, with each space in
+   <Owner> written as _ (tools/retired_field_names.txt; inc-cjos0). Returns the other
+   side's variable name, or "". */
+static std::string v1VariableRenamedName(Module *mod, rID owner, const char *saved)
+  {
+    std::string on = "(module)";
+    if (owner)
+      {
+        Resource *res = mod->__GetResource(owner);
+        if (!res) return "";
+        const char *nm = mod->GetText(res->Name);
+        on = nm ? nm : "";
+      }
+    for (size_t i = 0; i != on.size(); i++) if (on[i] == ' ') on[i] = '_';
+    std::string key = on + "." + saved, prefix = on + ".";
+    for (const RenamedFieldName *rn = RENAMED_FIELD_NAMES; rn->scope; rn++)
+      if (!strcmp(rn->scope, "Game.ScriptVariable"))
+        {
+          std::string o = rn->oldName, n = rn->newName;
+          if (key == o && n.compare(0, prefix.size(), prefix) == 0) return n.substr(prefix.size());
+          if (key == n && o.compare(0, prefix.size(), prefix) == 0) return o.substr(prefix.size());
+        }
+#ifdef DEBUG
+    /* inc-cjos0: INCURSION_RENAMED_EXTRA="Owner.old Owner.new|Owner.old Owner.new" adds
+       Game.ScriptVariable rows for one run, so tools/script_vars_survive.py can watch a
+       renamed variable keep its value without a row in the engine's table. */
+    const char *x = getenv("INCURSION_RENAMED_EXTRA");
+    if (x)
+      {
+        std::string list = x;
+        size_t a = 0;
+        while (a <= list.size())
+          {
+            size_t b = list.find('|', a);
+            if (b == std::string::npos) b = list.size();
+            std::string item = list.substr(a, b - a);
+            a = b + 1;
+            size_t sp = item.find(' ');
+            if (sp == std::string::npos) continue;
+            std::string o = item.substr(0, sp), n = item.substr(sp + 1);
+            if (key == o && n.compare(0, prefix.size(), prefix) == 0) return n.substr(prefix.size());
+            if (key == n && o.compare(0, prefix.size(), prefix) == 0) return o.substr(prefix.size());
+          }
+      }
+#endif
+    return "";
+  }
+
 /* A value lands in the loaded variable of its converted owner with the same
-   name; a name the owner lost is dropped, one the file lacks keeps its
-   default (inc-cjos0). */
+   name, or the other side of a Game.ScriptVariable rename row; a name the owner
+   lost is dropped, one the file lacks keeps its default (inc-cjos0). */
 static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
   {
     std::vector<DebugInfo*> table = v1VariableTable(mod);
@@ -2358,6 +2407,14 @@ static long v1PlaceVariables(V1SegPending *sp, Module *mod, char *seg)
           for (size_t j = 0; j < table.size(); ++j)
             if (v1VariableOwner(table[j]) == owners[k] &&
                 !strcmp(var->name, table[j]->Ident)) { match = table[j]; break; }
+        if (valid[k] && !match)
+          {
+            std::string other = v1VariableRenamedName(mod, (rID)owners[k], var->name);
+            if (other.size())
+              for (size_t j = 0; j < table.size(); ++j)
+                if (v1VariableOwner(table[j]) == owners[k] &&
+                    !strcmp(other.c_str(), table[j]->Ident)) { match = table[j]; break; }
+          }
         const char *reason = NULL;
         if (!valid[k]) reason = "owner conversion failed";
         else if (!v1VariableType(var->type)) reason = "unsupported recorded type";
@@ -4816,7 +4873,7 @@ bool Registry::V1RunSchemaTest(const char *outDir)
         pl->JournalInfo.bestItem = "Vorpal Blade";
         pl->JournalInfo.bestItemVal = 205;
         pl->JournalInfo.numMonSeen = 206;
-        for (i = 0; i != MA_LAST_REAL; i++)
+        for (i = 0; i != MA_COUNT; i++)
           pl->JournalInfo.numMonOfType[i] = (int)(i + 1);
         /* Real YuseCommands indexes, plus the -1 "empty" sentinel in one
            slot: the load rules accept those two shapes and nothing else. */
@@ -5659,6 +5716,42 @@ bool Registry::V1RunSchemaTest(const char *outDir)
       ok = ok && grpOk;
     }
 
+    /* inc-cjos0 phase 9c: the monster type helpers and the array they size,
+       printed for tools/check_monster_numbers.sh to assert. The self-checks
+       here: MaByIndex(MaIndex(n)) == n for every real type, and a count
+       written at MaIndex(n) of a numMonOfType read back at the same slot. */
+    {
+      bool grpOk = true;
+      static const int probe[] = { 0, 1, 73, 74, 75, 130, 131, 132, 255, 256 };
+      static int cnt[MA_COUNT];
+      printf("MONNUMBERS const MA_LAST_REAL=%d MA_LAST=%d MA_HIGH_FIRST=%d MA_HIGH_END=%d MA_COUNT=%d\n",
+             (int)MA_LAST_REAL, (int)MA_LAST, (int)MA_HIGH_FIRST, (int)MA_HIGH_END, (int)MA_COUNT);
+      printf("MONNUMBERS len numMonOfType=%d\n",
+             (int)(sizeof(((Player*)0)->JournalInfo.numMonOfType) / sizeof(int)));
+      for (size_t k = 0; k != sizeof(probe) / sizeof(probe[0]); k++)
+        {
+          int n = probe[k];
+          printf("MONNUMBERS n=%d IsRealMonType=%d MaIndex=%d MaByIndex=%d\n",
+                 n, (int)IsRealMonType(n), MaIndex(n), MaByIndex(n));
+        }
+      for (int n = 0; n != 256; n++)
+        if (IsRealMonType(n))
+          {
+            if (MaByIndex(MaIndex(n)) != n) { printf("MONNUMBERS round trip broken at %d\n", n); grpOk = false; }
+            cnt[MaIndex(n)] = n;
+          }
+      int seen = 0;
+      for (int k = 1; k < MA_COUNT; k++)
+        {
+          int n = MaByIndex(k);
+          if (!IsRealMonType(n) || cnt[k] != n) { printf("MONNUMBERS slot %d does not hold type %d\n", k, n); grpOk = false; }
+          seen++;
+        }
+      printf("MONNUMBERS walk visited=%d last=%d\n", seen, MA_COUNT > 1 ? MaByIndex(MA_COUNT - 1) : 0);
+      printf("SCHEMATEST GROUP monnumbers %s\n", grpOk ? "PASS" : "FAIL");
+      ok = ok && grpOk;
+    }
+
     if (ok)
       printf("SCHEMATEST PASS\n");
     return ok;
@@ -6431,6 +6524,15 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
         bool featArr = intEl && row.name == "Feats";
         bool typed = ifam || featArr;
         uint32 step = (n <= 64 || typed) ? 1 : 32;   /* a long array logs a hash per 32 elements: a moved element still shows */
+        if (step != 1)
+          {
+            /* inc-cjos0 9c3b: the bytes behind the hashes, so compare_values.py can re-hash a group whose bounds
+               moved when the array grew. Not a field the game holds; the comparer reads it and never compares it. */
+            std::string hex;
+            char hb[4];
+            for (size_t b = 0; b != (size_t)n * es; b++) { snprintf(hb, sizeof(hb), "%02x", a[b]); hex += hb; }
+            fprintf(f, "%s %s{bytes} bytes es=%u:%s\n", scope.c_str(), row.name.c_str(), (unsigned)es, hex.c_str());
+          }
         for (uint32 i = 0; i < n; i += step)
           {
             uint32 e = (i + step < n) ? i + step : n;
@@ -6452,7 +6554,8 @@ static bool v1FvWalk(FILE *f, const uint8 *p, size_t len, const std::string &rec
                   }
                 else if (FAMNAMES_MEASURED)
                   {
-                    const char *nm = V1FamName(ifam, !strcmp(ifam, "sk") ? (long)SkillByIndex((int)i) : (long)i);
+                    const char *nm = V1FamName(ifam, !strcmp(ifam, "sk") ? (long)SkillByIndex((int)i)
+                                       : !strcmp(ifam, "ma") ? (long)MaByIndex((int)i) : (long)i);
                     val += nm ? std::string("(@") + nm + ")" : std::string("(?)");
                   }
               }

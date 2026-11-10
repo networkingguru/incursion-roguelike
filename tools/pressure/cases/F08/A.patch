@@ -1,27 +1,12 @@
-diff --git a/inc/Creature.h b/inc/Creature.h
-index d62a9c3..a05fe41 100644
---- a/inc/Creature.h
-+++ b/inc/Creature.h
-@@ -1249,6 +1249,8 @@ class Character: public Creature
-       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
-       FIELD_U16("desiredAlign", desiredAlign);
-       FIELD_U32("Proficiencies", Proficiencies);
-+      uint8 ac8WA = (uint8)AC8_WIDTH_A;
-+      FIELD_U8("Ac8WA", ac8WA);
-       /* Load-direction fixups, below every field they read (wire format,
-          load-direction ordering). Both are guarded by V1Active(): on the v0
-          path the raw dump supplies these bytes and rejecting a v0 save this
 diff --git a/inc/Defines.h b/inc/Defines.h
-index 22911b6..2972f60 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
-@@ -347,6 +347,9 @@ typedef signed int        hObj;
- #define KN_IDENTIFIED 0x60
- #define KN_HANDLED   0x80
- // end family: kn
-+// family: ac8_width stored ordinal u16
-+#define AC8_WIDTH_A 256
-+// end family: ac8_width
- // family: if_flag stored bits u16
- 
- #define IF_BLESSED     0x0001
+@@ -5088,7 +5088,7 @@
+ #define MAX_WILDER_GRIDY   16
+ // end no-family
+ // family: lim_spells stored ordinal u16 grows MAX_SPELLS
+-#define MAX_SPELLS         2048
++#define MAX_SPELLS         4097
+ // end family: lim_spells
+ // family: lim_gods stored ordinal u16 grows MAX_GODS
+ #define MAX_GODS           25

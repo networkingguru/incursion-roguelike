@@ -23,17 +23,44 @@ cd "$ROOT"
 # Refuse to compile a tree whose stored values or saved names collide (inc-cjos0
 # phase 7e, F10: a hand merge of two branches runs no hook and no gate, so this is
 # the one step every build passes). Exit 2 means "could not measure" (no master
-# ref, no python3): it warns and the build goes on. Any other failure stops the
-# build before a binary is written.
+# ref, no python3). Inside a git checkout, meaning the tree being built is itself
+# a checkout (its git top level is $ROOT), exit 2 or a missing python3 STOPS the
+# build, because a collision could go unseen (inc-cjos0 gap 13b). Outside git it
+# warns and the build goes on: a source copy with no history, and a copy nested
+# inside another checkout's logs/, which has no history of its own, count as
+# outside git. A missing check file always warns, so an old ref still builds.
+# Any other failure stops the build before a binary is written.
 PRECHECK_START=$SECONDS
+IN_GIT=0
+if command -v git >/dev/null 2>&1; then
+    GIT_TOP="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [ -n "$GIT_TOP" ] && [ "$(cd "$GIT_TOP" && pwd -P)" = "$(pwd -P)" ]; then
+        IN_GIT=1
+    fi
+fi
 for chk in tools/check_define_dups.py tools/check_stored_values.py tools/check_save_names.py; do
-    if [ ! -f "$chk" ] || ! command -v python3 >/dev/null 2>&1; then
-        echo "build: WARNING $chk not run (missing file or python3); the build goes on"
+    if [ ! -f "$chk" ]; then
+        echo "build: WARNING $chk not run (missing file); the build goes on"
+        continue
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        if [ "$IN_GIT" = 1 ]; then
+            echo "build: STOPPED: python3 is missing, so $chk could not run and a collision could go unseen; no binary was built."
+            echo "    Install python3."
+            exit 1
+        fi
+        echo "build: WARNING $chk not run (missing python3); the build goes on"
         continue
     fi
     rc=0
     out="$(python3 "$chk" 2>&1)" || rc=$?
-    if [ "$rc" = 2 ]; then
+    if [ "$rc" = 2 ] && [ "$IN_GIT" = 1 ]; then
+        echo "build: STOPPED by $chk (exit 2, could not measure); no binary was built:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -3 | sed 's/^/    /'
+        echo "    The check could not measure, so a collision could go unseen."
+        echo "    Make master resolvable (for example: git fetch origin master:master)."
+        exit 1
+    elif [ "$rc" = 2 ]; then
         echo "build: WARNING $chk could not measure (exit 2); the build goes on:"
         printf '%s\n' "$out" | grep -v '^KNOWN' | tail -3 | sed 's/^/    /'
     elif [ "$rc" != 0 ]; then

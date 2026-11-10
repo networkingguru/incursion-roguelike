@@ -4,9 +4,10 @@
 # fact: scope of a field -- tools/convert_tags_to_names.py site_scope (the owner by number_values.py's scope rule, plus every open V1EmbedBegin name); --selftest builds its own scratch tree
 # fact: retired and renamed names -- tools/retired_field_names.txt (the file the engine's inc/SaveRetiredNames.h copies; tools/check_field_names.sh keeps the two equal)
 # fact: migration names -- the v1Migrations[] table in src/SaveV1.cpp, read as text
+# fact: the base tree -- a git ref (default master, re-read on every run) whose inc/ and src/ `git archive` gives; the migration functions it registers
 """Static checks of the names a save file carries (inc-cjos0, spec 5.3 and 8).
 
-  check_save_names.py [--root ROOT]            run every check; exit 0 pass, 1 refuse, 2 cannot measure
+  check_save_names.py [--root ROOT] [--base REF]  run every check; exit 0 pass, 1 refuse, 2 cannot measure
   check_save_names.py migrations all           print the comma list the writer saves (every registered name)
   check_save_names.py migrations run REV       print the comma list a load runs for a file of revision REV
                                                that holds no applied migration
@@ -19,6 +20,11 @@ Checks
      declarations of one name.  One declaration reached from several records (a loop, a shared
      FieldsV1) has one member expression and passes.
   3. Two migrations registered under one name.
+  4. A migration name that master registers must run the same function, with the same body,
+     in the tree (--base REF, default master, read with `git archive` of inc/ and src/).  A
+     name is permanent and its function is frozen once it lands: a file that lists the name
+     skips the migration, so a changed function never reaches it.  Only the named function's
+     text is compared (comments and spacing ignored); a helper it calls is not.
 V1ArrayWiden16 reads its OLD name on purpose; only its new name is checked.  A name a macro
 argument carries (AC8_X("name", m)) is invisible here: the engine refuses it at run time
 (v1WNameId and v1Find in src/SaveV1.cpp).
@@ -26,6 +32,8 @@ argument carries (AC8_X("name", m)) is invisible here: the engine refuses it at 
 import argparse
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -38,6 +46,7 @@ RETIRED_REL = "tools/retired_field_names.txt"
 SAVEV1_REL = "src/SaveV1.cpp"
 EMBED_AT = re.compile(r"\bV1EmbedBegin_AT\s*\(")
 MIGRATION_ROW = re.compile(r'\{\s*"([^"]*)"\s*,\s*(\d+)\s*,')
+MIGRATION_FN_ROW = re.compile(r'\{\s*"([^"]*)"\s*,\s*(\d+)\s*,\s*&\s*(?:\w+::)?(\w+)')
 
 
 def parse_retired(path):
@@ -132,13 +141,69 @@ def check_fields(root, retired_path):
             bad.append("%s: %s(\"%s\") in scope %s uses the old name of a rename to \"%s\" (%s)"
                        % (where, call, nm, path, old[(path, nm)], RETIRED_REL))
         if member is not None:
-            decl.setdefault((path, nm), {}).setdefault(member, where)
-    for (path, nm), members in sorted(decl.items()):
+            decl.setdefault((path, nm), []).append((member, where))
+    for (path, nm), writes in sorted(decl.items()):
+        members = {m for m, _w in writes}
+        w = sorted(x for _m, x in writes)
         if len(members) > 1:
-            w = sorted(members.values())
             bad.append("%s: name \"%s\" in scope %s is declared with %d different members (%s)"
                        % (w[0], nm, path, len(members), ", ".join(w[1:])))
+        elif len(w) > 1:
+            bad.append("%s: name \"%s\" in scope %s is written at %d sites with the same spelling (%s). "
+                       "A name is written once in its scope; keep one site"
+                       % (w[0], nm, path, len(w), ", ".join(w[1:])))
     return bad, len(sites)
+
+
+def check_literal_args(root):
+    """-> [FAIL line] for every FIELD_* call outside inc/Base.h whose name argument is not one string
+    literal. V1LiteralName refuses a pointer at compile time; an array variable only this text check sees."""
+    bad = []
+    for u in load_units(root):
+        if u.rel == "inc/Base.h":
+            continue
+        for grp in u.calls():
+            if u.in_pp(grp[0].off):
+                continue
+            s0 = grp[0]
+            if s0.name.startswith("FIELD_") and s0.name != "FIELD_SKIP" and literal(u, s0.span) is None:
+                bad.append("%s:%d: %s name argument is not a string literal (V1LiteralName; the name check reads literal names only)"
+                           % (u.rel, u.line(s0.off), s0.name))
+    return bad
+
+
+BASE_REL = "inc/Base.h"   # defines the FIELD_ macros; its #defines are the macros themselves
+# A macro that writes field names as literals and takes only a type: the engine's four Array
+# specialisations. Its names ("Count", "Element") are fixed, so no argument carries a name.
+MACRO_ALLOWED = {("src/SaveV1.cpp", "V1_ELEM_ARRAY_FIELDS")}
+DEFINE_HEAD = re.compile(r"^[ \t]*#[ \t]*define[ \t]+(\w+)", re.M)
+FIELD_CALL = re.compile(r"\b(FIELD_\w+|V1Field|V1Rid\w*|V1Str\w*)\s*\(")
+
+
+def check_macros(root):
+    """-> [FAIL line] for every #define outside inc/Base.h whose body calls FIELD_*, V1Field, V1Rid or V1Str.
+    A macro argument carries the name, so the name check cannot read it."""
+    bad = []
+    for u in load_units(root):
+        if u.rel == BASE_REL:
+            continue
+        t = nv.blank_comments(u.raw)
+        for m in DEFINE_HEAD.finditer(t):
+            end = m.end()
+            while True:
+                nl = t.find("\n", end)
+                if nl < 0:
+                    end = len(t)
+                    break
+                end = nl
+                if t[nl - 1:nl] != "\\":
+                    break
+                end = nl + 1
+            c = FIELD_CALL.search(t, m.end(), end)
+            if c and (u.rel, m.group(1)) not in MACRO_ALLOWED:
+                bad.append("%s:%d: macro %s calls %s; write the FIELD_ call out with a literal name "
+                           "(the name check reads literal names only)" % (u.rel, u.line(m.start()), m.group(1), c.group(1)))
+    return bad
 
 
 def migration_rows(root):
@@ -153,6 +218,112 @@ def migration_rows(root):
     return [(g.group(1), int(g.group(2))) for g in MIGRATION_ROW.finditer(raw, op, cl)]
 
 
+def migration_fns(root):
+    """-> [(name, function name)] in table order, from the v1Migrations[] table of src/SaveV1.cpp."""
+    raw = open(os.path.join(root, SAVEV1_REL), encoding="utf-8", errors="replace").read()
+    t = nv.blank_comments(raw)
+    m = re.search(r"\bv1Migrations\s*\[\s*\]\s*=\s*\{", t)
+    if not m:
+        raise ValueError("no v1Migrations[] table in %s" % SAVEV1_REL)
+    op = m.end() - 1
+    cl = t.find("};", op)
+    return [(g.group(1), g.group(3)) for g in MIGRATION_FN_ROW.finditer(raw, op, cl)]
+
+
+def strip_comments(raw):
+    """raw without its comments; string and character literals stay."""
+    out, i, n = [], 0, len(raw)
+    while i < n:
+        two = raw[i:i + 2]
+        if two == "//":
+            j = raw.find("\n", i)
+            i = n if j < 0 else j
+        elif two == "/*":
+            j = raw.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            out.append(" ")
+        elif raw[i] in "\"'":
+            j = i + 1
+            while j < n and raw[j] != raw[i]:
+                j += 2 if raw[j] == "\\" else 1
+            out.append(raw[i:j + 1])
+            i = j + 1
+        else:
+            out.append(raw[i])
+            i += 1
+    return "".join(out)
+
+
+def function_bodies(root, fn):
+    """-> every definition of `fn()` in inc/ and src/ (inline or `Class::fn`), comments dropped
+    and white space collapsed, in file order."""
+    out = []
+    pat = re.compile(r"(?<![\w])(?:\w+::)*%s\s*\(\s*\)\s*(?:const\s*)?\{" % re.escape(fn))
+    for sub in ("inc", "src"):
+        for dp, dn, fnames in os.walk(os.path.join(root, sub)):
+            dn.sort()
+            for f in sorted(fnames):
+                if not f.endswith(ct.EXTS):
+                    continue
+                raw = open(os.path.join(dp, f), encoding="utf-8", errors="replace").read()
+                if fn not in raw:
+                    continue
+                t = nv.blank_comments(raw)
+                for m in pat.finditer(t):
+                    op, depth = m.end() - 1, 0
+                    for k in range(op, len(t)):
+                        depth += (t[k] == "{") - (t[k] == "}")
+                        if depth == 0:
+                            out.append(" ".join(strip_comments(raw[op:k + 1]).split()))
+                            break
+    return out
+
+
+def check_frozen(base_root, root):
+    """Item 4. -> (FAIL lines, migrations compared). ValueError when the base cannot be read."""
+    tree = {}
+    for name, fn in migration_fns(root):
+        tree.setdefault(name, fn)
+    bad = []
+    bp = os.path.join(base_root, SAVEV1_REL)
+    # A base from before the migration table landed registers nothing, so it freezes nothing.
+    held = os.path.isfile(bp) and "v1Migrations" in open(bp, encoding="utf-8", errors="replace").read()
+    rows = migration_fns(base_root) if held else []
+    for name, fn in rows:
+        if name not in tree:
+            bad.append("%s: migration \"%s\" is gone from the table; a registered name is permanent "
+                       "(master runs %s for it)" % (SAVEV1_REL, name, fn))
+        elif tree[name] != fn:
+            bad.append("%s: migration \"%s\" has a changed function: master runs %s, the tree runs %s. "
+                       "A name is permanent and its function is frozen once it lands. Fix: keep %s as it is "
+                       "and register the new function under a new name"
+                       % (SAVEV1_REL, name, fn, tree[name], fn))
+        else:
+            was = function_bodies(base_root, fn)
+            if not was:
+                raise ValueError("cannot find the body of %s (migration \"%s\") in the base" % (fn, name))
+            now = function_bodies(root, fn)
+            if not now:
+                bad.append("%s: migration \"%s\" has a changed function: the body of %s is gone from the tree"
+                           % (SAVEV1_REL, name, fn))
+            elif now != was:
+                bad.append("%s: migration \"%s\" has a changed function body: %s differs from master. "
+                           "A name is permanent and its function is frozen once it lands. Fix: restore %s "
+                           "and register the new work under a new name" % (SAVEV1_REL, name, fn, fn))
+    return bad, len(rows)
+
+
+def extract_base(ref, dest, root):
+    """Read-only: git archive of inc/ and src/ of ref into dest."""
+    a = subprocess.Popen(["git", "-C", root, "archive", ref, "inc", "src"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    t = subprocess.run(["tar", "-x", "-C", dest], stdin=a.stdout, capture_output=True)
+    a.stdout.close()
+    err = a.stderr.read().decode()
+    if a.wait() != 0 or t.returncode != 0:
+        raise ValueError("cannot read base %s: %s" % (ref, (err or t.stderr.decode()).strip()[-300:]))
+
+
 def check_migrations(root):
     rows = migration_rows(root)
     bad, seen = [], {}
@@ -165,14 +336,23 @@ def check_migrations(root):
     return bad, len(rows)
 
 
-def run_all(root):
+def run_all(root, base="master"):
     rp = os.path.join(root, RETIRED_REL)
     if not os.path.isfile(rp) or not os.path.isfile(os.path.join(root, SAVEV1_REL)):
         print("UNMEASURED: %s or %s is missing under %s" % (RETIRED_REL, SAVEV1_REL, root))
         return 2
     try:
         fb, nsites = check_fields(root, rp)
+        fb += check_macros(root)
+        fb += check_literal_args(root)
         mb, nmig = check_migrations(root)
+        tmp = tempfile.mkdtemp(prefix="save_names_base.")
+        try:
+            extract_base(base, tmp, root)
+            fb2, _n = check_frozen(tmp, root)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        mb += fb2
     except ValueError as e:
         print("UNMEASURED: %s" % e)
         return 2
@@ -202,7 +382,7 @@ def selftest():
             open(os.path.join(d, SAVEV1_REL), "w").write(
                 "static const V1Migration v1Migrations[] = {\n%s\n};\n"
                 % "\n".join('    { "%s", %d, &Player::Fn },' % r for r in rows))
-            return check_fields(d, os.path.join(d, RETIRED_REL))[0], check_migrations(d)[0], d
+            return check_fields(d, os.path.join(d, RETIRED_REL))[0], check_migrations(d)[0], check_macros(d) + check_literal_args(d)
 
     good = """class Foo {
   void FieldsV1(Registry &r)
@@ -238,7 +418,22 @@ def selftest():
     f, _, _ = run(good.replace('FIELD_I32("b", b)', 'FIELD_I32("a", c)'), ret)
     check("red (F03): one name, two members, one scope is refused", len(f) == 1 and "2 different members" in f[0])
     f, _, _ = run(good.replace('FIELD_I32("b", b)', 'FIELD_U8("a", a)'), ret)
-    check("green: one declaration written twice is one declaration", not f)
+    check("red (N16): one name written at two sites is refused, whatever the member",
+          len(f) == 1 and '"a"' in f[0] and "2 sites" in f[0] and "same spelling" in f[0])
+    f, _, _ = run(good.replace('r.V1EmbedEnd();\n      r.V1EmbedBegin("F"', 'r.V1EmbedEnd();\n      r.V1EmbedBegin("F"')
+                  .replace('FIELD_U8("x", e.x);', 'FIELD_U8("x", e.x); FIELD_U8("y", e.y);'), ret)
+    check("green: one name in two different scopes is not a repeat", not f)
+    f, _, d = run(good + "#define W(n, m) FIELD_U32(n, m)\n", ret)
+    check("red (N15): a macro that calls FIELD_ outside Base.h is refused",
+          len(d) == 1 and "macro W calls FIELD_U32" in d[0])
+    f, _, d = run(good + "#define W(m) \\\n  do { r.V1Rid(\"n\", m); } while (0)\n", ret)
+    check("red (N15): a continued macro body that calls V1Rid is refused", len(d) == 1)
+    f, _, d = run(good + "#define W(m) (m)\n// #define V(m) FIELD_U8(\"z\", m)\n", ret)
+    check("green: a macro that calls no field function, and a commented one, pass", not d)
+    f, _, d = run(good.replace('FIELD_I32("b", b)', 'FIELD_I32(nm, b)'), ret)
+    check("red: a FIELD_ call whose name is a variable is refused", len(d) == 1 and "not a string literal" in d[0])
+    f, _, d = run("#define FIELD_U8(name,m) r.V1Field((name), K_U8, &(m), 1)\n", ret, rel="inc/Base.h")
+    check("green: the FIELD_ macros of inc/Base.h are not refused", not d)
     f, _, _ = run(good.replace('FIELD_U8("x", g[i].x);', 'FIELD_U8("x", g[i].x); FIELD_U8("x", g[i].y);'), ret)
     check("red: two members of one name inside an _AT embed are refused", len(f) == 1 and "Foo.G" in f[0])
     f, _, _ = run(good.replace('r.V1EmbedEnd(); }', 'r.V1EmbedEnd(); } FIELD_U8("a", z);'), ret)
@@ -246,6 +441,50 @@ def selftest():
     f, m, _ = run(good, ret, [("A", 5), ("B", 6), ("A", 0)])
     check("red (F11): a duplicate migration name is refused", len(m) == 1 and '"A"' in m[0])
     check("green: distinct migration names pass", not run(good, ret, [("A", 5), ("B", 6), ("C", 0)])[1])
+    # N19: a registered migration name keeps its function, and the function keeps its body
+    def tree(rows, bodies):
+        d = tempfile.mkdtemp()
+        for sub in ("inc", "src", "tools"):
+            os.makedirs(os.path.join(d, sub))
+        open(os.path.join(d, SAVEV1_REL), "w").write(
+            "static const V1Migration v1Migrations[] = {\n%s\n};\n"
+            % "\n".join('    { "%s", %d, &Player::%s },' % r for r in rows))
+        open(os.path.join(d, "src", "Mig.cpp"), "w").write(bodies)
+        return d
+    rows = [("A", 5, "FnA"), ("B", 0, "FnB")]
+    body = ("void Player::FnA() { x = 1; /* note */ }\n"
+            "class P { void FnB() { if (y == 1040) z = 101; } void Other() { q = 1; } };\n")
+    with tempfile.TemporaryDirectory() as _scratch:
+        bt = tree(rows, body)
+        check("green: a tree equal to the base passes", not check_frozen(bt, bt)[0])
+        check("green: a comment or spacing change in a body passes",
+              not check_frozen(bt, tree(rows, body.replace("/* note */", "/* other */").replace("x = 1", "x  =  1")))[0])
+        check("green: a new migration row and a body elsewhere passes",
+              not check_frozen(bt, tree(rows + [("C", 0, "FnC")], body + "void Player::FnC() { w = 2; }\n"))[0])
+        check("green: another function in the class may change",
+              not check_frozen(bt, tree(rows, body.replace("q = 1", "q = 2")))[0])
+        bad_rows = [("A", 5, "FnA"), ("B", 0, "FnB2")]
+        f = check_frozen(bt, tree(bad_rows, body + "void Player::FnB2() { z = 202; }\n"))[0]
+        check("red (N19): a name that runs another function is refused",
+              len(f) == 1 and '"B"' in f[0] and "changed function" in f[0] and "FnB2" in f[0])
+        f = check_frozen(bt, tree(rows, body.replace("z = 101", "z = 202")))[0]
+        check("red (N19): the same function with another body is refused",
+              len(f) == 1 and '"B"' in f[0] and "changed function" in f[0] and "FnB" in f[0])
+        f = check_frozen(bt, tree(rows, body.replace("x = 1", "x = 2")))[0]
+        check("red: a changed body outside a class is refused", len(f) == 1 and '"A"' in f[0])
+        f = check_frozen(bt, tree(rows[:1], body))[0]
+        check("red: a registered name that leaves the table is refused", len(f) == 1 and '"B"' in f[0] and "gone" in f[0])
+        f = check_frozen(bt, tree(rows, body.replace("void Player::FnA() { x = 1; /* note */ }\n", "")))[0]
+        check("red: a function whose body is gone is refused", len(f) == 1 and '"A"' in f[0])
+        nt = tempfile.mkdtemp()
+        os.makedirs(os.path.join(nt, "src"))
+        open(os.path.join(nt, SAVEV1_REL), "w").write("// a base before the table landed\n")
+        check("green: a base with no migration table freezes nothing", check_frozen(nt, bt) == ([], 0))
+        try:
+            check_frozen(tree(rows, "// no bodies\n"), bt)
+            check("unmeasured: a base with no body for a registered function", False)
+        except ValueError:
+            check("unmeasured: a base with no body for a registered function", True)
     print("selftest: %s" % ("FAILED: " + ", ".join(bad) if bad else "passed"))
     return 1 if bad else 0
 
@@ -253,6 +492,7 @@ def selftest():
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--root", default=os.path.dirname(HERE))
+    ap.add_argument("--base", default="master")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("what", nargs="*")
     a = ap.parse_args(argv)
@@ -270,7 +510,7 @@ def main(argv):
         ap.error("usage: migrations all | migrations run REV")
     if a.what:
         ap.error("unknown argument")
-    return run_all(a.root)
+    return run_all(a.root, a.base)
 
 
 if __name__ == "__main__":

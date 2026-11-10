@@ -1,3 +1,14 @@
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -16,6 +16,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+ };
+ 
+ static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
++  { "Game.ScriptVariable", "Dance_of_Ruin.vrock_count", "Dance_of_Ruin.vrock_total" },
+   { NULL, NULL, NULL }
+ };
+ 
 diff --git a/lib/mon4.irh b/lib/mon4.irh
 index 3b90b14..f43c443 100644
 --- a/lib/mon4.irh
@@ -53,3 +64,12 @@ index 3b90b14..f43c443 100644
    {
      Image: red GLYPH_LDEVIL; Size: SZ_MEDIUM; 
      CR: OPT_CR(7,7); HD: 6; Hit: +6; Def: 15; Mov: 150%; Spd: 125%;
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -3,4 +3,5 @@
+ #          rename <scope> <old> <new>  the reader matches either name
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
++rename Game.ScriptVariable Dance_of_Ruin.vrock_count Dance_of_Ruin.vrock_total
+ Character SpellsU16

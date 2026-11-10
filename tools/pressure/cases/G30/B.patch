@@ -56,7 +56,6 @@ index bfb9807..ae024ba 100644
      END_ARCHIVE
  	};
 diff --git a/inc/Defines.h b/inc/Defines.h
-index 22911b6..d051da1 100644
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
 @@ -337,6 +337,7 @@ typedef signed int        hObj;
@@ -88,7 +87,7 @@ index 22911b6..d051da1 100644
  
  /* Hack -- see Monster::Inventory() */
  #define SL_ARCHERY   50
-@@ -1987,6 +1990,7 @@ typedef signed int        hObj;
+@@ -2004,6 +2007,7 @@ typedef signed int        hObj;
  #define A_DMG_OFFHAND 24   /* Offhand +toDmg */
  #define A_SIZ         25   /* Size Catagory */
  #define A_MOV         26   /* Movement Rate */
@@ -96,7 +95,7 @@ index 22911b6..d051da1 100644
  #define A_DEF         27   /* Defense Class */
  #define A_SAV_FORT    28   /* Fortitude Save Bonus */
  #define A_SAV_REF     29   /* Reflex Save Bonus */
-@@ -2001,7 +2005,7 @@ typedef signed int        hObj;
+@@ -2018,7 +2022,7 @@ typedef signed int        hObj;
  #define A_FAT         38   /* Maximum Fatigue Points */
  #define A_COV         39   /* Armour Coverage Level */
  #define A_CDEF        40
@@ -105,24 +104,18 @@ index 22911b6..d051da1 100644
  
  #define A_HIT 50 /* Universal +toHit */
  #define A_AID 51 /* Add to A_HIT, A_DEF, A_SAV & A_MAG */
-@@ -2168,6 +2172,7 @@ typedef signed int        hObj;
+@@ -2185,8 +2189,9 @@ typedef signed int        hObj;
  #define SK_LASTSKILL  49
  #define SK_LAST       49  /* alias of SK_LASTSKILL */
  #define SK_ANY -1
 +#define SK_GRWB 800
- // end family: sk
- /* Skills 1-48 are fixed. A new skill takes the next number from SK_HIGH_FIRST
-    up to 999 and raises SK_HIGH_END by one. SK_COUNT is the length of every
-@@ -2179,7 +2184,7 @@ typedef signed int        hObj;
- #define SK_HIGH_FIRST 800
- // end family: sk_high_first
- // family: sk_high_end stored ordinal i16 grows SK_HIGH_END
+ /* SK_HIGH_END is one past the last high skill. */
 -#define SK_HIGH_END   800
 +#define SK_HIGH_END   801
- // end family: sk_high_end
- // family: sk_count stored ordinal i16 grows SK_COUNT
- #define SK_COUNT      (SK_LASTSKILL + (SK_HIGH_END - SK_HIGH_FIRST))
-@@ -2344,9 +2349,10 @@ typedef signed int        hObj;
+ // end family: sk
+ /* Skills 1-48 are fixed; SK_LASTSKILL (49) and SK_LAST are frozen values and
+    never rise. A new skill takes the next number from SK_HIGH_FIRST up to 999
+@@ -2362,9 +2367,10 @@ typedef signed int        hObj;
  #define CA_TATTOOS           138
  #define CA_ACROBATIC_FIGHTING 139
  #define CA_GRANT_ITEM        140
@@ -134,7 +127,7 @@ index 22911b6..d051da1 100644
  // end family: ca
  // family: phd internal
  
-@@ -2907,10 +2913,11 @@ typedef signed int        hObj;
+@@ -2925,10 +2931,11 @@ typedef signed int        hObj;
  /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
     so existing feat numbers stored in saves are unchanged. */
  #define FT_CANNIBALISM         362
@@ -147,7 +140,7 @@ index 22911b6..d051da1 100644
  // end family: ft
  // family: mm stored bits u32
  
-@@ -3555,6 +3562,7 @@ typedef signed int        hObj;
+@@ -3573,6 +3580,7 @@ typedef signed int        hObj;
     eID is the spell, Val the tail units to apply if concentration is stopped
     early, and Duration the cap. */
  #define CONCENTRATING     247
@@ -155,7 +148,7 @@ index 22911b6..d051da1 100644
  /* inc-z1ba: the watcher identified this illusion's cast with Spellcraft. Obj is
     the illusion (creature, item or terrain creator) and eID the cast's spell, so
     the +4 disbelief bonus applies only to the illusion that cast made. */
-@@ -3564,7 +3572,7 @@ typedef signed int        hObj;
+@@ -3582,7 +3590,7 @@ typedef signed int        hObj;
     -1 once the buff ended and the mana was released (Mag then = released mana
     not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
  #define HELD_MANA         250
@@ -164,7 +157,7 @@ index 22911b6..d051da1 100644
  // end family: stati
  // no-family
    
-@@ -4010,6 +4018,7 @@ typedef signed int        hObj;
+@@ -4028,6 +4036,7 @@ typedef signed int        hObj;
  #define SS_DOMA  10 /* From a Domain */
  #define SS_SONG  11 /* Bardic Music */
  #define SS_CURS  12 /* Non-Dispellable; needs Remove Curse */
@@ -172,7 +165,7 @@ index 22911b6..d051da1 100644
  #define SS_BLES  13 /* Divine Blessings, was 
                         SS_SHLD -- ww: tower shield in CalcValues() */
  #define SS_BODY  14 /* from your current body (polymorph/race) */
-@@ -4580,6 +4589,7 @@ typedef signed int        hObj;
+@@ -4598,6 +4607,7 @@ typedef signed int        hObj;
  #define OPT_POWER_STATS         118
  #define OPT_ELUDE_DEATH         119
  #define OPT_NO_ALLY_TRANS       120       
@@ -180,7 +173,7 @@ index 22911b6..d051da1 100644
  #define OPT_NATURAL_SPEED       121
  // end family: opt
  // no-family
-@@ -5076,14 +5086,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+@@ -5094,14 +5104,15 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
  #define MAX_GODS           25
  // end family: lim_gods
  // family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL

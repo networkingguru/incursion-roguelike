@@ -109,12 +109,13 @@ diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
 index b67de67..ac3f2a7 100644
 --- a/inc/SaveRetiredNames.h
 +++ b/inc/SaveRetiredNames.h
-@@ -16,7 +16,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+@@ -16,7 +16,8 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
  };
  
  static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
 -  /* grw slot A */
 +  { "Character", "RageCount", "RageCounter" },
++  { "Game.ScriptVariable", "Dance_of_Ruin.vrock_count", "Dance_of_Ruin.vrock_total" },
    { NULL, NULL, NULL }
  };
  
@@ -354,11 +355,12 @@ diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
 index a33610d..4238c44 100644
 --- a/tools/retired_field_names.txt
 +++ b/tools/retired_field_names.txt
-@@ -3,6 +3,6 @@
+@@ -3,6 +3,7 @@
  #          rename <scope> <old> <new>  the reader matches either name
  # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
  # A retired name is never reused.
 -# grw slot A
 +rename Character RageCount RageCounter
++rename Game.ScriptVariable Dance_of_Ruin.vrock_count Dance_of_Ruin.vrock_total
  Character SpellsU16
  # grw slot B
