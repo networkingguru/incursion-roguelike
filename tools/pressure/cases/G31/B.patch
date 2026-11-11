@@ -59,7 +59,7 @@ index 22911b6..bc24edb 100644
 -#define FT_LAST                364
 +#define FT_LAST                365
  // end family: ft
- // family: mm stored bits u32
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
  
 @@ -3555,6 +3558,7 @@ typedef signed int        hObj;
     eID is the spell, Val the tail units to apply if concentration is stopped

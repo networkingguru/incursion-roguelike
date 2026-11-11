@@ -63,7 +63,7 @@ index 22911b6..df2f18e 100644
 -#define FT_LAST                364
 +#define FT_LAST                365
  // end family: ft
- // family: mm stored bits u32
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
  
 @@ -3559,12 +3562,13 @@ typedef signed int        hObj;
     the illusion (creature, item or terrain creator) and eID the cast's spell, so

@@ -5,7 +5,7 @@ index 22911b6..1af6e57 100644
 @@ -4857,7 +4857,7 @@ typedef signed int        hObj;
     here (src/SaveV1.cpp copies the word raw), so the widths, shifts and masks
     below are stored values. Changing one changes what every saved glyph means. */
- // family: glyph_word stored ordinal u32
+ // family: glyph_word stored ordinal u32 glyph-of Thing.Image+Door.SecretSavedGlyph+Map.Fields.Element.Image+Map.ov_GlyphImage
 -#define GLYPH_ID_BITS			12
 +#define GLYPH_ID_BITS			13
  #define GLYPH_FORE_BITS			COLOUR_BITS

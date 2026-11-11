@@ -13,7 +13,7 @@ index 22911b6..6c6ad33 100644
 -#define FT_LAST                364
 +#define FT_LAST                365
  // end family: ft
- // family: mm stored bits u32
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
  
 diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
 index ca12033..7115bd4 100644

@@ -1,2 +1,0 @@
-# N01: SOCIAL_MOD, planted by name in P's own build
-status SOCIAL_MOD 29 0

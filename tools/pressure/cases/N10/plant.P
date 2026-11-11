@@ -1,3 +1,0 @@
-# N10: bits 363 and 500 in P's own build
-feat FT_LUCUBRATION
-feat FT_AC8_P500

@@ -138,7 +138,7 @@ diff --git a/inc/Defines.h b/inc/Defines.h
 -#define FT_LAST                364
 +#define FT_LAST                365
  // end family: ft
- // family: mm stored bits u32
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
  
 @@ -3573,6 +3580,7 @@ typedef signed int        hObj;
     eID is the spell, Val the tail units to apply if concentration is stopped

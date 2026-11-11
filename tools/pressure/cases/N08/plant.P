@@ -1,2 +1,0 @@
-# N08: the valid high skill's rank 7 in P's own build; row 0 stays empty
-skill SK_AC8_P 7
