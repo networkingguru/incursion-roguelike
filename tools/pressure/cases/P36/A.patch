@@ -1,7 +1,7 @@
 --- a/inc/Defines.h
 +++ b/inc/Defines.h
 @@ -2491,6 +2491,7 @@
- // family: aq stored ordinal i8 sentinel AQ_LAST elem-of QItem.Qualities shares wq
+ // family: aq stored ordinal i8 elem-of QItem.Qualities shares wq
  
  #define AQ_LIGHT_FOR     1
 +#define AQ_GRWA 82

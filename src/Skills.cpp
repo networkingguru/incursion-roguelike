@@ -29,6 +29,7 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include "QualityClassProbe.h" /* inc-rddai */
 
 int16 LastSkillCheckResult = 0;
 
@@ -3717,7 +3718,9 @@ Augment:
 			return ABORT;
 		}
 
-		for (i = 0; i != WQ_LAST; i++) {
+		for (i = 0; i <= WQ_TRUELAST; i++) {
+			if (isWeapon ? !QualityIsWeapon(i) : !QualityIsArmor(i))
+				continue;
 			if (!LookupOnly(desc, i))
 				continue;
 			if (!it->QualityOK(i))
@@ -3743,6 +3746,7 @@ Augment:
 					continue;
 			}
 
+			QualityClassOffered(i); /* inc-rddai: read-only probe hook */
 			thisp->MyTerm->LOption(LookupOnly(pre, i) ? Lookup(pre, i) :
 				(LookupOnly(post, i) ? Lookup(post, i) : "???"), i,
 				Lookup(desc, i));

@@ -4,6 +4,7 @@
    intervention, divine blessings, crowning, etc. */
    
 #include "Incursion.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 static TextVal AidTypes[] = {
   { AID_HEAL,       "healing you" },
@@ -1403,6 +1404,7 @@ EvReturn Character::Retribution(EventInfo &e)
 EvReturn Character::GodDeflect(EventInfo &e)
   {
     int16 i; rID aidChart[64];
+    DamageClassGodEntry(e); /* inc-kx693 */
     if (!GodID)
       return NOTHING;
       

@@ -6,5 +6,5 @@
  #define WG_HARMOUR        0x80000000
 +#define WG_GRWB 0x80000
  // end family: wg
- // family: wq stored ordinal i8 sentinel WQ_LAST elem-of QItem.Qualities shares aq
+ // family: wq stored ordinal i8 elem-of QItem.Qualities shares aq
  

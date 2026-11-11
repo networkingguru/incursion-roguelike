@@ -61,6 +61,7 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 int16 CorpseNut[] = { 0, 1, 10, 25, 50, 100, 300, 500, 800 };
 
@@ -1352,8 +1353,8 @@ int16 MaterialHardness(int8 mat, int8 DType)
    and T_SHIELD (src/Item.cpp:282-286); every WQ_* bearer is a Weapon and
    answers false. quality::poison resistance is out of scope: MaterialHardness
    returns -1 for AD_TOXI on every material, so every item already is immune.
-   Hardness's existing IQ_* tests need no such gate because IQ_* is 67 and up,
-   past both WQ_LAST (64) and AQ_LAST (42). */
+   Hardness's existing IQ_* tests need no such gate because IQ_* rows answer
+   no in both columns of the quality table. */
 bool Item::QualityImmune(int8 DType)
 {
   if (!isArmour())
@@ -1468,6 +1469,7 @@ EvReturn Item::Damage(EventInfo &e) {
     int posthard;
     bool plural = false, destroyed = false;
 
+    DamageClassItemDamage(this); /* inc-kx693 */
     if (!isCorporeal())
         return DONE;
 
@@ -2469,7 +2471,7 @@ int16 Weapon::ItemLevel(bool bounded)
       return base;
     QPlus = Plus;
     for(i=0;i!=8;i++)
-      if (Qualities[i] && Qualities[i] < WQ_LAST) {
+      if (Qualities[i] && QualityIsWeapon(Qualities[i])) {
         for (j=0;QualityMods[j][0] != -1;j++)
           if (QualityMods[j][0] == Qualities[i])
             QPlus += QualityMods[j][1];
@@ -2504,7 +2506,7 @@ int16 Armour::ItemLevel(bool bounded)
       return base; 
     QPlus = Plus;
     for(i=0;i!=8;i++)
-      if (Qualities[i] && Qualities[i] < AQ_LAST) {
+      if (Qualities[i] && QualityIsArmor(Qualities[i])) {
         for (j=0;AQualityMods[j][0] != -1;j++)
           if (AQualityMods[j][0] == Qualities[i])
             QPlus += AQualityMods[j][1];
@@ -2534,7 +2536,7 @@ int16 QItem::ItemLevel(bool bounded)
       return base; 
     QPlus = Plus;
     for(i=0;i!=8;i++)
-      if (Qualities[i] && Qualities[i] < AQ_LAST) {
+      if (Qualities[i] && QualityIsArmor(Qualities[i])) {
         for (j=0;AQualityMods[j][0] != -1;j++)
           if (AQualityMods[j][0] == Qualities[i])
             QPlus += AQualityMods[j][1];

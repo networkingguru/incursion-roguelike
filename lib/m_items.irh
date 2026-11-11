@@ -1546,8 +1546,8 @@ AI_POTION Effect "Oil of Transformation" : EA_GENERIC
         EActor->IPrint("Your <hObj> changes into a <Res>!",
           ETarget,newID);
       ETarget->ChangeIID(newID);
-      for (i=0;i!=WQ_LAST;i++)
-        if (ETarget->HasQuality(i))
+      for (i=0;i<=WQ_TRUELAST;i++)
+        if (QualityIsWeapon(i) && ETarget->HasQuality(i))
           {
             ETarget->RemoveQuality(i);
             if (ETarget->QualityOK(i))

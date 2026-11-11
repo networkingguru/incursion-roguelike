@@ -166,7 +166,7 @@ Monster "jovoc" : MA_DEMON
       m = GetHandle(EMap);
       if (m == NULL || EVictim->isDead())
         return NOTHING;
-      if (e.DType > AD_LAST_PHYSICAL)
+      if (!DTypeTakesHP(e.DType))
         return NOTHING;
       hJovoc = GetHandle(EVictim);
         

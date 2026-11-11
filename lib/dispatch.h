@@ -2764,6 +2764,18 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 3)
         REGS(n) = AutoStackIntoPack(oCreature(STACK(1)), oItem(STACK(2)), STACK(3)!=0);
         return;
+    case 538:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = DTypeTakesHP((int16)STACK(1));
+        return;
+    case 539:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = QualityIsWeapon((int16)STACK(1));
+        return;
+    case 540:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = QualityIsArmor((int16)STACK(1));
+        return;
       default:
         Error("Illegal member function call!");
       }

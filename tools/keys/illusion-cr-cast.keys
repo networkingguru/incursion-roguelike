@@ -1,0 +1,22 @@
+# inc-q4kjl: a non-innate caster casts Phantasmal Force as an illusory creature.
+# Read by tools/check_illusion_cr.sh, which reads the ILLUSION_CR probe line.
+#
+#   INCURSION_PVAL_PROBE=<path> \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#       tools/headless.sh tools/keys/illusion-cr-cast.keys 1
+#
+@include illusion-spotted-setup.keys
+
+m
+@choose "Phantasmal Force"
+c
+@expect "Target Illusion"
+LEFT
+ENTER
+@while "more --" SPACE
+@dump:cast
+v
+@dump:msgs
+ESC
+@dump:end

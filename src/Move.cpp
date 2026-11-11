@@ -1103,6 +1103,11 @@ SkipConfirms:
 				Move(ox, oy);
 				return ABORT;
 			}
+			/* upstream: the EV_PUSH walk can remove the mover (terrain effects), and
+			   the code below dereferences m. Plain control flow, so Win32 crashes
+			   the same way. Observed, dive-depth-4 seed 16; inc-qapjo, not sent. */
+			if (isDead() || !m)
+				return DONE;
 			if (dis->isIllusion() && !dis->isRealTo(this)) {
 				TPrint(e, "You pass through the <EVictim>.",
 					"The <EActor> passes through you.",

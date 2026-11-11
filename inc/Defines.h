@@ -1106,7 +1106,7 @@ typedef signed int        hObj;
 #define DF_FEAR   0x08000000
 #define DF_SUBD   0x10000000
 // end family: df_dmg
-// family: ad stored ordinal i8 sentinel AD_LAST_PHYSICAL val-of IMMUNITY+RESIST+HEAL_TIMEOUT
+// family: ad stored ordinal i8 val-of IMMUNITY+RESIST+HEAL_TIMEOUT
 
 
 #define AD_NORM    0    /* ordinary physical */
@@ -1125,7 +1125,6 @@ typedef signed int        hObj;
 #define AD_PIERCE  12 
 #define AD_BLUNT   13
 #define AD_STUK    14  /* entangles */
-#define AD_LAST_PHYSICAL 13  /* alias of AD_BLUNT */
 
 #define AD_SLEE    16
 #define AD_STUN    17  /* stuns */
@@ -2422,7 +2421,7 @@ typedef signed int        hObj;
 #define WG_MARMOUR        0x40000000
 #define WG_HARMOUR        0x80000000
 // end family: wg
-// family: wq stored ordinal i8 sentinel WQ_LAST elem-of QItem.Qualities shares aq
+// family: wq stored ordinal i8 elem-of QItem.Qualities shares aq
 
 #define WQ_HOLY          1
 #define WQ_UNHOLY        2
@@ -2486,9 +2485,8 @@ typedef signed int        hObj;
 #define WQ_DRAINING      62
 #define WQ_BLOODED       63
 
-#define WQ_LAST          64
 // end family: wq
-// family: aq stored ordinal i8 sentinel AQ_LAST elem-of QItem.Qualities shares wq
+// family: aq stored ordinal i8 elem-of QItem.Qualities shares wq
 
 #define AQ_LIGHT_FOR     1
 #define AQ_MEDIUM_FOR    2
@@ -2530,7 +2528,6 @@ typedef signed int        hObj;
 #define AQ_LIFEKEEPING   39
 #define AQ_ARTICULATED   40
 #define AQ_GRAVEN        41
-#define AQ_LAST          42
 
 #define AQ_SHATTERING    43
 // end family: aq
