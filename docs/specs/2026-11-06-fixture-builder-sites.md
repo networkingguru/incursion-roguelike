@@ -779,6 +779,8 @@ Columns come from each `.sheet.txt` header (seed, settings, key script) and the 
 
 Summary: 74 fixtures; 49 distinct fixture key scripts (plus 8 include-only helpers); 24 with post-creation work (including options alteration at creation); 5 chained (alignment-drain-level1, alignment-drain-level2, alignment-drain-warrior from quality-item-magic-seed5-opt0822; human-paladin-damaged-armour-opt0822 from human-paladin-seed4-opt0822; weapon-sets-old-defaults from dequ-save-message-seed5-opt0822); 3 scenes. 3 recipes depend on env vars the sheet cannot record: priest-mage-wounded and pain-priest (INCURSION_LOF_FORCE_ROLL=20, INCURSION_FORCE_DAMAGE_ROLL=3), levitate-bottom (INCURSION_LEVITATE_CHASM=1).
 
+Dropped 2026-11-11 (inc-10v7f): 11 of these 74 were loaded by no check or key script, so their .sav, .keys and .sheet.txt files and their MANIFEST rows are removed instead of converted: circle-stack-adjust-seed20260905-gate, orc-barbarian-seed3-gate, orc-barbarian-seed4-gate, orc-barbarian-seed11-gate, orc-barbarian-seed3390-gate, orc-barbarian-seed20260905-gate, orc-barbarian-seed7-opt0818, orc-rogue-seed1-gate, orc-rogue-seed1-opt0818, prestige-earthsinger-seed3-opt0818, prestige-earthsinger-seed3-opt0822. The table below keeps their rows as the survey found them.
+
 | # | fixture | stamp | key script | seed | options | post-creation work | chained from | scene |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `alignment-drain-lawful-neutral` | IS1.6 | `alignment-drain-lawneutral-save.keys` | 1 | options-2026-08-22.dat | wizard on; Genocide Everything (clear level). Creation includes god pick (lawful neutral human warrior) | - | - |

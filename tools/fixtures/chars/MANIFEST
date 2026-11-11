@@ -33,7 +33,6 @@
 # tools/sync_char_fixtures.sh. Never edit an existing row -- a fixture is
 # frozen, and a check reads its expectations out of the fixture's own sheet.
 
-circle-stack-adjust-seed20260905-gate  tools/keys/circle-stack-adjust-save.keys   20260905    tools/gates/Options.Dat
 dequ-save-dc-seed5-opt0822             tools/keys/dequ-save-dc-save.keys          5           tools/fixtures/options-2026-08-22.dat
 dequ-save-message-seed5-opt0822        tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22.dat
 orc-warrior-dequ-seed5-maxhp         tools/keys/dequ-save-message-save.keys     5           tools/fixtures/options-2026-08-22-maxhp.dat
@@ -47,15 +46,9 @@ monk-weapon-immunity-seed1-opt0818     tools/keys/monk-weapon-immunity-save.keys
 orc-barbarian-seed1-gate               tools/keys/chargen-default-save.keys       1           tools/gates/Options.Dat
 orc-barbarian-seed1-opt0818            tools/keys/chargen-default-save.keys       1           tools/fixtures/options-2026-08-18.dat
 orc-barbarian-seed1-opt0822            tools/keys/chargen-default-save.keys       1           tools/fixtures/options-2026-08-22.dat
-orc-barbarian-seed11-gate              tools/keys/chargen-default-save.keys       11          tools/gates/Options.Dat
 orc-barbarian-seed11-opt0822           tools/keys/chargen-default-save.keys       11          tools/fixtures/options-2026-08-22.dat
-orc-barbarian-seed20260905-gate        tools/keys/chargen-default-save.keys       20260905    tools/gates/Options.Dat
 orc-barbarian-seed20260905-opt0822     tools/keys/chargen-default-save.keys       20260905    tools/fixtures/options-2026-08-22.dat
-orc-barbarian-seed3-gate               tools/keys/chargen-default-save.keys       3           tools/gates/Options.Dat
-orc-barbarian-seed3390-gate            tools/keys/chargen-default-save.keys       3390        tools/gates/Options.Dat
-orc-barbarian-seed4-gate               tools/keys/chargen-default-save.keys       4           tools/gates/Options.Dat
 orc-barbarian-seed5-opt0822            tools/keys/chargen-default-save.keys       5           tools/fixtures/options-2026-08-22.dat
-orc-barbarian-seed7-opt0818            tools/keys/chargen-default-save.keys       7           tools/fixtures/options-2026-08-18.dat
 orc-barbarian-seed7-opt0822            tools/keys/chargen-default-save.keys       7           tools/fixtures/options-2026-08-22.dat
 orc-barbarian-seed99-opt0822           tools/keys/chargen-default-save.keys       99          tools/fixtures/options-2026-08-22.dat
 orc-mage-seed1-opt0822                 tools/keys/chargen-mage-save.keys          1           tools/fixtures/options-2026-08-22.dat
@@ -63,13 +56,9 @@ orc-mage-seed4-gate                    tools/keys/chargen-mage-save.keys        
 orc-mage-seed4-opt0822                 tools/keys/chargen-mage-save.keys          4           tools/fixtures/options-2026-08-22.dat
 orc-mage-seed5-opt0822                 tools/keys/chargen-mage-save.keys          5           tools/fixtures/options-2026-08-22.dat
 orc-priest-seed4-gate                  tools/keys/chargen-priest-save.keys        4           tools/gates/Options.Dat
-orc-rogue-seed1-gate                   tools/keys/chargen-rogue-save.keys         1           tools/gates/Options.Dat
-orc-rogue-seed1-opt0818                tools/keys/chargen-rogue-save.keys         1           tools/fixtures/options-2026-08-18.dat
 orc-rogue-seed1-opt0822                tools/keys/chargen-rogue-save.keys         1           tools/fixtures/options-2026-08-22.dat
 orc-rogue-seed4-opt0822                tools/keys/chargen-rogue-save.keys         4           tools/fixtures/options-2026-08-22.dat
 orc-rogue-seed6-opt0822                tools/keys/chargen-rogue-save.keys         6           tools/fixtures/options-2026-08-22.dat
-prestige-earthsinger-seed3-opt0818     tools/keys/prestige-earthsinger-save.keys  3           tools/fixtures/options-2026-08-18.dat
-prestige-earthsinger-seed3-opt0822     tools/keys/prestige-earthsinger-save.keys  3           tools/fixtures/options-2026-08-22.dat
 prestige-geomancy-seed1-opt0822        tools/keys/prestige-geomancy-save.keys     1           tools/fixtures/options-2026-08-22.dat
 skill-by-name-seed1-opt0818            tools/keys/skill-by-name-save.keys         1           tools/fixtures/options-2026-08-18.dat
 quality-item-magic-seed5-opt0822      tools/keys/quality-item-magic-save.keys    5           tools/fixtures/options-2026-08-22.dat
