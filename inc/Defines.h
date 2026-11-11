@@ -1123,7 +1123,6 @@ typedef signed int        hObj;
 #define AD_PIERCE  12 
 #define AD_BLUNT   13
 #define AD_STUK    14  /* entangles */
-#define AD_LAST_PHYSICAL 13  /* alias of AD_BLUNT */
 
 #define AD_SLEE    16
 #define AD_STUN    17  /* stuns */

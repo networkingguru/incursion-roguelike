@@ -61,6 +61,7 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 int16 CorpseNut[] = { 0, 1, 10, 25, 50, 100, 300, 500, 800 };
 
@@ -1468,6 +1469,7 @@ EvReturn Item::Damage(EventInfo &e) {
     int posthard;
     bool plural = false, destroyed = false;
 
+    DamageClassItemDamage(this); /* inc-kx693 */
     if (!isCorporeal())
         return DONE;
 

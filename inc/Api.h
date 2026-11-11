@@ -1112,6 +1112,8 @@ system int16   ApplyDurationMetamagic(int32 dur, uint32 mm, bool mystic);
    already holds a stack it would join. True when a pack took it; the item may
    then be gone (merged), so do not use it afterwards. A non-player returns false. */
 system bool    AutoStackIntoPack(hObj:T_CREATURE who, hObj:T_ITEM it, bool wildOK = false);
+/* Does damage type dtype take hit points? One row per type in DTypeHP (inc-kx693). */
+system bool    DTypeTakesHP(int16 dtype);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

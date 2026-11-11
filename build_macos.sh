@@ -213,6 +213,9 @@ elif [ "$COMPILER" = no ]; then
 else
     OBJ="$ROOT/build/obj-$OUT"
 fi
+# inc-kx693: every damage type needs exactly one row in the DTypeHP table.
+python3 "$ROOT/tools/check_dtype_hp_table.py" \
+    || { echo "BUILD STOPPED: fix the DTypeHP table in src/Tables.cpp (tools/check_dtype_hp_table.py)."; exit 1; }
 mkdir -p "$OBJ" "$ROOT/mod" "$ROOT/logs" "$ROOT/save"
 
 if [ "$COMPILER" = yes ]; then

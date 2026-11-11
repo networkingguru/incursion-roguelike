@@ -178,6 +178,10 @@ extern const char *KeyBindings,
                   *MonthNames[],
                   *EncumbranceNames[];
 
+struct DTypeHPRow { int16 dtype; bool takesHP; };
+extern DTypeHPRow DTypeHP[];
+bool DTypeTakesHP(int16 dtype);
+
 extern TextVal DTypeNames[],
                ATypeNames[],
                AbilityNames[],

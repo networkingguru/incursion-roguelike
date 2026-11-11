@@ -2437,7 +2437,7 @@ Wizard Spell "Animate Rope" : EA_GENERIC
         hObj hItem, hAnim; int16 percent;                            
         /* Send damage the animated object takes directly to its     
            actual Item object, and adjust cHP accordingly. */         
-        if (e.DType <= AD_LAST_PHYSICAL)                             
+        if (DTypeTakesHP(e.DType))                             
           {                                                          
             hItem = EVictim->GetStatiObj(TRANSFORMED);               
             hAnim = GetHandle(EVictim);                              
