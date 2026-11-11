@@ -11,10 +11,23 @@ Usage: tools/canon_compare.py [--all] <a.canon> <b.canon>   exit 0 same, 1 diffe
                                           (--all prints every differing line, not the first 30)
        tools/canon_compare.py --filter <x.canon>    print the dump minus the allowlist
        tools/canon_compare.py --list                print the allowlist
+       tools/canon_compare.py --choices <x.canon>   print the CHOICE PROJECTION of a dump (phase 12a)
+       tools/canon_compare.py --choices-diff <a.canon> <b.canon>
+                                          multiset difference of the two projections: `- line`
+                                          in <a> only, `+ line` in <b> only; exit 0 when empty, 1 not
+
+The choice projection is what a player chose, not what the rules compute from it
+(Brian's ruling, 2026-11-11: a conversion passes when its choices match): the
+Gender, Race, Class, Faith and Align lines; the seven attribute base scores
+(`STR base 12`); every line of Special Abilities, Feats, Inventory and CharGen
+Options and Choices, led by the section name; skill ranks above 0
+(`skill <name> ranks <n>`); known spell names (`spell <name>`). A section ends at
+the next unindented `Heading:` line. Two projections compare as multisets.
 
 Exit: 0 the dumps match outside the allowlist; 1 they differ (the first lines
 that differ are printed); 2 bad usage or an unreadable file.
 """
+import collections
 import difflib
 import os
 import re
@@ -150,6 +163,56 @@ def filtered(path):
     return out
 
 
+_HEADINGS = ("Special Abilities:", "Feats:", "Inventory:", "CharGen Options and Choices:",
+             "Skill Ratings:", "Known Spells:")
+
+
+def choices(path):
+    """The choice projection of a dump (see the module docstring), a list of lines.
+    Fails (exit 2) when the file is unreadable or holds none of the header lines,
+    so a file that is not a dump cannot compare equal to another one."""
+    try:
+        lines = open(path, errors="replace").read().split("\n")
+    except OSError as e:
+        print("canon_compare: cannot read %s: %s" % (path, e), file=sys.stderr)
+        sys.exit(2)
+    out = []
+    for l in lines:
+        if re.match(r"^(Gender|Race|Class|Faith|Align) ", l):
+            out.append(l.rstrip())
+        m = re.match(r"^(STR|DEX|CON|INT|WIS|CHA|LUC):.*\(base (\d+)", l)
+        if m:
+            out.append("%s base %s" % (m.group(1), m.group(2)))
+    cur = None
+    for l in lines:
+        if re.match(r"^[A-Z][A-Za-z' ]+:$", l):
+            cur = l if l in _HEADINGS else None
+            continue
+        if cur in ("Special Abilities:", "Feats:", "Inventory:", "CharGen Options and Choices:"):
+            if l.strip():
+                out.append("%s %s" % (cur, l.strip()))
+        elif cur == "Skill Ratings:":
+            m = re.match(r"^\s+(.+?)\s+[+-]\d+\s+\((\d+) ranks", l)
+            if m and m.group(2) != "0":
+                out.append("skill %s ranks %s" % (m.group(1), m.group(2)))
+        elif cur == "Known Spells:":
+            m = re.match(r"^\s+(\S.*?)\s{2,}\d", l)
+            if m:
+                out.append("spell %s" % m.group(1))
+    if not any(l.startswith("Race ") for l in out):
+        print("canon_compare: %s is not a character dump (no Race line)" % path, file=sys.stderr)
+        sys.exit(2)
+    return out
+
+
+def choices_diff(a_path, b_path):
+    """[(sign, line)]: '-' in a only, '+' in b only, as multisets."""
+    a, b = collections.Counter(choices(a_path)), collections.Counter(choices(b_path))
+    out = [("-", l) for l in sorted((a - b).elements())]
+    out += [("+", l) for l in sorted((b - a).elements())]
+    return out
+
+
 def main(argv):
     show_all = False
     if len(argv) > 1 and argv[1] == "--all":
@@ -158,6 +221,14 @@ def main(argv):
     if len(argv) == 2 and argv[1] == "--list":
         print("\n".join(describe()))
         return 0
+    if len(argv) == 3 and argv[1] == "--choices":
+        print("\n".join(choices(argv[2])))
+        return 0
+    if len(argv) == 4 and argv[1] == "--choices-diff":
+        d = choices_diff(argv[2], argv[3])
+        for sign, l in d:
+            print("%s %s" % (sign, l))
+        return 1 if d else 0
     if len(argv) == 3 and argv[1] == "--filter":
         print("\n".join(filtered(argv[2])))
         return 0

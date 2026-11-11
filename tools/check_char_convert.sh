@@ -48,6 +48,16 @@
 # fact: the roll search verdicts -- synthetic multisets of difference lines inside tools/char_roll_search.py selftest and a temporary dump pair; no game run, no seed
 # fact: the comment case -- a copy of src/CharFile.cpp with two comment lines put in front, in a scratch root under logs/ with a copy of tools/canon_compare.py and inc/Defines.h; the two options named in the comments are not the one the code forces, and the case counts the forcing lines the tool lists
 #
+# Sixth part (phase 12a, the pass rule): a conversion passes when the CHOICES of the build equal the choices of the old
+# save (tools/canon_compare.py --choices-diff), less the rows of KNOWN_DIFFERENCES in tools/char_convert_map.py. Controls:
+# a changed computed line passes; a changed choice line fails and is named; the table cannot excuse a potion (the
+# synthetic Cure Disease pair stays a remainder, and no name in the kit row is a dedupe-exempt kind); each row's cause is
+# live (a commit that git resolves, a bead that `bd show` reports not closed).
+# fact: the choice dumps -- the dump of the tracked orc-barbarian-seed1-opt0822.sav ($W/old.canon, already made above); the
+#   controls edit copies of it, and an edit that finds no line fails the check as INCONCLUSIVE
+# fact: the Cure Disease pair -- a synthetic choices-diff written by this file; no game run, no seed
+# fact: the row causes -- commit 4e1fc266 in this repository's history; bead inc-tjvn's status read by `bd show inc-tjvn --json` in the live case, and by a synthetic JSONL named by CHAR_CONVERT_BEADS in the stale-row control (no database); the fake-bd runs (red with closed, green with open) are in logs/phase12a/controls-red.txt; no bd or no JSON makes the check fail (exit 2 from causes), not pass
+
 # Usage: INCURSION_BIN=./incursion-headless tools/check_char_convert.sh
 # Exit: 0 the table restores all six kinds and each withheld key shows; 1 not; 2 could not run.
 set -uo pipefail
@@ -290,9 +300,82 @@ fi
 
 # Fourth part (phase 11g): perk charges follow their item's context, and merged stacks keep their sources.
 if tools/char_convert_map.py selftest > "$W/selftest.out" 2>&1; then
-    echo "ok   char_convert_map.py selftest: $(grep -c '^ok' "$W/selftest.out") cases (perk charges by context, gold and food stacks)"
+    echo "ok   char_convert_map.py selftest: $(grep -c '^ok' "$W/selftest.out") cases (perk charges by context, gold, food and potion stacks, a stack of two asks)"
 else
     grep FAIL "$W/selftest.out" | head -3 | cut -c1-200; echo "FAIL char_convert_map.py selftest"; fail=1
+fi
+
+# Sixth part (phase 12a).
+cp "$W/old.canon" "$W/p1.canon"
+python3 - "$W/p1.canon" <<'PY' || { echo "INCONCLUSIVE: no Defense Class or Fortitude line to edit in the dump"; exit 2; }
+import re, sys
+p = sys.argv[1]
+t = open(p).read()
+t2 = re.sub(r"^(Fortitude +)\+(\d+)", lambda m: "%s+%d" % (m.group(1), int(m.group(2)) + 3), t, count=1, flags=re.M)
+if t2 == t: sys.exit(1)
+open(p, "w").write(t2)
+PY
+tools/canon_compare.py --choices-diff "$W/old.canon" "$W/p1.canon" > "$W/p1.out" 2>&1
+if [ $? -eq 0 ] && ! tools/canon_compare.py "$W/old.canon" "$W/p1.canon" > /dev/null 2>&1; then
+    echo "ok   a changed computed line (Fortitude) differs in the full comparison and passes the choices comparison"
+else
+    echo "FAIL a changed computed line must pass the choices comparison and still differ in the full one"; cat "$W/p1.out" | head -3; fail=1
+fi
+cp "$W/old.canon" "$W/p2.canon"
+python3 - "$W/p2.canon" <<'PY' || { echo "INCONCLUSIVE: no feat line to edit in the dump"; exit 2; }
+import sys
+p = sys.argv[1]
+L = open(p).read().split("\n")
+i = L.index("Feats:") + 1
+L[i] = "  Zzz Changed Feat"
+open(p, "w").write("\n".join(L))
+PY
+tools/canon_compare.py --choices-diff "$W/old.canon" "$W/p2.canon" > "$W/p2.out" 2>&1
+if [ $? -eq 1 ] && grep -q '^+ Feats: Zzz Changed Feat' "$W/p2.out"; then
+    echo "ok   a changed feat fails the choices comparison and the line is named: $(grep -m1 '^+ Feats' "$W/p2.out")"
+else
+    echo "FAIL a changed choice line must make --choices-diff exit 1 and name the line"; head -3 "$W/p2.out"; fail=1
+fi
+printf -- '- Inventory: 10 Potions of Cure Disease [0]\n+ Inventory: 7 Potions of Cure Disease [0]\n' > "$W/potion.diff"
+tools/char_convert_map.py excuse "$W/potion.diff" > "$W/potion.out" 2>&1
+if [ $? -eq 1 ] && grep -q '^remainder: - Inventory: 10 Potions of Cure Disease' "$W/potion.out" && ! grep -q '^excused' "$W/potion.out"; then
+    echo "ok   the table does not excuse 10 -> 7 Potions of Cure Disease"
+else
+    echo "FAIL the table excused a potion stack"; cat "$W/potion.out" | head -3; fail=1
+fi
+printf -- '- Inventory: 5 tanglefoot bags\n+ Inventory: tanglefoot bag\n' > "$W/bags.diff"
+if tools/char_convert_map.py excuse "$W/bags.diff" > "$W/bags.out" 2>&1 && grep -q '^excused: .*bead inc-tjvn' "$W/bags.out"; then
+    echo "ok   the table excuses 5 tanglefoot bags -> tanglefoot bag, naming bead inc-tjvn"
+else
+    echo "FAIL the table did not excuse the named kit stack"; head -3 "$W/bags.out"; fail=1
+fi
+if python3 - <<'PY'
+import importlib.util, re, sys
+spec = importlib.util.spec_from_file_location("ccm", "tools/char_convert_map.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+bad = [n for pair in m.KIT_DEDUPE_ITEMS for n in pair if re.search(r"potion|scroll|food|gold|arrow|bolt|ration|meat", n, re.I)]
+sys.exit(1 if bad or not m.KIT_DEDUPE_ITEMS else 0)
+PY
+then
+    echo "ok   no name in the kit-dedupe row is a dedupe-exempt kind (potion, scroll, food, gold, arrow, bolt)"
+else
+    echo "FAIL the kit-dedupe row names a dedupe-exempt kind"; fail=1
+fi
+tools/char_convert_map.py causes > "$W/causes.out" 2>&1
+RCCAUSE=$?
+if [ "$RCCAUSE" -eq 0 ]; then
+    echo "ok   every KNOWN_DIFFERENCES row's cause is live"
+else
+    echo "FAIL KNOWN_DIFFERENCES: $(head -2 "$W/causes.out" | tr '\n' ' ' | cut -c1-300)"; fail=1
+fi
+cat > "$W/stale.jsonl" <<'JL'
+{"id":"inc-tjvn","status":"closed"}
+JL
+CHAR_CONVERT_BEADS="$W/stale.jsonl" tools/char_convert_map.py causes > "$W/stale.out" 2>&1
+if [ $? -eq 1 ] && grep -q 'stale and must be deleted' "$W/stale.out"; then
+    echo "ok   a row whose bead is closed makes the cause check fail with a stale-row message"
+else
+    echo "FAIL the cause check did not fail on a closed bead"; fail=1
 fi
 
 [ $fail -eq 0 ] && { echo "PASS: the table restores every kind of decision it converts, and each withheld key shows"; exit 0; }

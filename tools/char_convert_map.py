@@ -16,6 +16,16 @@ Usage:
   tools/char_convert_map.py selftest
       Prove, on synthetic input, that the perk charges follow their item and that
       merged stacks keep their sources. Exit 0 all hold.
+  tools/char_convert_map.py excuse <choices-diff.txt>
+      Read the output of `canon_compare.py --choices-diff` (lines `- old` and
+      `+ built`). Pass it through KNOWN_DIFFERENCES: print `excused: <old> -> <built> --
+      <cause>` for each pair a row covers, then `remainder:` lines for the rest.
+      Exit 0 the remainder is empty; 1 it is not.
+  tools/char_convert_map.py causes
+      Prove each KNOWN_DIFFERENCES row's cause is live: `commit <sha>` resolves
+      with git; `bead <id>` is not closed: `bd show <id> --json`, or the JSONL (one object per
+      line) that CHAR_CONVERT_BEADS names. Exit 0 all live; 1 a row is stale (delete it);
+      2 COULD NOT MEASURE (no bd, no JSON).
   tools/char_convert_map.py options <old.canon> <walk.canon> <manifest-settings> <dir>
       Print the settings file in <dir> (options-*.dat) whose options equal the
       old save's. <walk.canon> is the dump of the save a walk wrote under the
@@ -38,6 +48,7 @@ import functools
 import glob
 import os
 import re
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -619,7 +630,7 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
     the old game made them (GenNum). The Beginner's Kit is the old run made
     between the last paired class kit item and the first paired Universal Gear
     item (or the kit's food ration). The engine merges equal stacks: asks whose
-    quantities add up to one built stack are one group, and the old stack's
+    quantities add up to one built stack are one group (a kit_item and a beginkit_item ask alike), and the old stack's
     quantity is shared out over them; a quantity key that feeds the same stack
     keeps its value."""
     old_items = merge_stacks(parse_items(sections(old_p)))
@@ -644,7 +655,7 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
                         or base_name(b["eid"]) != (base_name(d["effect"]) or "-")):
                     continue
                 if bi in used:
-                    if (not exact and i in ask_lines["kit_item"] and d["quantity"]
+                    if (not exact and d["quantity"]
                             and left.get(bi, 0) >= d["quantity"]):
                         left[bi] -= d["quantity"]
                         ask_item[i] = bi
@@ -704,7 +715,9 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
     if ask_lines["beginkit_item"]:
         bk = [k for k in pool if lo < old_items[k]["gen"] < hi]
     groups = {"kit_item": [k for k in pool if k not in bk], "beginkit_item": bk}
-    slots = {"kit_item": pending_kit, "beginkit_item": ask_lines["beginkit_item"]}
+    # a beginkit_item ask that joined the stack of a paired kit_item ask is set with that group, not by the Beginner's Kit run
+    slots = {"kit_item": pending_kit,
+             "beginkit_item": [i for i in ask_lines["beginkit_item"] if ask_item.get(i) not in group_old]}
     edits = {}
 
     def own_qty(i):
@@ -740,12 +753,25 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
             continue   # the stack is already the old one
         delta = o["qty"] - b["qty"]
         target = members[-1]   # the share the dump cannot place goes on the last ask
+        # A surplus comes off the last ask first, then the one before it: an ask left with nothing is set to none.
+        # A shortfall goes on the last ask.
+        share, excess = {j: own_qty(j) for j in members}, -delta
+        for j in reversed(members):
+            take = min(share[j], max(excess, 0))
+            share[j] -= take
+            excess -= take
+        share[target] -= min(excess, 0)
+        if excess > 0 or sum(share.values()) + (b["qty"] - sum(own_qty(j) for j in members)) != o["qty"]:
+            raise Stop("the old %s stack holds %d and the skeleton's other sources of it make %d (%s)"
+                       % (base_name(o["iid"]), o["qty"], b["qty"] - sum(own_qty(j) for j in members), label_of(target)))
         for j in members:
-            q = own_qty(j) + (delta if j == target else 0)
-            if q < 1:
-                raise Stop("the old %s stack holds %d and the skeleton's other sources of it make %d (%s)"
-                           % (base_name(o["iid"]), o["qty"], b["qty"] - own_qty(j), label_of(j)))
-            put(j, o, q)
+            if share[j] >= 1:
+                put(j, o, share[j])
+            elif own_qty(j):
+                m = CHAR_LINE.match(lines[j])
+                edits[j] = ["%s: none" % label_of(j)]
+                done.append(("kit", "%s: %s -> none (the old %s stack of %d is made by the other asks)"
+                             % (label_of(j), m.group(3), base_name(o["iid"]), o["qty"])))
         if delta:
             UNSET.append(("kit", "%s: the dump shows one stack of %d where the build merged %d (%s); the split is "
                           "not in the dump, so the difference %+d went on %s"
@@ -1073,6 +1099,26 @@ def selftest():
     want("food: the key keeps its value, the ask takes the difference, the split is named",
          out[1] == "kit_item [Human;a1]: food ration, quantity 5" and out[2] == "beginkit_food: 9"
          and any("the split is not in the dump" in u for u in unset), " | ".join(out) + " / " + " ; ".join(unset))
+    # inc-10v7f: a kit_item ask and a beginkit_item ask for the same item made one stack; the old stack is shared out
+    pot = ("potion", 10, 5, 0)
+    for label, skel_q, built_q, want_q in (("7+3, old 10: both keep the walk's quantity", (7, 3), 10, (7, 3)),
+                                           ("7+5, old 10: the last ask takes the remainder", (7, 5), 12, (7, 3)),
+                                           ("7+3, old 12: the last ask takes the extra", (7, 3), 10, None)):
+        old_q = 12 if want_q is None else 10
+        want_q = want_q or (7, 5)
+        out, _ = run(["kit_item [Orc;a2]: knife, quantity 1", "kit_item [Dragonkin;a0]: potion, quantity %d" % skel_q[0],
+                      "beginkit_item: potion, quantity %d" % skel_q[1]],
+                     [knife, ("potion", built_q, 6, 0)], [("knife", 1, 5, 2), ("potion", old_q, 6, 0)])
+        want("stack of two asks, " + label, out[1] == "kit_item [Dragonkin;a0]: potion, quantity %d" % want_q[0]
+             and out[2] == "beginkit_item: potion, quantity %d" % want_q[1], " | ".join(out))
+    out, _ = run(["kit_item [Orc;a2]: knife, quantity 1", "kit_item [Human;a2]: potion, quantity 5", "beginkit_item: potion, quantity 6"],
+                 [knife, ("potion", 11, 6, 0)], [("knife", 1, 5, 2), ("potion", 5, 6, 0)])
+    want("stack of two asks, old 5 against walk 5+6: the surplus takes the last ask to none",
+         out[1] == "kit_item [Human;a2]: potion, quantity 5" and out[2] == "beginkit_item: none", " | ".join(out))
+    out, _ = run(["kit_item [Orc;a2]: knife, quantity 1", "kit_item [Dragonkin;a0]: potion, quantity 7", "beginkit_item: none"],
+                 [knife, ("potion", 7, 6, 0)], [("knife", 1, 5, 2), pot])
+    want("stack of one ask (and an ask the walk gave nothing): the ask takes the old total",
+         out[1] == "kit_item [Dragonkin;a0]: potion, quantity 10" and out[2] == "beginkit_item: none", " | ".join(out))
     # a quality that adds to the plus: the dump cannot say how much, so the plus stays and the output names it
     out, unset = run(["kit_item [Universal Gear;a20]: banded mail, quantity 1"],
                      [("banded mail", 1, 5, 0)], [("banded mail", 1, 5, 1, ["AQ_LIGHT_FOR"])])
@@ -1109,9 +1155,143 @@ def selftest():
     return 1 if bad else 0
 
 
+# The conversion passes when the CHOICES of the build equal the choices of the old
+# save (canon_compare.py --choices). A row here names one difference that a rule
+# change since the old save was made causes, so a reader sees what was excused and
+# why. A row covers EXACT lines; a line no row covers fails the conversion.
+# A row whose cause is fixed MUST be deleted (tools/check_char_convert.sh).
+def _kit_stack(singular_plural):
+    def old_to_built(old):
+        m = re.match(r"^Inventory: (\d+) (.+?)( \[.*\])?$", old)
+        if not m or int(m.group(1)) < 2:
+            return None
+        for sing, plur in singular_plural:
+            if m.group(2) == plur:
+                return "Inventory: %s%s" % (sing, m.group(3) or "")
+        return None
+    return old_to_built
+
+
+# (singular, plural): the kit stacks the starting-kit dedupe (src/Create.cpp
+# KitDedupeExempt) cuts to one. Potions, scrolls, food, coins and ammunition are
+# exempt from it and MUST NOT appear here.
+KIT_DEDUPE_ITEMS = [
+    ("vial of holy water", "vials of holy water"),
+    ("orcish dagger", "orcish daggers"),
+    ("dagger", "daggers"),
+    ("tanglefoot bag", "tanglefoot bags"),
+]
+
+KNOWN_DIFFERENCES = [
+    {"name": "devouring-to-cannibalism", "cause": "commit 4e1fc266",
+     "kinds": ["Special Abilities: Devouring -> Feats: Cannibalism"],
+     "old_to_built": lambda old: "Feats: Cannibalism" if old == "Special Abilities: Devouring" else None},
+    {"name": "kit-dedupe-stack-to-one", "cause": "bead inc-tjvn",
+     "kinds": ["Inventory: %s -> %s" % (p, s) for s, p in KIT_DEDUPE_ITEMS],
+     "old_to_built": _kit_stack(KIT_DEDUPE_ITEMS)},
+]
+
+
+def excuse(old_only, built_only):
+    """(excused, old_rest, built_rest): excused is [(old, built, row)]. Each excused
+    pair consumes one old-only and one built-only line; nothing else is dropped."""
+    old_rest, built_rest, excused = list(old_only), list(built_only), []
+    for row in KNOWN_DIFFERENCES:
+        for old in list(old_rest):
+            want = row["old_to_built"](old)
+            if want is not None and want in built_rest:
+                old_rest.remove(old)
+                built_rest.remove(want)
+                excused.append((old, want, row))
+    return excused, old_rest, built_rest
+
+
+def read_choices_diff(path):
+    old, built = [], []
+    for l in open(path, errors="replace").read().split("\n"):
+        if l.startswith("- "):
+            old.append(l[2:])
+        elif l.startswith("+ "):
+            built.append(l[2:])
+    return old, built
+
+
+def bead_status(ref):
+    """The status of bead <ref>: from the JSONL named by CHAR_CONVERT_BEADS (one object
+    per line; the controls use it), else from `bd show <ref> --json`. Returns the status
+    string, None when the bead is not found, and raises Stop when neither source works."""
+    import json
+    env = os.environ.get("CHAR_CONVERT_BEADS")
+    if env:
+        if not os.path.exists(env):
+            raise Stop("COULD NOT MEASURE: CHAR_CONVERT_BEADS=%s does not exist" % env)
+        status = None
+        for l in open(env, errors="replace"):
+            try:
+                d = json.loads(l)
+            except ValueError:
+                continue
+            if isinstance(d, dict) and d.get("id") == ref:
+                status = d.get("status")
+        return status
+    cmd = "bd show %s --json" % ref
+    try:
+        r = subprocess.run(["bd", "show", ref, "--json"], capture_output=True, text=True, cwd=ROOT)
+        d = json.loads(r.stdout)
+    except (OSError, ValueError) as e:
+        raise Stop("COULD NOT MEASURE: `%s` gave no JSON (%s)" % (cmd, e))
+    if isinstance(d, list):
+        d = d[0] if d else None
+    if not isinstance(d, dict) or "status" not in d:
+        raise Stop("COULD NOT MEASURE: `%s` printed no object with a status" % cmd)
+    return d["status"]
+
+
+def causes(rows=None):
+    """0 all rows live, 1 a row is stale, 2 the bead status could not be measured."""
+    rc = 0
+    for row in (KNOWN_DIFFERENCES if rows is None else rows):
+        kind, _, ref = row["cause"].partition(" ")
+        if kind == "commit":
+            ok = subprocess.run(["git", "-C", ROOT, "cat-file", "-e", ref + "^{commit}"],
+                                capture_output=True).returncode == 0
+            if not ok:
+                print("stale: row %s names %s, which git does not resolve; delete the row" % (row["name"], row["cause"]))
+                rc = max(rc, 1)
+        elif kind == "bead":
+            try:
+                status = bead_status(ref)
+            except Stop as e:
+                print(e)
+                return 2
+            if status is None or status == "closed":
+                print("stale: row %s names %s, which is %s; the row is stale and must be deleted" % (row["name"], row["cause"], status or "not found"))
+                rc = max(rc, 1)
+        else:
+            print("stale: row %s has a cause that is neither commit nor bead: %s" % (row["name"], row["cause"]))
+            rc = max(rc, 1)
+    return rc
+
+
+def cmd_excuse(path):
+    old, built = read_choices_diff(path)
+    excused, old_rest, built_rest = excuse(old, built)
+    for o, b, row in excused:
+        print("excused: %s -> %s -- %s (%s)" % (o, b, row["cause"], row["name"]))
+    for l in old_rest:
+        print("remainder: - %s" % l)
+    for l in built_rest:
+        print("remainder: + %s" % l)
+    return 0 if not old_rest and not built_rest else 1
+
+
 def main(argv):
     args = argv[1:]
     try:
+        if len(args) == 2 and args[0] == "excuse":
+            return cmd_excuse(args[1])
+        if args == ["causes"]:
+            return causes()
         if args == ["selftest"]:
             return selftest()
         if args and args[0] == "options" and len(args) == 5:

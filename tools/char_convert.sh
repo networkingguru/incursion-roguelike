@@ -9,8 +9,10 @@
 # The ceiling: the tables map the decisions a dump states (scalars, perks, the
 # feat queue, skill ranks, the kit, two item quantities). A difference in a
 # RESULT (abilities, derived attributes, the equipment arrangement) is a rule
-# that changed since the old save was made: the conversion fails on it, by
-# design, and prints it. Extend the tables in the bead that needs more.
+# that changed since the old save was made: it is listed in diff.txt and does
+# not fail the conversion (Brian, 2026-11-11: a conversion passes when its
+# choices match). A choice that differs fails it. Extend the tables in the bead
+# that needs more.
 #
 # Usage: tools/char_convert.sh <fixture-name> <out.char> [--withhold <key>]
 #        INCURSION_BIN=<binary>              the binary (default ./incursion-headless)
@@ -34,9 +36,13 @@
 #   3. Build the skeleton, play the old script's post-creation steps on it,
 #      dump the result, compare with tools/canon_compare.py. See THE ARRIVAL.
 #   4. Set each mapped value that differs, from the tables in char_convert_map.py.
-#   5. Build again and compare. Exit 0 only when the dumps match outside the one
-#      allowlist of tools/canon_compare.py. A differing line with no mapping
-#      fails and is printed. Nothing is added to the allowlist.
+#   5. Build again and compare. The full comparison (tools/canon_compare.py --all)
+#      is written to diff.txt as information. Exit 0 when the CHOICES of the
+#      build equal the choices of the old .sav (canon_compare.py --choices:
+#      gender, race, class, faith, alignment, base scores, feats, abilities,
+#      skill ranks, spells, inventory), after the rows of KNOWN_DIFFERENCES in
+#      tools/char_convert_map.py excuse the lines a named rule change moved. A
+#      choice line no row excuses fails and is printed. Computed lines never fail.
 #   6. --withhold <key>: skip setting that one key in step 4, to prove step 5.
 #
 # THE ARRIVAL (phase 11e). An old .sav was written by its key script AFTER
@@ -251,12 +257,25 @@ SUM_AFTER="$(cksum < "$SAV")"
 [ "$SUM_BEFORE" = "$SUM_AFTER" ] || { echo "char_convert: THE OLD .sav CHANGED during the run: $SAV" >&2; exit 2; }
 NDIFF="$(grep -cE '^[-+][^-+]' "$OD/diff.txt")"
 
+# The pass rule: the choices of the build equal the choices of the old .sav, less the
+# rows of KNOWN_DIFFERENCES. diff.txt (every computed line) is information.
+tools/canon_compare.py --choices "$OD/old.canon" > "$OD/old.choices" || exit 2
+tools/canon_compare.py --choices "$OD/built.canon" > "$OD/built.choices" || exit 2
+tools/canon_compare.py --choices-diff "$OD/old.canon" "$OD/built.canon" > "$OD/choices-diff.txt"
+RCC=$?
+[ "$RCC" -le 1 ] || { echo "char_convert: canon_compare --choices-diff failed (exit $RCC)" >&2; exit 2; }
+tools/char_convert_map.py excuse "$OD/choices-diff.txt" > "$OD/excused.txt"
+RCE=$?
+[ "$RCE" -le 1 ] || { echo "char_convert: char_convert_map.py excuse failed (exit $RCE)" >&2; exit 2; }
+NEXC="$(grep -c '^excused: ' "$OD/excused.txt")"
+RC="$RCE"
+
 # The .char is written whenever the comparison completed, with its result: a
 # fixture that still differs needs tools/char_attribute.sh, and that takes this file.
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 [ -n "$(git status --porcelain -- src inc lib tools 2>/dev/null)" ] && COMMIT="$COMMIT+uncommitted"
-if [ "$RC" -eq 0 ]; then RESULT="CONVERTED: the dump of the build equals the dump of the old .sav outside the allowlist of tools/canon_compare.py"
-else RESULT="DIFFERS: $NDIFF dump line(s) of the build differ from the old .sav (the full diff is the comparison of the dumps; tools/char_attribute.sh takes this file)"; fi
+if [ "$RC" -eq 0 ]; then RESULT="CONVERTED: the choices of the build equal the choices of the old .sav; $NDIFF computed line(s) differ (diff.txt); $NEXC line(s) excused by KNOWN_DIFFERENCES"
+else RESULT="DIFFERS: a choice of the build differs from the old .sav and no KNOWN_DIFFERENCES row excuses it (the lines are in choices-diff.txt; tools/char_attribute.sh takes this file)"; fi
 {
     echo "# $NAME: converted from $SAV by tools/char_convert.sh."
     echo "# Skeleton: key script $KEYS, seed $SEED, settings $OPTS, recorded by binary commit $COMMIT."
@@ -274,6 +293,7 @@ else RESULT="DIFFERS: $NDIFF dump line(s) of the build differ from the old .sav 
         echo "# Values NOT set from the old dump (the dump shows each only through a result):"
         sed 's/^/#   /' "$OD/unset.txt"
     fi
+    grep '^excused: ' "$OD/excused.txt" | sed 's/^excused: \(.*\) -> \(.*\) -- \(.*\) (.*)$/#   differs: \1 -> \2 -- \3/'
     cat "$FINAL"
 } > "$OUTCHAR"
 if [ -s "$OD/unset.txt" ]; then
@@ -281,10 +301,10 @@ if [ -s "$OD/unset.txt" ]; then
     sed 's/^/char_convert:   /' "$OD/unset.txt"
 fi
 if [ "$RC" -ne 0 ]; then
-    echo "char_convert: $NAME does NOT convert; $NSET value(s) set ($KINDS); $NDIFF dump lines differ and have no mapping or still differ:"
-    grep -E '^[-+][^-+]' "$OD/diff.txt" | cut -c1-170 | head -40
-    echo "(full diff: $OD/diff.txt; wrote $OUTCHAR for tools/char_attribute.sh)"
+    echo "char_convert: $NAME does NOT convert; $NSET value(s) set ($KINDS); these choices of the build differ from the old .sav and no KNOWN_DIFFERENCES row excuses them:"
+    grep '^remainder: ' "$OD/excused.txt" | cut -c1-170 | head -40
+    echo "(choices: $OD/choices-diff.txt; computed diff: $OD/diff.txt; wrote $OUTCHAR for tools/char_attribute.sh)"
     exit 1
 fi
-echo "char_convert: $NAME converted; $NSET value(s) set ($KINDS); wrote $OUTCHAR"
+echo "char_convert: $NAME converted; the choices equal the old .sav's; $NDIFF computed line(s) differ (diff.txt); $NEXC line(s) excused by KNOWN_DIFFERENCES; $NSET value(s) set ($KINDS); wrote $OUTCHAR"
 exit 0
