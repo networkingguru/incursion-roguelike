@@ -1,11 +1,13 @@
 # inc-w91w rule 2: fire at a found trap under a creature, three squares
 # east. `t` opens target mode, RIGHT steps to the creature, ENTER opens the
 # "-- Examine --" list of the square (creature, trap, terrain...), and the
-# trap is picked from it by name. Same `s` and lowercase-f notes as
+# trap is picked from it by name. Same LEFT/RIGHT and lowercase-f notes as
 # trap-shot-loc.keys.
 @while "-- more --" SPACE
-s
+LEFT
+RIGHT
 f
+@expect "Select direction, location or target"
 t
 RIGHT
 ENTER

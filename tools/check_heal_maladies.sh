@@ -53,6 +53,7 @@
 # fact: other monsters and corpses on the level -- wizard Genocide Everything, before the summon
 # fact: the kobold beside the player -- wizard Monster Summoning, after the genocide
 # fact: the kobold's Will save against Hold Person fails -- INCURSION_FORCE_SAVE_ROLL=1 (natural 1 always fails; src/Fight.cpp)
+# fact: the paralysis lasts until Heal or the end of the run -- scratch Hold Person has EF_DROUND swapped for EF_PERMANANT (duration -1), so a cast on a 60-tick boundary cannot expire it (inc-woh0d)
 # fact: the nine maladies land on the player -- the test god's EV_BLESSING calls GainPermStati directly, no roll (tools/fixtures/heal-maladies-god.irh)
 # fact: the innate Heal cast succeeds -- Character::SpellRating returns 100 for SP_INNATE, no roll (src/Magic.cpp)
 # fact: the text matched ("<MALADY> from ", "PARALYSIS from ") -- the debug Stati dump names constants, not seed-chosen text
@@ -87,6 +88,14 @@ _build_scratch() {
     cp -Rf "$CHECK_ROOT/lib" "$dir/lib" || _check_die 2 "could not copy lib/"
     ln -sfn "$CHECK_ROOT/inc" "$dir/inc"
     cat "$CHECK_ROOT/tools/fixtures/heal-maladies-god.irh" >> "$dir/lib/main.irc"
+
+    local held
+    held=$(perl -0pi -e '
+        $c = s/("Hold Person" : EA_INFLICT\s*\{[^}]*?Flags: EF_LIM_MTYPE, EF_MENTAL, )EF_DROUND;/$1EF_PERMANANT;/;
+        END { print STDERR (defined $c ? $c : 0); }
+    ' "$dir/lib/wspells.irh" 2>&1)
+    [ "$held" = 1 ] || _check_die 2 \
+        "made $held Hold Person declarations permanent in lib/wspells.irh, expected 1"
 
     if [ "$mode" = break ]; then
         local removed

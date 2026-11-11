@@ -1,0 +1,15 @@
+# inc-10v7f: inspect arrival shot prompt sequencing; investigation only.
+# Repro: INCURSION_LOAD=logs/trap-built/ob-replay/save/Varag.sav INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat INCURSION_TRAP_ATTACK_PROBE=shot-hit INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_SAVE_ROLL=1 INCURSION_RUN_DIR="$PWD/logs/trap-built/arrival-prompts" tools/headless.sh tools/repro_trap_built.keys 1
+# Prepare the arrived save with the char_arrive.sh command from the inc-10v7f brief.
+@dump:initial
+@while "-- more --" SPACE
+s
+@dump:after-search
+f
+@dump:after-fire
+l
+RIGHT*3
+@dump:cursor
+ENTER
+@dump:after-enter
+@quit

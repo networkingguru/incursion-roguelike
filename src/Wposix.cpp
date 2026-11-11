@@ -670,6 +670,7 @@ int main(int argc, char *argv[]) {
            that loads a built character plays only what the script did after
            creation (tools/char_convert.sh; the n comes from
            Game::NewGameTail, see KeyScriptPosition). */
+        /* fixture builder hook (inc-10v7f). */
         if (getenv("INCURSION_KEYS_SKIP")) {
             const char *skip = getenv("INCURSION_KEYS_SKIP");
             char *end = NULL;

@@ -1,4 +1,5 @@
 # Fixture builder: characters built from a text file (inc-10v7f)
+<!-- citations: this-port -->
 
 Version 2. Version 1 was reviewed by two independent reviewers (bead notes,
 2026-11-06); every Critical and Major finding is folded in below, and the
@@ -40,7 +41,7 @@ reruns the same walk and has the same flaw.
 Creation already has one place where each decision is made or replayed: the
 `MO_CREATE` / `MO_RECREATE` switch sites that reincarnation uses
 (`RollAttributes` `src/Create.cpp:2287`, `GrantGear` `src/Annot.cpp:588-642`,
-skill ranks `:1223-1233`, the prompt primitives `src/Term.cpp:2895, 3421`,
+skill ranks `src/Create.cpp:1358-1376`, the prompt primitives `src/Term.cpp:2895, 3421`,
 `src/TextTerm.cpp:1015, 1424, 1868`). The builder MUST NOT add a second
 layer beside it. Instead those sites call ONE interface, `CreationSource`,
 with three backends:
@@ -71,7 +72,7 @@ spell table `TextTerm::LearnTable` (`src/TextTerm.cpp:1824`), the attribute
 screen in `RollAttributes` (direct key reads `src/Create.cpp:2477, 2583`),
 the skill screen `TextTerm::SkillManager` (`src/Managers.cpp:2110-2228`; its
 commit at `:2215-2218` becomes a function both the screen and the source
-call), the creation option screen `OptionManager(OPC_CHARGEN)` (`:866`), and
+call), the creation option screen `OptionManager(OPC_CHARGEN)` (`src/Create.cpp:963`), and
 every prompt a creation-time script raises (`lib/races.irh` EV_BIRTH yn,
 the epic god menu with its "No god" and CG_FEAT "Cancel" rows).
 
@@ -79,11 +80,11 @@ Random draws that decide a character fact (R-C-2, K-C3, K-M3): gender
 (`:916`), name (`PickName :72`), attribute sets and rerolls, perk type and
 details (`CreatePerk`, rolls at `:1828-2030`), hit points and mana per level
 (`AdvanceLevel`), `formulaSeed` (`:885`, which also decides the Multitude
-domain pool `:2686`), `storeSeed` (`:1454`), and inside `GrantGear` every
+domain pool `src/Create.cpp:2804-2812`), `storeSeed` (`:1454`), and inside `GrantGear` every
 draw: inclusion chance, `GF_RANDOM_ITEM` (`src/Annot.cpp:661-677`),
 `GF_RANDOM_EFFECT` (`:679-712`), item level (`:720-735`), `Amount.Roll()`
-(`:743`), plus `GrantBeginnerKit` (`src/Create.cpp:549-598`), and the
-missile, thrown and ammo counts (`:1281-1311`).
+(`src/Annot.cpp:763`), plus `GrantBeginnerKit` (`src/Create.cpp:549-598`), and the
+missile, thrown and ammo counts (`src/Create.cpp:1425-1457`).
 
 ### Two tripwires (the resilience backbone)
 
@@ -365,7 +366,7 @@ section or amendment it names.
   count as stated, whatever fed the `srand`. T2 stays armed after every
   `srand` inside its window. Under `File`, the `srand(NextSeed() % 100)` in
   `GrantGear` (`src/Annot.cpp:584-591`) is skipped, and each draw after it
-  is answered by its A4 key. The Multitude domain pick (`src/Create.cpp:2686`,
+  is answered by its A4 key. The Multitude domain pick (`src/Create.cpp:2804`,
   `srand(formulaSeed)` then `possDom[random(max)]`) is answered by eight
   `domain_pool: <domain>` lines, by name. `formulaSeed` stays a stated value
   for what reads it after creation. C2 adds mutation (e): a draw inserted
@@ -493,7 +494,7 @@ below overrides the section it names.
     only by room generation and does nothing here (E2, V1).
   - A `Tiles` entry for the start tile with `TILE_START` at (20,20) (E7).
   The scene applier clears `isVault` on every square after the map is
-  written, because `WriteMap` sets it on every grid square (`:1187`) and
+  written, because `WriteMap` sets it on every grid square (`src/MakeLev.cpp:1187`) and
   rest, teleport and spawn code treat vault squares differently (E3). No
   monster arrives on the test map except by a scene line: the applier turns
   off the map's wandering-monster arrival (`DaysPassed` path) (E7).
@@ -525,7 +526,7 @@ below overrides the section it names.
      mount onto it, through ONE helper extracted from `Player::MoveDepth`'s
      companion gathering (`src/Feature.cpp:1448`). `MoveDepth` itself
      refuses a non-dungeon `dID`, and a portal move takes the player only
-     (`:481`) (E4). The old level 1 stays in memory and in the save, as
+     (`src/Feature.cpp:478-479`) (E4). The old level 1 stays in memory and in the save, as
      after any portal trip.
   2. Applies the scene lines in file order.
   Placement reuses engine bodies, moved, never copied (section 4, G2):

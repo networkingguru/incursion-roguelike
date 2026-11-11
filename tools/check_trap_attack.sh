@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # inc-w91w: found-trap attacks, remote area victims, and unchanged Rogue disarm.
-# fact: class, stats, kit -- orc-barbarian/rogue-seed1-opt0822.sav fixtures
+# fact: class, stats, kit -- the orc-barbarian/rogue-seed1-opt0822 fixtures as tools/headless.sh serves them (INCURSION_LOAD of the .sav path; built from the .char or the frozen .sav)
 # fact: options -- tools/fixtures/options-2026-08-22.dat
 # fact: map, no AI, found trap and its distance -- INCURSION_TRAP_ATTACK_PROBE scene
 # fact: hit/miss/fumble d20 and confirmation -- INCURSION_LOF_FORCE_ROLL
@@ -12,6 +12,9 @@
 # fact: faerie-fire duration is positive or absent, not its random value -- normal spell duration bounds
 # fact: attack target -- normal Attack menu cursor, staged trap one square east
 # fact: shooter kit -- probe wields a short bow and 20 flight arrows (shot-thrown: a dagger)
+# fact: time charged by the attack -- probe baseline taken on entry to the attack (TrapAttackProbeBegin; area modes: right before AttackTrap), after the load's Timeout reset
+# fact: scene holds no creature but the shooter -- probe snapshots handles, removes them, logs creatures=0
+# fact: the aim prompt is up before aiming -- key script @expect "Select direction, location or target"
 # fact: shot target square and its lighting -- probe lights the room; keys aim three squares east
 # fact: staged creature (shot-under, shot-between) never acts -- probe gives it permanent ASLEEP
 # fact: staged creature hit points -- probe sets 10000, so a strike shows as a drop
@@ -45,6 +48,8 @@ text=open(sys.argv[1]).read(); mode=sys.argv[2]
 lines=[l for l in text.splitlines() if 'TRAP_ATTACK' in l]
 print('\n'.join(lines))
 stage=next((l for l in lines if ' stage ' in l), '')
+scene=next((l for l in lines if 'TRAP_ATTACK scene' in l), '')
+assert 'creatures=0' in scene, 'scene not empty: %r'%scene
 assert stage and 'armed=1' in stage and 'blind=0' in stage and 'lit=0' in stage, 'missing clean armed baseline'
 assert ('class=rogue' if mode=='rogue' else 'class=barbarian') in stage.lower(), 'wrong fixture class'
 if mode.startswith('shot-'):

@@ -1,4 +1,5 @@
 # Fixture builder: decision sites and fixture tools (inc-10v7f)
+<!-- citations: this-port -->
 
 Phases 1 and 2 of `docs/specs/2026-11-06-fixture-builder-brief.md`. Part A is the
 phase-1 site list (every `MO_RECREATE`, `MO_CREATE`, `reincarnate` and `RInf` site,
@@ -225,10 +226,10 @@ Not reachable in the window (Reasoned, no census row, no player path): EV_BIRTH 
 | `CreationGodFit(Ex)` | 3000-3200 | sets `BAttr=18`, calls `CalcValues` twice: each call runs `RecalcCraftFormulas` -> `NextSeed()` tick (Skills.cpp:4263-4350) | no draw; shifts `NextSeed` ticks |
 | `ForbidPromptAsk` | Event.cpp:437; Create.cpp:4889 (AdvanceLevel) | Box + yn "Advance anyway?" when god forbids the class | SourcedPick; CK_FORBID_CONFIRM (A) |
 | BOUND_GOD join | Create.cpp (AdvanceLevel) `ReThrow(EV_CONVERT)` | an Alienist level without a god joins the bound god (may prompt via EV_CONVERT) | not yet traced |
-| EV_BIRTH Semirath, Xel, Aiswin; EV_BIRTH Aiswin's Hunt effect | religion.irh:9763, 12547, 1118; landed-inc-pu6v.irh:2520 | deterministic grants (Semirath's gift calls `CreateItem` + `Initialize`, no script draw) | none |
+| EV_BIRTH Semirath, Xel, Aiswin; EV_BIRTH Aiswin's Hunt effect | epic branch `inc-pu6v`, not in this tree: `lib/religion.irh` (epic lines 9763, 12547, 1118) and the epic's landed-god file (epic line 2520) | deterministic grants (Semirath's gift calls `CreateItem` + `Initialize`, no script draw) | none |
 | Dwarf/Orc worship yn removed | races.irh:918, 1871 | | master-only prompts P37, P38 |
 | Multitude `domain_pool` removed | Create.cpp:3392-3470 `ChooseDomains(nChoices,isSwap)` has no `srand`/`random` and no `Multitude` text | row 6 and row 9 of section 3 do not exist on the epic. B1's `domain_pool` lines apply to master only | - |
-| `ChooseDomains` SwapDomains call | ClassSuspend.cpp:1207 | mid-game domain swap | post-creation |
+| `ChooseDomains` SwapDomains call | `ClassSuspend.cpp` on the epic branch `inc-pu6v`, not in this tree (epic line 1207) | mid-game domain swap | post-creation |
 | `FT_PERK_LAST` | Create.cpp (CreatePerk PERK_FEAT) `random(FT_PERK_LAST - FT_FIRST)`; `FeatPerkRangeGuard` | the perk-feat range differs, so the same stated feat list is a different draw domain | no key change |
 | Mode-dependent code | 3410, 6215 | `Mode==MO_CREATE` read outside a decision | File backend keeps the mode |
 | Annot.cpp:729-790 | equal to master 586-649 | | D14, D15 |
@@ -245,7 +246,7 @@ grep: `grep -rliE "reincarnat|gallery|RInf" tools` -> 4 files.
 | tools/dump_save.sh:24 | comment: read only, never calls `TouchGallery` |
 | tools/check_stale_quotes.sh | unrelated (grep word) |
 
-No check, key script or gate drives `Player::Reincarnate`, `Create(true)`, MO_RECREATE through a real creation, or `gallery.dat`. So after D1-D15 become `CreationSource` calls, nothing in the repo shows reincarnation behaves as before. A new check is needed for "behaves exactly as today" (A6). Epic: same, plus `tools/check_xel_agent_ally.sh:29` (a comment).
+No check, key script or gate drives `Player::Reincarnate`, `Create(true)`, MO_RECREATE through a real creation, or `gallery.dat`. So after D1-D15 become `CreationSource` calls, nothing in the repo shows reincarnation behaves as before. A new check is needed for "behaves exactly as today" (A6). Epic: same, plus a comment in the epic branch's `tools/check_xel_agent_ally.sh` (not in this tree; epic line 29).
 
 ### 7. Gaps and suspicions
 

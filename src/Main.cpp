@@ -195,6 +195,7 @@ void Game::NewGameTail(rID mID, Player *pp) {
                 fclose(sf);
             }
         }
+        /* fixture builder hook (inc-10v7f). */
         const char *ms = getenv("INCURSION_MAP_STREAM");
         if (ms && *ms) {
             unsigned long tick, seed;

@@ -7,24 +7,19 @@
      SourcedRoll(key, live)        a number
      SourcedPick(key, list, live)  a choice among named candidates
      SourcedItem(key, item, live)  a generated item, as a complete description
-
    `live` is the code the site ran before this file existed; it runs unchanged
    whenever the active source holds no answer. The active source is one of:
-
      Live    normal play. It answers nothing, so every site runs `live`, and it
-             RECORDS what each site decided (into RInf for the gallery, and
-             into a .char file when INCURSION_RECORD_CHAR=<path> is set, and
-             then also into <path without extension>.walk.sav, a save of the
-             character at the end of game setup, before the first turn).
-     Replay  gallery reincarnation. It answers from RInf exactly what RInf
-             holds; every other decision is NOT_RECORDED and the site acts as
-             Live (spec A6).
-
+             RECORDS each decision (into RInf for the gallery; with
+             INCURSION_RECORD_CHAR=<path>, also into a .char file and a
+             <path minus extension>.walk.sav, saved at the end of setup).
+     Replay  gallery reincarnation. It answers from RInf what RInf holds; any
+             other decision is NOT_RECORDED and the site acts as Live (spec A6).
      File    the fixture builder (`incursion-headless -build <file.char>`). It
-             answers EVERY decision from a parsed .char file, by (key, context)
-             queue, and never lets a site run `live`: a decision the file does
-             not state is a build failure that prints the line to add. It
-             writes no gallery entry and no recording (src/CharFile.cpp).
+             answers EVERY decision from a parsed .char file by (key, context)
+             queue and never runs `live`: an unstated decision fails the build
+             and prints the line to add. No gallery entry, no recording
+             (src/CharFile.cpp).
    A key is an enum name plus a context: the resource and event whose script
    runs (CreationScope), an optional `sub` name, and the ordinal in that (key,
    context) queue. The recorder writes `<key> [<context>]: <value>`. */

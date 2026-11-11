@@ -685,6 +685,7 @@ static std::string OptionsBase(const char *path)
 
 std::string CreationWalkSavePath()
 {
+    /* fixture builder hook (inc-10v7f). */
     const char *path = getenv("INCURSION_RECORD_CHAR");
     if (!path || !*path)
         return std::string();
@@ -720,6 +721,7 @@ std::string CreationNormalize(const std::string &label)
 
 static void WriteCharFile()
 {
+    /* fixture builder hook (inc-10v7f). */
     const char *path = getenv("INCURSION_RECORD_CHAR");
     if (!path || !*path)
         return;
@@ -743,6 +745,7 @@ static void WriteCharFile()
        file the session ran under, or the changed copy written beside this
        file, and the session seed. */
     {
+        /* fixture builder hook (inc-10v7f). */
         const char *opts = getenv("INCURSION_OPTIONS");
         const char *seed = getenv("INCURSION_SEED");
         if (haveOptions)
@@ -910,6 +913,7 @@ public:
         { Emit(k, c, ItemText(it)); }
     void NoteOptions(const int8 *opts, int n)
     {
+        /* fixture builder hook (inc-10v7f). */
         const char *path = getenv("INCURSION_RECORD_CHAR");
         if (!path || !*path)
             return;

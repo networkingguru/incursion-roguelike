@@ -150,16 +150,6 @@ mutant() {   # <script> <sed expression> <tag>: a copy of a tool with one change
     chmod +x "$MUTPATH"
 }
 want_red() {   # <label> <fixture>: the mutant run (COUT, CRC) must stop at the proof, red
-    if [ -n "${GNBASE:-}" ] && [ "$2" = "$GN" ]; then   # the base itself differs: red means lines beyond the base's
-        local extra
-        extra="$(grep -E '^[-+][^-+]' "$W/$TAG/$2/proof.txt" 2>/dev/null | sort | comm -23 - "$GNBASE" | head -1)"
-        if [ "$CRC" -eq 2 ] && grep -q "METHOD DEFECT" "$COUT" && [ -n "$extra" ]; then
-            echo "ok   $1: the proof goes red beyond the base on $2 ($(printf '%s' "$extra" | cut -c1-70))"
-        else
-            echo "FAIL $1: the proof shows nothing beyond the base on $2 (exit $CRC)"; fail=1
-        fi
-        return
-    fi
     if [ "$CRC" -eq 2 ] && grep -q "METHOD DEFECT" "$COUT" && ! grep -q "method proof: the replay" "$COUT"; then
         echo "ok   $1: the proof goes red on $2 ($(grep -m1 -E '^[-+][^-+]' "$COUT" | cut -c1-70))"
     else
@@ -175,19 +165,7 @@ want_green() {   # <fixture>: the real tool prints the proof line
 }
 RG=orc-rogue-seed1-opt0822; GN=gnome-warrior-wis3-pickaxe-seed1-opt0822; RT=orc-rogue-seed4-opt0822
 conv rg "$RG";  want_green "$RG"
-conv gn "$GN"
-# gnome-warrior: the replay of the built character and the walk's live session part ways in the first turns on the
-# walk's own map (a monster acts differently after a load: the draws are equal until turn 198008, the monsters' timeouts
-# are not), so its proof differs by the lines of proof.txt of this run. Those lines are the BASE: the controls below MUST
-# show lines beyond them. Should the base ever be green, the controls are the plain ones.
-GNBASE=""
-if grep -q "method proof: the replay of the skeleton equals the walk's final save" "$COUT"; then
-    want_green "$GN"
-else
-    GNBASE="$W/gn-base-lines.txt"
-    grep -E '^[-+][^-+]' "$W/gn/$GN/proof.txt" | sort > "$GNBASE"
-    echo "known  the proof of $GN differs by $(grep -c '' "$GNBASE") line(s) on its own map ($(head -1 "$GNBASE" | cut -c1-80)); the controls below must show lines beyond them"
-fi
+conv gn "$GN";  want_green "$GN"
 conv rt "$RT";  want_green "$RT"
 
 mutant char_arrive.sh 's|if \[ "\$SKIP" != "-" \]; then|if false; then|' char_arrive_mutant
