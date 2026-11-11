@@ -711,9 +711,9 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
     food = next((o for b, o in other_out if base_name(b["iid"]) == "food ration" and o), None)
     if food is not None and lo < food["gen"] < hi:
         hi = food["gen"]
-    bk = []
-    if ask_lines["beginkit_item"]:
-        bk = [k for k in pool if lo < old_items[k]["gen"] < hi]
+    # The run is found whether or not the skeleton asks for it: a kit-off skeleton has no beginkit_item
+    # ask, and the old (kit-on) character's Beginner's Kit items are then left out, not set (an item is not a choice).
+    bk = [k for k in pool if lo < old_items[k]["gen"] < hi]
     groups = {"kit_item": [k for k in pool if k not in bk], "beginkit_item": bk}
     # a beginkit_item ask that joined the stack of a paired kit_item ask is set with that group, not by the Beginner's Kit run
     slots = {"kit_item": pending_kit,
@@ -781,6 +781,8 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
                              delta, label_of(target))))
     for key in ("kit_item", "beginkit_item"):
         have, mine = sorted(groups[key], key=lambda k: old_items[k]["gen"]), slots[key]
+        if key == "beginkit_item":
+            have = have[:len(mine)]   # the old kit items beyond the skeleton's asks are not choices
         if len(have) > len(mine):
             raise Stop("the old character holds %d %s item(s) the skeleton has no ask for, first: %s (%s)"
                        % (len(have) - len(mine), key, base_name(old_items[have[len(mine)]]["iid"]), key))
@@ -1017,12 +1019,19 @@ def dump_options(path):
     raise Stop("%s has no Options line" % path)
 
 
+KIT_OPTION = 101   # OPT_BEGINKIT, inc/Defines.h
+
+
 def choose_options(old_p, walk_p, manifest, d):
     old, walk = dump_options(old_p), dump_options(walk_p)
     base = option_bytes(manifest)
     noise = {k for k in set(walk) | set(base) if walk.get(k, 0) != base.get(k, 0)}
+    noise.add(KIT_OPTION)   # an item is not a choice (Brian, 2026-11-11): the kit byte is never compared
     fits, closest = [], None
-    for c in sorted(glob.glob(os.path.join(d, "options-*.dat"))):
+    cands = sorted(glob.glob(os.path.join(d, "options-*.dat")))
+    if not any(os.path.normpath(c) == os.path.normpath(manifest) for c in cands):
+        cands.append(manifest)
+    for c in cands:
         cb = option_bytes(c)
         diff = {k: (old.get(k, 0), cb.get(k, 0)) for k in set(old) | set(cb)
                 if k not in noise and old.get(k, 0) != cb.get(k, 0)}
@@ -1037,7 +1046,9 @@ def choose_options(old_p, walk_p, manifest, d):
         print("no settings file matches the old save; closest %s differs in option(s): %s"
               % (c, ", ".join("%d (old %d, file %d)" % (k, a, b) for k, (a, b) in sorted(diff.items()))))
         return 1
-    pick = next((c for c in fits if os.path.normpath(c) == os.path.normpath(manifest)), fits[0])
+    pick = next((c for c in fits if os.path.normpath(c) == os.path.normpath(manifest)), None)
+    if pick is None:   # never a kit-on file unless the MANIFEST names one
+        pick = next((c for c in fits if not option_bytes(c).get(KIT_OPTION, 0)), fits[0])
     if len(fits) > 1:
         print("char_convert_map: %d settings files match (%s); chose %s"
               % (len(fits), ", ".join(fits), pick), file=sys.stderr)
@@ -1160,35 +1171,10 @@ def selftest():
 # change since the old save was made causes, so a reader sees what was excused and
 # why. A row covers EXACT lines; a line no row covers fails the conversion.
 # A row whose cause is fixed MUST be deleted (tools/check_char_convert.sh).
-def _kit_stack(singular_plural):
-    def old_to_built(old):
-        m = re.match(r"^Inventory: (\d+) (.+?)( \[.*\])?$", old)
-        if not m or int(m.group(1)) < 2:
-            return None
-        for sing, plur in singular_plural:
-            if m.group(2) == plur:
-                return "Inventory: %s%s" % (sing, m.group(3) or "")
-        return None
-    return old_to_built
-
-
-# (singular, plural): the kit stacks the starting-kit dedupe (src/Create.cpp
-# KitDedupeExempt) cuts to one. Potions, scrolls, food, coins and ammunition are
-# exempt from it and MUST NOT appear here.
-KIT_DEDUPE_ITEMS = [
-    ("vial of holy water", "vials of holy water"),
-    ("orcish dagger", "orcish daggers"),
-    ("dagger", "daggers"),
-    ("tanglefoot bag", "tanglefoot bags"),
-]
-
 KNOWN_DIFFERENCES = [
     {"name": "devouring-to-cannibalism", "cause": "commit 4e1fc266",
      "kinds": ["Special Abilities: Devouring -> Feats: Cannibalism"],
      "old_to_built": lambda old: "Feats: Cannibalism" if old == "Special Abilities: Devouring" else None},
-    {"name": "kit-dedupe-stack-to-one", "cause": "bead inc-tjvn",
-     "kinds": ["Inventory: %s -> %s" % (p, s) for s, p in KIT_DEDUPE_ITEMS],
-     "old_to_built": _kit_stack(KIT_DEDUPE_ITEMS)},
 ]
 
 

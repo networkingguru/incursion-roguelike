@@ -39,7 +39,7 @@
 # fact: the character -- tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, committed beside this check; the faults are tested against its build, no walk and no key script
 # fact: the random stream -- the seed: line of that .char file feeds the build; every assertion is on an exit code and a failure line that names no drawn value, so no stream value is read
 # fact: the unstatedDraw sites and the baseline rows -- read as text from src/, inc/ and tools/fixtures/unstated_draws.baseline; no game run
-# fact: the options -- the options: line of the .char file names tools/fixtures/options-2026-08-22-kit.dat; build_fixture.sh passes no other settings
+# fact: the options -- the options: line of the .char file names tools/fixtures/options-2026-08-22.dat; build_fixture.sh passes no other settings
 #
 # Usage: INCURSION_BIN=./incursion-headless tools/check_fixture_tripwires.sh
 #        tools/check_fixture_tripwires.sh --baseline-only   (the baseline part, no binary)

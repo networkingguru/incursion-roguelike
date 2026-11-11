@@ -27,11 +27,15 @@
 #      the walk or to a build; only tools/dump_save.sh reads it, from a copy in
 #      its own sandbox, and this script proves it stayed byte-identical.
 #   1b. The settings come from the old .sav, not from the MANIFEST: the
-#      Options line of its dump picks the one tools/fixtures/options-*.dat
-#      whose options equal it (tools/char_convert_map.py options). If the pick
-#      is not the MANIFEST's file, the walk runs again under the pick. None
-#      matches: fail, naming the differing options. The pick is used for the
-#      walk, the build, both dumps, and is the `options:` line of the output.
+#      Options line of its dump picks one of tools/fixtures/options-*.dat or
+#      the MANIFEST's own file whose options equal it (tools/char_convert_map.py
+#      options). Noise, never compared: an option the walk's FINAL save holds
+#      differently from the MANIFEST's file (the key script switched it in
+#      game), and the Beginner's Kit byte (101; an item is not a choice).
+#      Among several fits the MANIFEST's file wins, then a kit-off file. If
+#      the pick is not the MANIFEST's file, the walk runs again under the pick.
+#      None matches: fail, naming the differing options. The pick is used for
+#      the walk, the build, both dumps, and is the `options:` line of the output.
 #   2. Dump the old .sav (tools/char_dump.sh).
 #   3. Build the skeleton, play the old script's post-creation steps on it,
 #      dump the result, compare with tools/canon_compare.py. See THE ARRIVAL.
@@ -138,9 +142,21 @@ INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$SAV" "$OD/old.canon" > /dev/null 
     || { echo "char_convert: cannot dump $SAV" >&2; exit 2; }
 
 # 1b. The settings the old .sav was made under.
+# The newest save a run left that is not the one it loaded, the backup, or the gallery.
+newest_save() {   # <run dir> [<file to exclude>]
+    local f
+    for f in $(ls -t "$1"/save/*.sav 2>/dev/null); do
+        [ -n "${2:-}" ] && cmp -s "$f" "$2" && continue
+        echo "$f"; return 0
+    done
+    return 1
+}
+
 [ -f "$OD/skeleton.walk.sav" ] || { echo "char_convert: the walk left no walk save" >&2; exit 2; }
-INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$OD/skeleton.walk.sav" "$OD/walk.canon" > /dev/null 2>&1 \
-    || { echo "char_convert: cannot dump the walk save" >&2; exit 2; }
+# The walk's FINAL save, not the creation-time one: an option the key script switches in game is then noise.
+WSAV0="$(newest_save "$OD/walk")" || { echo "char_convert: the walk left no final save" >&2; exit 2; }
+INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$WSAV0" "$OD/walk.canon" > /dev/null 2>&1 \
+    || { echo "char_convert: cannot dump the walk's final save" >&2; exit 2; }
 MANIFEST_OPTS="$OPTS"
 CHOSEN="$(tools/char_convert_map.py options "$OD/old.canon" "$OD/walk.canon" "$MANIFEST_OPTS" tools/fixtures 2> "$OD/options.err")"
 RCO=$?
@@ -175,16 +191,6 @@ case "$STREAM" in
     *) echo "char_convert: $NAME: the walk wrote no map stream position (skeleton.walk.stream)" >&2; exit 2 ;;
 esac
 echo "char_convert: creation consumed $KEYPOS script entries of $KEYS; the rest is replayed on the build"
-
-# The newest save a run left that is not the one it loaded, the backup, or the gallery.
-newest_save() {   # <run dir> [<file to exclude>]
-    local f
-    for f in $(ls -t "$1"/save/*.sav 2>/dev/null); do
-        [ -n "${2:-}" ] && cmp -s "$f" "$2" && continue
-        echo "$f"; return 0
-    done
-    return 1
-}
 
 # build, load, replay the arrival, dump: the one tool tools/char_attribute.sh also calls.
 ARRIVE="${CHAR_ARRIVE_TOOL:-tools/char_arrive.sh}"

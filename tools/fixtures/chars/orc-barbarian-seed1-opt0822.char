@@ -1,17 +1,39 @@
-# orc-barbarian-seed1-opt0822: the character tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
-# holds, written by hand from the canonical dump of that file (tools/char_dump.sh).
-# Written for inc-10v7f phase 7a, spec B7: the dump of the build of this file is
-# compared with the dump of the old .sav by tools/check_handwritten_fixture.sh.
-#
-# Read from the dump: the name (Identity), the base attributes (BaseAttr), the
-# perks (the journal's "Starting Perks": Bonus Feat Light Sleeper, Wild Talent
-# Brain Lock), the feats, the hit and mana rolls, the skill ranks, the starting
-# kit and its quantities, and the creation record (formulaSeed, storeSeed,
-# Personality). The old .sav's Options line holds OPT_BEGINKIT=1, so the
-# options are the kit variant of the dated settings file.
-options: tools/fixtures/options-2026-08-22-kit.dat
+# orc-barbarian-seed1-opt0822: converted from tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/chargen-default-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 8372843a+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 352 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/chargen-default-save.keys 1 111 74 24:23:0
+# roll search: NO MATCH: script_roll [Barbarian;EV_153] #0, script_roll [Barbarian;EV_153] #1, script_roll [Barbarian] #0 = recorded values kept, UNRESOLVED (recorded [2, 1, 2]; no combination of the 12 completed matched: each leaves a difference line a roll moves (fewest differing lines 184, core 174); ties [[2, 1, 1], [2, 1, 2], [2, 1, 3]]); 12 tries in 7.8 s (0.65 s per try); record logs/char-convert/orc-barbarian-seed1-opt0822/roll-search.txt
+# rolls: script_roll|Barbarian;EV_153|0|1|2
+# rolls: script_roll|Barbarian;EV_153|1|1|2
+# rolls: script_roll|Barbarian|0|1|3
+# Values set from the old dump (6), skeleton value -> old value:
+#   scalar: name: Rathak -> Varag
+#   scalar: surname: the Breaker -> the Deathbringer
+#   scalar: character_name: Rathak the Breaker -> Varag the Deathbringer
+#   perk: perk [0]: PERK_FEAT Larcenous -> PERK_FEAT Light Sleeper
+#   perk: perk [1]: PERK_ITEM wand, effect cracked, plus 3 -> PERK_TALENT Brain Lock
+#   perk: perk_charges [wand]: 36 dropped (its perk is no longer an item)
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_chance [Orc;a3]: 41 kept as the walk recorded it; the old character holds this annotation's item (longspear, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Barbarian;a1]: 32 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Barbarian;a7]: 88 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 44 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 9 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 5 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: script_roll [Barbarian;EV_153] #0: UNRESOLVED, kept as the walk recorded it (2); no combination of the 12 completed matched: each leaves a difference line a roll moves (fewest differing lines 184, core 174); tied candidates (in the order of the rolls above): [[2, 1, 1], [2, 1, 2], [2, 1, 3]]
+#   roll: script_roll [Barbarian;EV_153] #1: UNRESOLVED, kept as the walk recorded it (1); no combination of the 12 completed matched: each leaves a difference line a roll moves (fewest differing lines 184, core 174); tied candidates (in the order of the rolls above): [[2, 1, 1], [2, 1, 2], [2, 1, 3]]
+#   roll: script_roll [Barbarian] #0: UNRESOLVED, kept as the walk recorded it (2); no combination of the 12 completed matched: each leaves a difference line a roll moves (fewest differing lines 184, core 174); tied candidates (in the order of the rolls above): [[2, 1, 1], [2, 1, 2], [2, 1, 3]]
+#   differs: Special Abilities: Devouring -> Feats: Cannibalism -- commit 4e1fc266
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
 seed: 1
-
 alter_options: no
 explore_continue: yes
 formula_seed: 2
@@ -110,32 +132,6 @@ gear_chance [Universal Gear;a14]: 5
 kit_item [Universal Gear;a16]: hide armour, quantity 1
 thrown_quantity: 7
 script_yn [Orc;EV_150]: yes
-# The Beginner's Kit, in the order the old .sav made it (the generation numbers
-# in its dump): the belt potions, then the pack potions, the wand and the food.
-beginkit_item: potion, effect See Invisibility;potion, quantity 5
-beginkit_item: potion, effect Remove Curse;potion, quantity 4
-beginkit_item: potion, effect Cure Disease, quantity 3
-beginkit_item: potion, effect Antitoxin, quantity 4
-beginkit_item: potion, effect Restore Strength, quantity 2
-beginkit_item: potion, effect Restore Constitution, quantity 3
-beginkit_item: potion, effect Restoration, quantity 3
-beginkit_item: potion, effect Detect Stairs, quantity 2
-beginkit_item: wand, effect Identify, charges 50, quantity 1
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_item: none
-beginkit_food: 9
 personality: The Manipulative Plotter
 store_seed: 24
 character_name: Varag the Deathbringer

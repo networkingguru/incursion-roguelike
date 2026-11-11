@@ -19,7 +19,7 @@
 # comparison that cannot fail, goes red.
 #
 # fact: the character -- the tracked hand-written .char and the tracked old .sav beside it; both are committed and every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
-# fact: the settings -- tools/fixtures/options-2026-08-22-kit.dat, named in the .char's options: line and passed to the dumps (the old .sav was made with OPT_BEGINKIT on)
+# fact: the settings -- tools/fixtures/options-2026-08-22.dat, named in the .char's options: line and passed to the dumps (the dumps read the kit off; an item is not a choice)
 # fact: the damaged values -- text edits of lines of the tracked .char (a feat, a perk feat, two skill ranks, a hit roll, two quantities); an edit that finds no line fails the check as INCONCLUSIVE
 # fact: the replacement feat -- "Endurance", a candidate of the level-1 feat menu for this race and class, read from the module by the build (a name that is not a candidate fails the build, which fails the check)
 #
@@ -51,12 +51,12 @@
 # Sixth part (phase 12a, the pass rule): a conversion passes when the CHOICES of the build equal the choices of the old
 # save (tools/canon_compare.py --choices-diff), less the rows of KNOWN_DIFFERENCES in tools/char_convert_map.py. Controls:
 # a changed computed line passes; a changed choice line fails and is named; the table cannot excuse a potion (the
-# synthetic Cure Disease pair stays a remainder, and no name in the kit row is a dedupe-exempt kind); each row's cause is
-# live (a commit that git resolves, a bead that `bd show` reports not closed).
+# synthetic Cure Disease pair stays a remainder); each row's cause is live (a commit that git
+# resolves) and a synthetic bead row whose bead is closed is stale.
 # fact: the choice dumps -- the dump of the tracked orc-barbarian-seed1-opt0822.sav ($W/old.canon, already made above); the
 #   controls edit copies of it, and an edit that finds no line fails the check as INCONCLUSIVE
 # fact: the Cure Disease pair -- a synthetic choices-diff written by this file; no game run, no seed
-# fact: the row causes -- commit 4e1fc266 in this repository's history; bead inc-tjvn's status read by `bd show inc-tjvn --json` in the live case, and by a synthetic JSONL named by CHAR_CONVERT_BEADS in the stale-row control (no database); the fake-bd runs (red with closed, green with open) are in logs/phase12a/controls-red.txt; no bd or no JSON makes the check fail (exit 2 from causes), not pass
+# fact: the row causes -- commit 4e1fc266 in this repository's history; a synthetic bead row whose status comes from a synthetic JSONL named by CHAR_CONVERT_BEADS in the stale-row control (no database, no live bead); no bd or no JSON makes the check fail (exit 2 from causes), not pass
 
 # Usage: INCURSION_BIN=./incursion-headless tools/check_char_convert.sh
 # Exit: 0 the table restores all six kinds and each withheld key shows; 1 not; 2 could not run.
@@ -70,8 +70,8 @@ export INCURSION_BIN="$BIN"
 NAME=orc-barbarian-seed1-opt0822
 GOOD=tools/fixtures/chars/$NAME.char
 OLD=tools/fixtures/chars/$NAME.sav
-KITOPTS=tools/fixtures/options-2026-08-22-kit.dat
-[ -f "$GOOD" ] && [ -f "$OLD" ] && [ -f "$KITOPTS" ] || { echo "INCONCLUSIVE: $GOOD, $OLD or $KITOPTS is missing"; exit 2; }
+OPTS=tools/fixtures/options-2026-08-22.dat
+[ -f "$GOOD" ] && [ -f "$OLD" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: $GOOD, $OLD or $OPTS is missing"; exit 2; }
 [ -f lib/program.i ] || { echo "INCONCLUSIVE: lib/program.i is missing; build the module first"; exit 2; }
 
 W="$(mktemp -d "$ROOT/logs/char-convert-check.XXXXXX")" || exit 2
@@ -80,11 +80,11 @@ trap 'rm -rf "$W"' EXIT
 dump_build() {   # <char> <tag>: builds <char>, dumps it to $W/<tag>.canon
     tools/build_fixture.sh "$1" "$W/$2-out" > "$W/$2-build.log" 2>&1 \
         || { echo "INCONCLUSIVE: $1 did not build: $(grep -m1 'BUILD FAILED' "$W/$2-build.log" | cut -c1-300)"; exit 2; }
-    INCURSION_OPTIONS="$KITOPTS" tools/char_dump.sh "$W/$2-out/$(basename "$1" .char).sav" "$W/$2.canon" > /dev/null 2>&1 \
+    INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$W/$2-out/$(basename "$1" .char).sav" "$W/$2.canon" > /dev/null 2>&1 \
         || { echo "INCONCLUSIVE: cannot dump the build of $1"; exit 2; }
 }
 
-INCURSION_OPTIONS="$KITOPTS" tools/char_dump.sh "$OLD" "$W/old.canon" > /dev/null 2>&1 \
+INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$OLD" "$W/old.canon" > /dev/null 2>&1 \
     || { echo "INCONCLUSIVE: cannot dump $OLD"; exit 2; }
 cp "$GOOD" "$W/good.char"
 dump_build "$W/good.char" good
@@ -343,24 +343,6 @@ if [ $? -eq 1 ] && grep -q '^remainder: - Inventory: 10 Potions of Cure Disease'
 else
     echo "FAIL the table excused a potion stack"; cat "$W/potion.out" | head -3; fail=1
 fi
-printf -- '- Inventory: 5 tanglefoot bags\n+ Inventory: tanglefoot bag\n' > "$W/bags.diff"
-if tools/char_convert_map.py excuse "$W/bags.diff" > "$W/bags.out" 2>&1 && grep -q '^excused: .*bead inc-tjvn' "$W/bags.out"; then
-    echo "ok   the table excuses 5 tanglefoot bags -> tanglefoot bag, naming bead inc-tjvn"
-else
-    echo "FAIL the table did not excuse the named kit stack"; head -3 "$W/bags.out"; fail=1
-fi
-if python3 - <<'PY'
-import importlib.util, re, sys
-spec = importlib.util.spec_from_file_location("ccm", "tools/char_convert_map.py")
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-bad = [n for pair in m.KIT_DEDUPE_ITEMS for n in pair if re.search(r"potion|scroll|food|gold|arrow|bolt|ration|meat", n, re.I)]
-sys.exit(1 if bad or not m.KIT_DEDUPE_ITEMS else 0)
-PY
-then
-    echo "ok   no name in the kit-dedupe row is a dedupe-exempt kind (potion, scroll, food, gold, arrow, bolt)"
-else
-    echo "FAIL the kit-dedupe row names a dedupe-exempt kind"; fail=1
-fi
 tools/char_convert_map.py causes > "$W/causes.out" 2>&1
 RCCAUSE=$?
 if [ "$RCCAUSE" -eq 0 ]; then
@@ -371,7 +353,12 @@ fi
 cat > "$W/stale.jsonl" <<'JL'
 {"id":"inc-tjvn","status":"closed"}
 JL
-CHAR_CONVERT_BEADS="$W/stale.jsonl" tools/char_convert_map.py causes > "$W/stale.out" 2>&1
+CHAR_CONVERT_BEADS="$W/stale.jsonl" python3 - > "$W/stale.out" 2>&1 <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("ccm", "tools/char_convert_map.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+sys.exit(m.causes([{"name": "synthetic-bead-row", "cause": "bead inc-tjvn"}]))
+PY
 if [ $? -eq 1 ] && grep -q 'stale and must be deleted' "$W/stale.out"; then
     echo "ok   a row whose bead is closed makes the cause check fail with a stale-row message"
 else

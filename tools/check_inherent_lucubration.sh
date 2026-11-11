@@ -127,7 +127,7 @@ if run lucubration-mage "$MAGE"; then
     observe cast-before '] Alarm' 'unpicked-book control starts memorized'
     observe cast-before '] Endure Cold' 'Endure Cold is not yet memorized' absent
     observe books-before "spellbook [Adventurers' Arts]" 'the control book is carried before dropping'
-    observe books-gone 'Wand of Identify' 'post-drop inventory was reached'
+    observe books-gone 'orcish longspear' 'post-drop inventory was reached'
     observe books-gone 'spellbook [' 'all six books have left the pack' absent
     # A held, marked arcane row whose book is missing reads "Needs book"
     # (inc-g045 ruling).

@@ -24,7 +24,7 @@
 # copy. A copy whose reversal does nothing makes step 2 report UNEXPLAINED.
 #
 # fact: the character -- the tracked hand-written tools/fixtures/chars/orc-barbarian-seed1-opt0822.char and the tracked old .sav beside it; every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
-# fact: the settings -- the options: line of that .char names tools/fixtures/options-2026-08-22-kit.dat; the tool passes it to every dump
+# fact: the settings -- the options: line of that .char names tools/fixtures/options-2026-08-22.dat; the tool passes it to every dump
 # fact: the explaining commit -- 95ddb886, a fixed commit of this history; if it is not there, or its lib/ src/ inc/ part no longer reverses on the tree, the check reports INCONCLUSIVE and names the line the tool printed
 # fact: the unrelated commit -- bde7800d, a fixed commit that edits only lib/mon4.irh (a monster aura); step 4 proves it explains nothing here, and a reverse that fails makes the check INCONCLUSIVE
 # fact: the conflicting commit -- 25c91507, a fixed commit whose src/Create.cpp part no longer applies; if it ever reverses, step 5 is void and the check reports INCONCLUSIVE
@@ -75,7 +75,7 @@ fi
 SYN="$CHAR_ATTR_LOGS/$NAME/out-all-out/$(basename "$CHAR" .char).sav"
 [ -f "$SYN" ] || inconclusive "step 1 left no build on the undone tree ($SYN)"
 cp "$SYN" "$W/fx/synthetic.sav"
-printf 'synthetic tools/keys/none.keys 1 tools/fixtures/options-2026-08-22-kit.dat\n' > "$W/MANIFEST"
+printf 'synthetic tools/keys/none.keys 1 tools/fixtures/options-2026-08-22.dat\n' > "$W/MANIFEST"
 export CHAR_ATTR_DIR="$W/fx" CHAR_ATTR_MANIFEST="$W/MANIFEST"
 
 expect() {   # <step> <tag> <exit> <word> <args...>

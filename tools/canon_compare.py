@@ -19,10 +19,10 @@ Usage: tools/canon_compare.py [--all] <a.canon> <b.canon>   exit 0 same, 1 diffe
 The choice projection is what a player chose, not what the rules compute from it
 (Brian's ruling, 2026-11-11: a conversion passes when its choices match): the
 Gender, Race, Class, Faith and Align lines; the seven attribute base scores
-(`STR base 12`); every line of Special Abilities, Feats, Inventory and CharGen
-Options and Choices, led by the section name; skill ranks above 0
-(`skill <name> ranks <n>`); known spell names (`spell <name>`). A section ends at
-the next unindented `Heading:` line. Two projections compare as multisets.
+(`STR base 12`); every line of Special Abilities, Feats and CharGen
+Options and Choices, led by the section name (an item is not a choice: Inventory
+and the Beginner's Kit switch are compared only by --all); skill ranks above 0 (`skill <name> ranks <n>`); known
+spell names (`spell <name>`). A section ends at the next unindented `Heading:` line. Two projections compare as multisets.
 
 Exit: 0 the dumps match outside the allowlist; 1 they differ (the first lines
 that differ are printed); 2 bad usage or an unreadable file.
@@ -163,7 +163,7 @@ def filtered(path):
     return out
 
 
-_HEADINGS = ("Special Abilities:", "Feats:", "Inventory:", "CharGen Options and Choices:",
+_HEADINGS = ("Special Abilities:", "Feats:", "CharGen Options and Choices:",
              "Skill Ratings:", "Known Spells:")
 
 
@@ -188,8 +188,8 @@ def choices(path):
         if re.match(r"^[A-Z][A-Za-z' ]+:$", l):
             cur = l if l in _HEADINGS else None
             continue
-        if cur in ("Special Abilities:", "Feats:", "Inventory:", "CharGen Options and Choices:"):
-            if l.strip():
+        if cur in ("Special Abilities:", "Feats:", "CharGen Options and Choices:"):
+            if l.strip() and not l.strip().startswith("__Beginner's Kit:"):   # an item is not a choice
                 out.append("%s %s" % (cur, l.strip()))
         elif cur == "Skill Ratings:":
             m = re.match(r"^\s+(.+?)\s+[+-]\d+\s+\((\d+) ranks", l)

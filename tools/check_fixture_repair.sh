@@ -30,7 +30,7 @@
 #
 # fact: the character -- tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, committed; built from the file alone, no key script and no walk
 # fact: the random stream -- the seed: line of that .char feeds the build; build_fixture.sh removes every other INCURSION_* variable; part (b) ends at the load error and reads no drawn value, and every other assertion compares dump hashes of one file under one seed
-# fact: the options -- the options: line of the .char names tools/fixtures/options-2026-08-22-kit.dat; part (a) uses a scratch copy of it with one byte appended
+# fact: the options -- the options: line of the .char names tools/fixtures/options-2026-08-22.dat; part (a) uses a scratch copy of it with one byte appended
 # fact: the cache, the locks and the build log -- scratch directories made by this script (INCURSION_FIXTURE_CACHE); the worktree's real cache is never read or written, and INCURSION_FIXTURE_PIN is removed from the environment
 # fact: the binary -- INCURSION_BIN or ./incursion-headless; part (a) also runs a scratch copy of it with one byte appended
 # fact: the clock -- the age of the lock in (d) is set with touch -t (2 hours); the check waits at most a few seconds in all
@@ -48,7 +48,7 @@ unset INCURSION_FIXTURE_PIN INCURSION_FIXTURE_CACHE
 
 NAME=orc-barbarian-seed1-opt0822
 CHAR=tools/fixtures/chars/$NAME.char
-OPT=tools/fixtures/options-2026-08-22-kit.dat
+OPT=tools/fixtures/options-2026-08-22.dat
 [ -f "$CHAR" ] && [ -f "$OPT" ] || { echo "INCONCLUSIVE: $CHAR or $OPT is missing"; exit 2; }
 
 W="$(mktemp -d "$ROOT/logs/fixture-repair-check.XXXXXX")" || exit 2

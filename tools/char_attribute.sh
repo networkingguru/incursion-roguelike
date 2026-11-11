@@ -154,7 +154,8 @@ short() { git rev-parse --short "$1"; }
 OD="$(mkdir -p "$LOGS/$NAME" && cd "$LOGS/$NAME" && pwd)"
 rm -f "$OD"/diff-*.txt "$OD"/built-*.canon "$OD"/old-*.canon "$OD"/rev-*.patch "$OD"/build-*.log "$OD"/err-*.txt
 rm -rf "$OD"/out-* "$OD"/tree "$OD"/tree-*
-rm -f "$OD"/err-arrive-*.txt "$OD"/rs-* "$OD"/rolls.txt
+rm -f "$OD"/err-arrive-*.txt "$OD"/rolls.txt
+rm -rf "$OD"/rs-*
 sed -n 's/^# rolls: *//p' "$OUTCHAR" | tr '|' '\t' > "$OD/rolls.txt"
 [ -s "$OD/rolls.txt" ] && ROLLS_TXT="$OD/rolls.txt"
 RS_NOTES=""
