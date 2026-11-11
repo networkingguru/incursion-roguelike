@@ -1114,6 +1114,9 @@ system int16   ApplyDurationMetamagic(int32 dur, uint32 mm, bool mystic);
 system bool    AutoStackIntoPack(hObj:T_CREATURE who, hObj:T_ITEM it, bool wildOK = false);
 /* Does damage type dtype take hit points? One row per type in DTypeHP (inc-kx693). */
 system bool    DTypeTakesHP(int16 dtype);
+/* Can quality q sit on a weapon / on armor? One row per quality name in QualityTable (inc-rddai). */
+system bool    QualityIsWeapon(int16 q);
+system bool    QualityIsArmor(int16 q);
  
  
 /* functions with variable-type parameters handled by macro type-cast */

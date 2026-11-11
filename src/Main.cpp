@@ -394,6 +394,11 @@ void Game::Play() {
     extern void DamageClassProbe(Player *pl);
     DamageClassProbe(pp);
 
+    /* Off unless INCURSION_QUALITY_CLASS_PROBE is set. inc-rddai. See
+       src/QualityClassProbe.cpp and tools/check_quality_class.sh. */
+    extern void QualityClassProbe(Player *pl);
+    QualityClassProbe(pp);
+
     /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
     extern void ConcentMonsterProbe(Player *pl);
     ConcentMonsterProbe(pp);

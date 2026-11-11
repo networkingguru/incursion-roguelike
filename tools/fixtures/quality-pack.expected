@@ -1,0 +1,8 @@
+QC pack n=0 type=58 plus=0 slots=69,0,0,0,0,0,0,0 lvl=0
+QC pack n=1 type=58 plus=0 slots=69,0,0,0,0,0,0,0 lvl=0
+QC pack n=2 type=58 plus=0 slots=69,0,0,0,0,0,0,0 lvl=0
+QC pack n=4 type=21 plus=0 slots=69,0,0,0,0,0,0,0 lvl=0
+QC pack n=12 type=21 plus=1 slots=15,25,0,0,0,0,0,0 lvl=3
+QC pack n=22 type=58 plus=1 slots=7,15,26,34,60,0,0,0 lvl=4
+QC pack n=23 type=58 plus=0 slots=69,0,0,0,0,0,0,0 lvl=0
+END lines=7 errors=0

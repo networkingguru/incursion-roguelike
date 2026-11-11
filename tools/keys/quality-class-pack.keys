@@ -1,0 +1,8 @@
+# Key script for tools/check_quality_class.sh --pack-reload:
+# INCURSION_QUALITY_CLASS_PROBE=pack logs every pack item that has a quality at
+# the start of Game::Play; this script buys the one turn that makes a session.
+# inc-rddai.
+@dump:arrival
+
+s
+@dump:played
