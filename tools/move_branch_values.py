@@ -30,7 +30,9 @@ the shape of the family:
            its value; each is reported.
 Then, in each family that moved a name, every `sentinel <NAME>` of the mark is
 rewritten to max+1 of the merged family (ordinal and enum families; a bits
-sentinel has no meaning and is left). A `grows <NAME>` limit (spec 6.1) is no
+sentinel has no meaning and is left). A sentinel whose line carries an `alias of <NAME>`
+note equals the last member instead: it takes the highest member value over every family
+that lists it (one move), and its note names the real member that holds that value. A `grows <NAME>` limit (spec 6.1) is no
 stored value: it stays out of the merged family. A moved value in such a family
 takes the first free index at or above the base's limit (so the index range grows
 by one per moved value), and the limit is raised to (largest moved index + 1) and
@@ -71,6 +73,7 @@ import check_stored_values as csv  # noqa: E402
 
 ROOT = cdd.ROOT
 LITERAL = re.compile(r"-?(0[xX][0-9a-fA-F]+|\d+)[uUlL]*")
+ALIAS_NAME = re.compile(r"(\balias\s+of\s+)[A-Za-z_]\w*")
 ENUM_LINE = re.compile(r"^(\s*)([A-Za-z_]\w*)(?:\s*=\s*(.*?))?\s*(,?)\s*$")
 
 
@@ -94,7 +97,68 @@ def grow_limit(bfam, tvals, grows):
     return max(vals) if vals else None
 
 
-def plan(base, tree, retired):
+def alias_note(root, m):
+    """The `alias of <NAME>` note of the define or enumerator member m (name, value,
+    file, line), the way check_define_dups reads it: the line, else a comment-only
+    line above. Return (NAME, offset) with offset 0 (same line) or -1 (the line
+    above), or None."""
+    if root is None:
+        return None
+    with open(os.path.join(root, m[2]), encoding="latin-1", newline="") as f:
+        raw = f.read().split("\n")
+    for off in (0, -1):
+        i = m[3] - 1 + off
+        if i < 0 or (off and not cdd.COMMENT_ONLY.match(raw[i])):
+            continue
+        a = cdd.ALIAS.search(raw[i])
+        if a:
+            return a.group(1), off
+    return None
+
+
+def alias_moves(tree, moves, root):
+    """A sentinel that carries an `alias of <NAME>` note EQUALS the last member of
+    its families. After the moves it takes the highest member value over every
+    family that lists it, and its note names a real member that holds that value.
+    One move per sentinel, however many families list it."""
+    newv = {mv["name"]: mv["new"] for mv in moves if not mv["sentinel"]}
+    fams = {}
+    for fam in sorted(tree):
+        if tree[fam]["class"] == "stored":
+            for s in tree[fam]["sentinels"]:
+                fams.setdefault(s, []).append(fam)
+    sentinels = {s for t in tree.values() for s in t["sentinels"]}
+    out = []
+    for s, fl in sorted(fams.items()):
+        if not any(mv["fam"] in fl for mv in moves if not mv["sentinel"]):
+            continue
+        m = next((x for f in fl for x in tree[f]["members"] if x[0] == s), None)
+        note = alias_note(root, m) if m else None
+        if note is None:
+            continue
+        held = {}
+        for f in fl:
+            skip = set(tree[f]["sentinels"]) | set(tree[f].get("grows", []))
+            for x in tree[f]["members"]:
+                if x[0] not in skip and x[0] not in sentinels:
+                    held.setdefault(newv.get(x[0], x[1]), []).append(x)
+        if not held:
+            continue
+        top = max(held)
+        real = [x for x in held[top] if alias_note(root, x) is None]
+        if not real:
+            raise Refused("sentinel %s: no real member holds the top value %d, so its "
+                          "`alias of` note has nothing to name (bead inc-cjos0)" % (s, top))
+        holder = min(real, key=lambda x: (x[0] not in newv, x[0]))[0]
+        if m[1] == top and note[0] == holder:
+            continue
+        out.append(dict(fam=fl[0], name=s, old=m[1], new=top, file=m[2], line=m[3],
+                        shape=tree[fl[0]]["shape"], sentinel=True, alias=holder,
+                        alias_off=note[1]))
+    return out
+
+
+def plan(base, tree, retired, root=None):
     """Return a list of moves. A move is a dict: fam, name, old, new, file, line,
     shape, sentinel (bool). Raises Refused."""
     moves = []
@@ -124,6 +188,16 @@ def plan(base, tree, retired):
             held = 0
             for v in merged:
                 held |= csv.pattern(v, width)
+            # A family that shares a member name with this one shares its word: its
+            # members hold bits of this word too (sc and sc_all).
+            mine = {m[0] for m in t["members"]} | {m[0] for m in base.get(fam, {}).get("members", [])}
+            for other in sorted(set(tree) | set(base)):
+                if other == fam:
+                    continue
+                om = (tree.get(other, {}).get("members", []) + base.get(other, {}).get("members", []))
+                if any(m[0] in mine for m in om):
+                    for m in om:
+                        held |= csv.pattern(m[1], width)
             for name in order:
                 free = [k for k in range(csv.BITS[width]) if not (held >> k) & 1]
                 if not free:
@@ -200,6 +274,8 @@ def plan(base, tree, retired):
                               shape=shape, sentinel=False))
         for s in t["sentinels"]:
             m = tvals.get(s)
+            if m is not None and alias_note(root, m) is not None:
+                continue    # an alias of the last member: alias_moves() sets it
             if m is not None and m[1] != mx + 1:
                 moves.append(dict(fam=fam, name=s, old=m[1], new=mx + 1, file=m[2],
                                   line=m[3], shape=shape, sentinel=True))
@@ -211,7 +287,7 @@ def plan(base, tree, retired):
                                   "%s (bead inc-xm3nq)" % (fam, g, mx + 1, width))
                 moves.append(dict(fam=fam, name=g, old=m[1], new=mx + 1, file=m[2],
                                   line=m[3], shape=shape, sentinel=True, grows=True))
-    return moves
+    return moves + alias_moves(tree, moves, root)
 
 
 # ---------------------------------------------------------------- editing
@@ -240,7 +316,11 @@ def edit_define(lines, mv):
     code, gap, comment = split_comment(m.group(2))
     body = code.strip()
     fmt = "0x%X" if mv["shape"] == "bits" else "%d"
+    if mv.get("alias") and mv["alias_off"] == 0:
+        comment = ALIAS_NAME.sub(r"\g<1>" + mv["alias"], comment)
     lines[mv["line"] - 1] = m.group(1) + (fmt % mv["new"]) + gap + comment + eol
+    if mv.get("alias") and mv["alias_off"] == -1:
+        lines[mv["line"] - 2] = ALIAS_NAME.sub(r"\g<1>" + mv["alias"], lines[mv["line"] - 2])
     return None if LITERAL.fullmatch(body) else body
 
 
@@ -261,7 +341,7 @@ def build_enum_line(p):
             + ("," if p["comma"] else "") + p["gap"] + p["comment"] + p["eol"])
 
 
-def edit_enum(text, path, name, newv, vals, mode, sent_want):
+def edit_enum(text, path, name, newv, vals, mode, sent_want, alias_want=None):
     """Edit the enum that holds name. mode 'move': take the line to the end of the
     enum (before trailing sentinel names) with `= newv`. mode 'set': give name the
     value newv in place. vals: {enumerator: value}, updated. sent_want: {sentinel
@@ -308,6 +388,8 @@ def edit_enum(text, path, name, newv, vals, mode, sent_want):
             cur = prev + 1 if p["expr"] is None else vals[nm]
             if cur != want:
                 p["expr"] = str(want)
+            if alias_want and nm in alias_want:
+                p["comment"] = ALIAS_NAME.sub(r"\g<1>" + alias_want[nm], p["comment"])
         else:
             want = vals[nm]
             if p["expr"] is None and prev + 1 != want:
@@ -351,12 +433,13 @@ def apply_moves(root, moves, vals):
         by_fam.setdefault(mv["fam"], []).append(mv)
     for fam, ms in sorted(by_fam.items()):
         sent_want = {m["name"]: m["new"] for m in ms if m["sentinel"]}
+        alias_want = {m["name"]: m["alias"] for m in ms if m.get("alias")}
         for mv in sorted(ms, key=lambda m: (m["sentinel"], m["file"], m["line"])):
             text = get(mv["file"])
             if mv["shape"] == "enum":
                 mode = "set" if mv["sentinel"] else "move"
                 text, fol = edit_enum(text, mv["file"], mv["name"], mv["new"], vals, mode,
-                                      sent_want)
+                                      sent_want, alias_want)
                 texts[mv["file"]] = text
                 for nm, v in fol:
                     notes[(fam, nm)] = (v, mv["file"])
@@ -405,7 +488,7 @@ def run_move(root, ref, dry, use_compiler=True, out=print):
         out("move_branch_values: no-op on %s" % ref)
         return 0
     base, tree, problems, retired, _kept = csv.measure(ref, root, use_compiler)
-    moves = plan(base, tree, retired)
+    moves = plan(base, tree, retired, root)
     vals = {m[0]: m[1] for d in tree.values() for m in d["members"]}
     if dry:
         for mv in sorted(moves, key=lambda m: (m["fam"], m["file"], m["line"])):
@@ -470,7 +553,7 @@ def selftest():
         base, tree, problems, retired, _k = csv.measure(ref, d, False)
         return csv.compare(base, tree, problems, retired)[0]
 
-    def case(label, base, tree, retired="", want=None, code=0, grep=(), dry=False):
+    def case(label, base, tree, retired="", want=None, code=0, grep=(), dry=False, dups=False):
         print("case: " + label)
         d, defs = mkrepo(base, tree, retired)
         before = check(d)
@@ -488,6 +571,9 @@ def selftest():
             assert s in text, (label, s, text)
         if code == 0 and not dry:
             assert check(d) == [], (label, check(d))
+            if dups:
+                c2, m2 = cdd.check(defs)
+                assert c2 == 0, (label, m2)
             print("  GREEN " + out[0])
         elif code == 0:
             assert read(defs) == tree, label
@@ -528,6 +614,14 @@ def selftest():
              want=fam("e", "enum {\n    E_A,\n    E_B,\n    E_C,\n    E_D = 3,\n"
                            "    E_LAST\n};\n", es),
              grep=["e E_D 1 -> 3"])
+        sca = "".join("#define S_%d 0x%X\n" % (k, 1 << k) for k in range(2))
+        scb = "".join("#define S_%d 0x%X\n" % (k, 1 << k) for k in range(2, 8))
+        sct = "// family: s_all internal\n" + scb + "// end family: s_all\n"
+        scf = "// family: s stored bits u8, s_all internal\n" + sca + "// end family: s, s_all\n"
+        case("an overlapping internal family holds the free bits: the mover refuses",
+             scf + sct,
+             scf.replace(sca, sca + "#define S_GA 0x2\n") + sct,
+             code=1, grep=["family s", "inc-xm3nq"])
         full = "".join("#define F_%d 0x%X\n" % (k, 1 << k) for k in range(8))
         case("a full bit word refuses",
              fam("f", full, "stored bits u8"),
@@ -543,6 +637,28 @@ def selftest():
              want=fam("t", "#define T_X 1\n#define T_Y 2\n#define T_Z 3\n#define T_LAST 4\n",
                       ss),
              grep=["t T_LAST 3 -> 4", "[sentinel]"])
+        sa = "stored ordinal i8 sentinel X_TRUELAST"
+        case("an alias sentinel equals the new top and names the moved member",
+             fam("x", "#define X_A 1\n#define X_TOP 2\n#define X_TRUELAST 2 /* alias of X_TOP */\n",
+                 sa),
+             fam("x", "#define X_A 1\n#define X_TOP 2\n#define X_N 2\n"
+                      "#define X_TRUELAST 2 /* alias of X_TOP */\n", sa),
+             want=fam("x", "#define X_A 1\n#define X_TOP 2\n#define X_N 3\n"
+                           "#define X_TRUELAST 3 /* alias of X_N */\n", sa),
+             grep=["x X_TRUELAST 2 -> 3", "[sentinel]"], dups=True)
+        def two(body):
+            return ("// family: x stored ordinal i8 sentinel X_TRUELAST sentinel Y_TRUELAST, "
+                    "y stored ordinal i8 sentinel Y_TRUELAST sentinel X_TRUELAST\n" + body
+                    + "// end family: x, y\n")
+        al = ("#define X_TRUELAST 2 /* alias of X_TOP */\n"
+              "#define Y_TRUELAST 2 /* alias of X_TOP */\n")
+        al2 = ("#define X_TRUELAST 3 /* alias of X_N */\n"
+               "#define Y_TRUELAST 3 /* alias of X_N */\n")
+        case("an alias sentinel named by two families moves once, to the top",
+             two("#define X_A 1\n#define X_TOP 2\n" + al),
+             two("#define X_A 1\n#define X_TOP 2\n#define X_N 2\n" + al),
+             want=two("#define X_A 1\n#define X_TOP 2\n#define X_N 3\n" + al2),
+             grep=["X_TRUELAST 2 -> 3", "Y_TRUELAST 2 -> 3"], dups=True)
         case("two colliding tree names get two distinct values", b,
              fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n#define A_W 2\n"),
              want=fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 3\n"
