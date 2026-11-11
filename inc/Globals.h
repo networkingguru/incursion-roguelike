@@ -182,6 +182,11 @@ struct DTypeHPRow { int16 dtype; bool takesHP; };
 extern DTypeHPRow DTypeHP[];
 bool DTypeTakesHP(int16 dtype);
 
+struct QualityRow { int16 quality; bool weapon; bool armor; };
+extern QualityRow QualityTable[];
+bool QualityIsWeapon(int16 q);
+bool QualityIsArmor(int16 q);
+
 extern TextVal DTypeNames[],
                ATypeNames[],
                AbilityNames[],

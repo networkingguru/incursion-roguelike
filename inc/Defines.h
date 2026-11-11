@@ -2415,7 +2415,6 @@ typedef signed int        hObj;
 #define WQ_DRAINING      62
 #define WQ_BLOODED       63
 
-#define WQ_LAST          64
 // end family: wq
 // family: aq
 
@@ -2459,7 +2458,6 @@ typedef signed int        hObj;
 #define AQ_LIFEKEEPING   39
 #define AQ_ARTICULATED   40
 #define AQ_GRAVEN        41
-#define AQ_LAST          42
 
 #define AQ_SHATTERING    43
 // end family: aq
