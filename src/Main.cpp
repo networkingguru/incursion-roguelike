@@ -389,6 +389,11 @@ void Game::Play() {
     extern void TrueIllusionProbe(Player *pl);
     TrueIllusionProbe(pp);
 
+    /* Off unless INCURSION_DAMAGE_CLASS_PROBE is set. inc-kx693. See
+       src/DamageClassProbe.cpp and tools/check_damage_class.sh. */
+    extern void DamageClassProbe(Player *pl);
+    DamageClassProbe(pp);
+
     /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
     extern void ConcentMonsterProbe(Player *pl);
     ConcentMonsterProbe(pp);

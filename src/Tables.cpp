@@ -1082,6 +1082,98 @@ TextVal SourceNames[] = {
   { 0, NULL } };
 
 
+/* Does a damage type take hit points? One row per damage-type number in the
+   `family: ad` block of inc/Defines.h; every type MUST have exactly one row
+   (an alias shares its target's row). tools/check_dtype_hp_table.py enforces
+   it at build time. inc-kx693. */
+DTypeHPRow DTypeHP[] = {
+  { AD_NORM, true },
+  { AD_FIRE, true },
+  { AD_COLD, true },
+  { AD_ACID, true },
+  { AD_ELEC, true },
+  { AD_TOXI, true },
+  { AD_NECR, true },
+  { AD_PSYC, true },
+  { AD_MAGC, true },
+  { AD_SUNL, true },
+  { AD_SONI, true },
+  { AD_SLASH, true },
+  { AD_PIERCE, true },
+  { AD_BLUNT, true },
+  { AD_STUK, false },
+  { AD_SLEE, false },
+  { AD_STUN, false },
+  { AD_PLYS, false },
+  { AD_STON, false },
+  { AD_POLY, false },
+  { AD_CHRM, false },
+  { AD_DISN, false },
+  { AD_CRIT, false },
+  { AD_BLND, false },
+  { AD_SLOW, false },
+  { AD_CONF, false },
+  { AD_DISE, false },
+  { AD_FEAR, false },
+  { AD_SUBD, false },
+  { AD_NAUS, false },
+  { AD_DREX, false },
+  { AD_DRMA, false },
+  { AD_LEGS, false },
+  { AD_STCK, false },
+  { AD_STEA, false },
+  { AD_SGLD, false },
+  { AD_TLPT, false },
+  { AD_RUST, false },
+  { AD_CURS, false },
+  { AD_WRAP, false },
+  { AD_DRST, false },
+  { AD_DRDX, false },
+  { AD_DRCO, false },
+  { AD_DRIN, false },
+  { AD_DRWI, false },
+  { AD_DRCH, false },
+  { AD_DRLU, false },
+  { AD_DAST, false },
+  { AD_DADX, false },
+  { AD_DACO, false },
+  { AD_DAIN, false },
+  { AD_DAWI, false },
+  { AD_DACH, false },
+  { AD_DALU, false },
+  { AD_DCAY, false },
+  { AD_WERE, false },
+  { AD_BLEE, false },
+  { AD_POIS, false },
+  { AD_KNOC, false },
+  { AD_CHOK, false },
+  { AD_GRAB, false },
+  { AD_ANTI, false },
+  { AD_ERAY, false },
+  { AD_ENGL, false },
+  { AD_TRIP, false },
+  { AD_DISA, false },
+  { AD_HOLY, false },
+  { AD_LAWF, false },
+  { AD_CHAO, false },
+  { AD_EVIL, false },
+  { AD_VAMP, false },
+  { AD_SOAK, false },
+  { AD_SPE1, false },
+  { AD_SPE2, false },
+  { AD_SHAT, false },
+  { AD_SWAL, false },
+  { AD_FALL, false },
+  { -1, false } };
+
+bool DTypeTakesHP(int16 dtype) {
+  for (int16 i = 0; DTypeHP[i].dtype >= 0; i++)
+    if (DTypeHP[i].dtype == dtype)
+      return DTypeHP[i].takesHP;
+  return false;
+  }
+
+
 TextVal DTypeNames[] = {
   { AD_NORM, "Physical Damage" },
   { AD_FIRE, "Fire" },

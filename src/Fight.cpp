@@ -33,6 +33,7 @@
 #include <vector>
 #include "Incursion.h"
 #include "HideCheck.h"
+#include "DamageClassProbe.h" /* inc-kx693: read-only observation hooks */
 
 /* inc-e5ke: probe the converted damage events Creature::Damage re-delivers
    with ReThrow(EV_DAMAGE,e). Defined in src/DmgPostProbe.cpp; off unless
@@ -5192,7 +5193,7 @@ EvReturn Creature::HandleNegate(EventInfo &e)
 			  return NOTHING;
 		if (e.Event == EV_DAMAGE)
 		  {
-		    if (e.DType <= AD_LAST_PHYSICAL ||
+		    if (DTypeTakesHP(e.DType) ||
 		        e.DType == AD_SUBD || e.DType == AD_WRAP)
 		      return NOTHING;
 		    if (!e.isNAttack)
@@ -5795,11 +5796,12 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
             e.strDmg += " -2 focus"; e.bDmg -= 2; }
       }    
       
+    DamageClassCheckpoint(DC_SITE_MIEN_BEFORE, e); /* inc-kx693 */
     if (e.EVictim->HasFeat(FT_TERRIBLE_MEIN))
       if ((is_standard_attk(e.AType) ||
           is_postgrab_attk(e.AType) ||
           e.AType == A_SWNG || e.AType == A_GREA) &&
-            e.DType <= AD_LAST_PHYSICAL)
+            DTypeTakesHP(e.DType))
         if (e.EActor->isMType(MA_SAPIENT) && !(e.EActor->
               ResistLevel(AD_FEAR) == -1))
           {
@@ -5810,6 +5812,7 @@ EvReturn Creature::PreStrike(EventInfo &e) /* this == EActor */
               { e.strDmg += Format(" %+d mein", -(cha - bon));
                 e.bDmg   -= (cha - bon); }
           }
+    DamageClassCheckpoint(DC_SITE_MIEN_AFTER, e); /* inc-kx693 */
 
     /* This needs to be here rather than in CalcValues because we
        don't wield a thrown weapon before throwing it, ergo we
@@ -8048,6 +8051,7 @@ EvReturn Creature::Damage(EventInfo &e) {
     Item *it = NULL;
     bool coll;
 
+    DamageClassDamageEntry(e); /* inc-kx693 */
     if (e.EVictim->isDead())
         return ABORT;
 
@@ -8151,8 +8155,9 @@ IgnoreMorality:;
                     } 
     }
 
+    DamageClassCheckpoint(DC_SITE_TAH_BEFORE, e); /* inc-kx693 */
     if (e.EVictim->HasAbility(CA_TOUGH_AS_HELL))
-        if (e.DType <= AD_LAST_PHYSICAL)
+        if (DTypeTakesHP(e.DType))
             if (e.EVictim->Mod(A_CON) > 0)
             {
                 int16 mod, percent;
@@ -8170,6 +8175,7 @@ IgnoreMorality:;
                     e.vDmg   = max(1, e.vDmg - mod);
                 }
             }
+            DamageClassCheckpoint(DC_SITE_TAH_AFTER, e); /* inc-kx693 */
 
             if (e.vDmg > e.EVictim->cHP / 3)
                 if (e.AType && (e.EActor != e.EVictim))
@@ -8187,9 +8193,10 @@ IgnoreMorality:;
                                             "The <EVictim> falls with the blow, lessening the force.");
                                     }
 
-                                    if (e.DType <= AD_LAST_PHYSICAL && e.isCrit)
+                                    if (DTypeTakesHP(e.DType) && e.isCrit)
                                         if (e.EVictim->isCharacter())
                                             e.EPVictim->GodDeflect(e);
+                                    DamageClassCheckpoint(DC_SITE_GOD_AFTER, e); /* inc-kx693 */
 
                                     if (e.actIllusion)
                                     {
@@ -8200,12 +8207,13 @@ IgnoreMorality:;
                                             return DONE;
                                         }
                                         /* For now... */
-                                        if (e.DType > AD_LAST_PHYSICAL)
+                                        if (!DTypeTakesHP(e.DType))
                                             return DONE;
                                     }
                                     if (e.effIllusion)
-                                        if (e.DType > AD_LAST_PHYSICAL)
+                                        if (!DTypeTakesHP(e.DType))
                                             return DONE;
+                                    DamageClassCheckpoint(DC_SITE_ILL_PASSED, e); /* inc-kx693: past both illusion guards */
                                     /* inc-yam9: every tier of illusion gets a disbelief
                                     save on every landed hit, due to the absence of
                                     kinetics, smell, etc. */

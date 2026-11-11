@@ -1,0 +1,124 @@
+                        Varag the Deathbringer, The Manipulative Plotter (Explore Mode)
+
+Gender Male
+Race   Orc
+Class  Barbarian 1
+Faith  Khasrach
+XP     0
+Next @ 1000
+Align  Neutral
+
+
+STR: 17/00 [+3/+3] (base 12, +2 inherent, +4 natural, -1 hunger)
+DEX: 12/00 [+1/+0] (base 12)
+CON: 12/00 [+1/+0] (base 12, +1 inherent, -1 hunger)
+INT: 13/00 [+1/+1] (base 15, -2 natural)
+WIS: 16/00 [+3/+2] (base 14, +2 natural)
+CHA: 14/00 [+2/+1] (base 16, -2 natural)
+LUC: 15/00 [+2/+2] (base 15)
+Fortitude   +3(Barbarian +2, +1 Con)
+Reflex      +1(Barbarian +0, +1 Dex)
+Will        +3(Barbarian +0, +3 Wis)
+Melee   +toHit +4  (Barbarian +1, +3 Str)
+        Damage +4  (base 1d3 / 1d3, +3 Str, +1 weapon)
+        Speed  140%(base 100%) x 140% weapon
+Size           Human-sized:
+  (base human-sized)
+
+Defense Class  11:
+  (base 10, +1 Dex)
+
+Coverage       8:
+  (base 0, +8 armour)
+
+Movement Rate  90%:
+  (base 100%) x 80% armour x 120% skill x 90% encumbrance
+
+Hit Dice Rolls 42:
+   [20 + 1d12 (12) + 2 (CON bonus)] + 25% (Toughness)
+Mana Rolls     17:
+   10 + 1d4 (4) x 1 + 3 (WIS bonus)
+
+Encumbrance    Light:
+   (Light 44.3s, Moderate 133.0s, Heavy 266.0s, Extreme 400.0s, Max Press 520.0s)
+
+Special Abilities:
+  Berserk Rage
+  Devouring
+  Darkvision (60 ft)
+  Innate Spells:
+    Brain Lock
+  Scent (30 ft)
+  Tough as Hell
+  Spellbreaker
+  Spell Fury
+
+Feats:
+  Acrobatic
+  Alertness
+  Armour Proficiency: Light
+  Armour Proficiency: Medium
+  Light Sleeper
+  Toughness
+
+Resistances and Armour:
+  Slashing Damage 5
+  Piercing Damage 6
+  Blunt Damage 6
+
+Proficiencies Simple Weapons, Long Blades, Axes, Impact, Polearms, Spears, Flails, Light Armour, Medium Armour and shotput
+
+Skill Ratings:
+  Athletics        +8  (2 ranks, +3 STR, +3 train)
+  Balance          -4  (0 ranks, -4 armour)
+  Craft            +6  (2 ranks, +2 train, +2 kit)
+  Escape Artist    -4  (0 ranks, -4 armour)
+  Healing          +7  (1 ranks, +2 WIS, +2 train, +2 kit)
+  Hide in Shadows  -4  (0 ranks, -4 armour)
+  Intimidate       +6  (0 ranks, +3 STR, +3 train)
+  Intuition        +4  (0 ranks, +2 WIS, +2 train)
+  Jump             +4  (0 ranks, +3 STR, +2 train, +3 feat, -4 armour)
+  Knowledge (Nature) +3  (0 ranks, +1 INT, +2 train)
+  Knowledge (Theology) +6  (0 ranks, +2 WIS, +4 kit)
+  Listen           +7  (0 ranks, +2 WIS, +2 train, +3 feat)
+  Move Silently    -4  (0 ranks, -4 armour)
+  Pick Pockets     -3  (0 ranks, +1 CHA, -4 armour)
+  Spot             +7  (0 ranks, +2 WIS, +2 train, +3 feat)
+  Swimming         -6  (0 ranks, +2 train, -8 armour)
+  Tumble           -1  (0 ranks, +3 feat, -4 armour)
+  Wilderness Lore  +4  (0 ranks, +2 WIS, +2 train)
+
+Spiritual State:
+__You are devoted to Khasrach.
+__Khasrach is noncommital.
+__Khasrach has not aided you.
+____(Favour 0, Lev 0, Pen 0%)
+__You are perfectly neutral with
+____regard to Good and Evil.
+__You are perfectly neutral with
+____regard to Law and Chaos.
+
+CharGen Options and Choices:
+__You are in Explore Mode.
+__Beginner's Kit: ON
+__Initial Rolling Method: 4d6 + Perks
+__Allow Rerolling: YES
+__Use the Subraces: YES
+__Disallow Wizard Mode: NO
+__Maximum Hit Points: YES
+__Maximum Mana: YES
+__Default Character Gender: MALE
+__Monsters Maximum Hit Points: NO
+__Roll Attributes First: NO
+__Gain Attributes With Levels: YES
+__Allow Rapid Intuition: WEAPONS
+__Monsters Use Djikstra: YES
+__Out-Of-Depth Monsters: YES
+__Transgression Hints: YES
+__Difficulty Level: BASELINE
+__Power Stats: EXTREME
+__Elude Death: SEVEN
+__Disable Complicity Transgressions: YES
+__Natural Weapon Speed: ORIGINAL
+
+
