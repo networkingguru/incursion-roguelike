@@ -4755,7 +4755,7 @@ typedef signed int        hObj;
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
 #define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
 // end family: opt_gen
-// family: opt stored ordinal u16 bound OPT_LAST grows OPT_LAST
+// family: opt stored ordinal u16 bound OPT_LAST grows OPT_LAST block 100
 
 
 #define OPC_TACTICAL            500

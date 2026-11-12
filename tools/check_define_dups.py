@@ -67,6 +67,16 @@ CLASS (one per family on every open mark; the end mark carries none):
                                             member value >= it, and
                                             tools/move_branch_values.py takes a
                                             free value below it or refuses.
+  block <N>            (stored ordinal or enum only, once) N is a positive decimal
+                                            integer. The family's values live in
+                                            blocks of N, and a value that moves
+                                            stays in its own block (family opt:
+                                            the OPC_ category decides where an
+                                            option shows and whether a character
+                                            save keeps it). tools/move_branch_values.py
+                                            takes the lowest free value of the
+                                            old value's block or refuses
+                                            (inc-cjos0).
   val-of <STATI>[+<STATI>]  (stored only) Status.val of each named status holds a member of
                                             this family (BLINDNESS holds a BLIND_ value).
   mag-of <STATI>[+<STATI>]  (stored only) the same for Status.mag. Each name MUST be a member
@@ -154,7 +164,7 @@ Exit:  0 clean   1 unmarked define, duplicate, bad alias, or bad class
 
 IMPORT. load_families(defines=None) returns (families, problems). families maps
 a family name to {"class": "internal"|"stored", "shape": str|None, "width":
-str|None, "sentinels": [NAME], "bounds": [NAME], "grows": [NAME],
+str|None, "sentinels": [NAME], "bounds": [NAME], "grows": [NAME], "block": int|None,
 "val_of": [STATI], "mag_of": [STATI], "field_of"/"index_of"/"elem_of": [Scope.Field], "at_of": [Scope.Array[NAME]], "shares": [family], "members": [(name, value, file, line)]}.
 problems is the list of FAIL lines (empty when the marks are sound).
 tools/check_stored_values.py imports it.
@@ -317,7 +327,7 @@ def parse_class(fam, rest, no):
     """rest: the tokens after the family name. Return (spec, problem). spec is
     {"class","shape","width","sentinels"}; problem is a message or None."""
     spec = {"class": None, "shape": None, "width": None, "sentinels": [], "bounds": [],
-            "grows": [], "val_of": [], "mag_of": [], "field_of": [], "index_of": [],
+            "grows": [], "block": None, "val_of": [], "mag_of": [], "field_of": [], "index_of": [],
             "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []}
     if not rest:
         return spec, ("line %d: family %s has no class. " % (no, fam)) + HOW % (fam, fam)
@@ -356,11 +366,24 @@ def parse_class(fam, rest, no):
             spec["shares"] += tail[1].split("+")
             tail = tail[2:]
             continue
+        if tail[0] == "block":
+            if len(tail) < 2 or not re.fullmatch(r"[1-9][0-9]*", tail[1]):
+                return spec, ("line %d: family %s says 'block %s' but a block size is a "
+                              "positive decimal integer" % (no, fam, tail[1] if len(tail) > 1 else ""))
+            if rest[1] == "bits":
+                return spec, ("line %d: family %s is a bits family, so 'block %s' has no "
+                              "meaning (use shape ordinal or enum)" % (no, fam, tail[1]))
+            if spec["block"] is not None:
+                return spec, ("line %d: family %s names two block sizes (%d and %s); a family has one"
+                              % (no, fam, spec["block"], tail[1]))
+            spec["block"] = int(tail[1])
+            tail = tail[2:]
+            continue
         if tail[0] not in ("sentinel", "bound", "grows") or len(tail) < 2 \
                 or not IDENT.fullmatch(tail[1]):
             return spec, ("line %d: family %s has a bad word '%s' after its width "
                           "(only 'sentinel <NAME>', 'grows <NAME>', 'bound <NAME>', "
-                          "'val-of <STATI>[+<STATI>]', 'mag-of <STATI>[+<STATI>]', "
+                          "'block <N>', 'val-of <STATI>[+<STATI>]', 'mag-of <STATI>[+<STATI>]', "
                           "'field-of|index-of|elem-of|glyph-of|word-of <Scope.Field>[+...]', 'at-of <Scope.Array>[<NAME>][+...]' or 'shares <family>' "
                           "may follow)" % (no, fam, " ".join(tail)))
         if tail[0] == "bound" and rest[1] == "bits":
@@ -619,7 +642,7 @@ def scan_all(files):
         problems += outside + bad
         for no, fam, spec in specs:
             d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
-                                      "sentinels": [], "bounds": [], "grows": [], "members": [],
+                                      "sentinels": [], "bounds": [], "grows": [], "blocks": [], "members": [],
                                       "marks": [], "rows": [], "first": None,
                                       "val_of": [], "mag_of": [], "field_of": [],
                                       "index_of": [], "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []})
@@ -642,6 +665,8 @@ def scan_all(files):
                 d["bounds"].append((s, path, no))
             for s in spec["grows"]:
                 d["grows"].append((s, path, no))
+            if spec["block"] is not None:
+                d["blocks"].append((spec["block"], path, no))
             for s in spec["val_of"]:
                 d["val_of"].append((s, path, no))
             for s in spec["mag_of"]:
@@ -652,7 +677,7 @@ def scan_all(files):
         for no, name, value, kind, fams_here, alias, known in placed:
             for fam in fams_here:
                 d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
-                                          "sentinels": [], "bounds": [], "grows": [], "members": [],
+                                          "sentinels": [], "bounds": [], "grows": [], "blocks": [], "members": [],
                                           "marks": [], "rows": [], "first": None,
                                           "val_of": [], "mag_of": [], "field_of": [],
                                           "index_of": [], "elem_of": [], "glyph_of": [], "word_of": [], "at_of": [], "shares": []})
@@ -740,6 +765,10 @@ def scan_all(files):
         if len(d["bounds"]) > 1:
             problems.append("FAIL: family %s names %d bounds (%s); a family has one"
                             % (fam, len(d["bounds"]), " ".join(b[0] for b in d["bounds"])))
+        if len({b[0] for b in d["blocks"]}) > 1:
+            problems.append("FAIL: family %s names %d block sizes (%s); a family has one"
+                            % (fam, len({b[0] for b in d["blocks"]}),
+                               " ".join(str(b[0]) for b in d["blocks"])))
         kinds = {r[3] for r in d["rows"]}
         if d["shape"] == "enum" and "define" in kinds:
             problems.append("FAIL: family %s has shape enum but holds a #define (%s)"
@@ -751,6 +780,7 @@ def scan_all(files):
         d["sentinels"] = [s for s, _p, _n in d["sentinels"]]
         d["bounds"] = [s for s, _p, _n in d["bounds"]]
         d["grows"] = [s for s, _p, _n in d["grows"]]
+        d["block"] = d["blocks"][0][0] if d["blocks"] else None
         d["val_of"] = [s for s, _p, _n in d["val_of"]]
         d["mag_of"] = [s for s, _p, _n in d["mag_of"]]
         for kind in ("field_of", "index_of", "elem_of", "glyph_of", "word_of", "at_of", "shares"):
@@ -819,7 +849,7 @@ def load_families(defines=None, files=None):
     fams, problems, _multi = scan_all(files)
     out = {f: {"class": d["class"], "shape": d["shape"], "width": d["width"],
                "sentinels": list(d["sentinels"]), "bounds": list(d["bounds"]),
-               "grows": list(d["grows"]), "val_of": list(d["val_of"]), "mag_of": list(d["mag_of"]),
+               "grows": list(d["grows"]), "block": d["block"], "val_of": list(d["val_of"]), "mag_of": list(d["mag_of"]),
                "field_of": list(d["field_of"]), "index_of": list(d["index_of"]),
                "elem_of": list(d["elem_of"]), "glyph_of": list(d["glyph_of"]), "word_of": list(d["word_of"]), "at_of": list(d["at_of"]), "shares": list(d["shares"]),
                "members": list(d["members"])}
@@ -1251,6 +1281,19 @@ def selftest():
         assert c == 1 and "names 2 bounds" in m, (c, m)
         fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % (n[0] - 3))])
         assert problems == [] and fams["a"]["bounds"] == ["A_LAST"], (problems, fams)
+        # block <N> (inc-cjos0): a positive decimal size, ordinal or enum only, one size per family
+        c, m = run(fam("a", "#define A_X 1\n", stored + " block 100"))
+        assert c == 0, (c, m)
+        fams, problems = load_families(files=[os.path.join(tmp, "d%d.h" % n[0])])
+        assert problems == [] and fams["a"]["block"] == 100, (problems, fams)
+        c, m = run(fam("a", "#define A_X 1\n", stored + " block x"))
+        assert c == 1 and "block x" in m and "positive decimal" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n", "stored bits u8 block 4"))
+        assert c == 1 and "bits family" in m and "block 4" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n", stored + " block 10") + fam("a", "#define A_Y 2\n", stored + " block 20"))
+        assert c == 1 and "2 block sizes" in m, (c, m)
+        c, m = run(fam("a", "#define A_X 1\n", stored + " block 10") + fam("a", "#define A_Y 2\n", stored))
+        assert c == 0, (c, m)
         # val-of / mag-of (inc-cjos0 9f-pre P2): a stored family names the statuses whose val or mag
         # holds its members; each must be a member of family stati, and a (status, slot) has one family
         st = fam("stati", "#define BLINDNESS 3\n#define SLEEPING 7\n#define ASLEEP 7 /* alias of SLEEPING */\n",

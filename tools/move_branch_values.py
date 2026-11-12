@@ -39,7 +39,9 @@ by one per moved value), and the limit is raised to (largest moved index + 1) an
 never lowered. A base member at or above the base limit (A_HIT.., SL_ARCHERY) is no
 index: it is never counted, and a move that would reach one is REFUSED naming the
 family, the limit and that member. A bound that is also `grows`
-(OPT_LAST) is raised the same way instead of refusing. Two moved names never take one value. A
+(OPT_LAST) is raised the same way instead of refusing. A `block <N>` clause overrides both: a moved value
+takes the lowest free value of its own block of N (old // N * N), or the mover REFUSES naming the family
+and the block, and the limit never moves. Two moved names never take one value. A
 new value that does not fit the storage width is REFUSED naming bead inc-xm3nq.
 A value written as an expression (`FT_FIRST + 3`) is rewritten to the literal;
 the report line says so. It changes no base name, no base value, and no line
@@ -205,6 +207,25 @@ def plan(base, tree, retired, root=None):
                                   "(bead inc-xm3nq)" % (fam, width, name))
                 new = 1 << free[0]
                 held |= new
+                moves.append(dict(fam=fam, name=name, old=names[name][1], new=new,
+                                  file=names[name][2], line=names[name][3],
+                                  shape=shape, sentinel=False))
+            continue
+        if t.get("block"):
+            # `block <N>`: a moved value stays in its own block of N. No `grows` or
+            # `bound` placement, and no limit move (bead inc-cjos0).
+            taken = set(merged)
+            for name in order:
+                lo = names[name][1] // t["block"] * t["block"]
+                free = [v for v in range(lo, lo + t["block"]) if v not in taken]
+                if not free:
+                    raise Refused("family %s: block %d is full, no free value for %s "
+                                  "(bead inc-cjos0)" % (fam, lo, name))
+                new = free[0]
+                if not csv.fits(new, shape, width):
+                    raise Refused("family %s: %s would take %d, which does not fit %s "
+                                  "(bead inc-xm3nq)" % (fam, name, new, width))
+                taken.add(new)
                 moves.append(dict(fam=fam, name=name, old=names[name][1], new=new,
                                   file=names[name][2], line=names[name][3],
                                   shape=shape, sentinel=False))
@@ -724,6 +745,19 @@ def selftest():
              want=fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 3\n#define T_LAST 4\n"
                             "#define T_HIT 50\n#define T_MAG 55\n", at),
              grep=["at T_Z 2 -> 3", "at T_LAST 3 -> 4"])
+        bk = "stored ordinal u8 bound X_LAST grows X_LAST block 10"
+        case("block <N>: a moved value takes the lowest free value of its own block, the limit stays",
+             fam("x", "#define X_A 10\n#define X_E 12\n#define X_D 20\n#define X_LAST 30\n", bk),
+             fam("x", "#define X_A 10\n#define X_E 12\n#define X_Z 12\n#define X_D 20\n"
+                      "#define X_LAST 30\n", bk),
+             want=fam("x", "#define X_A 10\n#define X_E 12\n#define X_Z 11\n#define X_D 20\n"
+                           "#define X_LAST 30\n", bk),
+             grep=["x X_Z 12 -> 11"])
+        full = "".join("#define X_M%d %d\n" % (v, v) for v in range(10, 20))
+        case("block <N>: a full block refuses, naming the family and the block",
+             fam("x", full + "#define X_LAST 30\n", bk),
+             fam("x", full + "#define X_Z 12\n#define X_LAST 30\n", bk),
+             code=1, grep=["family x", "block 10", "is full", "X_Z"])
         case("gap 6: a move that reaches a reserved member refuses",
              fam("at", "#define T_X 1\n#define T_Y 2\n#define T_LAST 3\n#define T_HIT 4\n", at),
              fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 2\n#define T_W 2\n"
