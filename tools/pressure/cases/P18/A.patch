@@ -4,7 +4,7 @@
  // end family: stati
  // family: val_phased stored ordinal i16 val-of PHASED
    #define PHASE_MATERIAL     0
-+  #define PHASE_GRWA 6
++  #define PHASE_GRWA 7
    #define PHASE_VORTEX       1
    #define PHASE_ASTRAL       2
    #define PHASE_ETHEREAL     3
