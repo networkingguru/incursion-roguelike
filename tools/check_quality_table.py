@@ -9,7 +9,7 @@
 QualityIsWeapon() and QualityIsArmor() answer from QualityTable[] in
 src/Tables.cpp. A quality with no row answers false silently, so this check
 FAILS the build when a WQ_/AQ_/IQ_ name in the quality blocks of inc/Defines.h
-(the TRUELAST aliases excluded) has no row, has two rows, or when a row
+has no row, has two rows, or when a row
 names a constant that is not in those blocks. It also FAILS when it cannot find
 a block or the table. Exit 0 pass, 1 fail (one line per problem).
 
@@ -22,7 +22,6 @@ import sys
 DEFINE_RE = re.compile(r"^\s*#define\s+((?:WQ|AQ|IQ)_[A-Za-z0-9_]+)\s+(\d+)\b")
 ROW_RE = re.compile(r"^\s*\{\s*((?:WQ|AQ|IQ)_[A-Za-z0-9_]+)\s*,\s*(true|false)\s*,\s*(true|false)\s*\}")
 FAMILIES = ("wq", "aq", "wq, aq")
-MARKERS = ("WQ_TRUELAST", "AQ_TRUELAST")
 
 
 def names(defines_text):
@@ -39,7 +38,7 @@ def names(defines_text):
             fam = None
         elif fam in FAMILIES:
             d = DEFINE_RE.match(line)
-            if d and d.group(1) not in MARKERS:
+            if d:
                 out[d.group(1)] = int(d.group(2))
     return out if {"wq", "aq"} <= found and out else None
 
@@ -78,7 +77,7 @@ def problems(defines_text, tables_text):
 
 
 def selftest():
-    d = ("// family: wq\n#define WQ_A 1\n#define WQ_TRUELAST 9\n// end family: wq\n"
+    d = ("// family: wq\n#define WQ_A 1\n// end family: wq\n"
          "// family: aq\n#define AQ_B 1\n// end family: aq\n"
          "// family: wq, aq\n#define IQ_C 7\n// end family: wq, aq\n")
     t = ("QualityRow QualityTable[] = {\n  { WQ_A, true, false },\n"

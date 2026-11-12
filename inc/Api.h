@@ -1117,6 +1117,8 @@ system bool    DTypeTakesHP(int16 dtype);
 /* Can quality q sit on a weapon / on armor? One row per quality name in QualityTable (inc-rddai). */
 system bool    QualityIsWeapon(int16 q);
 system bool    QualityIsArmor(int16 q);
+/* The highest quality number in QualityTable; loops over every quality stop here (inc-mafd8). */
+system int16   QualityMaxNumber();
  
  
 /* functions with variable-type parameters handled by macro type-cast */

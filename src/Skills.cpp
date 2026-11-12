@@ -3718,7 +3718,7 @@ Augment:
 			return ABORT;
 		}
 
-		for (i = 0; i <= WQ_TRUELAST; i++) {
+		for (i = 0; i <= QualityMaxNumber(); i++) {
 			if (isWeapon ? !QualityIsWeapon(i) : !QualityIsArmor(i))
 				continue;
 			if (!LookupOnly(desc, i))

@@ -2552,11 +2552,6 @@ typedef signed int        hObj;
 #define IQ_SACRED        80
 #define IQ_WROUGHT       81
 // end family: wq, aq
-// family: wq stored ordinal i8 sentinel WQ_TRUELAST sentinel AQ_TRUELAST, aq stored ordinal i8 sentinel AQ_TRUELAST sentinel WQ_TRUELAST
-
-#define AQ_TRUELAST      81  /* alias of IQ_WROUGHT */
-#define WQ_TRUELAST      81  /* alias of IQ_WROUGHT */
-// end family: wq, aq
 // family: ws stored ordinal i16 val-of WEP_SKILL
 
 

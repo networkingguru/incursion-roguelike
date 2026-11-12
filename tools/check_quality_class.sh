@@ -32,6 +32,11 @@
 # log byte for byte with tools/fixtures/quality-class.expected. The probe holds
 # no copy of the class test.
 #
+# SITE 6 (inc-mafd8). `QC s6 item=weapon|armor q=<n> name=<text>`: the name
+# Item::Name gives an identified long sword or leather armor holding only
+# quality n, for n = 1..82, plus `q=1+67` (a weapon holding qualities 1 and 67,
+# to show a shared number is named once). 165 lines.
+#
 # SAVE COMPARISON, layer A (--save, --save-reload). A probe-disabled session
 # loads the frozen character, saves, and the engine's own character dump is
 # compared with tools/fixtures/quality-class-char.expected (byte-identical to
@@ -70,6 +75,7 @@
 # fact: the Oil's target form -- key-script @choose "long sword"; the name is a module resource, fixed by lib/weapons.irh; a SETUP_ERROR if the choice returns another weapon
 # fact: menu text is not asserted -- hook list and slot arrays are read, never rendered text; the dumps are specimens
 # fact: ItemLevel return values, offered list, slot arrays -- read-only calls and one read-only hook at the production sites, no copied predicate
+# fact: the name text -- Item::Name over the fixed name tables in src/Tables.cpp (PreQualNames, PostQualNames, APreQualNames, APostQualNames, GenericPreQualNames); items are named resources made identified (MakeKnown 0xFF, NA_IDENT), plus 0, quantity 1, no flavor or random text
 # fact: log text and order -- fixed case ids; no names, handles, times or random text
 # fact: the quality-name domain -- committed manifest tools/fixtures/quality-names.expected compared with the WQ_/AQ_/IQ_ defines in inc/Defines.h
 # fact: saved item quality values -- fixture plus the pack mode; the character dump of layer A stops before Inventory and is not used for items
@@ -197,6 +203,7 @@ probe_mode() {
         [ "$want" -eq 82 ] || unmeasured "$want numbered $s lines, wanted 82; see $log"
         [ "$(grep -c "^QC $s base " "$log")" -eq 1 ] || unmeasured "no single $s base line; see $log"
     done
+    [ "$(grep -c '^QC s6 item=' "$log")" -eq 165 ] || unmeasured "not 165 s6 lines (82 weapon, 82 armor, one shared-number); see $log"
     [ "$(grep -c '^QC s5 case=' "$log")" -eq 3 ] || unmeasured "not three s5 lines; see $log"
     [ "$(grep -c '^QC s4 item=.* ret=' "$log")" -eq 2 ] || unmeasured "not two s4 ret lines; see $log"
     u=$(grep '^QC ' "$log" | sort | uniq -d | wc -l | tr -d ' ')

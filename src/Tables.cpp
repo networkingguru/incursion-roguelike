@@ -1305,6 +1305,17 @@ bool QualityIsArmor(int16 q) {
   return false;
   }
 
+/* The highest quality number in QualityTable. The loops that visit every
+   quality (Weaponcraft offer, item naming, Oil of Transformation) stop here, so
+   a new quality needs no edit to any of them. inc-mafd8. */
+int16 QualityMaxNumber() {
+  int16 m = 0;
+  for (int i = 0; QualityTable[i].quality != -1; i++)
+    if (QualityTable[i].quality > m)
+      m = QualityTable[i].quality;
+  return m;
+  }
+
 bool DTypeTakesHP(int16 dtype) {
   for (int16 i = 0; DTypeHP[i].dtype >= 0; i++)
     if (DTypeHP[i].dtype == dtype)
@@ -1781,6 +1792,12 @@ TextVal GenericPreQualNames[] = {
   { IQ_DARKWOOD, "darkwood" },
   { IQ_IRONWOOD, "ironwood" },
   { IQ_MITHRIL, "mithril" },
+  /* upstream: the naming loop stopped one short of IQ_WROUGHT (the last
+     quality) and this table had no entry for it, so a wrought item's name
+     omitted it; plain loop bound and missing table row, so Win32 upstream
+     does the same. Observed (tools/check_quality_class.sh s6: a wrought long
+     sword named "long sword"). inc-mafd8; not sent. */
+  { IQ_WROUGHT, "wrought iron" },
 
   { IQ_ELVEN, "elven" },
   { IQ_DWARVEN, "dwarven" },

@@ -592,8 +592,8 @@ def marked_files(root=ROOT):
         for dp, _dn, fns in os.walk(os.path.join(root, sub)):
             for fn in sorted(fns):
                 p = os.path.join(dp, fn)
-                if p == DEF_DEFAULT:
-                    continue
+                if p == DEF_DEFAULT or not fn.endswith(SOURCE_EXT):
+                    continue  # the compiler never reads a backup such as X.h.orig
                 try:
                     with open(p, encoding="latin-1") as f:
                         if any(MARK.match(l) for l in f.read().split("\n")):
@@ -1099,6 +1099,14 @@ def selftest():
         c, m = run(fam("stati", "#define A_X 234\n#define B_X 234\n"))
         assert c == 1 and "family stati: A_X B_X all = 234" in m, (c, m)
         assert run(fam("stati", "#define A_X 234\n#define B_X 235\n"))[0] == 0
+        # a backup copy (X.h.orig, left by patch) is not a second header
+        mroot = os.path.join(tmp, "mroot")
+        os.makedirs(os.path.join(mroot, "inc"))
+        for nm in ("Twin.h", "Twin.h.orig"):
+            with open(os.path.join(mroot, "inc", nm), "w") as f:
+                f.write(fam("a", "#define A_X 7\n"))
+        got = marked_files(mroot)
+        assert got == [os.path.join(mroot, "inc", "Twin.h")], got
         # b. one value in two families: pass
         c, m = run(fam("a", "#define A_X 7\n") + fam("b", "#define B_X 7\n"))
         assert c == 0 and "PASS" in m, (c, m)
