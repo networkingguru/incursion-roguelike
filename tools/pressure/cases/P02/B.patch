@@ -8,3 +8,13 @@
  
  // end family: ad
  // no-family
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1164,6 +1164,7 @@
+   { AD_SHAT, false },
+   { AD_SWAL, false },
+   { AD_FALL, false },
++  { AD_GRWB, true },
+   { -1, false } };
+ 
+ /* Which item types can carry a quality? One row per quality name in the

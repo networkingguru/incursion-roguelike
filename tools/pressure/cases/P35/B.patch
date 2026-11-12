@@ -8,3 +8,13 @@
  #define WQ_FLAMING       7
  #define WQ_SHOCKING      8
  #define WQ_FROST         9
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1289,6 +1289,7 @@
+   { IQ_BLESSED, false, false },
+   { IQ_SACRED, false, false },
+   { IQ_WROUGHT, false, false },
++  { WQ_GRWB, true, false },
+   { -1, false, false } };
+ 
+ bool QualityIsWeapon(int16 q) {

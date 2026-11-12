@@ -1,1 +1,1 @@
-refuse family ft FT_AC8_
+refuse family ft: FT_AC8_

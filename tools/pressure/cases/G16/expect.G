@@ -1,1 +1,1 @@
-refuse family ft FT_GRW
+refuse family ft: FT_GRW

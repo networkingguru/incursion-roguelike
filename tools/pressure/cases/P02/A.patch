@@ -8,3 +8,13 @@
  #define AD_FIRE    1    /* fire damage */
  #define AD_COLD    2    /* frost damage */
  #define AD_ACID    3    /* acid/corrosive damage */
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1088,6 +1088,7 @@
+    it at build time. inc-kx693. */
+ DTypeHPRow DTypeHP[] = {
+   { AD_NORM, true },
++  { AD_GRWA, true },
+   { AD_FIRE, true },
+   { AD_COLD, true },
+   { AD_ACID, true },

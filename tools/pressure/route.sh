@@ -253,7 +253,7 @@ premerge_refused() {
     out="$( cd "$w" && python3 tools/move_branch_values.py 2>&1 )"
     printf '%s\n' "$out" > "$rlf"
     line=""
-    [ -z "$RECOVER_RE" ] || line="$(grep -v KNOWN "$cl" | grep -m1 -E "$RECOVER_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"
+    [ -z "$RECOVER_RE" ] || line="$(grep -vE '^[[:space:]]*KNOWN:' "$cl" | grep -m1 -E "$RECOVER_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"
     [ -n "$line" ] || line="$(grep -m1 -E '^[[:space:]]*FAIL: family |^stati |^[a-z_0-9]+ [A-Za-z_0-9]+ .* -> ' "$cl" | sed 's/^[[:space:]]*//' | cut -c1-200)"
     RECOVERED_LINE="${line:-$(decide "$cl")}"
     cc="$LOG/premerge-$id-$LAND_N-recommit.log"
@@ -375,7 +375,7 @@ land_with_recovery() { # <bead> <base> <baseline> <base-sha>
     grep -qE 'CONFLICT|does not merge cleanly' "$first_log" && return 1
     if recover "$1"; then
         line=""
-        [ -z "$RECOVER_RE" ] || line="$(grep -v KNOWN "$first_log" | grep -m1 -E "$RECOVER_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"
+        [ -z "$RECOVER_RE" ] || line="$(grep -vE '^[[:space:]]*KNOWN:' "$first_log" | grep -m1 -E "$RECOVER_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"
         [ -n "$line" ] || line="$(grep -m1 -E '^[[:space:]]*FAIL: family |^stati |^[a-z_0-9]+ [A-Za-z_0-9]+ .* -> ' "$first_log" | sed 's/^[[:space:]]*//' | cut -c1-200)"
         RECOVERED_LINE="${line:-$(decide "$first_log")}"
         # the first failure was repaired: it no longer decides the verdict, unless the case names it
@@ -394,7 +394,7 @@ finish_works() { # after the last landing
     local reason="$1"
     if [ -n "$RECOVERED_LINE" ]; then
         if [ -n "$RECOVER_RE" ] && ! printf '%s' "$RECOVERED_LINE" | grep -qE "$RECOVER_RE" \
-           && ! cat "$LOG"/land-*-1.log 2>/dev/null | grep -v KNOWN | grep -qE "$RECOVER_RE"; then
+           && ! cat "$LOG"/land-*-1.log 2>/dev/null | grep -vE '^[[:space:]]*KNOWN:' | grep -qE "$RECOVER_RE"; then
             verdict FAIL "recovered, but the first refusal did not name /$RECOVER_RE/ (line: $RECOVERED_LINE)"
         fi
         reason="$reason; first refusal then mover recovery: $RECOVERED_LINE"
@@ -412,7 +412,7 @@ finish_from_failure() { # the first failing step decides
         conflict)   verdict FAIL "$label: git text conflict with no usable resolution (resolve/ of the case): $(grep -hm1 -E 'FAIL|CONFLICT' "$lf" | cut -c1-200)";;
     esac
     if [ "$EXPECT" = refuse ]; then
-        named="$(grep -v KNOWN "$lf" | grep -m1 -E "$EXPECT_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"   # KNOWN lines are the checks' standing notes, not the refusal
+        named="$(grep -vE '^[[:space:]]*KNOWN:' "$lf" | grep -m1 -E "$EXPECT_RE" | sed 's/^[[:space:]]*//' | cut -c1-200)"   # KNOWN lines are the checks' standing notes, not the refusal
         local adv; adv="$(awk -F'\t' -v l="$label" '$2==l {a=$8} END{print a}' "$STEPS")"
         if [ -n "$named" ] && [ "$adv" != yes ]; then
             verdict PASS "refused at $label naming the space, destination did not advance: $named"

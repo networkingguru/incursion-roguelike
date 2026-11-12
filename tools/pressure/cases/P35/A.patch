@@ -8,3 +8,13 @@
  #define WQ_UNHOLY        2
  #define WQ_CHAOTIC       3
  #define WQ_LAWFUL        4
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1174,6 +1174,7 @@
+    inc-rddai. */
+ QualityRow QualityTable[] = {
+   { WQ_HOLY, true, false },
++  { WQ_GRWA, true, false },
+   { WQ_UNHOLY, true, false },
+   { WQ_CHAOTIC, true, false },
+   { WQ_LAWFUL, true, false },
