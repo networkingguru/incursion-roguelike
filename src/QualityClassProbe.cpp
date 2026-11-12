@@ -3,9 +3,10 @@
    number line). Off unless INCURSION_QUALITY_CLASS_PROBE is set;
    called once from Main.cpp at the start of Game::Play. The value picks a mode:
      1      full log: sites 1-3 (ItemLevel), site 4 (the Augment quality menu),
-            site 5 (Oil of Transformation); writes logs/quality-class.log
+            site 5 (Oil of Transformation), site 6 (item names); writes logs/quality-class.log
      stage  put marker items in the pack, for the save test
      pack   log every pack item that has a quality, for the save test
+     grow   offer, Oil and name for quality 82 (tools/check_quality_growth.sh)
    Lines: SETUP_ERROR case=<id> why=<text>, `QC <site> ...`, and a final
    `END lines=<n> errors=<n>`.
 
@@ -105,6 +106,33 @@ static void QCLevels(int site)
         else        QCLine("%s q=%d lvl=%d", id, q, lvl);
         delete it;
     }
+}
+
+/* Site 6 (inc-mafd8): the name the inventory shows, via Item::Name, for an
+   identified item holding one quality, for every number 1..82. */
+static void QCName(const char *kind, const char *res, const int *quals, int nq,
+    const char *tag)
+{
+    Item *it = QCMake("s6", res, 0);
+    if (!it) return;
+    QItem *qi = (QItem *)it;
+    for (int i = 0; i < 8; i++) qi->Qualities[i] = i < nq ? (int8)quals[i] : 0;
+    String nm = Decolorize(it->Name(NA_LONG | NA_IDENT));
+    QCLine("s6 item=%s q=%s name=%s", kind, tag, (const char *)nm);
+    delete it;
+}
+
+static void QCNames()
+{
+    for (int q = 1; q <= 82; q++) {
+        char tag[8];
+        snprintf(tag, sizeof(tag), "%d", q);
+        const int one[1] = { q };
+        QCName("weapon", "long sword", one, 1, tag);
+        QCName("armor", "leather armour", one, 1, tag);
+    }
+    const int both[2] = { 1, 67 };
+    QCName("weapon", "long sword", both, 2, "1+67");
 }
 
 /* Site 4: one CraftItem(Augment) call. The key script answers the prompts. */
@@ -210,10 +238,21 @@ void QualityClassProbe(Player *pl)
         QCStage(pl);
     else if (!strcmp(mode, "pack"))
         QCPack(pl);
+    else if (!strcmp(mode, "grow")) {
+        /* inc-mafd8: a quality number above every shipped one (82), added by
+           tools/fixtures/quality-grow.patch: offered, kept by the Oil, named. */
+        pl->GainPermStati(INNATE_KIT, NULL, SS_MISC, SK_CRAFT);
+        QCOffer(pl, "weapon", "light mace");
+        pl->RemoveStati(INNATE_KIT, SS_MISC, SK_CRAFT);
+        const int grow[1] = { 82 };
+        QCOil(pl, "grow", grow, 1);
+        QCName("weapon", "long sword", grow, 1, "82");
+    }
     else {
         QCLevels(1);
         QCLevels(2);
         QCLevels(3);
+        QCNames();
         pl->GainPermStati(INNATE_KIT, NULL, SS_MISC, SK_CRAFT);
         QCOffer(pl, "weapon", "light mace");
         QCOffer(pl, "armor", "leather armour");

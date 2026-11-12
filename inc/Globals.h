@@ -186,6 +186,7 @@ struct QualityRow { int16 quality; bool weapon; bool armor; };
 extern QualityRow QualityTable[];
 bool QualityIsWeapon(int16 q);
 bool QualityIsArmor(int16 q);
+int16 QualityMaxNumber();
 
 extern TextVal DTypeNames[],
                ATypeNames[],
