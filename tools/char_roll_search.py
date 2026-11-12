@@ -15,6 +15,7 @@ UNSEEN column of CREATION_KEY_LIST, inc/CreationSource.h). This tool holds no
 key name and no range: both come from that file and that column.
 
 Usage: tools/char_roll_search.py selftest   (the verdict rules and the multiset difference; exit 0 all hold)
+       tools/char_roll_search.py fill <in.char> <out.char> <unset-file>   (build; add each missing pick line with the build's default and name it in <unset-file>; exit 0 built, 2 not)
        tools/char_roll_search.py <skeleton.char> <rolls> <old.canon> <prefix>
            <keys> <seed> <options> <skip|-> <tick|-> <stream|-> [--max N]
   A roll's value can change which decisions the game asks next (an item the
@@ -169,7 +170,15 @@ def build_filled(lines, tc, added, limit=64):
                 del lines[at]
                 continue
             return "the build calls line %d surplus, but it is not \"%s\"" % (at + 1, sm.group(2))[:300]
+        nm = re.search(r"BUILD FAILED: .*:(\d+): character_name: \"[^\"]*\" matches no candidate; candidates: (\S+)", p.stderr)
+        if nm:   # a monk's title is rolled (EV_150): the roll decides the name, so the stated name follows the roll
+            at = int(nm.group(1)) - 1
+            if at < len(lines) and key_of(lines[at]) == "character_name" and lines[at] != "character_name: " + nm.group(2):
+                lines[at] = "character_name: " + nm.group(2)
+                continue
         mm = re.search(r"BUILD FAILED: missing line in .*; add: (.*)", p.stderr)
+        if not mm:   # a pick asked again with no value left: the build names the next line to state
+            mm = re.search(r"BUILD FAILED: stated value rejected by the game: .* was asked again with no value left;.*\(to state more, add the line: (.*)\)\s*$", p.stderr, re.M)
         if not mm:
             return (re.search(r"BUILD FAILED.*", p.stderr) or re.search(r".+", p.stderr + "build failed")).group(0)[:300]
         new = mm.group(1).rstrip("\n")
@@ -178,6 +187,11 @@ def build_filled(lines, tc, added, limit=64):
             return "the build asks for \"%s\" more than %d times" % (new, limit)
         added.append(new)
         insert_line(lines, new)
+
+
+def fill_notes(added):
+    """The unset lines (kind pick) for the lines build_filled added."""
+    return "".join("pick: %s added: the dump does not show this decision; the build's default was taken\n" % a for a in added)
 
 
 def decide(done, defaulted):
@@ -236,6 +250,24 @@ def selftest():
     open(os.path.join(d, "r"), "w").write("\n".join(body[:5] + ["  - Item A", "  - Item B"]))
     want("a line the build has once more than the old dump is one difference",
          sum(diff_lines(os.path.join(d, "p"), os.path.join(d, "r")).values()) == 1)
+    # build_filled adds a missing pick line with the build's default (the build mocked by a stub subprocess.run)
+    class R:
+        def __init__(s, rc, err): s.returncode, s.stderr = rc, err
+    real_run = subprocess.run
+    def fake(argv, **kw):
+        txt = open(argv[1]).read()
+        if "craft_formula [Potion]: Fury" in txt:
+            return R(0, "")
+        return R(10, "BUILD FAILED: missing line in x.char; add: craft_formula [Potion]: Fury\n")
+    subprocess.run = fake
+    try:
+        ls, added = ["race: Orc", "craft_formula [Alchemy]: Scentblind", "feat: Alertness"], []
+        why = build_filled(ls, os.path.join(d, "fill.char"), added)
+    finally:
+        subprocess.run = real_run
+    want("build_filled adds a missing pick line next to its kin, and the note is a pick line",
+         why == "" and added == ["craft_formula [Potion]: Fury"] and "craft_formula [Potion]: Fury" in ls
+         and fill_notes(added).startswith("pick: craft_formula [Potion]: Fury added:"), "%r %r %r" % (why, added, ls))
     return 1 if bad else 0
 
 
@@ -247,6 +279,14 @@ def main(argv):
     args = argv[1:]
     if args == ["selftest"]:
         return selftest()
+    if len(args) == 4 and args[0] == "fill":   # fill <in.char> <out.char> <unset-file>
+        lines, added = open(args[1]).read().split("\n"), []
+        why = build_filled(lines, args[2], added)
+        if why:
+            print("char_roll_search: fill: " + why, file=sys.stderr)
+            return 2
+        open(args[3], "a").write(fill_notes(added))
+        return 0
     cap = 500
     if "--max" in args:
         i = args.index("--max")
@@ -316,13 +356,18 @@ def main(argv):
                         skel, conv, "--rolls", rolls_p, "--report", pre + "-values.txt", "--unset", pre + "-unset.txt"])
                 why = ("cannot convert: " + q.stderr.strip()) if q.returncode != 0 else ""
                 if q.returncode == 0:
+                    # a decision the dump does not show (a craft formula the converted ranks now ask for): the build's default
+                    conv_lines, added_c = open(conv).read().split("\n"), []
+                    why = build_filled(conv_lines, conv, added_c)
+                    open(pre + "-unset.txt", "a").write(fill_notes(added_c))
+                if q.returncode == 0 and not why:
                     p = sh([os.path.join(ROOT, "tools", "char_arrive.sh"), conv, pre + "-c", keys, seed, opts, skip, tick, stream])
                     why = p.stderr.strip() if p.returncode != 0 else ""
                     if p.returncode == 0:
                         d = diff_lines(pre + "-c.canon", old_canon)
         results.append((values, conv if d is not None else None, d, why))
         # keep the converted .char of a completed try; drop the rest of its files
-        for suffix in ("-fill", "-s-out", "-s-replay", "-c-out", "-c-replay"):
+        for suffix in ("-fill", "-s-out", "-s-replay", "-c-out", "-c-replay", "-skel-fill", "-conv-fill"):
             subprocess.run(["rm", "-rf", pre + suffix])
         for suffix in ("-s-load.sav", "-s-build.log", "-s-replay.log", "-s.canon", "-c-load.sav", "-c-build.log",
                        "-c-replay.log", "-c.canon", "-s-arrive.err"):

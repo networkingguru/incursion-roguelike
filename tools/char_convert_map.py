@@ -4,18 +4,17 @@
 ponytail: this helper and tools/char_convert.sh stay only until the epic
 conversion lands (inc-pu6v.369); then both are deleted. The ceiling: the
 tables below map what a canonical dump states as a DECISION: names, base
-attributes, hit and mana rolls, the creation seeds (MAP); the starting perks,
-the feat queue, the skill ranks, the kit and two item quantities (LISTS).
+attributes, hit and mana rolls, the creation seeds (MAP); the feat queue, the
+skill ranks, the kit and two item quantities (LISTS). A perk is not a choice
+(owner's ruling 2026-11-11): the built character keeps the perks the walk rolled.
 Abilities, derived attributes and the equipment arrangement are RESULTS of
 those decisions under the current rules; nothing here sets them, and a
 difference left in them is the conversion's finding (a rule changed since the
-old save was made). A fact the dump does not state (an ability perk's value,
-the item of an item perk) stops the conversion and is named.
+old save was made).
 
 Usage:
   tools/char_convert_map.py selftest
-      Prove, on synthetic input, that the perk charges follow their item and that
-      merged stacks keep their sources. Exit 0 all hold.
+      Prove, on synthetic input, that merged stacks keep their sources. Exit 0 all hold.
   tools/char_convert_map.py excuse <choices-diff.txt>
       Read the output of `canon_compare.py --choices-diff` (lines `- old` and
       `+ built`). Pass it through KNOWN_DIFFERENCES: print `excused: <old> -> <built> --
@@ -38,7 +37,7 @@ Usage:
       .char. Set each scalar the MAP table names, then replace each list the
       LISTS table names, where the old dump states another value than the
       dump of the build. Prints one line per value set; --report writes them,
-      each led by its kind (scalar, perk, feat, skill, kit, quantity). Also
+      each led by its kind (scalar, feat, spell, skill, kit, quantity). Also
       prints one `unset <kind>:` line for each value it could not set from the
       dump and the dump shows only as a result (--unset writes them; --rolls
       names the .rolls file of the walk, whose keys char_roll_search.py sets).
@@ -74,6 +73,8 @@ UNSET = []
 MAP = [
     (r"^Name: (\S+) (.+)$",
         [("name", "", r"\1"), ("surname", "", r"\2"), ("character_name", "", r"\1 \2")]),
+    # a one-word Name is a monk's title (the Monk EV_150 script replaces the typed name): only character_name states it
+    (r"^Name: (\S+)$", [("character_name", "", r"\1")]),
     (r"^HitRolls\[\d+:([^-][^\]]*)\]: (-?\d+)(?: -?\d+)*$", [("hp_roll", r"\1", r"\2")]),
     (r"^ManaRolls\[\d+:([^-][^\]]*)\]: (-?\d+)(?: -?\d+)*$", [("mana_roll", r"\1", r"\2")]),
     (r"^BaseAttr A_([A-Z]+): (-?\d+)$", [("attr_{lower}(\\1)", "", r"\2")]),
@@ -102,27 +103,6 @@ SHOWN = {
 }
 DATA_LINES = ("seed", "options")
 
-# PERKS. The dump keeps no perk block; the journal lists the granted perks
-# ("Starting Perks:", src/Create.cpp NamePerk). One row per journal label:
-# (label, PerkType, the .char key, the journal text pattern, the value, the
-# kind of name the value is: "" none, "effect" resolve in program.i).
-# A row with no PerkType is a perk the journal does not state fully; its
-# fourth field says what is missing.
-PERK_LABELS = [
-    ("Bonus Feat",     "PERK_FEAT",   "perk_feat",   r"^(.+)$", r"\1", ""),
-    ("Wild Talent",    "PERK_TALENT", "perk_spell",  r"^(.+)$", r"\1", "effect"),
-    ("Innate Spell",   "PERK_SPELL",  "perk_spell",  r"^(.+)$", r"\1", "effect"),
-    ("Resistance",     "PERK_RESIST", "perk_resist", r"^(.+) \+10$", r"\1", ""),
-    ("Save Bonus",     "PERK_RESIST", "perk_resist", r"^\+4 vs\. (.+)$", r"save {lower}(\1)", ""),
-    ("Immunity",       "PERK_IMMUNE", "perk_immune", r"^(.+)$", r"\1", ""),
-    ("Extra Ability",  None, "perk_ability",
-        "the journal omits the ability value when it is 1 or less"),
-    ("Favoured Enemy", None, "perk_ability",
-        "the journal names the enemy type, not the ability value"),
-    ("Starting Item",  None, "perk_item",
-        "the journal names the item as a player reads it, not its item, effect, plus and qualities"),
-]
-
 # QUANTITIES. A carried item no kit ask made, and the roll key that sets its
 # quantity (src/Create.cpp: the thrown weapons, the Beginner's Kit food, the
 # ammunition of a bow). The item is named by its item name or by its type.
@@ -132,9 +112,8 @@ OTHER_QUANTITY = [(("name", "shotput"), "thrown_quantity"),
 
 # LISTS. name, the keys the list owns (what --withhold names).
 LISTS = [
-    ("perks",  ("perk_type", "perk_feat", "perk_ability", "perk_spell", "perk_resist",
-                "perk_immune", "perk_item", "perk_charges")),
     ("feats",  ("feat",)),
+    ("spells", ("spell_learn",)),
     ("skills", ("skill_ranks",)),
     ("kit",    ("kit_item", "beginkit_item")),
     ("quantities", tuple(k for _, k in OTHER_QUANTITY)),
@@ -185,6 +164,10 @@ class Names:
         tagged = [c for c in cands if c.endswith(";" + hint)] if hint else []
         if len(tagged) == 1:
             return tagged[0]
+        if kind == "effect" and hint:   # an item's effect with no tag of its own: the one ";item" candidate
+            items = [c for c in cands if c.endswith(";item")]
+            if len(items) == 1:
+                return items[0]
         raise Stop("\"%s\" names %d %ss (%s); the dump keeps the name without its tag"
                    % (base, len(cands), kind, ", ".join(cands)))
 
@@ -365,32 +348,6 @@ def journal_perks(secs):
     return out
 
 
-def old_perks(old_secs, built_secs, names):
-    """The granted perks the old journal lists: [(type, key, value)], or None
-    where the old journal says what the build's says (the skeleton's line
-    stands, whatever the journal leaves out of it)."""
-    built = journal_perks(built_secs)
-    out = []
-    for n, (label, val) in enumerate(journal_perks(old_secs)):
-        if n < len(built) and built[n] == (label, val):
-            out.append(None)
-            continue
-        row = next((r for r in PERK_LABELS if r[0] == label), None)
-        if row is None:
-            raise Stop("the journal lists a perk labelled \"%s\" that the table does not know" % label)
-        if row[1] is None:
-            raise Stop("perk \"%s: %s\" cannot be set from the dump: %s (key %s)"
-                       % (label, val, row[3], row[2]))
-        pm = re.match(row[3], val)
-        if not pm:
-            raise Stop("perk \"%s: %s\" does not read as %s" % (label, val, row[3]))
-        v = expand(row[4], pm)
-        if row[5]:
-            v = names.resolve("effect", v)
-        out.append((row[1], row[2], v))
-    return out
-
-
 def perk_slots(lines):
     """{slot: {"type": (line, value), "field": (line, key, value)}}."""
     slots = {}
@@ -404,49 +361,6 @@ def perk_slots(lines):
         else:
             rec["field"] = (i, m.group(1), m.group(3))
     return slots
-
-
-def replace_perks(lines, perks, done):
-    """Edits {line index: replacement lines} that make the skeleton's perk
-    slots, in order, the old granted perks. Slots past them stay."""
-    slots = perk_slots(lines)
-    order = sorted(slots)
-    if len(perks) > len(order):
-        raise Stop("the old character was granted %d perks; the skeleton asks for %d (perk_type)"
-                   % (len(perks), len(order)))
-    edits, charge_drop = {}, []
-    item_slots = [s for s in order if slots[s]["type"] and slots[s]["type"][1] == "PERK_ITEM"]
-
-    def item_name(slot):   # the item a PERK_ITEM slot makes, named as perk_charges [<item>] names it
-        f = slots[slot]["field"]
-        return base_name(parse_item_text(f[2])["name"]) if f and f[1] == "perk_item" else None
-    for k, perk in enumerate(perks):
-        if perk is None:
-            continue
-        ptype, key, val = perk
-        s = order[k]
-        rec = slots[s]
-        cur = (rec["type"][1], rec["field"][1], rec["field"][2]) if rec["type"] and rec["field"] else None
-        if cur == (ptype, key, val):
-            continue
-        edits[rec["type"][0]] = ["perk_type [%d]: %s" % (s, ptype), "%s [%d]: %s" % (key, s, val)]
-        if rec["field"]:
-            edits[rec["field"][0]] = []
-        done.append(("perk", "perk [%d]: %s -> %s %s" % (
-            s, "%s %s" % (cur[0], cur[2]) if cur else "(none)", ptype, val)))
-        if s in item_slots:
-            # the charges line of that item: the nth line of its context, n counting the item slots of that name before this one
-            name = item_name(s)
-            nth = len([t for t in item_slots if t < s and item_name(t) == name])
-            charge_drop.append((name, nth))
-    for name, nth in charge_drop:
-        same = [i for i, l in enumerate(lines)
-                if key_of(l) == "perk_charges" and (CHAR_LINE.match(l).group(2) or "") == name]
-        if nth < len(same):
-            edits[same[nth]] = []
-            done.append(("perk", "%s dropped (its perk is no longer an item)" % lines[same[nth]]))
-        # no line: an item that is no wand or staff draws no charges
-    return edits
 
 
 def feat_names(path):
@@ -465,6 +379,17 @@ def replace_feats(lines, old_p, built_p, skel_perk_feats, old_perk_feats, done):
         return {}
     idx = [i for i, l in enumerate(lines) if key_of(l) == "feat"]
     edits = {}
+    beyond = []
+    if idx and len(chosen_o) > len(idx):
+        # more feats than creation has slots: the extra are level-up picks of the arrival replay, and the dump cannot tell
+        # them from creation's. The feats the skeleton states and the old also has come first.
+        rest, first = list(chosen_o), []
+        for f in chosen_s:
+            if f in rest:
+                rest.remove(f)
+                first.append(f)
+        ordered = first + rest
+        chosen_o, beyond = ordered[:len(idx)], ordered[len(idx):]
     if idx:
         edits[idx[0]] = ["feat: %s" % f for f in chosen_o]
         for i in idx[1:]:
@@ -472,21 +397,80 @@ def replace_feats(lines, old_p, built_p, skel_perk_feats, old_perk_feats, done):
     else:
         edits[len(lines)] = ["feat: %s" % f for f in chosen_o]
     done.append(("feat", "feat queue: %s -> %s" % (", ".join(chosen_s) or "(none)", ", ".join(chosen_o) or "(none)")))
-    if len(chosen_o) != len(chosen_s):
+    if beyond:
+        UNSET.append(("feat", "feat: %s are the old character's beyond creation's %d slots: level-up picks of the arrival replay "
+                      "(a leveled fixture); the replay decides them" % (", ".join(beyond), len(idx))))
+    elif len(chosen_o) < len(chosen_s):
         done.append(("feat", "NOTE the old queue has %d feats, the skeleton asked for %d: the build decides"
                      % (len(chosen_o), len(chosen_s))))
     return edits
 
 
+def known_spells(path):
+    """The names of the dump's Known Spells section, in the dump's order, less the spells a perk granted
+    (the journal's Wild Talent and Innate Spell lines: a perk is not a choice)."""
+    secs = sections(path)
+    perk = [t for lab, t in journal_perks(secs) if lab in ("Wild Talent", "Innate Spell")]
+    out = []
+    on = False
+    for l in open(path, errors="replace").read().split("\n"):
+        if re.match(r"^[A-Z][A-Za-z' ]+:$", l):
+            on = l == "Known Spells:"
+            continue
+        m = on and re.match(r"^\s+(\S.*?)\s{2,}\d", l)
+        if m:
+            out.append(m.group(1))
+    for t in perk:
+        if t in out:
+            out.remove(t)
+    return out
+
+
+def replace_spells(lines, old_p, built_p, done):
+    """The spells the screens asked for (spell_learn): what the old character knows, less the build's own
+    grants (the spells it knows that its spell_learn lines did not pick, perks aside)."""
+    idx = [i for i, l in enumerate(lines) if key_of(l) == "spell_learn"]
+    if not idx:
+        return {}
+    skel = [CHAR_LINE.match(lines[i]).group(3) for i in idx]
+    skel_names = [re.sub(r" \[[^\]]*\]$", "", v) for v in skel]
+    auto = known_spells(built_p)
+    for n in skel_names:
+        if n in auto:
+            auto.remove(n)
+    chosen_o = known_spells(old_p)
+    for n in auto:
+        if n in chosen_o:
+            chosen_o.remove(n)
+    if sorted(chosen_o) == sorted(skel_names):
+        return {}
+    src = re.search(r" (\[[^\]]*\])$", skel[0])   # the source of the skeleton's own pick; the dump does not name it
+    new = ["spell_learn: %s%s" % (n, " " + src.group(1) if src else "") for n in chosen_o]
+    edits = {idx[0]: new}
+    for i in idx[1:]:
+        edits[i] = []
+    done.append(("spell", "spell queue: %s -> %s" % (", ".join(skel), ", ".join(n[13:] for n in new) or "(none)")))
+    return edits
+
+
+def skill_names():
+    """{display name: SK_ constant} from the SkillInfo table of src/Tables.cpp (read at run time)."""
+    text = open(os.path.join(ROOT, "src", "Tables.cpp"), errors="replace").read()
+    a = text.find("SkillInfoStruct SkillInfo[]")
+    names = dict((m.group(2), m.group(1)) for m in re.finditer(r'\{\s*(SK_\w+)\s*,\s*"([^"]+)"', text[a:])) if a >= 0 else {}
+    if not names:
+        raise Stop("src/Tables.cpp has no SkillInfo table")
+    return names
+
+
 def replace_skills(lines, old_p, built_p, done):
+    """Each skeleton skill_ranks line is set to the old ranks less what the build adds on its own (race, class):
+    the skeleton states what the player bought, the dump shows the sum."""
     nums = read_defines("SK_")
-    last = nums["SK_LASTSKILL"]
     idx = [i for i, l in enumerate(lines) if key_of(l) == "skill_ranks"]
     if not idx:
         return {}
-    if len(idx) != last:
-        raise Stop("the skeleton has %d skill_ranks lines, the module has %d skills (skill_ranks)"
-                   % (len(idx), last))
+    by_name = skill_names()
 
     def ranks(path):
         r = {}
@@ -498,21 +482,35 @@ def replace_skills(lines, old_p, built_p, done):
                 r[nums[m.group(1)]] = int(m.group(2))
         return r
     old_r, built_r = ranks(old_p), ranks(built_p)
-    skel_r = {}
-    for j, i in enumerate(idx):
-        v = int(CHAR_LINE.match(lines[i]).group(3))
-        if v:
-            skel_r[j] = v
-    if skel_r != built_r:
-        raise Stop("the skeleton's skill_ranks lines are not in skill-number order: the build's ranks "
-                   "differ from them (skill_ranks)")
     edits = {}
-    for j, i in enumerate(idx):
-        want, have = old_r.get(j, 0), skel_r.get(j, 0)
-        if want != have:
-            m = CHAR_LINE.match(lines[i])
-            edits[i] = ["skill_ranks [%s]: %d" % (m.group(2), want)]
-            done.append(("skill", "skill_ranks [%s]: %d -> %d" % (m.group(2), have, want)))
+    for pos, i in enumerate(idx):
+        m = CHAR_LINE.match(lines[i])
+        name = m.group(2) or ""
+        nm = re.match(r"^skill (\d+)$", name)
+        if nm:
+            sk = int(nm.group(1))   # the unnamed number the writer uses for a skill with no name
+        elif name in by_name and by_name[name] in nums:
+            sk = nums[by_name[name]]
+        else:
+            # a skill with no SK_ constant (an unimplemented one, a generated Knowledge name): the writer lists
+            # the skills in skill-number order, so its place in the list is its number
+            if len(idx) != nums["SK_LASTSKILL"]:
+                raise Stop("the skeleton's skill_ranks [%s] names no skill of the SkillInfo table, and its %d skill_ranks lines "
+                           "are not the module's %d skills, so the position cannot stand for the number (skill_ranks)"
+                           % (name, len(idx), nums["SK_LASTSKILL"]))
+            sk = pos
+        stated, built = int(m.group(3)), built_r.get(sk, 0)
+        if built < stated:
+            raise Stop("the build has %d rank(s) of skill_ranks [%s] where the skeleton states %d: nothing can take ranks away (skill_ranks)"
+                       % (built, name, stated))
+        auto = built - stated   # ranks the race or class adds on its own
+        want = old_r.get(sk, 0) - auto
+        if want < 0:
+            raise Stop("the old character has %d rank(s) of skill_ranks [%s] but the build adds %d on its own (skill_ranks)"
+                       % (old_r.get(sk, 0), name, auto))
+        if want != stated:
+            edits[i] = ["skill_ranks [%s]: %d" % (name, want)]
+            done.append(("skill", "skill_ranks [%s]: %d -> %d%s" % (name, stated, want, " (the build adds %d on its own)" % auto if auto else "")))
     return edits
 
 
@@ -535,20 +533,6 @@ def merge_stacks(items):
 def item_sig(it):
     return (base_name(it["iid"]), base_name(it["eid"]), it["plus"], it["charges"], it["qty"],
             tuple(it["quals"]), it["iflags"] & 0x8b, it["bane"])
-
-
-def quality_names(quals):
-    """The writer's names for a list of dump qualities (`#<n>` becomes its IQ_ name)."""
-    out = []
-    for q in quals:
-        m = re.match(r"^#(\d+)$", q)
-        if m:
-            nm = next((k for k, v in read_defines("IQ_").items() if v == int(m.group(1))), None)
-            if nm is None:
-                raise Stop("a quality number %s has no IQ_ name (kit_item)" % m.group(1))
-            q = nm
-        out.append(q)
-    return out
 
 
 def item_text(it, plus, quals, names):
@@ -623,6 +607,62 @@ def kit_line_text(o, i, lines, ask_item, built_items, names, qty):
     return item_text(dict(o, qty=qty), plus, quals, names)
 
 
+SKILL_TOOLS = (("SK_HEAL", "healing kit"), ("SK_DISGUISE", "disguise kit"), ("SK_ALCHEMY", "alchemy set"),
+               ("SK_MINING", "pickaxe"), ("SK_CRAFT", "craftsman's tools"), ("SK_HANDLE_DEV", "mechanical tools"))
+
+
+def skill_rank_by_define(path):
+    """{SK_ name: ranks} of the dump's Skill Ranks section."""
+    out = {}
+    for l in sect(sections(path), "Skill Ranks"):
+        m = re.match(r"^Skill (SK_\w+): (\d+)$", l)
+        if m:
+            out[m.group(1)] = int(m.group(2))
+    return out
+
+
+def set_aside_made_items(old_items, built_items, old_secs, built_secs, old_p, built_p):
+    """Items no kit ask makes: a perk item (made before any kit item, so the oldest items by GenNum; the
+    journal's "Starting Item" lines count them) and the tool a skill with ranks gives (src/Create.cpp
+    SkillKits). Neither side counts them: the walk's own perk roll and the skill ranks make them."""
+    out = []
+    notes = []
+    for secs, items, who in ((old_secs, old_items, "old"), (built_secs, built_items, "built")):
+        items = list(items)
+        lines = [t for lab, t in journal_perks(secs) if lab == "Starting Item"]
+        oldest = sorted(items, key=lambda it: it["gen"])[:len(lines)]
+        if len(oldest) < len(lines):
+            raise Stop("the %s journal lists %d Starting Item perk(s) but the dump holds %d item(s)" % (who, len(lines), len(items)))
+        perk_names = []
+        for text, it in zip(lines, oldest):
+            pm = re.search(r" \+(-?\d+)$", text)
+            em = re.search(r" of (.+?)(?: \+-?\d+)?$", text)
+            if pm and int(pm.group(1)) != it["plus"]:
+                raise Stop("the %s journal line \"Starting Item: %s\" says plus %s but the oldest item (%s) has plus %d"
+                           % (who, text, pm.group(1), base_name(it["iid"]), it["plus"]))
+            if em and base_name(it["eid"]) != "-" and em.group(1) != base_name(it["eid"]):   # "of <x>" on an item with no effect is a quality
+                raise Stop("the %s journal line \"Starting Item: %s\" says effect %s but the oldest item (%s) has effect %s"
+                           % (who, text, em.group(1), base_name(it["iid"]), base_name(it["eid"])))
+            items.remove(it)
+            perk_names.append(base_name(it["iid"]))
+        ranks = skill_rank_by_define(old_p if who == "old" else built_p)
+        tools = []
+        for sk, tool in SKILL_TOOLS:
+            if ranks.get(sk, 0) > 0:
+                hit = next((it for it in items if base_name(it["iid"]) == tool), None)
+                if hit is not None:
+                    items.remove(hit)
+                    tools.append("%s, %s %d" % (tool, sk[3:].lower(), ranks[sk]))
+        out.append(items)
+        if perk_names or tools:
+            notes.append("%s: %d perk item%s (%s) and %d skill tool%s (%s)" % (
+                who, len(perk_names), "" if len(perk_names) == 1 else "s", ", ".join(perk_names) or "-",
+                len(tools), "" if len(tools) == 1 else "s", "; ".join(tools) or "-"))
+    if notes:
+        UNSET.append(("kit", "set aside, made by the perk roll and the skill ranks, not by a kit ask -- " + " | ".join(notes)))
+    return out[0], out[1]
+
+
 def replace_kit(lines, old_p, built_p, names, done, other_out):
     """The kit asks (kit_item, beginkit_item) take the items the old character
     holds. A kit ask takes the old item of its own name (the same item first,
@@ -633,8 +673,10 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
     quantities add up to one built stack are one group (a kit_item and a beginkit_item ask alike), and the old stack's
     quantity is shared out over them; a quantity key that feeds the same stack
     keeps its value."""
-    old_items = merge_stacks(parse_items(sections(old_p)))
-    built_items = merge_stacks(parse_items(sections(built_p)))
+    old_secs, built_secs = sections(old_p), sections(built_p)
+    old_items = merge_stacks(parse_items(old_secs))
+    built_items = merge_stacks(parse_items(built_secs))
+    old_items, built_items = set_aside_made_items(old_items, built_items, old_secs, built_secs, old_p, built_p)
     if sorted(map(item_sig, old_items)) == sorted(map(item_sig, built_items)):
         return {}   # the same items already: nothing in the kit to set
     ask_lines = {k: [i for i, l in enumerate(lines) if key_of(l) == k]
@@ -852,69 +894,6 @@ def owned_keys():
     return owned
 
 
-def carry_perk_items(lines, old_p, built_p, done):
-    """Each PERK_ITEM slot's item as the old dump holds it, also when the old and the built journals agree
-    (the journal names the item as a player reads it): the qualities, the plus and the charges.
-    The old counterpart of a slot is the n-th item of its item and effect name, oldest first (a perk item
-    is made before the kit). The qualities are stated, so they are set. The stated plus is kept when the build
-    already makes the old plus, and named unresolved when it does not (a quality may add a plus the dump
-    does not split out). perk_charges [<item>] takes the old item's charges."""
-    slots = perk_slots(lines)
-    old_items = merge_stacks(parse_items(sections(old_p)))
-    built_items = merge_stacks(parse_items(sections(built_p)))
-    edits, seen = {}, {}
-    for s_ in sorted(slots):
-        rec = slots[s_]
-        if not (rec["type"] and rec["type"][1] == "PERK_ITEM" and rec["field"] and rec["field"][1] == "perk_item"):
-            continue
-        li, _k, text = rec["field"]
-        d = parse_item_text(text)
-        nm, ef = base_name(d["name"]), base_name(d["effect"]) or "-"
-        n = seen.get((nm, ef), 0)
-        seen[(nm, ef)] = n + 1
-
-        def pick(items):
-            c = sorted([it for it in items if base_name(it["iid"]) == nm and base_name(it["eid"]) == ef],
-                       key=lambda it: it["gen"])
-            return c[n] if n < len(c) else None
-        o, b = pick(old_items), pick(built_items)
-        label = "perk_item [%d]" % s_
-        if o is None or b is None:
-            UNSET.append(("perk", "%s: %s; its plus, qualities and charges are kept as the walk recorded them"
-                          % (label, "the old dump holds no %s" % nm if o is None else "the build holds no %s" % nm)))
-            continue
-        pieces = split_item_text(text.strip())
-        keep = [p_ for p_ in pieces if p_.split(" ", 1)[0] not in ("quality",)]
-        quals = quality_names(o["quals"])
-        new_quals = ["quality " + q for q in quals]
-        if sorted(o["quals"]) != sorted(b["quals"]):
-            UNSET.append(("perk", "%s: plus stays %d; the old %s has plus %d and qualities [%s], the build's has [%s], "
-                          "and the dump does not say how much of a plus a quality adds"
-                          % (label, d["plus"], nm, o["plus"], " ".join(o["quals"]), " ".join(b["quals"]))))
-        elif o["plus"] != b["plus"]:
-            UNSET.append(("perk", "%s: plus stays %d (the build makes plus %d from it); the old %s has plus %d, "
-                          "which the dump does not say how to state" % (label, d["plus"], b["plus"], nm, o["plus"])))
-        # the qualities come after the flags and before the quantity, as item_text writes them
-        out = [p_ for p_ in keep]
-        at = len(out)
-        for j, p_ in enumerate(out):
-            if p_.split(" ", 1)[0] in ("quantity", "charges", "stati"):
-                at = j
-                break
-        out[at:at] = new_quals
-        new_text = ", ".join(out)
-        if new_text != text.strip():
-            edits[li] = ["perk_item [%d]: %s" % (s_, new_text)]
-            done.append(("perk", "perk_item [%d]: %s -> %s" % (s_, text.strip(), new_text)))
-        idx = [i for i, l in enumerate(lines) if key_of(l) == "perk_charges" and (CHAR_LINE.match(l).group(2) or "") == nm]
-        if n < len(idx):
-            cm = CHAR_LINE.match(lines[idx[n]])
-            if int(cm.group(3)) != o["charges"]:
-                edits[idx[n]] = ["perk_charges [%s]: %d" % (nm, o["charges"])]
-                done.append(("perk", "perk_charges [%s]: %s -> %d" % (nm, cm.group(3), o["charges"])))
-    return edits
-
-
 def gear_chance_report(lines):
     """A gear_chance roll decides whether an annotation of a kit resource grants anything (its roll must
     be within the annotation's chance). The grant is derived from the old dump: the kit_item line of the
@@ -947,8 +926,12 @@ def unset_kept(lines, searched):
     directly (SHOWN) and that is not searched: PICK, ROLL and ITEM keys alike. gear_chance is named per
     line (gear_chance_report)."""
     kinds, owned, count = key_kinds(), owned_keys(), {}
+    perk_slots_n = 0
     for l in lines:
         k = key_of(l)
+        if k and k.startswith("perk_"):   # a perk is not a choice (owner's ruling 2026-11-11): one line for all the slots
+            perk_slots_n += k == "perk_type"
+            continue
         if not k or k in DATA_LINES or k in searched or k == "gear_chance":
             continue
         if any(k.startswith(o) if o.endswith("_") else k == o for o in owned):
@@ -958,6 +941,9 @@ def unset_kept(lines, searched):
         count[k] = count.get(k, 0) + 1
     for k in sorted(count):
         UNSET.append((kinds.get(k, "?").lower(), "%s: %d line(s) kept as the walk recorded them; the dump does not show this decision directly" % (k, count[k])))
+    if perk_slots_n:
+        UNSET.append(("perk", "perk slots: %d kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)"
+                      % perk_slots_n))
     gear_chance_report(lines)
 
 
@@ -975,17 +961,15 @@ def convert(old_p, built_p, in_p, out_p, withhold, report, unset=None, rolls=Non
     done, other = [], []
     del UNSET[:]
     names = Names()
-    perks = old_perks(sections(old_p), sections(built_p), names)
     set_scalars(lines, old_p, built_p, withhold, done)
 
     def on(name):   # --withhold <key> skips the one list that owns the key
         return withhold not in next(r for r in LISTS if r[0] == name)[1]
-    if on("perks"):
-        lines = apply_edits(lines, replace_perks(lines, perks, done))
-        lines = apply_edits(lines, carry_perk_items(lines, old_p, built_p, done))
     if on("feats"):
         lines = apply_edits(lines, replace_feats(lines, old_p, built_p, skel_feats,
                                                  [v for lab, v in journal_perks(sections(old_p)) if lab == "Bonus Feat"], done))
+    if on("spells"):
+        lines = apply_edits(lines, replace_spells(lines, old_p, built_p, done))
     if on("skills"):
         lines = apply_edits(lines, replace_skills(lines, old_p, built_p, done))
     if on("kit"):
@@ -1057,7 +1041,7 @@ def choose_options(old_p, walk_p, manifest, d):
 
 
 def selftest():
-    """Phase 11g: the perk charges follow their item's context, merged stacks keep their sources, and
+    """Phase 11g: merged stacks keep their sources, and
     a quantity key that feeds a merged stack keeps its value. Prints one line per case; exit 0 all hold."""
     import tempfile
 
@@ -1076,16 +1060,7 @@ def selftest():
         print("%s %s%s" % ("ok  " if cond else "FAIL", label, (": " + detail) if detail and not cond else ""))
         if not cond:
             bad.append(label)
-    # 1. perk_charges by the item's context
-    base = ["perk_type [0]: PERK_ITEM", "perk_item [0]: ring, effect Channeling, plus 2",
-            "perk_type [1]: PERK_ITEM", "perk_item [1]: wand, effect cracked, plus 3", "perk_charges [wand]: 36"]
-    for label, perks, kept in (("the wand's perk is replaced: its charges line goes", [None, ("PERK_FEAT", "perk_feat", "Alertness")], False),
-                               ("the ring's perk is replaced: the wand keeps its charges line", [("PERK_FEAT", "perk_feat", "Alertness"), None], True)):
-        lines = list(base)
-        done = []
-        lines = apply_edits(lines, replace_perks(lines, perks, done))
-        want(label, ("perk_charges [wand]: 36" in lines) == kept, "\n".join(lines))
-    # 2. merged stacks (a 5-line skeleton, two dumps)
+    # 1. merged stacks (a 5-line skeleton, two dumps)
     d = tempfile.mkdtemp()
     names = Names()
 
@@ -1141,18 +1116,77 @@ def selftest():
     want("plus: a plus the build does not reproduce is kept and named (no constant delta is assumed)",
          any("plus stays 1 (the build makes plus 1 from it)" in u for u in unset) and out == ["kit_item [Warrior;a0]: knife, plus 1, quantity 1"],
          " | ".join(out) + " / " + " ; ".join(unset))
-    # 3. a perk item is carried from the dump also when the journals agree: its charges
-    def item_canon(charges):
-        return ("=== Identity ===\n=== Kit ===\n  - Item iID=wand eID=cracked Type=T_WAND\n    Known=0xff Plus=3 Charges=%d "
-                "DmgType=0 GenNum=11 Flavor=0 homeID=- HP=1 Age=0 Swing=0 Quantity=1 IFlags=0x0\n" % charges)
-    open(os.path.join(d, "old"), "w").write(item_canon(40))
-    open(os.path.join(d, "built"), "w").write(item_canon(36))
-    lines = ["perk_type [1]: PERK_ITEM", "perk_item [1]: wand, effect cracked, plus 3", "perk_charges [wand]: 36"]
-    del UNSET[:]
-    out = apply_edits(lines, carry_perk_items(lines, os.path.join(d, "old"), os.path.join(d, "built"), []))
-    want("perk item: perk_charges takes the old item's charges", out[2] == "perk_charges [wand]: 40" and out[1] == lines[1],
+    # inc-10v7f: a perk item and a skill tool are made by the perk roll and the skill ranks, not by a kit ask
+    def canon2(items, perks, ranks):
+        out = ["=== Derived Sheet ===", "  Starting Perks:"] + ["  Starting Item: %s." % t for t in perks] + [""]
+        out += ["=== Skill Ranks ==="] + ["Skill %s: %d" % kv for kv in ranks] + ["=== Kit ==="]
+        for iid, qty, gen, plus in items:
+            out.append("  - Item iID=%s eID=- Type=T_COIN" % iid)
+            out.append("    Known=0xff Plus=%d Charges=0 DmgType=0 GenNum=%d Flavor=0 homeID=- HP=1 Age=0 Swing=0 "
+                       "Quantity=%d IFlags=0x0" % (plus, gen, qty))
+        return "\n".join(out) + "\n"
+
+    def run2(skel, built, old):
+        for n, (items, perks, ranks) in (("built", built), ("old", old)):
+            open(os.path.join(d, n), "w").write(canon2(items, perks, ranks))
+        del UNSET[:]
+        lines = list(skel)
+        edits = replace_kit(lines, os.path.join(d, "old"), os.path.join(d, "built"), names, [], [])
+        return apply_edits(lines, edits), [t for k, t in UNSET]
+    ask = ["kit_item [Orc;a2]: knife, quantity 1"]
+    out, unset = run2(ask, ([knife], [], []), ([("buckler", 1, 2, 2), ("knife", 1, 5, 2)], ["uncursed buckler +2"], []))
+    want("perk item: the oldest old item is set aside and paired to no ask",
+         out == ask and any("1 perk item (buckler)" in u for u in unset), " | ".join(out) + " / " + " ; ".join(unset))
+    out, unset = run2(ask, ([knife], [], []), ([("healing kit", 1, 37, 0), ("knife", 1, 5, 2)], [], [("SK_HEAL", 2)]))
+    want("skill tool: the healing kit of a Healing 2 character is set aside",
+         out == ask and any("healing kit, heal 2" in u for u in unset), " | ".join(out) + " / " + " ; ".join(unset))
+    try:
+        run2(ask, ([knife], [], []), ([("buckler", 1, 2, 1), ("knife", 1, 5, 2)], ["uncursed buckler +2"], []))
+        want("perk item: a journal plus that disagrees with the oldest item stops", False, "no Stop")
+    except Stop as e:
+        want("perk item: a journal plus that disagrees with the oldest item stops", "plus 2" in str(e), str(e))
+    # inc-10v7f: a one-word Name (a monk's title) states character_name only
+    open(os.path.join(d, "nm"), "w").write("Name: Harmonious_Fox\n")
+    want("scalars: a one-word Name states character_name only",
+         targets(os.path.join(d, "nm")) == [("character_name", "", "Harmonious_Fox")], str(targets(os.path.join(d, "nm"))))
+    # inc-10v7f: the spell queue takes the old character's picks, less the build's grants
+    def spells_canon(names):
+        return "Known Spells:\n" + "".join("  %s                     1   80%%    2 +10\n" % n for n in names) + "\nJournal:\n"
+    open(os.path.join(d, "sold"), "w").write(spells_canon(["True Strike", "Bane", "Call Light", "Call Companions"]))
+    open(os.path.join(d, "sbuilt"), "w").write(spells_canon(["True Strike", "Bane"]))
+    done = []
+    sl = ["spell_learn: Bane [Divine]", "feat: Alertness"]
+    out = apply_edits(sl, replace_spells(sl, os.path.join(d, "sold"), os.path.join(d, "sbuilt"), done))
+    want("spell queue: the old picks replace the skeleton's, with the skeleton's source",
+         out == ["spell_learn: Bane [Divine]", "spell_learn: Call Light [Divine]", "spell_learn: Call Companions [Divine]", "feat: Alertness"],
          " | ".join(out))
-    # 4. the unset report names a PICK key and each gear_chance line, and the wizard and explore flags are mapped
+    # inc-10v7f: an item's effect with an ";item" candidate, and the ambiguous case that stays a Stop
+    fake = Names.__new__(Names)
+    fake.full = {"item": {}, "effect": {"Nondetection": ["Nondetection;item", "Nondetection"], "Zap": ["Zap;item", "Zap;a;item", "Zap"]}}
+    want("effect name: the one ;item candidate is taken for an item", fake.resolve("effect", "Nondetection", "cloak") == "Nondetection;item")
+    try:
+        fake.resolve("effect", "Zap", "wand")
+        want("effect name: two ;item candidates stay a Stop", False, "no Stop")
+    except Stop:
+        want("effect name: two ;item candidates stay a Stop", True)
+    # skill ranks by name, less what the build adds on its own
+    sk = os.path.join(d, "skold"); sb = os.path.join(d, "skbuilt")
+    open(sk, "w").write("=== Skill Ranks (x) ===\nSkill SK_CLIMB: 9\nSkill SK_CRAFT: 4\n")
+    open(sb, "w").write("=== Skill Ranks (x) ===\nSkill SK_CLIMB: 9\nSkill SK_CRAFT: 2\n")
+    sl = ["skill_ranks [skill 0]: 0", "skill_ranks [Climb]: 2", "skill_ranks [Craft]: 2"]
+    out = apply_edits(sl, replace_skills(sl, sk, sb, []))
+    want("skill ranks: set by name to the old ranks less the build's own", out == ["skill_ranks [skill 0]: 0", "skill_ranks [Climb]: 2", "skill_ranks [Craft]: 4"], " | ".join(out))
+    # inc-10v7f: more old feats than creation slots keeps the stated feats first and names the rest
+    fk = os.path.join(d, "fkold"); fb = os.path.join(d, "fkbuilt")
+    open(fk, "w").write("=== Feats ===\nFeat Endurance\nFeat Great Fortitude\nFeat Hardiness\n")
+    open(fb, "w").write("=== Feats ===\nFeat Endurance\nFeat Focus Spell\n")
+    del UNSET[:]
+    fl = ["feat: Endurance", "feat: Hardiness"]
+    out = apply_edits(fl, replace_feats(fl, fk, fb, [], [], []))
+    want("feats: more old feats than slots keeps the stated feats and names the rest in one unset line",
+         out == ["feat: Endurance", "feat: Hardiness"] and any("Great Fortitude are the old character's beyond creation's 2 slots" in u for _k, u in UNSET),
+         " | ".join(out) + " / " + str(UNSET))
+    # 2. the unset report names a PICK key and each gear_chance line, and the wizard and explore flags are mapped
     del UNSET[:]
     unset_kept(["alter_options: no", "gear_chance [Universal Gear;a3]: 54", "kit_item [Universal Gear;a16]: hide armour, quantity 1",
                 "gear_chance [Universal Gear;a16]: 3"], set())
@@ -1160,6 +1194,12 @@ def selftest():
          any(u.startswith("alter_options: 1 line") for k, u in UNSET) and len([1 for k, u in UNSET if u.startswith("gear_chance")]) == 2
          and any("holds this annotation's item" in u for k, u in UNSET) and any("no kit_item line" in u for k, u in UNSET),
          " ; ".join(u for k, u in UNSET))
+    del UNSET[:]
+    unset_kept(["perk_type [0]: PERK_ITEM", "perk_item [0]: ring", "perk_type [1]: PERK_FEAT", "perk_feat [1]: Alertness",
+                "perk_charges [ring]: 3"], set())
+    want("unset report: all perk slots are ONE line of kind perk",
+         UNSET == [("perk", "perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)")],
+         str(UNSET))
     open(os.path.join(d, "flags"), "w").write("Flags: statiChanged=0 shownFF=1 Victory=0 Quit=0 UpdateMap=0 Dig=0 Wizard=1 Explore=0\n")
     want("scalars: the Flags line states wizard_mode and explore_mode",
          ("wizard_mode", "", "1") in targets(os.path.join(d, "flags")) and ("explore_mode", "", "0") in targets(os.path.join(d, "flags")))
@@ -1172,9 +1212,12 @@ def selftest():
 # why. A row covers EXACT lines; a line no row covers fails the conversion.
 # A row whose cause is fixed MUST be deleted (tools/check_char_convert.sh).
 KNOWN_DIFFERENCES = [
+    {"name": "level-up-first-feat-moved", "cause": "bead inc-10v7f.1",
+     "kinds": ["Feats: Great Fortitude -> Feats: Focus Spell (level-up menu's first entry moved)"],
+     "old_to_built": lambda old: "Feats: Focus Spell" if old == "Feats: Great Fortitude" else None},
     {"name": "devouring-to-cannibalism", "cause": "commit 4e1fc266",
-     "kinds": ["Special Abilities: Devouring -> Feats: Cannibalism"],
-     "old_to_built": lambda old: "Feats: Cannibalism" if old == "Special Abilities: Devouring" else None},
+     "kinds": ["ability CA_DEVOURING 1 -> Feats: Cannibalism"],
+     "old_to_built": lambda old: "Feats: Cannibalism" if old == "ability CA_DEVOURING 1" else None},
 ]
 
 

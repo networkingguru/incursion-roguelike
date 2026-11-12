@@ -17,12 +17,18 @@ Usage: tools/canon_compare.py [--all] <a.canon> <b.canon>   exit 0 same, 1 diffe
                                           in <a> only, `+ line` in <b> only; exit 0 when empty, 1 not
 
 The choice projection is what a player chose, not what the rules compute from it
-(Brian's ruling, 2026-11-11: a conversion passes when its choices match): the
-Gender, Race, Class, Faith and Align lines; the seven attribute base scores
-(`STR base 12`); every line of Special Abilities, Feats and CharGen
-Options and Choices, led by the section name (an item is not a choice: Inventory
-and the Beginner's Kit switch are compared only by --all); skill ranks above 0 (`skill <name> ranks <n>`); known
-spell names (`spell <name>`). A section ends at the next unindented `Heading:` line. Two projections compare as multisets.
+(Brian's ruling, 2026-11-11: a conversion passes when its choices match). Its lines:
+the Gender, Race, Class, Faith and Align lines; the seven attribute base scores
+(`STR base 12`); the raw `=== Feats ===` section (`Feats: <name>`, the character's own feats only);
+the raw `=== Abilities ===` section (`ability CA_X <n>`); the domains of the Player Stati
+(`domain <name>`) and the weapon of each focus feat (`weapon skill <n> <weapon>`, any WEP_SKILL stati not from an item); the sheet's Favoured Enemies block (`favoured enemy X`, a pick); every line of CharGen
+Options and Choices; skill ranks above 0 (`skill <name> ranks <n>`); known spell names (`spell <name>`).
+The Derived Sheet's own Feats and Special Abilities blocks are NOT read: they also hold what items and abilities compute.
+An item is not a choice, a perk is not a choice (same ruling): Inventory, the Beginner's Kit switch and the
+grants of a perk are compared only by --all. The dump's own "Starting Perks:" block names the perks: a Bonus Feat
+removes its feat; an Extra Ability removes its value from the ability (the name is mapped to CA_ through
+src/Tables.cpp ClassAbilities); a Favoured Enemy removes its enemy and one CA_FAV_ENEMY; a Wild Talent or Innate Spell
+removes its spell and the innate-spell ability. Two projections compare as multisets.
 
 Exit: 0 the dumps match outside the allowlist; 1 they differ (the first lines
 that differ are printed); 2 bad usage or an unreadable file.
@@ -167,6 +173,37 @@ _HEADINGS = ("Special Abilities:", "Feats:", "CharGen Options and Choices:",
              "Skill Ratings:", "Known Spells:")
 
 
+def starting_perks(lines):
+    """The perks the dump's journal lists under "Starting Perks:": [(label, text)]."""
+    out, on = [], False
+    for l in lines:
+        if not on:
+            on = bool(re.match(r"^\s*Starting Perks:\s*$", l))
+            continue
+        m = re.match(r"^\s+([A-Za-z ]+): (.*?)\.?\s*$", l)
+        if not m:
+            break
+        out.append((m.group(1).strip(), m.group(2)))
+    return out
+
+
+def class_ability_names():
+    """{display name: CA_ constant} from the ClassAbilities table of src/Tables.cpp (read at run time).
+    Fails (exit 2) when the table cannot be read."""
+    try:
+        text = open(os.path.join(_ROOT, "src", "Tables.cpp"), errors="replace").read()
+    except OSError as e:
+        print("canon_compare: cannot read src/Tables.cpp: %s" % e, file=sys.stderr)
+        sys.exit(2)
+    a = text.find("TextVal ClassAbilities[]")
+    b = text.find("};", a)
+    names = dict((m.group(2), m.group(1)) for m in re.finditer(r'\{\s*(CA_\w+)\s*,\s*"([^"]+)"\s*\}', text[a:b])) if a >= 0 else {}
+    if not names:
+        print("canon_compare: src/Tables.cpp has no ClassAbilities table", file=sys.stderr)
+        sys.exit(2)
+    return names
+
+
 def choices(path):
     """The choice projection of a dump (see the module docstring), a list of lines.
     Fails (exit 2) when the file is unreadable or holds none of the header lines,
@@ -183,12 +220,43 @@ def choices(path):
         m = re.match(r"^(STR|DEX|CON|INT|WIS|CHA|LUC):.*\(base (\d+)", l)
         if m:
             out.append("%s base %s" % (m.group(1), m.group(2)))
-    cur = None
+    # The raw sections state the character's own facts; the Derived Sheet's Feats and Special Abilities blocks
+    # also hold what items and abilities compute, so they are not read (except the favoured enemies below).
+    feats, abils, domains, section = [], collections.OrderedDict(), [], ""
+    for l in lines:
+        m = re.match(r"^=== (.*) ===$", l)
+        if m:
+            section = m.group(1)
+            continue
+        if section == "Feats":
+            m = re.match(r"^Feat (?!\(unnamed)(.+)$", l)
+            if m:
+                feats.append("Feats: " + m.group(1).rstrip())
+        elif section == "Abilities":
+            m = re.match(r"^Ability (CA_\w+): (-?\d+)$", l)
+            if m:
+                abils[m.group(1)] = abils.get(m.group(1), 0) + int(m.group(2))
+        elif section == "Player Stati":
+            m = re.match(r"^Stati: Nature=HAS_DOMAIN .* eID=(\S+)$", l)
+            if m:
+                domains.append("domain " + m.group(1))
+            m = re.match(r"^Stati: Nature=WEP_SKILL Val=(-?\d+) .* Source=(\S+) .* eID=(\S+)$", l)
+            if m and m.group(2) != "SS_ITEM":   # the weapon of a focus or proficiency feat
+                domains.append("weapon skill %s %s" % (m.group(1), m.group(3)))
+    cur, sub, enemies = None, None, []
     for l in lines:
         if re.match(r"^[A-Z][A-Za-z' ]+:$", l):
-            cur = l if l in _HEADINGS else None
+            cur, sub = (l if l in _HEADINGS else None), None
             continue
-        if cur in ("Special Abilities:", "Feats:", "CharGen Options and Choices:"):
+        if cur == "Special Abilities:":
+            if re.match(r"^  \S.*:$", l):
+                sub = l.strip()
+            elif re.match(r"^  \S", l):
+                sub = None
+            m = sub == "Favoured Enemies:" and re.match(r"^    \+\d+ vs\. (.+?)\s*$", l)
+            if m:
+                enemies.append("favoured enemy " + m.group(1))
+        elif cur == "CharGen Options and Choices:":
             if l.strip() and not l.strip().startswith("__Beginner's Kit:"):   # an item is not a choice
                 out.append("%s %s" % (cur, l.strip()))
         elif cur == "Skill Ratings:":
@@ -202,6 +270,30 @@ def choices(path):
     if not any(l.startswith("Race ") for l in out):
         print("canon_compare: %s is not a character dump (no Race line)" % path, file=sys.stderr)
         sys.exit(2)
+    # a perk is not a choice: the journal's "Starting Perks:" block names each grant, and one grant removes one fact
+    for label, text in starting_perks(lines):
+        if label == "Bonus Feat":
+            if "Feats: " + text in feats:
+                feats.remove("Feats: " + text)
+        elif label == "Extra Ability":
+            m = re.match(r"^(.*?)(?: \+(\d+))?$", text)
+            ca = class_ability_names().get(m.group(1))
+            if ca is None:
+                print("canon_compare: the perk \"Extra Ability: %s\" names no ability of the ClassAbilities table" % text, file=sys.stderr)
+                sys.exit(2)
+            if ca in abils:
+                abils[ca] -= int(m.group(2) or 1)
+        elif label == "Favoured Enemy":
+            if "favoured enemy " + text in enemies:
+                enemies.remove("favoured enemy " + text)
+            if "CA_FAV_ENEMY" in abils:
+                abils["CA_FAV_ENEMY"] -= 1
+        elif label in ("Wild Talent", "Innate Spell"):
+            abils.pop("CA_INNATE_SPELL", None)   # the innate-spell ability is one fact however many spells it holds
+            for g in ("spell " + text,):
+                if g in out:
+                    out.remove(g)
+    out += feats + ["ability %s %d" % kv for kv in abils.items() if kv[1] > 0] + domains + enemies
     return out
 
 

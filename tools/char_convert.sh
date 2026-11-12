@@ -6,7 +6,7 @@
 #
 # ponytail: this helper (with tools/char_convert_map.py, which holds the one
 # mapping table) stays only until the epic conversion lands (inc-pu6v.369).
-# The ceiling: the tables map the decisions a dump states (scalars, perks, the
+# The ceiling: the tables map the decisions a dump states (scalars, the
 # feat queue, skill ranks, the kit, two item quantities). A difference in a
 # RESULT (abilities, derived attributes, the equipment arrangement) is a rule
 # that changed since the old save was made: it is listed in diff.txt and does
@@ -40,7 +40,7 @@
 #   3. Build the skeleton, play the old script's post-creation steps on it,
 #      dump the result, compare with tools/canon_compare.py. See THE ARRIVAL.
 #   4. Set each mapped value that differs, from the tables in char_convert_map.py.
-#   5. Build again and compare. The full comparison (tools/canon_compare.py --all)
+#   5. Fill any pick the dump cannot state with the build's default (named in unset.txt; the unfilled file stays beside it), build again and compare. The full comparison (tools/canon_compare.py --all)
 #      is written to diff.txt as information. Exit 0 when the CHOICES of the
 #      build equal the choices of the old .sav (canon_compare.py --choices:
 #      gender, race, class, faith, alignment, base scores, feats, abilities,
@@ -255,6 +255,9 @@ if [ -s "$OD/skeleton.rolls" ]; then
 fi
 
 # 5. Build again, compare.
+cp "$FINAL" "${FINAL%.char}.unfilled.char"
+tools/char_roll_search.py fill "${FINAL%.char}.unfilled.char" "$FINAL" "$OD/unset.txt" 2> "$OD/fill.err" \
+    || { echo "char_convert: the final build asks for a line the fill could not add: $(cat "$OD/fill.err")" >&2; exit 2; }
 build_dump "$FINAL" built || exit 2
 tools/canon_compare.py --all "$OD/built.canon" "$OD/old.canon" > "$OD/diff.txt" 2>&1
 RC=$?

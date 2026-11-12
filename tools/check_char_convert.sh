@@ -7,20 +7,20 @@
 #
 # WHAT IS BEING PROVED (bead inc-10v7f, phase 11b). The hand-written
 # tools/fixtures/chars/orc-barbarian-seed1-opt0822.char states the decisions of
-# the tracked old save beside it. This check damages a copy of that .char in six
+# the tracked old save beside it. This check damages a copy of that .char in five
 # places, one per kind of decision the table converts: a hit roll (scalar), a
-# perk, a feat in the queue, two skill ranks, a kit item quantity, and the
-# thrown quantity. It builds the damaged copy and dumps it. It then runs the
+# feat in the queue, two skill ranks, a kit item quantity, and the thrown
+# quantity. A perk is not a choice (owner's ruling 2026-11-11): the table does not convert it. It builds the damaged copy and dumps it. It then runs the
 # conversion on the damaged copy with the dump of the OLD save: the converted
 # .char MUST build a character whose dump equals the dump of the build of the
 # hand-written file (outside the one allowlist of tools/canon_compare.py).
-# Control: with any one of the six keys withheld (--withhold), the converted
+# Control: with any one of the five keys withheld (--withhold), the converted
 # file MUST build a different character, so a kind the table dropped, or a
 # comparison that cannot fail, goes red.
 #
 # fact: the character -- the tracked hand-written .char and the tracked old .sav beside it; both are committed and every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
 # fact: the settings -- tools/fixtures/options-2026-08-22.dat, named in the .char's options: line and passed to the dumps (the dumps read the kit off; an item is not a choice)
-# fact: the damaged values -- text edits of lines of the tracked .char (a feat, a perk feat, two skill ranks, a hit roll, two quantities); an edit that finds no line fails the check as INCONCLUSIVE
+# fact: the damaged values -- text edits of lines of the tracked .char (a feat, two skill ranks, a hit roll, two quantities); an edit that finds no line fails the check as INCONCLUSIVE
 # fact: the replacement feat -- "Endurance", a candidate of the level-1 feat menu for this race and class, read from the module by the build (a name that is not a candidate fails the build, which fails the check)
 #
 # Second part (phase 11e, the arrival; proved in phase 11g). tools/char_convert.sh
@@ -36,8 +36,7 @@
 #   split + 1, - 1 (a copy of char_convert.sh that passes the split point +-1)   gnome-warrior-wis3-pickaxe-seed1-opt0822
 #   seed tick + 1  (a copy of char_convert.sh that passes the tick + 1)          orc-rogue-seed4-opt0822
 # Each fixture first converts with the real tools and prints the proof line.
-# Third part (phase 11g): `tools/char_convert_map.py selftest` holds (the charges line of a replaced item perk is found
-# by the item's context, a merged stack keeps its sources); INCURSION_KEYS_SKIP=abc is refused (exit 2), and
+# Third part (phase 11g): `tools/char_convert_map.py selftest` holds (a merged stack keeps its sources, the perk slots are one unset line); INCURSION_KEYS_SKIP=abc is refused (exit 2), and
 # tools/canon_compare.py reads the options the build forces from the code of
 # src/CharFile.cpp, not from a comment there.
 #
@@ -55,11 +54,12 @@
 # resolves) and a synthetic bead row whose bead is closed is stale.
 # fact: the choice dumps -- the dump of the tracked orc-barbarian-seed1-opt0822.sav ($W/old.canon, already made above); the
 #   controls edit copies of it, and an edit that finds no line fails the check as INCONCLUSIVE
+# fact: the focus-feat weapon -- the class WEP_SKILL stati lines of the tracked old dump ($W/old.canon), edited by sed; an edit that finds no line fails the check as INCONCLUSIVE
 # fact: the Cure Disease pair -- a synthetic choices-diff written by this file; no game run, no seed
 # fact: the row causes -- commit 4e1fc266 in this repository's history; a synthetic bead row whose status comes from a synthetic JSONL named by CHAR_CONVERT_BEADS in the stale-row control (no database, no live bead); no bd or no JSON makes the check fail (exit 2 from causes), not pass
 
 # Usage: INCURSION_BIN=./incursion-headless tools/check_char_convert.sh
-# Exit: 0 the table restores all six kinds and each withheld key shows; 1 not; 2 could not run.
+# Exit: 0 the table restores all five kinds, each withheld key shows and no perk is a choice; 1 not; 2 could not run.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -89,7 +89,7 @@ INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$OLD" "$W/old.canon" > /dev/null 2
 cp "$GOOD" "$W/good.char"
 dump_build "$W/good.char" good
 
-# The damage: six edits, each of which must find its line.
+# The damage: five edits, each of which must find its line.
 cp "$GOOD" "$W/damaged.char"
 damage() {   # <exact line> <replacement>
     grep -qxF -- "$1" "$W/damaged.char" || { echo "INCONCLUSIVE: no line \"$1\" in $GOOD"; exit 2; }
@@ -102,7 +102,6 @@ open(p, "w").write("\n".join(lines))
 PY
 }
 damage "hp_roll [Barbarian]: 12" "hp_roll [Barbarian]: 3"
-damage "perk_feat [0]: Light Sleeper" "perk_feat [0]: Larcenous"
 damage "feat: Alertness" "feat: Endurance"
 damage "skill_ranks [Climb]: 2" "skill_ranks [Climb]: 1"
 damage "skill_ranks [Jump]: 0" "skill_ranks [Jump]: 1"
@@ -131,7 +130,7 @@ if convert all; then
 fi
 
 # Control: each key withheld leaves a difference.
-for key in hp_roll perk_feat feat skill_ranks kit_item thrown_quantity; do
+for key in hp_roll feat skill_ranks kit_item thrown_quantity; do
     if ! convert "w-$key" --withhold "$key"; then continue; fi
     if tools/canon_compare.py "$W/good.canon" "$W/w-$key.canon" > "$W/w-$key.diff" 2>&1; then
         echo "FAIL withholding $key left no difference: the table or the comparison cannot fail on it"; fail=1
@@ -298,9 +297,9 @@ else
     echo "ok   with the one-combination rule loosened the selftest goes red ($(grep -m1 FAIL "$W/rsmut.out" | cut -c1-90))"
 fi
 
-# Fourth part (phase 11g): perk charges follow their item's context, and merged stacks keep their sources.
+# Fourth part (phase 11g): merged stacks keep their sources, and all perk slots are one unset line.
 if tools/char_convert_map.py selftest > "$W/selftest.out" 2>&1; then
-    echo "ok   char_convert_map.py selftest: $(grep -c '^ok' "$W/selftest.out") cases (perk charges by context, gold, food and potion stacks, a stack of two asks)"
+    echo "ok   char_convert_map.py selftest: $(grep -c '^ok' "$W/selftest.out") cases (gold, food and potion stacks, a stack of two asks, the perk slots as one unset line)"
 else
     grep FAIL "$W/selftest.out" | head -3 | cut -c1-200; echo "FAIL char_convert_map.py selftest"; fail=1
 fi
@@ -326,8 +325,8 @@ python3 - "$W/p2.canon" <<'PY' || { echo "INCONCLUSIVE: no feat line to edit in 
 import sys
 p = sys.argv[1]
 L = open(p).read().split("\n")
-i = L.index("Feats:") + 1
-L[i] = "  Zzz Changed Feat"
+i = next(n for n, l in enumerate(L) if l.startswith("=== Feats ===")) + 1
+L[i] = "Feat Zzz Changed Feat"
 open(p, "w").write("\n".join(L))
 PY
 tools/canon_compare.py --choices-diff "$W/old.canon" "$W/p2.canon" > "$W/p2.out" 2>&1
@@ -335,6 +334,15 @@ if [ $? -eq 1 ] && grep -q '^+ Feats: Zzz Changed Feat' "$W/p2.out"; then
     echo "ok   a changed feat fails the choices comparison and the line is named: $(grep -m1 '^+ Feats' "$W/p2.out")"
 else
     echo "FAIL a changed choice line must make --choices-diff exit 1 and name the line"; head -3 "$W/p2.out"; fail=1
+fi
+# The weapon of a focus feat is a choice: the WEP_SKILL stati of the baseline dump, edited to another weapon, differs.
+sed '/Nature=WEP_SKILL .*Source=SS_CLAS/ s/eID=[a-z ]*$/eID=zzz-changed-weapon/' "$W/old.canon" > "$W/p3.canon"
+if cmp -s "$W/old.canon" "$W/p3.canon"; then echo "INCONCLUSIVE: no class WEP_SKILL stati line to edit in the dump"; exit 2; fi
+tools/canon_compare.py --choices-diff "$W/old.canon" "$W/p3.canon" > "$W/p3.out" 2>&1
+if [ $? -eq 1 ] && grep -q '^+ weapon skill .* zzz-changed-weapon' "$W/p3.out"; then
+    echo "ok   a changed focus-feat weapon fails the choices comparison: $(grep -m1 '^+ weapon skill' "$W/p3.out")"
+else
+    echo "FAIL a changed focus-feat weapon must make --choices-diff exit 1 and name the line"; head -3 "$W/p3.out"; fail=1
 fi
 printf -- '- Inventory: 10 Potions of Cure Disease [0]\n+ Inventory: 7 Potions of Cure Disease [0]\n' > "$W/potion.diff"
 tools/char_convert_map.py excuse "$W/potion.diff" > "$W/potion.out" 2>&1
@@ -365,5 +373,61 @@ else
     echo "FAIL the cause check did not fail on a closed bead"; fail=1
 fi
 
-[ $fail -eq 0 ] && { echo "PASS: the table restores every kind of decision it converts, and each withheld key shows"; exit 0; }
+# Seventh part (inc-10v7f, a perk is not a choice): for each PerkType the first perk slot of the hand-written .char is
+# rewritten to a fixed stated perk. The build of it MUST have the same CHOICES as the build of the unrewritten file
+# (canon_compare.py --choices-diff empty) and MUST differ in the full comparison (the grant was made, and only the
+# projection drops it). A copy of canon_compare.py that strips no grant MUST fail a variant, so the strip is what holds it.
+# fact: the perk values -- fixed text in this file, one per PerkType (a horn, a worn pair of lenses of Precision that grants two feats and an ability, feat, ability four times, spell, talent, resist twice, immune), written into slot 0 of the tracked hand-written .char; the dump names each grant in its own "Starting Perks:" block; nothing reads a seed
+# fact: the unrewritten build -- the build of the tracked .char ($W/good.canon, made above): its own slots 0 and 1 are a feat and a talent, so the comparison also proves a stated perk can replace a rolled one
+# fact: the strip control -- a copy of tools/canon_compare.py whose grant loop is replaced by an empty one (sed); a copy that changes nothing fails the check as INCONCLUSIVE
+perk_variant() {   # <tag> <PERK_TYPE> <key> <value>: builds the .char with perk slot 0 rewritten, dumps it
+    python3 - "$GOOD" "$W/pv-$1.char" "$2" "$3" "$4" <<'PY' || { echo "INCONCLUSIVE: $GOOD has no perk slot 0 to rewrite"; exit 2; }
+import sys
+src, out, ptype, key, val = sys.argv[1:6]
+res, found = [], False
+for l in open(src).read().split("\n"):
+    if l.startswith("perk_type [0]:"):
+        res += ["perk_type [0]: " + ptype, "%s [0]: %s" % (key, val)]
+        found = True
+    elif not l.startswith("perk_feat [0]:"):
+        res.append(l)
+if not found:
+    sys.exit(1)
+open(out, "w").write("\n".join(res))
+PY
+    dump_build "$W/pv-$1.char" "pv-$1"
+}
+sed 's|for label, text in starting_perks(lines):|for label, text in []:|' tools/canon_compare.py > "$CR/tools/canon_compare_nostrip.py"
+if cmp -s tools/canon_compare.py "$CR/tools/canon_compare_nostrip.py"; then echo "INCONCLUSIVE: the strip mutation changed nothing"; exit 2; fi
+perk_ok=0; perk_n=0
+while IFS='|' read -r tag ptype key val; do
+    perk_n=$((perk_n + 1))
+    perk_variant "$tag" "$ptype" "$key" "$val"
+    if tools/canon_compare.py --choices-diff "$W/good.canon" "$W/pv-$tag.canon" > "$W/pv-$tag.diff" 2>&1 \
+            && ! tools/canon_compare.py --all "$W/good.canon" "$W/pv-$tag.canon" > /dev/null 2>&1; then
+        perk_ok=$((perk_ok + 1))
+    else
+        echo "FAIL perk $ptype '$val': the choices differ from the unrewritten build, or the build made no grant: $(head -2 "$W/pv-$tag.diff" | tr '\n' ' ' | cut -c1-200)"; fail=1
+    fi
+done <<'VARIANTS'
+item|PERK_ITEM|perk_item|horn, effect Panic
+lenses|PERK_ITEM|perk_item|lenses, effect Precision;eyes, plus 2
+feat|PERK_FEAT|perk_feat|Blind Fight
+abil|PERK_ABILITY|perk_ability|Animal Companions 1
+fav|PERK_ABILITY|perk_ability|Favoured Enemy 196700
+wse|PERK_ABILITY|perk_ability|Weapon Skill Eligibility 2
+spell|PERK_SPELL|perk_spell|Faerie Fire
+talent|PERK_TALENT|perk_spell|Cell Adjustment
+resistfire|PERK_RESIST|perk_resist|Fire
+resistsave|PERK_RESIST|perk_resist|save fear
+immune|PERK_IMMUNE|perk_immune|Paralysis
+VARIANTS
+[ "$perk_ok" -eq "$perk_n" ] && echo "ok   a stated perk of each of $perk_n kinds builds the same choices as the unrewritten file, and the full comparison differs"
+if python3 "$CR/tools/canon_compare_nostrip.py" --choices-diff "$W/good.canon" "$W/pv-feat.canon" > /dev/null 2>&1; then
+    echo "FAIL a copy of canon_compare.py that strips no perk grant still matches: the strip is not what holds the projection"; fail=1
+else
+    echo "ok   a copy of canon_compare.py that strips no perk grant fails on the Blind Fight perk"
+fi
+
+[ $fail -eq 0 ] && { echo "PASS: the table restores every kind of decision it converts, each withheld key shows and no perk is a choice"; exit 0; }
 exit 1
