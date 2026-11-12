@@ -2482,11 +2482,6 @@ typedef signed int        hObj;
 #define IQ_SACRED        80
 #define IQ_WROUGHT       81
 // end family: wq, aq
-// family: wq, aq
-
-#define AQ_TRUELAST      81  /* alias of IQ_WROUGHT */
-#define WQ_TRUELAST      81  /* alias of IQ_WROUGHT */
-// end family: wq, aq
 // family: ws
 
 

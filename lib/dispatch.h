@@ -2776,6 +2776,10 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 1)
         REGS(n) = QualityIsArmor((int16)STACK(1));
         return;
+    case 541:
+        ASSERT(REGS(63) >= 0)
+        REGS(n) = QualityMaxNumber();
+        return;
       default:
         Error("Illegal member function call!");
       }

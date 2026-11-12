@@ -1,0 +1,15 @@
+# Key script for tools/check_quality_growth.sh, INCURSION_QUALITY_CLASS_PROBE=grow
+# (src/QualityClassProbe.cpp; inc-mafd8). The answers, in the order the probe asks:
+#   site 4, weapon  CraftItem (Augment): q "Add quality", a the one candidate
+#                   (the light mace), the quality menu is dumped, ESC aborts
+#   site 5, x1      the Oil of Transformation "Select a New Form" menu: long sword
+# The final search is one real turn, so tools/headless.sh counts a session.
+q
+a
+@dump:offer-weapon
+ESC
+@choose "long sword"
+@dump:arrival
+
+s
+@dump:played
