@@ -164,6 +164,7 @@ class Item: public Thing, public Magic
       int16 MaxHP();
       void  MendHP(int16 hp) { cHP = min(MaxHP(),cHP+hp); }
       int16 GetHP() { return cHP; }
+      void  LoseHP(int16 hp) { cHP -= hp; } /* inc-10v7f wizard entry */
       virtual bool operator==(Item &i);
 
       /* Properties */

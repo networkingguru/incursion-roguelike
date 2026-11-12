@@ -130,7 +130,7 @@ _read_run() {
     local dir="$1" mal
     # The seed no longer matters: see the header's "# fact:" lines (inc-xh3k).
     INCURSION_FORCE_SAVE_ROLL=1 \
-    INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
     INCURSION_RUN_DIR="$dir" check_run tools/keys/heal-maladies.keys 5
 
     CONTROL_MISSING=()

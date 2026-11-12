@@ -34,7 +34,7 @@
 #
 # fact: duration of Divine Sacrifice -- seven cycles reach 5 HP at 3 units and at the old 6
 # fact: payments per cycle -- the loop stops paying at 5 HP, so more cycles never overshoot
-# fact: max HP 85 -- frozen fixture orc-bard-reapply-seed1.sav, girdle +2 CON 14
+# fact: max HP 85 -- frozen fixture orc-bard-reapply-seed1.char, girdle +2 CON 14
 # fact: froghemoth hit or miss -- payment needs a strike, not a hit
 #
 # THE RE-APPLY is Storycraft -> SetInherentPlus -> Item::ReApply, the same
@@ -43,13 +43,13 @@
 #
 # inc-stzd: this used to @include reapply-bard.keys; see reapply-enchant.keys's
 # header for why it now starts from the same INCURSION_LOAD fixture instead
-# (tools/fixtures/chars/orc-bard-reapply-seed1.sav) -- that script's own CON
+# (tools/fixtures/chars/orc-bard-reapply-seed1.char) -- that script's own CON
 # base of 12, which this section's HP arithmetic depends on, is unchanged.
 
-e                       # eat once: the frozen fixture loads Hungry, whose
-a                       # -1 CON would shift the HP arithmetic below
-@while "Stop eating" y
-@while "-- more --" SPACE
+# The fixture holds only the created character; setup-orc-bard-reapply-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-bard-reapply-seed1.keys
+# The old frozen fixture loaded Hungry, so an eat step stood here to clear its -1 CON. The built character is
+# Satiated (the sidebar says so), and the eat menu now lists the floor corpse first, so no eat step remains.
 @dump:ate
 
 d

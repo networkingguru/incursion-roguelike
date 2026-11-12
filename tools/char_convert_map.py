@@ -146,7 +146,7 @@ class Names:
         if not os.path.exists(path):
             raise Stop("lib/program.i is missing; build the module first")
         for line in open(path, errors="replace"):
-            m = re.search(r'\b(Item|Effect|Spell)\s+"([^"]+)"\s*:', line)
+            m = re.search(r'\b(Item|Effect|Spell|Poison)\s+"([^"]+)"\s*:', line)
             if not m:
                 continue
             kind = "item" if m.group(1) == "Item" else "effect"
@@ -168,6 +168,10 @@ class Names:
             items = [c for c in cands if c.endswith(";item")]
             if len(items) == 1:
                 return items[0]
+        if kind == "item":   # an item name and tagged variants of it (short sword, short sword;sunblade): the untagged one is the plain item
+            plain = [c for c in cands if ";" not in c]
+            if len(plain) == 1:
+                return plain[0]
         raise Stop("\"%s\" names %d %ss (%s); the dump keeps the name without its tag"
                    % (base, len(cands), kind, ", ".join(cands)))
 
@@ -692,7 +696,8 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
             if text == "none" or i in ask_item:
                 continue
             d = parse_item_text(text)
-            for bi, b in enumerate(built_items):
+            # the built item generated first: an ask is older than a wizard-made item of its name
+            for bi, b in sorted(enumerate(built_items), key=lambda t: t[1]["gen"]):
                 if (base_name(b["iid"]) != base_name(d["name"])
                         or base_name(b["eid"]) != (base_name(d["effect"]) or "-")):
                     continue
@@ -717,11 +722,12 @@ def replace_kit(lines, old_p, built_p, names, done, other_out):
     pool = sorted(range(len(old_items)), key=lambda k: old_items[k]["gen"])
     for b in [b for bi, b in enumerate(built_items) if bi not in used]:
         match = None
-        for k in pool:
-            o = old_items[k]
-            if base_name(o["iid"]) == base_name(b["iid"]) and base_name(o["eid"]) == base_name(b["eid"]):
-                match = k
-                pool.remove(k)
+        # the same item first (two long swords: the wizard-made one is not the ask's), then the same name
+        for same in (lambda o: item_sig(o) == item_sig(b),
+                     lambda o: base_name(o["iid"]) == base_name(b["iid"]) and base_name(o["eid"]) == base_name(b["eid"])):
+            match = next((k for k in pool if same(old_items[k])), None)
+            if match is not None:
+                pool.remove(match)
                 break
         other_out.append((b, old_items[match] if match is not None else None))
     # 3. a kit ask takes the old item that is its own built item, else the

@@ -32,7 +32,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav
+export INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.char
 KEYS=tools/keys/illusion-cr-cast.keys
 [ -f "$INCURSION_LOAD" ] || _check_die 2 "no $INCURSION_LOAD to load."
 

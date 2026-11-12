@@ -50,7 +50,7 @@ check_mutation src/Prayer.cpp \
 # fact: favour 120000 and the god Hesani -- wizard Become Divine Champion
 # fact: the prayer's skill roll succeeds -- INCURSION_RUNTO_SKILL_ROLL=20
 # fact: the aid granted at 120000 favour -- Hesani's AID_CHART (lib/religion.irh), fixed data
-export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.char
 export INCURSION_RUNTO_SKILL_ROLL=20
 check_run tools/keys/pray-aid-int32.keys 2
 

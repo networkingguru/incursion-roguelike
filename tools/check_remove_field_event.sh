@@ -29,7 +29,7 @@ status=0
 INCURSION_BIN="$ROOT/incursion-headless" \
 INCURSION_REMOVE_PROBE=scene INCURSION_RUN_DIR="$RUN_DIR" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
     tools/headless.sh tools/keys/template-alignment.keys 1 \
     > "$RUN_DIR/harness.txt" 2>&1 || status=$?
 log="$RUN_DIR/logs/remove-probe.log"

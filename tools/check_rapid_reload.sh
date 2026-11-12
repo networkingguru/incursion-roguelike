@@ -33,8 +33,11 @@ cd "$ROOT"
 OPTS=tools/fixtures/options-2026-08-22.dat
 FEAT_KEY=tools/keys/rapid-reload-feat.keys
 NOFEAT_KEY=tools/keys/rapid-reload-no-feat.keys
-FEAT_LOAD=tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav
-NOFEAT_LOAD=tools/fixtures/chars/spook-ally-seed5-opt0822.sav
+FEAT_LOAD=prestige-geomancy-seed1-opt0822
+NOFEAT_LOAD=tools/fixtures/chars/spook-ally-seed5-opt0822.char
+# fact: the Bard with Rapid Reload -- fixture prestige-geomancy-seed1-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Free Advancement, Show All Combat Rolls, Bard 7 and the Craft ranks -- tools/keys/setup-prestige-geomancy-seed1-opt0822.keys (the old .sav held them; V7-1 moved them into the check)
+# fact: the kite shield in the Ready Hand -- creation now readies it, so the key script rapid-reload-no-feat.keys moves it to the pack (with @expect on the slot text) before the crank
 SEED=1
 
 BIN="${INCURSION_BIN:-./incursion-headless}"

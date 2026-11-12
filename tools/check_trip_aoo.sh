@@ -68,7 +68,7 @@ cd "$ROOT" || exit 2
 # fact: each trip wins its opposed check -- INCURSION_LOF_FORCE_ROLL=18
 # fact: the player's name in the probe log -- read from the run (fixture name is fixed)
 SEED="${SEED:-2}"
-export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.char
 export INCURSION_LOF_FORCE_ROLL=18
 export INCURSION_OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 export INCURSION_TRIP_AOO_PROBE=1

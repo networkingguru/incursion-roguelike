@@ -1,0 +1,130 @@
+# gnome-warrior-wis3-pickaxe-seed1-opt0822: converted from tools/fixtures/chars/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/gnome-warrior-pickaxe-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 0 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/gnome-warrior-pickaxe-save.keys 1 97 75 29:28:0
+# roll search: MATCH: script_roll [Warrior;EV_150] #0, script_roll [Warrior;EV_150] #1 = [0, 4] (recorded [0, 4]); other matches [[0, 6]]; 21 tries in 24.8 s (1.18 s per try); record logs/phase12c/final2/gnome-warrior-wis3-pickaxe-seed1-opt0822/roll-search.txt
+# rolls: script_roll|Warrior;EV_150|0|0|2
+# rolls: script_roll|Warrior;EV_150|1|0|6
+# Values set from the old dump: none (the skeleton already matched).
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 1) | built: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 1)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_chance [Universal Gear;a3]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 45 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 5 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 21 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Gnome
+subrace: Gnome
+name: Bofi
+surname: Doublelock
+class: Warrior
+attr_str: 9
+attr_dex: 18
+attr_con: 18
+attr_int: 18
+attr_wis: 5
+attr_cha: 18
+attr_luc: 17
+craft_formula [Alchemy]: tanglefoot bag
+craft_formula [Alchemy]: eggshell smoke-bomb
+craft_formula [Alchemy]: Antitoxin
+alignment: Neutral
+feat: Acrobatic
+feat: Alertness
+hp_roll [Warrior]: 10
+mana_roll [Warrior]: 6
+feat_weapon: arbalest
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 1
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Gnome]: 25
+kit_item [Gnome;a0]: gnomish backpack, quantity 1
+kit_item [Gnome;a1]: wand, effect Fey Trapping;wand, plus 1, quantity 1, charges 50
+kit_item [Gnome;a2]: wand, effect Shards, plus 1, quantity 1, charges 50
+kit_item [Gnome;a3]: food ration, quantity 4
+kit_item [Gnome;a5]: cranquin, quantity 1
+kit_item [Gnome;a7]: brass lantern, quantity 1
+kit_item [Gnome;a8]: pickaxe, quantity 1
+gear_stream [Warrior]: 26
+kit_item [Warrior;a0]: gold piece, quantity 294
+kit_item [Warrior;a1]: potion, effect Oil of Transformation, quantity 3
+kit_item [Warrior;a2]: buckler;wooden, quantity 1
+kit_item [Warrior;a4]: dagger, quantity 1
+kit_item [Warrior;a5]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 27
+gear_chance [Universal Gear;a3]: 40
+gear_chance [Universal Gear;a4]: 45
+gear_chance [Universal Gear;a6]: 5
+gear_chance [Universal Gear;a7]: 40
+gear_chance [Universal Gear;a10]: 21
+gear_chance [Universal Gear;a14]: 97
+kit_item [Universal Gear;a15]: studded leather, quantity 1
+ammo_quantity: 38
+ammo_quantity: 30
+script_roll [Warrior;EV_150]: 0
+script_roll [Warrior;EV_150]: 4
+personality: The Disciplined Expert
+store_seed: 29
+character_name: Bofi Doublelock
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 2

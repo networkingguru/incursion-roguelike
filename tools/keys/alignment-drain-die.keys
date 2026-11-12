@@ -4,6 +4,8 @@
 #
 # Dumps: die-prompt (the "Die? [yn]" question), then four more after the answer. The game's Explore Mode
 # asks before it kills; "y" lets the death run.
+# The base character after the level 1 derivation (bd inc-10v7f): tools/keys/setup-alignment-drain-level1.keys.
+@include setup-alignment-drain-level1.keys
 s
 d
 @expect "Align  Chaotic Good"

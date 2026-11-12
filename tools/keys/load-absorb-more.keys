@@ -1,0 +1,5 @@
+# Put in front of the replay of a loaded character (tools/char_arrive.sh, INCURSION_KEYS_PREPEND).
+# A load prints "Welcome back" and the god's salutation, and a long quote makes that a "-- more --" the
+# walk never showed; it would eat the first replayed key. This reads the screen and sends SPACE only
+# while the prompt shows, so a load with no prompt loses nothing (bd inc-10v7f).
+@while "more --" SPACE

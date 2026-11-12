@@ -1,7 +1,7 @@
 # inc-10v7f timing reproduction; pinned fixture/seed, not a proposed check fix.
 # In a scratch worktree after tools/check_heal_maladies.sh has built its module:
 # INCURSION_FORCE_SAVE_ROLL=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-# INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+# INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
 # INCURSION_RUN_DIR="$PWD/logs/heal-maladies-fixed" tools/headless.sh tools/repro_heal_built_delay.keys 5
 # Investigation inc-10v7f: unchanged scenario with cast-boundary screens.
 # Reproduce using the check scratch module and INCURSION_FORCE_SAVE_ROLL=1.

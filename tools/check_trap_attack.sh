@@ -26,7 +26,7 @@ MODES="hit miss fumble avoid area-inside area-outside area-script rogue"
 MODES="$MODES shot-hit shot-miss shot-fumble shot-thrown shot-under shot-between"
 for mode in $MODES; do
     export INCURSION_TRAP_ATTACK_PROBE="$mode" INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_SAVE_ROLL=1
-    export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+    export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
     keys=tools/keys/trap-attack.keys
     case "$mode" in
         miss) export INCURSION_LOF_FORCE_ROLL=2 ;;
@@ -38,7 +38,7 @@ for mode in $MODES; do
         shot-hit|shot-between) keys=tools/keys/trap-shot-loc.keys ;;
         shot-thrown) keys=tools/keys/trap-shot-throw.keys ;;
         shot-under) keys=tools/keys/trap-shot-pick.keys ;;
-        rogue) export INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav
+        rogue) export INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.char
                keys=tools/keys/trap-attack-rogue.keys ;;
     esac
     check_run "$keys" "${TRAP_CHECK_SEED:-1}"

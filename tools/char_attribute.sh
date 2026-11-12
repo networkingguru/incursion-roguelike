@@ -15,8 +15,8 @@
 #        INCURSION_BIN=<binary>       the TODAY'S-TREE binary (default ./incursion-headless);
 #                                     build it first: BACKEND=posix ./build_macos.sh
 #        CHAR_ATTR_LOGS=<dir>         specimens (default logs/phase11c/attr)
-#        CHAR_ATTR_MANIFEST=<file>    the MANIFEST (default tools/fixtures/chars/MANIFEST)
-#        CHAR_ATTR_DIR=<dir>          where <fixture>.sav lives (default tools/fixtures/chars)
+#        CHAR_ATTR_MANIFEST=<file>    the MANIFEST (default tools/fixtures/specimens/MANIFEST)
+#        CHAR_ATTR_DIR=<dir>          where <fixture>.sav lives (default tools/fixtures/specimens)
 #        CHAR_ATTR_KEEP_TREE=1        keep the scratch trees (default: remove them)
 #
 #   <fixture>   a MANIFEST name; its old .sav is the oracle.
@@ -71,8 +71,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
 LOGS="${CHAR_ATTR_LOGS:-logs/phase11c/attr}"
-MANIFEST="${CHAR_ATTR_MANIFEST:-tools/fixtures/chars/MANIFEST}"
-FDIR="${CHAR_ATTR_DIR:-tools/fixtures/chars}"
+MANIFEST="${CHAR_ATTR_MANIFEST:-tools/fixtures/specimens/MANIFEST}"
+FDIR="${CHAR_ATTR_DIR:-tools/fixtures/specimens}"
 BASEBIN="${INCURSION_BIN:-./incursion-headless}"
 
 usage() {

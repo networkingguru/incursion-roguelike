@@ -41,8 +41,10 @@
 # Usage: tools/check_alignment_drain.sh [--prove-red]   (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
 
+# fact: character -- the base character quality-item-magic-seed5-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: wizard mode, the cleared level, 10000 XP and Warrior 5 -- tools/keys/setup-alignment-drain-warrior.keys (the old alignment-drain-warrior .sav held them; V7-1 moved them into the check)
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/alignment-drain-warrior.sav
+FIXTURE=quality-item-magic-seed5-opt0822   # the base character; tools/keys/setup-alignment-drain-warrior.keys derives Warrior 5
 KEYS=tools/keys/alignment-drain-wield.keys
 SEED=1
 
@@ -50,7 +52,7 @@ SEED=1
 # save, XP and drain assertion below then goes red. Declared, not yet run through --prove-red.
 check_mutation src/Inv.cpp 'DrainLevels(2);' ''
 
-[ -f "$FIXTURE" ] || _check_die 2 "the fixture is missing: $FIXTURE"
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "the fixture is missing: tools/fixtures/chars/$FIXTURE.char"
 export INCURSION_LOAD="$FIXTURE"
 check_run "$KEYS" "$SEED"
 unset INCURSION_LOAD

@@ -17,8 +17,8 @@
 # Usage: tools/char_convert.sh <fixture-name> <out.char> [--withhold <key>]
 #        INCURSION_BIN=<binary>              the binary (default ./incursion-headless)
 #        CHAR_CONVERT_LOGS=<dir>             specimens (default logs/char-convert)
-#        CHAR_CONVERT_MANIFEST=<file>        the MANIFEST (default tools/fixtures/chars/MANIFEST)
-#        CHAR_CONVERT_DIR=<dir>              where <name>.sav lives (default tools/fixtures/chars)
+#        CHAR_CONVERT_MANIFEST=<file>        the MANIFEST (default tools/fixtures/specimens/MANIFEST)
+#        CHAR_CONVERT_DIR=<dir>              where <name>.sav lives (default tools/fixtures/specimens)
 #
 # STEPS (the spec's, numbered as in the bead):
 #   1. Read the fixture's MANIFEST row (name, key script, seed, settings file).
@@ -111,8 +111,8 @@ if [ -z "$NAME" ] || [ -z "$OUTCHAR" ]; then
 fi
 BIN="${INCURSION_BIN:-./incursion-headless}"
 LOGS="${CHAR_CONVERT_LOGS:-logs/char-convert}"
-MANIFEST="${CHAR_CONVERT_MANIFEST:-tools/fixtures/chars/MANIFEST}"
-FDIR="${CHAR_CONVERT_DIR:-tools/fixtures/chars}"
+MANIFEST="${CHAR_CONVERT_MANIFEST:-tools/fixtures/specimens/MANIFEST}"
+FDIR="${CHAR_CONVERT_DIR:-tools/fixtures/specimens}"
 [ -x "$BIN" ] || { echo "$BIN not built. Run: BACKEND=posix ./build_macos.sh" >&2; exit 2; }
 export INCURSION_BIN="$BIN"
 
@@ -200,21 +200,25 @@ build_dump() {   # build_dump <char> <tag>: writes $OD/<tag>.canon; exit 2 on fa
 }
 
 # 3. Build the skeleton, play the arrival, prove the method, compare.
-build_dump "$OD/skeleton.char" built0 || exit 2
 WSAV="$(newest_save "$OD/walk")" || { echo "char_convert: the walk left no final save" >&2; exit 2; }
 INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$WSAV" "$OD/walkfinal.canon" > /dev/null 2>&1 \
     || { echo "char_convert: cannot dump the walk's final save" >&2; exit 2; }
-tools/canon_compare.py --all "$OD/built0.canon" "$OD/walkfinal.canon" > "$OD/proof.txt" 2>&1
-RCP=$?
 # The proof also compares the Location section (Position, Map): the replay and the walk are the same game,
 # so both stand on one map at one place. The comparison of the build with the OLD dump keeps dropping it.
 location() { awk '/^=== /{ p = ($0 ~ /^=== Location ===/) } p' "$1"; }
-diff -u <(location "$OD/built0.canon") <(location "$OD/walkfinal.canon") > "$OD/proof-location.txt" 2>&1
-RCL=$?
-if [ "$RCL" -ne 0 ]; then RCP=1; cat "$OD/proof-location.txt" >> "$OD/proof.txt"; fi
+prove() {   # prove: arrival replay of the skeleton at $KEYPOS, then compare it with the walk's final save; RCP 0 = equal
+    ( build_dump "$OD/skeleton.char" built0 ) || { RCP=2; return; }
+    tools/canon_compare.py --all "$OD/built0.canon" "$OD/walkfinal.canon" > "$OD/proof.txt" 2>&1
+    RCP=$?
+    diff -u <(location "$OD/built0.canon") <(location "$OD/walkfinal.canon") > "$OD/proof-location.txt" 2>&1
+    RCL=$?
+    if [ "$RCL" -ne 0 ]; then RCP=1; cat "$OD/proof-location.txt" >> "$OD/proof.txt"; fi
+}
+prove
 if [ "$RCP" -ne 0 ]; then
     echo "char_convert: METHOD DEFECT: build + load + arrival replay of the skeleton does not equal the walk's own final save; these lines differ (not covered by the allowlist):" >&2
     grep -E '^[-+][^-+]' "$OD/proof.txt" | cut -c1-170 | head -40 >&2
+    [ "$RCP" -ne 2 ] || cat "$OD/built0-arrive.err" >&2
     echo "(full diff: $OD/proof.txt)" >&2
     exit 2
 fi

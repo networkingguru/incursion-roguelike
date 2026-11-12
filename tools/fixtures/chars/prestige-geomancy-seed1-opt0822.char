@@ -1,0 +1,168 @@
+# prestige-geomancy-seed1-opt0822: converted from tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/prestige-geomancy-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 439 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/prestige-geomancy-save.keys 1 137 129 30:29:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (9), skeleton value -> old value:
+#   scalar: name: Bofi -> Ferris
+#   scalar: surname: Doublelock -> Murnig
+#   scalar: character_name: Bofi Doublelock -> Ferris Murnig
+#   scalar: store_seed: 30 -> 31
+#   feat: feat queue: Endurance, Hardiness -> Endurance, Hardiness
+#   kit: kit_item [Gnome;a3]: food ration, quantity 4 -> food ration, quantity 12
+#   kit: kit_item [Universal Gear;a15]: studded leather, quantity 1 -> wand, effect Shards, quantity 1, charges 50
+#   kit: kit_item [Gnome;a2]: wand, effect Shards, plus 1, quantity 1, charges 50 -> none (the old character has no item for this ask)
+#   quantity: ammo_quantity: 38 -> 31
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   feat: feat: Great Fortitude are the old character's beyond creation's 2 slots: level-up picks of the arrival replay (a leveled fixture); the replay decides them
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 3 skill tools (disguise kit, disguise 2; alchemy set, alchemy 2; craftsman's tools, craft 10) | built: 0 perk items (-) and 3 skill tools (disguise kit, disguise 2; alchemy set, alchemy 2; craftsman's tools, craft 10)
+#   kit: kit_item [Universal Gear;a15]: plus stays 0 (the build makes plus 0 from it); the old wand has plus 1, and the birth script of the ask may add a plus that depends on the stated one, which the dump does not say
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 24 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_chance [Bard;a1]: 50 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Bard;a2]: 39 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Bard;a3]: 15 kept as the walk recorded it; the old character holds this annotation's item (long sword, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Bard;a11]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Bard;a12]: 15 kept as the walk recorded it; the old character holds this annotation's item (flute, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 45 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 5 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 21 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   differs: Feats: Great Fortitude -> Feats: Focus Spell -- bead inc-10v7f.1
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Gnome
+subrace: Gnome
+name: Ferris
+surname: Murnig
+class: Bard
+attr_str: 12
+attr_dex: 18
+attr_con: 16
+attr_int: 16
+attr_wis: 17
+attr_cha: 18
+attr_luc: 14
+craft_formula [Alchemy]: tanglefoot bag
+craft_formula [Alchemy]: eggshell smoke-bomb
+craft_formula [Alchemy]: Antitoxin
+alignment: Neutral
+feat: Endurance
+feat: Hardiness
+hp_roll [Bard]: 6
+mana_roll [Bard]: 10
+craft_formula [Potion]: See Invisibility;potion
+craft_formula [Potion]: Light;potion
+craft_formula [Potion]: Vitality
+craft_formula [Potion]: Dimension Door
+craft_formula [Potion]: *Mana*
+craft_formula [Potion]: Invisibility
+craft_formula [Scroll]: Bull's Strength
+craft_formula [Scroll]: Gaze Reflection
+craft_formula [Scroll]: Blink
+craft_formula [Scroll]: Emotion
+craft_formula [Scroll]: Fly
+craft_formula [Scroll]: Monster Summoning III
+craft_formula [Scroll]: *Identify*;scroll
+craft_formula [Scroll]: Chain Lightning
+craft_formula [Scroll]: Passwall
+craft_formula [Scroll]: Wall of Fire
+craft_formula [Scroll]: Force Bolt
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 2
+skill_ranks [Diplomacy]: 2
+skill_ranks [Disguise]: 2
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: twilight salve
+gear_stream [Gnome]: 25
+kit_item [Gnome;a0]: gnomish backpack, quantity 1
+kit_item [Gnome;a1]: wand, effect Fey Trapping;wand, plus 1, quantity 1, charges 50
+kit_item [Gnome;a2]: none
+kit_item [Gnome;a3]: food ration, quantity 12
+kit_item [Gnome;a6]: arbalest, quantity 1
+kit_item [Gnome;a7]: brass lantern, quantity 1
+kit_item [Gnome;a8]: pickaxe, quantity 1
+gear_stream [Bard]: 26
+gear_chance [Bard;a1]: 50
+gear_chance [Bard;a2]: 39
+gear_chance [Bard;a3]: 15
+kit_item [Bard;a3]: long sword, quantity 1
+kit_item [Bard;a7]: gold piece, quantity 1
+kit_item [Bard;a9]: noble attire, quantity 1
+kit_item [Bard;a10]: gold piece, quantity 2552
+gear_chance [Bard;a11]: 37
+gear_chance [Bard;a12]: 15
+kit_item [Bard;a12]: flute, quantity 1
+gear_stream [Universal Gear]: 27
+gear_chance [Universal Gear;a3]: 40
+gear_chance [Universal Gear;a4]: 45
+gear_chance [Universal Gear;a6]: 5
+gear_chance [Universal Gear;a7]: 40
+gear_chance [Universal Gear;a10]: 21
+gear_chance [Universal Gear;a14]: 97
+kit_item [Universal Gear;a15]: wand, effect Shards, quantity 1, charges 50
+ammo_quantity: 31
+personality: The Ambitious Conqueror
+spell_learn: Call Companions [Bardic]
+craft_formula [Alchemy]: Universal Solvent
+craft_formula [Alchemy]: Alchemist's Fire
+store_seed: 31
+character_name: Ferris Murnig
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 2

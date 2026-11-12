@@ -1,4 +1,4 @@
-# inc-h5aql: load dequ-save-message-seed5-opt0822.sav with options-2026-08-22.dat.
+# inc-h5aql: load dequ-save-message-seed5-opt0822.char with options-2026-08-22.dat.
 # Regenerate: tools/check_weapon_sets.sh --make-fixture --force
 # Freeze normal monster actions; clear the saved level before arranging gear.
 @include dequ-setup-loaded.keys

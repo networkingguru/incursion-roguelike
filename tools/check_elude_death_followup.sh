@@ -218,7 +218,7 @@ judge() {
 # fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
 # fact: every natural attack hits -- INCURSION_LOF_FORCE_ROLL=18 (natural attacks threaten on 20, so 18 never threatens a critical)
 # fact: case (b) a claw leaves him alive, the rider kills -- INCURSION_FORCE_DAMAGE_ROLL=99 (claw 1d4 -> 4, rider 2d6 -> 12) with hp 5
-export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.char
 export INCURSION_LOF_FORCE_ROLL=18
 
 export INCURSION_ELUDE_PROBE="giant soldier ant:1"

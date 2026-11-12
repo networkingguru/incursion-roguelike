@@ -18,7 +18,7 @@
 # file MUST build a different character, so a kind the table dropped, or a
 # comparison that cannot fail, goes red.
 #
-# fact: the character -- the tracked hand-written .char and the tracked old .sav beside it; both are committed and every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
+# fact: the character -- the tracked hand-written .char and the old .sav tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav; both are committed and every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
 # fact: the settings -- tools/fixtures/options-2026-08-22.dat, named in the .char's options: line and passed to the dumps (the dumps read the kit off; an item is not a choice)
 # fact: the damaged values -- text edits of lines of the tracked .char (a feat, two skill ranks, a hit roll, two quantities); an edit that finds no line fails the check as INCONCLUSIVE
 # fact: the replacement feat -- "Endurance", a candidate of the level-1 feat menu for this race and class, read from the module by the build (a name that is not a candidate fails the build, which fails the check)
@@ -69,7 +69,7 @@ BIN="${INCURSION_BIN:-./incursion-headless}"
 export INCURSION_BIN="$BIN"
 NAME=orc-barbarian-seed1-opt0822
 GOOD=tools/fixtures/chars/$NAME.char
-OLD=tools/fixtures/chars/$NAME.sav
+OLD=tools/fixtures/specimens/$NAME.sav
 OPTS=tools/fixtures/options-2026-08-22.dat
 [ -f "$GOOD" ] && [ -f "$OLD" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: $GOOD, $OLD or $OPTS is missing"; exit 2; }
 [ -f lib/program.i ] || { echo "INCONCLUSIVE: lib/program.i is missing; build the module first"; exit 2; }

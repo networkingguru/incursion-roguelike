@@ -9,7 +9,7 @@
 # (glass: MaterialHardness(MAT_GLASS, AD_ACID) is -1) and a long sword (iron:
 # acid hardness above 0), then calls ThrowDmg(EV_DAMAGE, AD_ACID, 5, ..., player,
 # item) on each. It writes OWNER_DMG_PROBE lines to errors.log.
-# fact: character -- fixture xsummon-priest-seed5-opt0822.sav (INCURSION_LOAD)
+# fact: character -- fixture xsummon-priest-seed5-opt0822.char (INCURSION_LOAD)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: items -- probe creates both itself with Item::Create; no map item read
 # fact: damage amount and type -- constants in the probe (5, AD_ACID); EActor=owner
@@ -33,7 +33,7 @@ cd "$ROOT" || exit 2
 SEED=1
 KEYS=tools/keys/bane-radius.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 
 [ -x ./incursion-headless ] || {
     echo "UNMEASURED: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

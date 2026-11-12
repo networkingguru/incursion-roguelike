@@ -1,8 +1,11 @@
-# The AutoLootPacksProbe moves the player, so the room-description box opens
-# first: the first SPACE closes it. The macro's loot menu then gets SPACE
-# (mark the one item) and ENTER; ESC leaves any inventory screen.
-SPACE
+# The AutoLootPacksProbe moves the player, so a room-description box can open
+# first (the Winding Corridor one on a loaded old save, none on a built
+# character): the @while closes it only when it is there. The macro's loot menu
+# then gets SPACE (mark the one item) and ENTER; a "too large" notice is closed
+# by SPACE; ESC leaves any inventory screen.
+@while "Winding Corridor" SPACE
 SPACE
 ENTER
+@while "too large" SPACE
 ESC*10
 @quit

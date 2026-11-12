@@ -1,0 +1,29 @@
+# Prepares the built fixture orc-priest-pain-seed1-sneakopts for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state (bd inc-b4l3g.2, tools/check_feed_upon_pain.sh): wizard mode on; the
+# priest wounded; one punch thrown, so he carries a Feed upon Pain tally; every monster gone.
+# WOUNDED: a summoned giant rat bites while the priest waits. The wait is cut short while a hostile is in view,
+# so many waits are sent. THE PUNCH: the priest brawls (empty weapon hand) and punches the rat once.
+# The caller exports INCURSION_LOF_FORCE_ROLL and INCURSION_FORCE_DAMAGE_ROLL for the run (the check sets 20 and
+# 3 for the priest case: the rat then bites for a known amount and the punch deals a known 6, the tally).
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT ENTER
+@until "HP:" ESC
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . .
+RIGHT
+@while "Die?" n
+
+w
+@choose "Genocide Everything"
+s

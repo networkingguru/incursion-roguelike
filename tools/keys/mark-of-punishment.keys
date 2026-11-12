@@ -1,7 +1,7 @@
 # Observe Mark of Punishment, for bd inc-7mkt.
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=15 \
-#       INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-gate.sav \
+#       INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-gate.char \
 #       tools/headless.sh tools/keys/mark-of-punishment.keys 2
 #
 # WHAT IS MEASURED. Mark of Punishment (lib/pspells.irh) puts a TRAP_EVENT stati

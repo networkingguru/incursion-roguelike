@@ -1,4 +1,4 @@
-# Frozen fixtures
+# Fixtures
 
 ## Dated options fixtures
 
@@ -7,16 +7,16 @@ against. Each is the exact `Options.Dat` blob from the named repository commit:
 
 | Fixture | Source commit | Contents |
 |---|---|---|
-| `options-2026-08-13.dat` | `41df62b` | The settings present on 2026-08-13. |
 | `options-2026-08-18.dat` | `2f58be3` | The 2026-08-13 settings plus the 21-byte character-generation profile described below. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off. |
 | `options-2026-08-22.dat` | `2092592` | The 2026-08-18 settings with `OPT_AUTOOPEN` changed from 0 to 2. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is now 0, the Beginner's Kit off. This keeps a change to Roark's NECESSITIES list from shifting seed-pinned checks. |
 | `options-sneak-invis.dat` | n/a (derived) | `tools/gates/Options.Dat` with `OPT_AUTOHIDE` (518) forced to 0. `tools/check_sneak_invis.sh` uses it: with Automatic Hide in Shadows on, a rogue auto-hides in the dark and every blow counts as an unseen attack even without a spell, which spoils the visible control. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off. |
 | `options-sneak-invis-maxhp.dat` | n/a (derived) | `options-sneak-invis.dat` with `OPT_MON_MAX_HP` (108) forced from 0 to 3 (DOUBLE), so a summoned monster has fixed hit points. `tools/check_sneak_invis.sh` and the fixture `orc-rogue-sneak-seed1` use it (bead inc-b4l3g.30). |
-| `options-2026-08-22-maxhp.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_MON_MAX_HP` (108) forced from 0 to 3 (DOUBLE), so a summoned monster has fixed hit points. `tools/check_dequ_reach.sh` and the fixture `orc-warrior-dequ-seed5-maxhp` use it (bead inc-drr0). |
+| `options-2026-08-22-maxhp.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_MON_MAX_HP` (108) forced from 0 to 3 (DOUBLE), so a summoned monster has fixed hit points. `tools/check_dequ_reach.sh` and the specimen `orc-warrior-dequ-seed5-maxhp` use it (bead inc-drr0). |
 | `options-2026-08-22-freeadv.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_FREE_ADV` (803) forced to 1. `tools/keys/levelup-caster-sheet.keys` uses it to buy a real level through the character sheet's `G`/`A` command (Player::AdvanceLevel) on a frozen XP-0 fixture; the inc-ngku no-study control otherwise gets its level-up through `INCURSION_LEVELUP_PROBE`. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
 | `options-2026-08-22-noroomdesc.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_DESC_ROOM` (407) forced from 2 to 0. `tools/check_crowd_turn_cost.sh` uses it: with the default, the first room a ghostwalking sweep enters opens a description box that eats keys. `OPT_MON_DJIKSTRA` (114) stays 1, which that check requires. Changed by inc-rt8l: `OPT_BEGINKIT` (101) is 0, the Beginner's Kit off, as in the base file. |
 | `options-2026-08-22-kit.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_BEGINKIT` (101) forced to 1. `tools/check_beginner_kit.sh` runs each build with it and with `options-2026-08-22.dat` (kit off), and reads the Beginner's Kit as the difference. |
 | `options-2026-08-22-b17.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_BEGINKIT` (101) forced to 1, `OPT_MAX_HP` (105) and `OPT_MAX_MANA` (106) forced from 2 to 0 (rolled), and `OPT_GENDER` (107) forced from 2 to 3 (random). These are the four creation settings the dated file turns off. `tools/check_fixture_equivalence.sh` walks characters under it (spec B17, bead inc-10v7f). |
+| `options-2026-08-22-noautohide.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_AUTOHIDE` (518) forced from 1 to 0. `tools/check_build_seeds.sh`, `tools/compare_creation_walks.sh` and `tools/check_fixture_equivalence.sh` use it: a monk, rogue, bard or kobold hides in the first turn of play otherwise. |
 | `options-2026-08-22-b17-noautohide.dat` | n/a (derived) | `options-2026-08-22-b17.dat` with `OPT_AUTOHIDE` (518) forced from 1 to 0, as `options-2026-08-22-noautohide.dat` does: a monk, rogue, bard or kobold hides in the first turn of play otherwise, and a walk that saves at the end of creation then differs from its build. `tools/check_fixture_equivalence.sh --sweep` walks every race-by-class pair under it. |
 | `options-dwarven-focus.dat` | n/a (derived) | `options-2026-08-22.dat` with `OPT_DWARVEN_AUTOFOCUS` (214) set to 0. `tools/check_dwarven_focus_manual.sh` uses it, so the manual Dwarven Focus command runs instead of Auto-Focus. |
 
@@ -38,173 +38,166 @@ MUST NOT turn on an option whose result depends on a game-data list that changes
 
 ## Character fixtures
 
-`chars/<name>.sav`, `chars/<name>.keys` and `chars/<name>.sheet.txt` are one
-fixture, and a `.sav` on its own is not enough. The `.sav` is the frozen
-character. The `.keys` is the key script that generated him, copied in, because
-a save-format change will one day make remaking every fixture compulsory and the
-`.sav` cannot be remade without it. The `.sheet.txt` is the engine's own dump of
-the character under a provenance header — seed, settings, key script, commit,
-and the sha256 of both the `.sav` and `mod/Incursion.Mod` — so a reader can see
-what is in the `.sav` without loading it, and so a check can read its
-expectations out of the fixture instead of out of numbers typed into the check.
-`tools/make_char_fixture.sh` rewrites the whole sheet on every regeneration, so
-the header cannot drift away from the `.sav` beside it.
+### What a fixture is
 
-**Why a character is frozen at all.** A character built by a key script is not
-reproducible across module changes. An rID in this engine is a POSITION, so one
-resource added to `lib/` shifts every id above it. Measured 2026-09-12: commit
-`bef32c3` added one Effect to `lib/m_items.irh`, and the seed-1 Lizardfolk monk
-went from STR 18 holding a long sword +3 to STR 14 holding a quarterstaff, on
-byte-identical attribute dice. About seventeen checks were red on master that
-day, and at least four of them were red from this cause alone. A character LOADED from a save
-does not move, because the v1 save schema converts every saved rID through that
-save's own per-module manifest (`v1ConvertManifestRid`, `src/SaveV1.cpp`);
-measured the same day, byte-identical across the same module change. So a check
-that wants a character who stays himself must load one. The defect is bd
-`inc-sls0` and this machinery is bd `inc-1fjk`.
+A character fixture is one text file, `chars/<name>.char`. The file states every
+choice that made the character: race, class, attributes, feats, skill ranks,
+hit point and mana rolls, kit items. Each decision is one line,
+`<key> [context]: <value>`. The line `options:` names the options file. The line
+`seed:` names the seed. Lines that start with `#` are comments.
 
-**Using one.** `INCURSION_LOAD` names the save, and `tools/headless.sh` starts
-the session from that character instead of from the title menu:
+The `.char` file is the only committed part. The game builds the character from
+it with `tools/build_fixture.sh`. The `.sav` and the sheet are build products in
+`logs/fixture-cache/`. Nobody edits them and nobody commits them.
 
-```sh
-INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
-    tools/headless.sh tools/keys/load-char-sheet.keys 1
-```
+Before this system, a fixture was a frozen `.sav` with a key script and a sheet
+beside it. Each `.sav` was tied to the save format and to the map it was made
+on. A `.char` file has neither tie. Git history holds the old files.
 
-A loaded run still MUST name its settings, and it still takes a seed: the
-character comes from the file, but the seed pins everything the session does
-after the load. `tools/keys/load-char-sheet.keys` builds no character of its
-own, so it reads any fixture; run it with no `INCURSION_LOAD` and the game sits
-in its title menu and the run reports NO GAMEPLAY.
+### Loading one in a check
 
-**The save is COPIED into the run's sandbox, and that is the point.** A loaded
-session owns its save file and writes back to it, so a fixture handed to the
-game by path would be rewritten by the very run that read it.
-`tools/headless.sh` copies the file into the run's own `save/` and passes the
-bare name to `-load`, so nothing a session does reaches the path
-`INCURSION_LOAD` named. `tools/check_char_fixture.sh` asserts both halves of
-that: the fixture is byte-identical after a run that loaded AND saved it, and
-the run's sandbox holds its own copy.
+Set `INCURSION_LOAD=<name>` and run `tools/headless.sh`:
 
-**Making one.** `tools/make_char_fixture.sh <name> <keyscript> <seed> <options>`:
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+    INCURSION_LOAD=kobold-rogue-seed1 \
+        tools/headless.sh tools/keys/load-char-sheet.keys 1
 
-| Argument | What it is |
-|---|---|
-| `name` | What the fixture is called. It becomes `chars/<name>.sav` and its two companions, and also a `-load` argument, so letters, digits, dot, dash and underscore only. |
-| `keyscript` | The script that builds the character AND SAVES HIM. It must end with the System Menu's `[b]` Save and Continue — `ESC b` — which is the only save the game offers that does not also end the session. `tools/keys/lizardfolk-monk-save.keys` is the worked example. |
-| `seed` | The seed to generate under. Not optional: an unseeded run rolls different attributes, so it would freeze a different character. |
-| `options` | A settings file from this directory. Settings change what a seeded session does, so a fixture is only meaningful with the one that made it, and that name goes into the sheet header. |
+`tools/headless.sh` asks `tools/fixture_cache.sh` for the cached `.sav`. The
+cache builds it when it has no entry. `tools/headless.sh` copies the `.sav` into
+the run's own `save/`, so a run never writes the cache. The path form
+`INCURSION_LOAD=tools/fixtures/chars/<name>.char` means the same.
+`tools/fixture_sheet.sh <name>` prints the path of the cached sheet.
 
-The script generates the character, copies the `.sav` into place, and then LOADS
-that copy back through `tools/headless.sh` to write the sheet. It costs a second
-session and buys one guarantee: no fixture is published without having been
-loaded once, so a `.sav` that cannot be read back fails there rather than in
-somebody else's check a month later.
+A cached `.sav` that fails to load ends the run with exit 8 and the line
+`FIXTURE LOAD FAILED`. That is a loader or writer defect. The cache does not
+rebuild the entry, because a rebuild would hide the defect.
 
-**Regenerating one.** Add `--force`. Without it the script refuses to touch an
-existing fixture, because overwriting one silently retires every check built on
-it. The regenerating command is written into the sheet's own header, so a
-save-format change years from now is a matter of running what the file already
-says.
+A fixture holds only the created character. It holds no map and no position.
+A check that reads a map waits for bead inc-9s4u0, which gives it a test map.
 
-**A regeneration is always a real git diff, and the bytes are not the oracle.**
-The same name, key script, seed, settings and binary, run three times on
-2026-09-12, gave `.sav` files whose sha256 began `2b5fb59c`, `603f109b` and
-`94c4c2a8`, and `tools/check_char_fixture.sh` passed on each: same name, race,
-class and Strength. A save carries clocks and counters that no second run
-repeats. Judge a regeneration by what the sheet says, never by the size of the
-diff.
+### Setup scripts
 
-**When a fixture stops loading: read the drift message, and look at
-`lib/main.irc`.** A fixture that has worked for weeks and suddenly reports
-`Error reading saved game (File is Corrupt).` has almost certainly not been
-corrupted. A resource was added to the MIDDLE of an array instead of the end,
-and the loader refused the save rather than hand back the wrong character. The
-engine says so precisely, on stderr, and the run keeps it:
+A state reached after creation belongs to the check, not to the fixture. A
+check that needs the character wounded, in wizard mode, or without his weapon
+includes a setup script. The name is `tools/keys/setup-<fixture>.keys`:
 
-```
-incursion: module slot 0 Effect array slid at position 354: the save's manifest
-recorded "Endure Cold" there and the loaded module has "Endure Fire" -- a
-resource was inserted in the middle of the array, which the append-only rule
-forbids
-```
+    @include setup-kobold-rogue-seed1.keys
 
-`SaveV1_ResolveNames` throws `ECORRUPT` from `v1ManifestDrift`
-(`src/SaveV1.cpp`) after the save itself has read cleanly, so the probe log
-shows `load: after read` and the failure comes later. Grep the run directory for
-`array slid` or `was reordered` before suspecting anything else.
+The first lines of each setup script say which state the old `.sav` held.
+Three chained characters have no `.char`: `alignment-drain-level1`,
+`alignment-drain-level2` and `alignment-drain-warrior`. Their checks derive each
+one from `quality-item-magic-seed5-opt0822` with a
+`tools/keys/setup-alignment-drain-*.keys` script.
 
-The fix is never to regenerate the fixture. It is to move the new declaration to
-the END of `lib/main.irc`, which is the end of parse order and where that file's
-own APPEND-ONLY note says new resources go. `4ba035b` is the worked example: it
-declared a resource in the middle of `m_items.irh`, pushed 862 Effects down one
-place, and a save written before it read its owner's Robe of Blending back as a
-Hat of Disguise.
+### Specimens
 
-**The end of a lib file is NOT the end of the array.** `lib/main.irc`
-`#include`s the lib files in a fixed order and `m_items.irh` sits in the middle
-of it, so a resource appended to the bottom of `m_items.irh` still lands around
-Effect position 354 of roughly 860. Measured 2026-09-17: appending there made
-every character fixture in this directory unloadable, while the same Effect
-appended to the end of `lib/main.irc` left all 41 of them loading and their
-characters unchanged.
+`specimens/` holds old `.sav` files that stay as files. Nothing rebuilds them.
+There are two kinds of user.
 
-A character fixture is frozen too. If a check needs a different character, add a
-new fixture with its own key script and its own name; never edit an existing
-one, and never hand-edit a `.sheet.txt`, which would leave it describing a
-character the `.sav` beside it does not hold.
+1. Checks that read a map. They wait for bead inc-9s4u0. Each such check names
+   its specimen in its `# fact:` lines. When the check moves to a test map, its
+   specimen goes.
+2. Checks that test old save-format bytes: `tools/check_script_var_recovery.py`,
+   `tools/check_spellflag_migrate.sh`, `tools/check_spellflag_migrate6.sh`,
+   `tools/check_spells_widen.sh`, `tools/check_racial_cannibalism.sh` and
+   `tools/check_mage_loadout.sh`. Each names its specimen in its `# fact:` lines.
 
-**`human-paladin-damaged-armour-opt0822`** (bd inc-vouo) is
-`human-paladin-seed4-opt0822` after a wizard-made decay trap hit his leather
-armour +3: the armour holds 81 of 86 hit points. `tools/check_repair_cost.sh`
-loads it, so the repair price does not depend on a trap's random roll. It is
-derived from another fixture, not from chargen, so its recipe needs
-`INCURSION_LOAD`, and the sheet's own "regenerate with" line leaves it out:
+`tools/check_vararg_format_live.sh` belongs to kind 1: it reads a map.
 
-```sh
-INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
-tools/make_char_fixture.sh human-paladin-damaged-armour-opt0822 \
-    tools/keys/repair-cost-damage-save.keys 2 \
-    tools/fixtures/options-2026-08-22.dat --force
-```
+`tools/char_convert.sh`, `tools/char_attribute.sh` and
+`tools/check_char_convert.sh` also read specimens. They convert an old `.sav`
+into a `.char`. They stay until the epic conversion (bead inc-pu6v.369) lands.
+`specimens/MANIFEST` holds the rows they need: the key script, seed and options
+file that made each old save. When the epic conversion lands, delete those
+rows and the tools.
 
-Seed 2 is the seed on which the trap hit the armour (seeds 2, 3 and 6 hit; seed
-8 missed). A regeneration on another seed can miss, and then the armour is
-undamaged; `tools/check_repair_cost.sh` exits 2 on that.
+### Old fixtures that have no `.char`
 
-**`orc-barbarian-seed1-opt0818-store`** (bd inc-bw1xe) is the chargen orc barbarian
-(Rathak) saved AFTER he opened Roark Ironbeard's store once, so Roark exists and
-his rolled stock is in the save. `tools/check_store_find.sh` loads it. A save made
-before the first visit rolls a fresh stock in every run, and a landing that
-changes item generation (cd55ecd8 enabled sleep weapons) then changes the stock.
-He holds 21 gp. Roark's Weapons group is: a battleaxe +2; a b chaotic elven
-boomerang +5 of sleep; 57 daggers; a c halberd -3; a long sword +3; an orcish
-long sword +2 of balance; a b Outsiderbane vicious hunga-munga +5; 6 pickaxes;
-a b thirsty proficient knife +5; a b vicious hunga-munga +5 of wounding. It
-also holds 18 Potions of Light. Recipe:
+Two old fixtures keep their `.sav`, `.keys` and `.sheet.txt` in `chars/`. Both
+wait for bead inc-3117y. A check loads each `.sav` by path. Delete a row when
+its fixture gets a `.char`.
 
-```sh
-tools/make_char_fixture.sh orc-barbarian-seed1-opt0818-store \
-    tools/keys/chargen-default-store-save.keys 1 \
-    tools/fixtures/options-2026-08-18.dat --force
-```
+| Fixture | Key script and seed that made it | Settings file |
+|---|---|---|
+| `human-priest-mage-dual-seed4-gate` | `tools/keys/chargen-human-priest-mage-dual-save.keys`, seed 4 | `options-2026-08-22.dat` |
+| `levitate-bottom-seed1` | `tools/keys/levitate-bottom-save.keys`, seed 1 | `options-2026-08-22.dat` |
 
-A regeneration rolls a new stock; read the new Weapons group from the store
-screen and update the literals in `tools/check_store_find.sh`.
+### Adding a fixture
 
-### orc-warrior-dequ-seed5-maxhp
+Record a walk, or write the file by hand.
 
-The male orc Warrior (chaotic good) that `tools/keys/dequ-setup.keys` builds on seed 5,
-made with `options-2026-08-22-maxhp.dat` from `tools/keys/dequ-save-message-save.keys`
-(the same chargen). `tools/check_dequ_reach.sh` loads him so no roll decides his
-attributes (bead inc-drr0).
+To record a walk, run a key script that walks character creation. Set
+`INCURSION_RECORD_CHAR` to the output path:
 
-```bash
-tools/make_char_fixture.sh orc-warrior-dequ-seed5-maxhp \
-    tools/keys/dequ-save-message-save.keys 5 \
-    tools/fixtures/options-2026-08-22-maxhp.dat --force
-```
+    INCURSION_RECORD_CHAR=$PWD/logs/new.char \
+    INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+        tools/headless.sh tools/keys/chargen-default-save.keys 1
+
+The recorder writes one line for each decision the walk made. Copy the file to
+`tools/fixtures/chars/<name>.char`. Then build it and read the sheet:
+
+    tools/build_fixture.sh tools/fixtures/chars/<name>.char
+    tools/fixture_sheet.sh <name>
+
+To write the file by hand, start from a recorded file and change the lines.
+`tools/check_handwritten_fixture.sh` shows the method: it builds a hand-written
+`.char` and compares its dump with the dump of an old save. A wrong file does
+not build a wrong character. The build fails and names the line, with
+`missing line`, `surplus` or `stated value rejected by the game`.
+
+Use only letters, digits, `.`, `_` and `-` in the name. Say race, class and the
+reason for the fixture. Run `tools/check_fixture_build.sh` after you add a file.
+It builds every `.char` and checks the cache.
+
+### Adding a decision
+
+A decision is a draw or a prompt in character creation that the dice or the
+player answers. To add one:
+
+1. Wrap the draw or prompt in one of three primitives from `inc/CreationSource.h`:
+   `SourcedRoll(key, ...)` for a number, `SourcedPick(key, candidates)` for a
+   choice among named resources, `SourcedItem(key, ...)` for a generated item.
+   Add one line to the key table (the `X(name, kind, default, reach, seen)`
+   macro) in the same header. Give the key a new name and a default.
+2. Rebuild the game: `BACKEND=posix ./build_macos.sh`.
+3. Run `tools/fill_chars.sh`. A `.char` that lacks a line fails to build with
+   `missing line in <file>; add: <line>`. The tool appends the printed line,
+   with its default, to each file. It builds again until the file builds.
+4. Commit the C++ change and the filled `.char` files together. Read the diff
+   of the `.char` files. Each file should gain only the new lines.
+
+If you skip step 3, `tools/check_fixture_build.sh` fails and names the files.
+To rename a key or a value later, use `tools/char_rekey.sh <old> <new>`. It
+changes every `.char` and refuses a rename onto a name that exists.
+
+`tools/fill_chars.sh` and `tools/char_rekey.sh` hold no list of keys. They read
+the line from the build, or the key table from `inc/CreationSource.h`.
+`tools/check_char_tools.sh` proves both tools on a copy of one `.char`.
+`tools/check_add_decision.sh` plays steps 3 and 4 on a copy of every fifth `.char` (all with `ADD_DECISION_STEP=1`)
+under `logs/`. It removes all lines of one key from each file, runs
+`tools/fill_chars.sh`, and builds every file. It goes red when one file stays
+unfilled.
+
+A creation draw that no decision states must sit in an `unstatedDraw("<reason>")`
+scope, and each scope is one row of `tools/fixtures/unstated_draws.baseline`.
+`tools/check_fixture_tripwires.sh` states the rule in its header and checks the
+rows. Run it after step 1. `tools/census_creation_draws.sh` lists the draws of
+a walk.
+
+### How the cache key works
+
+The cache key is a SHA-256 over four hashes: the `.char` file, the options file
+that its `options:` line names, the `incursion-headless` binary in use, and
+`mod/Incursion.Mod`. A change to any one of the four gives a new key, and the
+cache builds the fixture again. The entry is
+`logs/fixture-cache/<key>/<name>.sav` with `<name>.sheet.txt`. The first three
+lines of the sheet name the key. The three newest keys of each name stay.
+`tools/fixture_cache.sh --key <name>` prints a key and builds nothing.
+
+The header of `tools/fixture_cache.sh` states the rest: the lock, the build log
+`logs/fixture-builds.tsv`, `INCURSION_FIXTURE_CACHE` and `INCURSION_FIXTURE_PIN`.
+`tools/check_fixture_repair.sh` proves that the cache repairs a stale entry and
+stops where repair would hide a defect.
 
 ## Tool-check fixtures
 

@@ -1,0 +1,9 @@
+# Prepares the built fixture alignment-drain-lawful-neutral for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on and every monster of the level genocided.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Genocide Everything"
+@until "Things in View" ESC

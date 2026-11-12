@@ -1,5 +1,8 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the Diplomacy roll -- INCURSION_RUNTO_SKILL_ROLL=20 (the sentence prints only when the roll beats the DC by 10; the old save's seed happened to roll high)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # Surrender must print the hobgoblin's 750 gold lein (inc-ur9b).
 # The sentence itself must be present before its amount can be judged.
 # Usage: tools/check_surrender_lein.sh (0 pass, 1 fail, 2 cannot measure)
@@ -7,7 +10,8 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 export INCURSION_OPTIONS="$CHECK_OPTIONS"
-export INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav
+export INCURSION_LOAD=kobold-rogue-seed1
+export INCURSION_RUNTO_SKILL_ROLL=20   # the lein sentence needs the Diplomacy roll to beat the DC by more than 10 (src/Social.cpp:1460)
 mkdir -p "$CHECK_ROOT/logs/runs" || _check_die 2 "cannot create runs directory"
 INCURSION_RUN_DIR="$(mktemp -d "$CHECK_ROOT/logs/runs/surrender-lein.XXXXXX")" ||
     _check_die 2 "cannot create a private run directory"

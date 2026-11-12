@@ -96,7 +96,7 @@ export INCURSION_FORCE_SAVE_ROLL=1
 # hit: force the attack die to 18.
 export INCURSION_LOF_FORCE_ROLL=18
 # The character is loaded, so no attribute roll decides him.
-export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.char
 
 check_run tools/keys/dequ-sunder.keys 5
 

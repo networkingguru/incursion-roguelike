@@ -5,6 +5,7 @@
 # Dumps: sheet-0-baseline before the wield; wield-prompt right after it (the message line shows
 # "uneasy", and "You die... Die? [yn]" when the wield kills him); sheet-1-after after it. A dead
 # character cannot open the sheet, so on the level 1 fixture sheet-1-after still shows the prompt.
+# The caller's setup comes first: alignment-drain-wield-once-level1.keys or alignment-drain-wield-once-level2.keys (bd inc-10v7f).
 s
 d
 @expect "Align  Chaotic Good"

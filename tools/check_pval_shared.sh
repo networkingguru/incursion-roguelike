@@ -21,7 +21,8 @@
 # PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The mutation
 # removes the copy in SetPVal, which brings back the in-place write.
 #
-# fact: character -- fixture human-priest-mage-seed4-gate
+# fact: character -- fixture human-priest-mage-seed4-gate (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode, Free Advancement and the Mage level (Priest 1 / Mage 1) -- tools/keys/setup-human-priest-mage-seed4-gate.keys (the old .sav held them; V7-1 moved them into the check)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat
 # fact: hostile creature beside the player -- wizard "Genocide Everything"
 # fact: ring mail worn, which cancels the spell -- inventory take-off in the keys
@@ -33,7 +34,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
+FIXTURE=human-priest-mage-seed4-gate
 KEYS=tools/keys/pval-shared-cast.keys
 SEED=4
 
@@ -45,7 +46,7 @@ check_mutation src/VMachine.cpp \
 '      if (e.EMagic != &e.EMagicCopy) {
         }'
 
-[ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE to load."
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "no tools/fixtures/chars/$FIXTURE.char to build."
 [ -f "$KEYS" ]    || _check_die 2 "no $KEYS to run."
 
 mkdir -p logs

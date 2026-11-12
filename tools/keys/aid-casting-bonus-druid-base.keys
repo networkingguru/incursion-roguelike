@@ -1,0 +1,5 @@
+# The druid's baseline casting-term reading for tools/check_aid_casting_bonus.sh: the same reading as
+# aid-casting-bonus-base.keys, after the setup the old druid .sav held (bd inc-10v7f). The orc mage control
+# keeps the plain script: the setup would turn wizard mode on for it.
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
+@include aid-casting-bonus-base.keys

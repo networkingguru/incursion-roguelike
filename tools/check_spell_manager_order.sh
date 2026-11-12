@@ -17,7 +17,7 @@ check_mutation src/Managers.cpp \
 '    (void)SpellManagerRowCmp;'
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-mage-seed4-gate.sav
+FIXTURE=tools/fixtures/chars/orc-mage-seed4-gate.char
 [ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE to load."
 export INCURSION_LOAD="$FIXTURE"
 export INCURSION_CHAR_PROBE=1

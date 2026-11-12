@@ -17,7 +17,8 @@
 # Without the fix: A and E show no drain (RED); B and D show no death prompt (RED); C is RED too when the
 # old balance test (!isMType(MA_NEUTRAL)) still printed "uneasy" for a Lawful Neutral wielder.
 #
-# fact: characters -- fixtures alignment-drain-level1, -level2, -lawful-neutral, -warrior (INCURSION_LOAD)
+# fact: characters -- the base character quality-item-magic-seed5-opt0822 (built from its .char), run under the derivations tools/keys/setup-alignment-drain-level1.keys, -level2.keys and -warrior.keys (wizard mode, Genocide Everything, XP ticks and level-ups the old derived .sav files held), and alignment-drain-lawful-neutral (built from its .char, setup-alignment-drain-lawful-neutral.keys) (INCURSION_LOAD)
+# fact: the wizard mode and cleared level of the Lawful Neutral run -- tools/keys/setup-alignment-drain-lawful-neutral.keys (wizard on, Genocide Everything)
 # fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
 # fact: monsters -- wizard "Genocide Everything" (A, B) or none reachable in the few turns passing (C, D, E)
 # fact: the unholy weapon -- wizard "Item Acquisition", Nine Lives Stealer +2, a fixed unholy long sword
@@ -35,8 +36,8 @@ SEED=1
 check_mutation src/Inv.cpp 'DrainLevels(2);' ''
 
 run() { # <fixture name> <key script>
-    [ -f "$FX/$1.sav" ] || _check_die 2 "the fixture is missing: $FX/$1.sav"
-    export INCURSION_LOAD="$FX/$1.sav"
+    [ -f "$FX/$1.char" ] || _check_die 2 "the fixture is missing: $FX/$1.char"
+    export INCURSION_LOAD="$1"          # built fixture, served from the cache
     check_run "tools/keys/$2" "$SEED"
     unset INCURSION_LOAD
     S="$CHECK_RUN/logs/screens"
@@ -72,7 +73,7 @@ want_saves() { # <before sheet> <after sheet> <levels lost> <what>
 
 # ---- A. level 2 lives ------------------------------------------------------------------
 echo "A. level 2"
-run alignment-drain-level2 alignment-drain-wield-once.keys
+run quality-item-magic-seed5-opt0822 alignment-drain-wield-once-level2.keys
 check_screens '*'
 check_expect "Class  Warrior 2" "the loaded character is the level 2 fixture"
 has "$(dump wield-prompt)" "uneasy"        || bad "A: the wield did not print 'uneasy'."
@@ -85,7 +86,7 @@ want_saves "$B" "$F" 1 "A"
 
 # ---- B. level 1 is asked to die ----------------------------------------------------------
 echo "B. level 1"
-run alignment-drain-level1 alignment-drain-wield-once.keys
+run quality-item-magic-seed5-opt0822 alignment-drain-wield-once-level1.keys
 check_screens '*'
 W="$(dump wield-prompt)"
 has "$W" "uneasy"    || bad "B: the wield did not print 'uneasy'."
@@ -93,7 +94,7 @@ has "$W" "You die... Die? [yn]" || bad "B: a level 1 wrong-alignment wielder was
 
 # ---- C, D. balance rule, Lawful Neutral --------------------------------------------------
 echo "C. balance weapon, Lawful Neutral"
-run alignment-drain-lawful-neutral alignment-drain-balance.keys
+run alignment-drain-lawful-neutral alignment-drain-balance-lawneutral.keys
 check_screens '*'
 check_expect "Quality added" "the balance quality was stamped"
 W="$(dump wielded)"
@@ -113,7 +114,7 @@ has "$W" "Die? [yn]" || bad "D: the level 1 Lawful wielder of a chaotic weapon w
 
 # ---- E. balance rule, Chaotic Good -------------------------------------------------------
 echo "E. balance weapon, Chaotic Good level 5"
-run alignment-drain-warrior alignment-drain-balance.keys
+run quality-item-magic-seed5-opt0822 alignment-drain-balance-warrior.keys
 check_screens '*'
 check_expect "Quality added" "the balance quality was stamped"
 has "$(dump wielded)" "uneasy" || bad "E: a Chaotic Good wielder of a balance weapon was not told 'uneasy'."

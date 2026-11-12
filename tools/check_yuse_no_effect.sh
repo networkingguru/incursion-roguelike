@@ -53,7 +53,7 @@ cd "$ROOT"
 SEED=1
 fail=0
 
-FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-gate.sav
+FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-gate.char
 [ -f "$FIXTURE" ] || {
     echo "INCONCLUSIVE: character fixture missing: $FIXTURE"
     exit 2

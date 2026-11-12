@@ -1,0 +1,12 @@
+# Prepares the base character quality-item-magic-seed5-opt0822 (an orc warrior, Chaotic Good, built from its .char)
+# as the old fixture alignment-drain-level1 (a .sav derived from it by play) was (bd inc-10v7f, inc-qaav4): wizard mode on and every monster gone, at level 1 with 0 XP.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Genocide Everything"
+d
+@expect "Align  Chaotic Good"
+@expect "XP     0"
+ESC

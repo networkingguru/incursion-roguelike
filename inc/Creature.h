@@ -1605,6 +1605,7 @@ class Player: public Character
 
       /* Debug Mode Functions */
  	 	  void WizardOptions();
+ 	 	  void KillEveryMonster();
 	 	  void BrowseThings(bool nearby);
 	 	  void ListLevelTreasure();
 	 	  void ListChestContents();

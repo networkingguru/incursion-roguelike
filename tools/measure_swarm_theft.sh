@@ -9,7 +9,7 @@ base="logs/swarm-theft/measure-$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$base"
 for seed in {1..20}; do
     INCURSION_SWARM_THEFT_PROBE=1 INCURSION_CHAR_PROBE=1 \
-      INCURSION_LOAD=tools/fixtures/chars/alignment-drain-warrior.sav \
+      INCURSION_LOAD=quality-item-magic-seed5-opt0822 \
       INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
       INCURSION_RUN_DIR="$base/seed-$seed" \
       tools/headless.sh tools/keys/swarm-theft-measure.keys "$seed" > "$base/seed-$seed.out" 2>&1

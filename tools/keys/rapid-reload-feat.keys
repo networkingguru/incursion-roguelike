@@ -12,6 +12,8 @@
 # out). The `s` before the dumps buys the one real turn a loaded session needs
 # to count as gameplay rather than a stall (tools/headless.sh, inc-loa.3).
 
+# The fixture holds only the created character; setup-prestige-geomancy-seed1-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-prestige-geomancy-seed1-opt0822.keys
 @dump:arrival
 s
 @dump:searched

@@ -1,5 +1,5 @@
 # inc-ckw0. Shared start for the grease and ice floor scenarios: a human
-# paladin LOADED from tools/fixtures/chars/human-paladin-seed4-grease-opt0822.sav
+# paladin LOADED from tools/fixtures/chars/human-paladin-seed4-opt0822 (a built .char)
 # (the caller passes INCURSION_LOAD; Balance -1), wizard mode with Freeze
 # Monsters on. No chargen: a seed then cannot change the character.
 # A frozen hostile kobold stands in sight, so the character counts as

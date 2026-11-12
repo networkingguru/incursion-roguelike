@@ -1,0 +1,11 @@
+# Prepares the built fixture lizardfolk-monk-barehand-seed1 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: the weapon dropped from the Weapon Hand, so he has empty hands.
+# src/Sheet.cpp:162 hides the whole Brawl block while the Weapon Hand holds a weapon, so every check that
+# measures bare-handed fighting empties the hands first. Dropped, not stowed: stowing is refused for size.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+i                       # Inventory Mode
+b                       # Weapon Hand -- the slot src/Sheet.cpp:162 tests
+d                       # Drop.
+@expect "Weapon Hand  :Empty"
+ESC                     # leave Inventory Mode, back to play

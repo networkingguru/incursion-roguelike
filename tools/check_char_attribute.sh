@@ -23,7 +23,7 @@
 # Mutation: CHAR_ATTR_TOOL=<a copy of the tool in tools/> runs the check on the
 # copy. A copy whose reversal does nothing makes step 2 report UNEXPLAINED.
 #
-# fact: the character -- the tracked hand-written tools/fixtures/chars/orc-barbarian-seed1-opt0822.char and the tracked old .sav beside it; every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
+# fact: the character -- the tracked hand-written tools/fixtures/chars/orc-barbarian-seed1-opt0822.char and the old .sav tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav; every draw is stated in the .char, so no seed or walk decides anything (inc-10v7f)
 # fact: the settings -- the options: line of that .char names tools/fixtures/options-2026-08-22.dat; the tool passes it to every dump
 # fact: the explaining commit -- 95ddb886, a fixed commit of this history; if it is not there, or its lib/ src/ inc/ part no longer reverses on the tree, the check reports INCONCLUSIVE and names the line the tool printed
 # fact: the unrelated commit -- bde7800d, a fixed commit that edits only lib/mon4.irh (a monster aura); step 4 proves it explains nothing here, and a reverse that fails makes the check INCONCLUSIVE
@@ -44,7 +44,7 @@ TOOL="${CHAR_ATTR_TOOL:-tools/char_attribute.sh}"
 NAME=orc-barbarian-seed1-opt0822
 CHAR=tools/fixtures/chars/$NAME.char
 REAL=95ddb886; UNRELATED=bde7800d; CONFLICT=25c91507
-[ -f "$CHAR" ] && [ -f tools/fixtures/chars/$NAME.sav ] && [ -x "$TOOL" ] || { echo "INCONCLUSIVE: $CHAR, its .sav or $TOOL is missing"; exit 2; }
+[ -f "$CHAR" ] && [ -f tools/fixtures/specimens/$NAME.sav ] && [ -x "$TOOL" ] || { echo "INCONCLUSIVE: $CHAR, its .sav or $TOOL is missing"; exit 2; }
 for c in $REAL $UNRELATED $CONFLICT; do
     git cat-file -e "$c^{commit}" 2>/dev/null || { echo "INCONCLUSIVE: commit $c is not in this history"; exit 2; }
 done

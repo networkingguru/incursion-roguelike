@@ -6,7 +6,7 @@
 #
 # The character is a male orc priest of Aiswin, lawful good. One fixture made here serves
 # the 5 key scripts that include it at the same seed and settings, because a
-# fixture's seed and settings are arguments to tools/make_char_fixture.sh and
+# fixture's seed and settings are arguments to the retired fixture maker and
 # only the chargen is baked into this file.
 #
 # WHY A CHARACTER IS FROZEN AT ALL, and why the chargen is included rather than

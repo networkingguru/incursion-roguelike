@@ -22,7 +22,7 @@
 # lib/*.irh resource cannot break them.
 #
 # fact: character -- fixture lizardfolk-monk-seed1 (a kit with qualities, stati, feats; no spells)
-# fact: character with spell lists -- fixture elf-mage-illusions-seed1
+# fact: character with spell lists -- fixture elf-mage-illusions-seed1 (built from its .char, served by tools/fixture_cache.sh; char_dump.sh reads the fixture as built, before any setup)
 # fact: settings -- options-2026-08-22.dat (INCURSION_OPTIONS, required by tools/char_dump.sh)
 # fact: the dump text -- field and section names only; no value, no seed, no roll is asserted
 #

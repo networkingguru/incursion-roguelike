@@ -17,7 +17,7 @@
 # bef32c3 swapped his long sword for a quarterstaff, the stow that used to
 # empty his hands was refused for size, and src/Sheet.cpp:165-171 then hid the
 # Brawl row this check exists to read (bd inc-sls0). So the monk is loaded from
-# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav, which holds him with
+# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.char, which holds him with
 # his hands already empty. tools/fixtures/README.md states the rule and the
 # measurement behind it, and tools/check_char_fixture.sh is the standing proof
 # that a loaded character does not move.
@@ -51,6 +51,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# fact: character -- fixture lizardfolk-monk-barehand-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the empty Weapon Hand (weapon dropped) -- tools/keys/setup-lizardfolk-monk-barehand-seed1.keys (the old .sav held it; V7-1 moved it into the check)
+# fact: settings -- OPTIONS=tools/fixtures/options-2026-08-18.dat
 SEED=1
 KEYS=tools/keys/monk-tempest.keys
 OPTIONS=tools/fixtures/options-2026-08-18.dat
@@ -58,7 +61,7 @@ OPTIONS=tools/fixtures/options-2026-08-18.dat
 # together. tools/headless.sh copies the .sav into the run's own save/ and
 # hands the game the bare name, so nothing this session does reaches the file.
 FIXTURE=lizardfolk-monk-barehand-seed1
-SAV="tools/fixtures/chars/$FIXTURE.sav"
+SAV="$FIXTURE"   # the bare name: tools/headless.sh builds it from tools/fixtures/chars/$FIXTURE.char
 WANT_BEFORE=125
 WANT_AFTER=175
 
@@ -66,11 +69,8 @@ WANT_AFTER=175
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
-[ -f "$SAV" ] || {
-    echo "FAIL: no $SAV, so there is no bare-handed monk to load."
-    echo "      Make one with:"
-    echo "      tools/make_char_fixture.sh $FIXTURE \\"
-    echo "          tools/keys/lizardfolk-monk-barehand-save.keys $SEED $OPTIONS"
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || {
+    echo "FAIL: no tools/fixtures/chars/$FIXTURE.char, so there is no monk to build."
     exit 1
 }
 

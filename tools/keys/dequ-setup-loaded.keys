@@ -1,5 +1,5 @@
 # dequ-setup.keys with its chargen removed: the orc warrior comes from
-# tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav (INCURSION_LOAD), so no
+# tools/fixtures/chars/dequ-save-message-seed5-opt0822.char (INCURSION_LOAD), so no
 # attribute roll decides him. Everything dequ-setup.keys does AFTER chargen is
 # kept: wizard mode on, Freeze Monsters on. bd inc-cr8v.
 #

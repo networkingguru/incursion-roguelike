@@ -5,7 +5,7 @@
 # Acquisition and chargen follow bloodspear-orc-save.keys, seed 4.
 # Description scrolling must reach Cost, below the outside-enchantment text.
 # inc-frim: no chargen. The check loads the frozen orc barbarian
-# tools/fixtures/chars/orc-barbarian-reapply-seed4.sav (INCURSION_LOAD), so
+# tools/fixtures/chars/orc-barbarian-reapply-seed4.char (INCURSION_LOAD), so
 # the character no longer follows the seed.
 
 d
@@ -75,6 +75,7 @@ z y
                         # disguised monster's reveal ("you realize that this giant
                         # rat is really a plague rat!") can push it behind one
 @while "-- more --" SPACE
+@dump:rested-end          # the rest of the wake message, when a reveal pushed it past a -- more --
 d
 @dump:expired-sheet
 ESC

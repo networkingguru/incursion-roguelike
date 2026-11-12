@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: the IS1.6 character human-priest-mage-seed4-gate -- the frozen old save tools/fixtures/specimens/human-priest-mage-seed4-gate.sav, kept as a specimen because this check reads its old-format bytes (flags that no migration touched)
+# fact: the IS1.3 character orc-priest-seed4-gate -- the frozen old save tools/fixtures/specimens/orc-priest-seed4-gate.sav, kept as a specimen because this check reads its old-format bytes
 # inc-vqla phase 2: a v1 save written before Character::Spells[] was widened
 # loads with the flags the file actually holds -- and the loader is exercised
 # on both a current-revision (IS1.6) and a legacy (IS1.3) file.
@@ -29,14 +31,14 @@
 #
 # TWO RUNS.
 #
-#   IS1.6  tools/fixtures/chars/human-priest-mage-seed4-gate.sav, written by
+#   IS1.6  tools/fixtures/specimens/human-priest-mage-seed4-gate.sav, written by
 #          master BEFORE this change. Its flags are a faithful copy of the file
 #          (no migration runs: migrated=0), so the probe's idx/raw pairs must
 #          equal the python reader's exactly -- every pair the file holds
 #          appears with the same raw value, and the probe reports no non-zero
 #          index the file lacks.
 #
-#   IS1.3  tools/fixtures/chars/orc-priest-seed4-gate.sav, whose flags ARE
+#   IS1.3  tools/fixtures/specimens/orc-priest-seed4-gate.sav, whose flags ARE
 #          migrated on load (migrated=1), so its raw words deliberately change.
 #          The check asserts only that the load succeeds and the probe prints
 #          lines, proving the legacy read is exercised on a rev-3 file too.
@@ -55,9 +57,9 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-FIXTURE=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
+FIXTURE=tools/fixtures/specimens/human-priest-mage-seed4-gate.sav
 SEED=4
-LEGACY=tools/fixtures/chars/orc-priest-seed4-gate.sav
+LEGACY=tools/fixtures/specimens/orc-priest-seed4-gate.sav
 LEGACY_SEED=4
 READER=tools/v1_spells_tag434.py
 

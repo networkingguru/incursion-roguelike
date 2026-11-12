@@ -1,9 +1,9 @@
-# Load tools/fixtures/chars/engaged-hostile.sav, let the bugbear kill him, and
+# Load tools/fixtures/specimens/engaged-hostile.sav, let the bugbear kill him, and
 # ANSWER the death prompt for real, for tools/check_headless.sh step 9
 # (bd inc-gjzx).
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/engaged-hostile.sav \
+#   INCURSION_LOAD=tools/fixtures/specimens/engaged-hostile.sav \
 #       tools/headless.sh tools/keys/death-confirm.keys <seed>
 #
 # Identical to tools/keys/death-freeze.keys up to the death prompt -- read

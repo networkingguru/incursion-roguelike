@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: the IS1.3 character orc-mage-seed1-opt0822 -- the frozen old save tools/fixtures/specimens/orc-mage-seed1-opt0822.sav, kept as a specimen because this check reads its old-format bytes
 # inc-j5yo revision 5: loading a pre-revision-5 save migrates the player's
 # spell flags exactly once, and the save that session writes comes back at
 # the current revision without migrating again.
@@ -14,7 +15,7 @@
 # and a save written afterwards -- by the very same binary -- must not run it
 # a second time. Two runs, one keys script:
 #
-#   Run A  loads tools/fixtures/chars/orc-mage-seed1-opt0822.sav and must
+#   Run A  loads tools/fixtures/specimens/orc-mage-seed1-opt0822.sav and must
 #          report migrated=1 with the file's own revision. That fixture is
 #          IS1.3, so the expected line is migrated=1 rev=3.
 #   Run B  loads the save Run A wrote and must report migrated=0 rev=6, with
@@ -45,7 +46,7 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/orc-mage-seed1-opt0822.sav
 SEED=1
 
 # The mutation this check defends: the two SP_GRANTED assignments that stamp

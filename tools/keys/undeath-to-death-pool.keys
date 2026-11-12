@@ -53,7 +53,7 @@
 # never STRIKE. This is the line that proves the spell's undead filter accepts
 # a bodak.
 #
-#   INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed1-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/specimens/orc-priest-seed1-opt0822.sav \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #   INCURSION_RUN_DIR="$PWD/logs/inc-kgzx/pool/seed-1" \
 #   INCURSION_HDPOOL_PROBE=1 \

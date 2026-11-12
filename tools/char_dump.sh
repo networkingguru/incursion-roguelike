@@ -50,7 +50,8 @@ echo "opts:  $INCURSION_OPTIONS" >&2
 
 case "$ARG" in
     */*|*.sav) SAVE="$ARG" ;;
-    *)         SAVE="tools/fixtures/chars/$ARG.sav" ;;
+    *)         SAVE="tools/fixtures/chars/$ARG.sav"
+               [ -f "$SAVE" ] || SAVE="tools/fixtures/specimens/$ARG.sav" ;;
 esac
 if [ ! -f "$SAVE" ]; then
     echo "no such save or fixture: $ARG (looked for $SAVE)" >&2

@@ -21,7 +21,7 @@ else
     RUN="logs/d9gk/repro-$(date +%Y%m%d-%H%M%S)-$$"
     mkdir -p "$RUN"
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+    INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
     INCURSION_RUN_DIR="$RUN" \
         tools/headless.sh tools/keys/druid-shoulder-metal.keys 7 > "$RUN/harness.log" 2>&1 || {
         echo "UNMEASURED: see $RUN/harness.log" >&2; exit 2;
@@ -38,6 +38,13 @@ STATES = [('left', BOW, BOW, 'long sword', 'Empty', 'neither'),
           ('thrownleft', 'bolas', 'Empty', 'long sword', 'Empty', 'thrownnone'),
           ('thrownnone', 'bolas', 'Empty', 'Empty', 'Empty', None)]
 try:
+    # The body armor is whatever the built character wears; it must not change between the states.
+    first_gear = (root / 'logs/screens').glob('*-left-gear.txt')
+    first_gear = next(first_gear).read_text()
+    armour_m = re.search(r'\)Armour\s*:(.*?)\s{2,}', first_gear)
+    if not armour_m:
+        raise ValueError('left: no Armour line to read')
+    ARMOUR = armour_m[1]
     rows = []
     dc = {}
     spells = {}
@@ -51,15 +58,15 @@ try:
         spells[state] = spell
         for label, value in [('Weapon Hand', wep), ('Ready Hand', ready),
                              ('L. Shoulder', left), ('R. Shoulder', right),
-                             ('Armour', 'elven cord armour')]:
+                             ('Armour', ARMOUR)]:
             if not re.search(re.escape(label) + r'\s*:' + re.escape(value) + r'\s', gear):
                 raise ValueError(f'{state}: wrong or missing {label}')
         if not re.search(r"'In the Air':Empty\s", gear):
             raise ValueError(f'{state}: item left in air')
         chance = re.search(r'^\s*(Chance: .+? = (\d+)%)\s*$', spell, re.M)
-        row = re.search(r'Call Light\s+\d+\s+\d+\s+(\d+)%', spell)
+        row = re.search(r'^>\s*\[\w\][^\n]*?\s(\d+)%', spell, re.M)  # the selected spell's own row (the Src column sits before Mana)
         if not chance or not row or chance[2] != row[1]:
-            raise ValueError(f'{state}: missing/inconsistent Call Light chance')
+            raise ValueError(f'{state}: missing/inconsistent chance of the selected spell')
         dc_line = re.search(r'^\s*Defense Class\s+(\d+)\s*\((.*)\)\s*$', sheet, re.M)
         if not dc_line:
             raise ValueError(f'{state}: missing Defense Class line')

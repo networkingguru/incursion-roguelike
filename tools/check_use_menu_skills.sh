@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # The use-skill menu (U) must list only things that work. (bd inc-6sm3)
 #
 # (a) Appraise, Decipher Script and Escape Artist were in ActiveTraits[]
@@ -12,7 +14,7 @@
 #     polymorphed into a spitting spider, spits at an adjacent kobold, and the
 #     game prints "Your poison cloud strikes a kobold."
 #
-# Both parts load tools/fixtures/chars/kobold-rogue-seed1.sav, a rogue with all
+# Both parts load kobold-rogue-seed1, a rogue with all
 # three skills, on seed 1 with the frozen 2026-08-22 settings. A run that
 # cannot open the menu, polymorph, or find "Spit Weapon" ends INCONCLUSIVE
 # (the key script's @expect), never green.
@@ -32,10 +34,10 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/kobold-rogue-seed1.sav
+FIXTURE=kobold-rogue-seed1
 SEED=1
 
-[ -f "$FIXTURE" ] || _check_die 2 "fixture missing: $FIXTURE"
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "fixture missing: $FIXTURE"
 export INCURSION_LOAD="$FIXTURE"
 
 # Two mutation sites, both guarded on every ordinary run. USE_MENU_MUTATE picks

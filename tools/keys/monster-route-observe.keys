@@ -1,4 +1,6 @@
 # inc-rabe: stage, then sample after each of 24 one-turn rests.
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 .*2
 l o
 # Dismiss the staged region description, then close the overview.

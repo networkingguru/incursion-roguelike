@@ -9,7 +9,7 @@ mkdir -p logs/runs
 run=$(mktemp -d "$PWD/logs/runs/monster-route-observe.XXXXXX") || exit 2
 INCURSION_ROUTE_PROBE=1 INCURSION_RUN_DIR="$run" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+INCURSION_LOAD=kobold-rogue-seed1 \
     tools/headless.sh tools/keys/monster-route-observe.keys "${1:-3}" > "$run/harness.txt" 2>&1
 rc=$?
 python3 - "$run" "$rc" <<'PY'

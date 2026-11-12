@@ -1,7 +1,7 @@
 # Reproduction for bd inc-a7jq, scenario B. Read by tools/check_loot_claim.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-noroomdesc.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char \
 #       tools/headless.sh tools/keys/b-thief-attack 4
 #
 # THE CHARACTER is the Lawful Good paladin fixture, on the cave entrance

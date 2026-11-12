@@ -250,6 +250,7 @@ public:
     bool HasKeyScript() { return keys != NULL; }
     long KeyScriptPosition();
     void SkipKeys(long n);
+    void PrependKeyScript(const char *fn);
 
     /* System-Independant File I/O */
     virtual const char* SaveSubDir()    { return "save"; }
@@ -681,6 +682,11 @@ int main(int argc, char *argv[]) {
             }
             AT1->SkipKeys(n);
         }
+        /* INCURSION_KEYS_PREPEND=<file> puts that key script in front of what is left, after the
+           skip: tools/char_convert.sh absorbs the prompt a load prints with it. Fixture builder
+           hook (inc-10v7f). */
+        if (getenv("INCURSION_KEYS_PREPEND") && *getenv("INCURSION_KEYS_PREPEND"))
+            AT1->PrependKeyScript(getenv("INCURSION_KEYS_PREPEND"));
     }
 
     /* The watchdog guards an unattended run. A person sitting at a terminal
@@ -1335,6 +1341,18 @@ void posixTerm::SkipKeys(long n) {
     }
     memmove(keys, keys + n, (keyCount - n) * sizeof(ScriptKey));
     keyCount -= (int32)n;
+}
+
+void posixTerm::PrependKeyScript(const char *fn) {
+    ScriptKey *rest = keys;
+    int32 n = keyCount, i;
+
+    keys = NULL;
+    keyCount = keyAlloc = 0;
+    LoadKeyScript(fn);
+    for (i = 0; i < n; i++)
+        AppendKey(rest[i]);
+    free(rest);
 }
 
 void posixTerm::LoadKeyScript(const char *fn) {

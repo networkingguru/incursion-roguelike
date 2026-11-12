@@ -1,0 +1,8 @@
+# Reads the priest's live Defense Class after the setup, for tools/check_feed_upon_pain.sh (bd inc-10v7f):
+# the frost giant case derives its forced attack roll from it. The old save's priest was fatigued (Defense
+# Class 9); the built priest is not (11), so the number is read, never typed.
+@include setup-orc-priest-pain-seed1-sneakopts.keys
+d
+@expect "Defense Class"
+@dump:sheet
+ESC

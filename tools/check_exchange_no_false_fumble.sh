@@ -1,6 +1,6 @@
 #!/bin/bash
 # gate: live
-# fact: character, stats, feats, gear and default weapon sets (none set) -- INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav
+# fact: character, stats, feats, gear and default weapon sets (none set) -- INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: terrain and starting position -- saved map in the character fixture
 # fact: path taken by the swap command (early no-defaults path of Character::Exchange) -- fixture has no default weapon sets; proved by the "You have no weapon sets" line in the after-dash dump
@@ -35,7 +35,7 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 SEED=1
 KEYS=tools/keys/exchange-no-defaults.keys
-LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav
+LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char
 
 [ -f "$LOAD" ] || _check_die 2 \
     "no $LOAD, so there is no frozen character with no default weapons." \

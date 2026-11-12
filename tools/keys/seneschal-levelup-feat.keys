@@ -1,6 +1,6 @@
 # inc-qylz: reach the level-up feat menu of the frozen lizardfolk monk.
 # Run by tools/check_seneschal_implemented.sh with
-# INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav.
+# INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char.
 #
 # Free Advancement (wizard mode switches, third row) lets G on the character
 # sheet gain a level with no experience points. The level-up menus are fixed by

@@ -11,7 +11,7 @@
 # WIN_NUMBERS row the game drew. Wrought wants 10, orcish wants 5 (Item::Hardness
 # halves it), plain iron 10, glass -1 to acid. Lines are WROUGHT_HARD_PROBE in
 # errors.log.
-# fact: character -- fixture xsummon-priest-seed5-opt0822.sav (INCURSION_LOAD)
+# fact: character -- fixture xsummon-priest-seed5-opt0822.char (INCURSION_LOAD)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: items -- probe creates all four with Item::Create/AddQuality; no map item read
 # fact: damage amount and type -- constants in the probe (14, AD_ACID); EActor=player, item on the floor so Owner() is NULL
@@ -41,7 +41,7 @@ cd "$ROOT" || exit 2
 SEED=1
 KEYS=tools/keys/bane-radius.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 
 [ -x ./incursion-headless ] || {
     echo "UNMEASURED: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

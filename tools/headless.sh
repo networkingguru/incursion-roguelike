@@ -156,8 +156,8 @@ fi
 # original file, which is the trap the copy above exists to avoid.
 #
 # A FIXTURE WITH A .char FILE COMES FROM THE CACHE (bead inc-10v7f, phase 9).
-# INCURSION_LOAD=<name> (no '/', no ".sav") and the old path form
-# tools/fixtures/chars/<name>.sav both map to <name> when
+# INCURSION_LOAD=<name> (no '/', no ".sav") and the path form
+# tools/fixtures/chars/<name>.char (or the old <name>.sav) both map to <name> when
 # tools/fixtures/chars/<name>.char exists. tools/fixture_cache.sh serves the
 # cached .sav for the current .char, options file, binary and module, building
 # it first on a miss, and the copy below then proceeds as for any other file.
@@ -179,9 +179,10 @@ if [ -n "$LOAD" ]; then
     ROOTP="$(cd "$ROOT" && pwd -P)"
     case "$LOAD" in
         */*)
-            if [ "${LOAD##*.}" = sav ]; then
+            LOAD_EXT="${LOAD##*.}"
+            if [ "$LOAD_EXT" = sav ] || [ "$LOAD_EXT" = char ]; then
                 LOAD_DIR="$(cd "$(dirname "$LOAD")" 2>/dev/null && pwd -P)"
-                LOAD_BASE="$(basename "$LOAD" .sav)"
+                LOAD_BASE="$(basename "$LOAD" ".$LOAD_EXT")"
                 if [ "$LOAD_DIR" = "$ROOTP/tools/fixtures/chars" ] && [ -f "$ROOT/tools/fixtures/chars/$LOAD_BASE.char" ]; then
                     FIX_NAME="$LOAD_BASE"
                 fi

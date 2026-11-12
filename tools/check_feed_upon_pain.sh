@@ -14,7 +14,8 @@
 #
 # facts the check reads, and the control that fixes each (docs/VERIFICATION.md,
 # "A check must not depend on the seed"):
-# fact: priest race, class, domain, kit (empty weapon hand), HP 29 of 36, tally 6 -- fixture orc-priest-pain-seed1-sneakopts
+# fact: priest race, class, domain, kit (empty weapon hand) -- fixture orc-priest-pain-seed1-sneakopts (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wound and the tally -- tools/keys/setup-orc-priest-pain-seed1-sneakopts.keys, run under the case's INCURSION_LOF_FORCE_ROLL and INCURSION_FORCE_DAMAGE_ROLL (priest case 20 and 3: the rat bites for a known amount, the punch deals 6); the check reads the starting hit points and every tally from the run, and asserts the wound
 # fact: priest settings -- INCURSION_OPTIONS=tools/fixtures/options-sneak-invis.dat
 # fact: a shrieker beside the priest -- wizard Monster Summoning, RIGHT ENTER
 # fact: the priest's blows hit -- INCURSION_LOF_FORCE_ROLL=20
@@ -23,7 +24,7 @@
 # fact: giant-case character (visible, so the giant attacks) -- fixture orc-priest-pain-seed1-sneakopts
 # fact: giant-case settings -- INCURSION_OPTIONS=tools/fixtures/options-sneak-invis.dat
 # fact: one frost giant beside the character -- wizard Monster Summoning, RIGHT ENTER
-# fact: the giant's blows hit, and none is a critical -- INCURSION_LOF_FORCE_ROLL=19
+# fact: the giant's blows hit, and none is a critical -- INCURSION_LOF_FORCE_ROLL, derived from the priest's live Defense Class (read from tools/keys/pain-sheet.keys; the priest's Defense Class is fatigue-dependent: 9 in the old save, 11 built)
 # fact: the giant's damage dice -- INCURSION_FORCE_DAMAGE_ROLL=2
 # fact: a giant's weapon and enchantment, so odd or even blow -- INCURSION_SUMMON_NO_GEAR=1 (src/Debug.cpp)
 # fact: the giant notices the priest and attacks -- not read; every assertion holds for any count of 1 or more
@@ -49,7 +50,7 @@ cd "$ROOT"
 [ -x ./incursion-headless ] || { echo "INCONCLUSIVE: build with BACKEND=posix ./build_macos.sh"; exit 2; }
 
 PRIEST_OPTIONS=tools/fixtures/options-sneak-invis.dat
-PRIEST_SAVE=tools/fixtures/chars/orc-priest-pain-seed1-sneakopts.sav
+PRIEST_SAVE=orc-priest-pain-seed1-sneakopts   # the bare name: built from tools/fixtures/chars/$PRIEST_SAVE.char
 PRIEST_KEY=tools/keys/pain-experiment.keys
 GIANT_OPTIONS=$PRIEST_OPTIONS
 GIANT_SAVE=$PRIEST_SAVE
@@ -58,11 +59,27 @@ PRIEST_DMG=3
 GIANT_DMG=2
 PRIEST_LOF=20
 # not 20: a natural 20 is a critical hit and doubles every blow, so every blow is even.
-# 18 keeps the Power Attack bonus (margin/3) the same for any defense the target shows
-GIANT_LOF=18
-for f in "$PRIEST_OPTIONS" "$PRIEST_SAVE" "$PRIEST_KEY" "$GIANT_OPTIONS" "$GIANT_SAVE" "$GIANT_KEY"; do
+# The giant's Power Attack bonus is (hit + roll - priest's Defense Class) / 3, so shifting the margin by a
+# multiple of 6 changes every blow's bonus by an even number and keeps every blow's parity. The old
+# priest (fatigued, Defense Class 9) was calibrated at roll 18, which makes (roll - Defense Class) = 9.
+# GIANT_LOF is therefore the largest roll below 20 with (roll - live Defense Class) = 3 mod 6, and the
+# Defense Class is read from a sheet dump of the built priest (tools/keys/pain-sheet.keys), not typed.
+GIANT_LOF=18   # replaced below once the live Defense Class is read
+for f in "$PRIEST_OPTIONS" "tools/fixtures/chars/$PRIEST_SAVE.char" "$PRIEST_KEY" "$GIANT_OPTIONS" "tools/fixtures/chars/$GIANT_SAVE.char" "$GIANT_KEY"; do
     [ -f "$f" ] || { echo "INCONCLUSIVE: $f is not there"; exit 2; }
 done
+
+# The priest's live Defense Class, for GIANT_LOF.
+SHEET_RUN="$ROOT/logs/runs/check-feed-pain-sheet-$$-$(date +%s)"
+INCURSION_RUN_DIR="$SHEET_RUN" INCURSION_OPTIONS="$GIANT_OPTIONS" INCURSION_LOAD="$GIANT_SAVE" \
+    INCURSION_LOF_FORCE_ROLL="$GIANT_LOF" INCURSION_FORCE_DAMAGE_ROLL="$GIANT_DMG" \
+    tools/headless.sh tools/keys/pain-sheet.keys 1 >/dev/null 2>&1
+DEF_CLASS="$(sed -nE 's/^ *Defense Class +([0-9]+).*/\1/p' "$SHEET_RUN"/logs/screens/*-sheet.txt 2>/dev/null | head -1)"
+[ -n "$DEF_CLASS" ] || { echo "INCONCLUSIVE: could not read the priest's Defense Class from $SHEET_RUN"; exit 2; }
+for r in 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2; do
+    if [ $(( ((r - DEF_CLASS) % 6 + 6) % 6 )) -eq 3 ]; then GIANT_LOF=$r; break; fi
+done
+echo "priest Defense Class $DEF_CLASS, so the frost giant's forced attack roll is $GIANT_LOF"
 
 TOKEN="${INCURSION_CHECK_TOKEN:-$$-$(date +%s)}"
 RUN_SEQ=0

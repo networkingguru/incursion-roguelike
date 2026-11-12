@@ -6,7 +6,7 @@
 # spellcasting chart at the new effective caster level, not leave it at the
 # raw class level's slots.
 #
-# THE CHARACTER. tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav is
+# THE CHARACTER. tools/fixtures/chars/prestige-geomancy-seed1-opt0822.char is
 # Ferris, a single-class Bard 7 whose Spellcasting ability sits at 3rd
 # (sheet line "Spellcasting (3rd)"), well behind the 4/5-of-character-level
 # cap Character::getEligableStudies() (src/Create.cpp:3877) checks, so
@@ -33,6 +33,8 @@
 # "Choose an area to improve:" menu -- confirmed by dumping the raw screen
 # right after choosing the feat before adding this line.
 
+# The fixture holds only the created character; setup-prestige-geomancy-seed1-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-prestige-geomancy-seed1-opt0822.keys
 @dump:arrival
 
 s               # one real turn (Search, finds nothing), so this counts as a

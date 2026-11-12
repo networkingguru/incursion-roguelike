@@ -1,6 +1,6 @@
 # inc-8chz B: Legend Lore rolls Knowledge (Magic) ONCE per magic item. Read by
 # tools/check_legend_lore.sh (seed 1) with INCURSION_LEGEND_LORE_PROBE=1, from
-# the frozen orc bard tools/fixtures/chars/orc-bard-reapply-seed1.sav (Legend
+# the frozen orc bard tools/fixtures/chars/orc-bard-reapply-seed1.char (Legend
 # Lore at 6th level, already in wizard mode, with Auto-Identify Items ON).
 #
 # Auto-Identify returns from Character::LegendIdent before Legend Lore runs
@@ -13,6 +13,8 @@
 # (one LegendIdent call). Leaving the manager drops it to the floor, and each
 # turn the floor sweep (Player, src/Player.cpp) calls LegendIdent on it again;
 # those calls must NOT roll. The pickup is another call.
+# The fixture holds only the created character; setup-orc-bard-reapply-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-bard-reapply-seed1.keys
 w
 @choose "Wizard Mode Switches"
 @dump:switches-before

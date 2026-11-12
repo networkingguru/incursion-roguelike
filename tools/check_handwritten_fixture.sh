@@ -24,8 +24,8 @@
 # (owner's ruling 2026-11-11, bead inc-10v7f).
 # and writes the full difference to logs/fixture-build/<name>.diff.
 #
-# fact: the character -- fixture file tools/fixtures/chars/orc-barbarian-seed1-opt0822.char and the tracked .sav beside it; both are committed, neither is generated
-# fact: the old dump -- tools/char_dump.sh of the tracked .sav, read by the binary under test (a binary that cannot read the old save format fails the check, which is the point of a dump)
+# fact: the character -- fixture file tools/fixtures/chars/orc-barbarian-seed1-opt0822.char and the old .sav tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav; both are committed, neither is generated
+# fact: the old dump -- tools/char_dump.sh of the specimen .sav, read by the binary under test (a binary that cannot read the old save format fails the check, which is the point of a dump)
 #
 # Usage: INCURSION_BIN=./incursion-headless tools/check_handwritten_fixture.sh
 # Exit: 0 pass; 1 fail; 2 could not run.
@@ -37,7 +37,7 @@ BIN="${INCURSION_BIN:-./incursion-headless}"
 [ -x "$BIN" ] || { echo "INCONCLUSIVE: $BIN is not built"; exit 2; }
 NAME=orc-barbarian-seed1-opt0822
 CHAR=tools/fixtures/chars/$NAME.char
-OLD=tools/fixtures/chars/$NAME.sav
+OLD=tools/fixtures/specimens/$NAME.sav
 OPTS=tools/fixtures/options-2026-08-22.dat
 [ -f "$CHAR" ] && [ -f "$OLD" ] || { echo "INCONCLUSIVE: $CHAR or $OLD is missing"; exit 2; }
 

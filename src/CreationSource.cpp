@@ -389,9 +389,11 @@ static bool QualityValue(rID iID, const std::string &name, int16 &q, std::string
         first = AQ_CONSTNAMES;
     else if (t == T_WEAPON || t == T_MISSILE || t == T_BOW)
         first = WQ_CONSTNAMES;
-    int32 v; int count;
-    if (TextValFind(first, name, v, count) ||
-        (first != IQ_CONSTNAMES && TextValFind(IQ_CONSTNAMES, name, v, count)))
+    int32 v;
+    /* IQ_CONSTNAMES names IQ_SILVER three times with one value; a name is
+       unambiguous when its rows agree, so the first row serves (inc-10v7f). */
+    if (TextValFindFirst(first, name, v) ||
+        (first != IQ_CONSTNAMES && TextValFindFirst(IQ_CONSTNAMES, name, v)))
         { q = (int16)v; return true; }
     char *end;
     long n = strtol(name.c_str(), &end, 10);

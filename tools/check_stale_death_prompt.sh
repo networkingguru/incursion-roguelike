@@ -21,8 +21,8 @@
 # fact: the stunjelly stands beside the player -- wizard Monster Summoning, square chosen with RIGHT
 # fact: the jelly engulfs (hit, then a failed Reflex save DC 15) -- key script loops "@until Engulfed ." bounded by SK_LOOP_MAX
 # fact: the character dies while engulfed -- key script loops "@until Die? [yn] ." bounded by SK_LOOP_MAX
-# fact: the character -- tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav, loaded with INCURSION_LOAD (DEX 7, Reflex -1)
-# fact: the seed -- varies only combat rolls (a loaded save fixes the character); seeds 1 2 3 vary them, and the oracle reads screen text no roll changes
+# fact: the character -- tools/fixtures/specimens/low-dex-orc-barbarian-seed18-gate.sav, loaded with INCURSION_LOAD (DEX 7, Reflex -1) -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
+# fact: the seed -- varies only combat rolls (a loaded save fixes the character); three seeds (1, 2, 3) vary them, and the oracle reads screen text no roll changes
 #
 # IT CANNOT PASS BY DEFAULT. Exit 2 when a session did not play, a dump is
 # missing, "Engulfed" never showed in the engulfed dump, or no live "Die? [yn]"
@@ -37,7 +37,7 @@ cd "$ROOT"
 OPTIONS=tools/gates/Options.Dat
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
 KEYS=tools/keys/engulf-stale-prompt.keys
-FIXTURE=tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav
+FIXTURE=tools/fixtures/specimens/low-dex-orc-barbarian-seed18-gate.sav
 [ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: fixture $FIXTURE is not there"; exit 2; }
 [ -f "$KEYS" ] || { echo "INCONCLUSIVE: $KEYS is not there"; exit 2; }
 

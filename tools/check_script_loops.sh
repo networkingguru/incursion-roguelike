@@ -48,7 +48,8 @@
 # without its JTAB skip (l changes).
 #
 # SEED INDEPENDENCE (docs/VERIFICATION.md, "A check must not depend on the seed"):
-# fact: character -- fixture druid-shoulder-metal-seed7-opt0822 (INCURSION_LOAD)
+# fact: character -- fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: the handler runs once the character is a champion -- wizard "Become Divine Champion" on a scratch god, no roll
 # fact: the printed numbers -- loop counters in the scratch script, no random call
@@ -58,7 +59,7 @@
 # Usage: tools/check_script_loops.sh [--prove-red] [case letters, default all]
 . "$(dirname "$0")/check_lib.sh"
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-SAV=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+SAV=druid-shoulder-metal-seed7-opt0822
 check_mutation src/RComp.cpp 'int32 rel = size + 1;' 'return; int32 rel = size + 1;'
 
 [ -x ./incursion-headless ] || _check_die 2 "build ./incursion-headless first (BACKEND=posix ./build_macos.sh)"

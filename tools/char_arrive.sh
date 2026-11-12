@@ -56,7 +56,7 @@ SAV="$LOAD"
 if [ "$SKIP" != "-" ]; then
     [ -n "$KEYS" ] && [ -n "$SEED" ] && [ "$TICK" != "-" ] || { echo "char_arrive: the arrival needs the key script, seed and tick" >&2; exit 2; }
     rm -rf "$RD"
-    INCURSION_LOAD="$LOAD" INCURSION_KEYS_SKIP="$SKIP" INCURSION_SEED_TICK="$TICK" INCURSION_OPTIONS="$OPTS" INCURSION_RUN_DIR="$RD" \
+    INCURSION_LOAD="$LOAD" INCURSION_KEYS_SKIP="$SKIP" INCURSION_KEYS_PREPEND="$ROOT/tools/keys/load-absorb-more.keys" INCURSION_SEED_TICK="$TICK" INCURSION_OPTIONS="$OPTS" INCURSION_RUN_DIR="$RD" \
         tools/headless.sh "$KEYS" "$SEED" > "$PFX-replay.log" 2>&1 < /dev/null
     rc=$?
     # 6: the key script ran out before the game ended. The replay saved before that, or the run left no

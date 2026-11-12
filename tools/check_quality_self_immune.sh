@@ -75,7 +75,7 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # A frozen character, not a generated one (tools/fixtures/README.md).
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.char
 export INCURSION_RUNTO_SKILL_ROLL=20
 check_mutation src/Item.cpp \
 '  if (QualityImmune(DType))

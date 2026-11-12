@@ -23,7 +23,7 @@
 # the player.
 #
 # THE ARITHMETIC IS FORCED, THE ROLL IS PINNED. The subject is the frozen orc
-# mage of tools/fixtures/chars/orc-mage-seed1-opt0822.sav (Melee +3). A test
+# mage of tools/fixtures/chars/orc-mage-seed1-opt0822.char (Melee +3). A test
 # god (tools/fixtures/natural-one-attack-god.irh, spliced onto a scratch copy
 # of lib/main.irc under logs/ only) grants +30 to hit when joined, so
 # e.vHit + e.vRoll on a forced 1 is 34 -- above any summoned goblin's Defense.
@@ -37,6 +37,16 @@
 #
 # A run that never printed an Attack line, or whose forced value does not appear
 # on it, is INCONCLUSIVE and never a pass.
+#
+# fact: character, its Melee +3 and race -- fixture orc-mage-seed1-opt0822 (tools/fixtures/chars/orc-mage-seed1-opt0822.char, served by tools/fixture_cache.sh)
+# fact: the +30 to hit -- tools/fixtures/natural-one-attack-god.irh, appended to a scratch copy of lib/main.irc and joined by the wizard menu "Become Divine Champion"
+# fact: the attack roll (d20) -- INCURSION_LOF_FORCE_ROLL=1, 2 and 20, one run each
+# fact: the goblin that is the target -- wizard Monster Summoning (Goblinkin, goblin), as tools/keys/natural-one-attack.keys runs it
+# fact: the goblin does not act or attack -- wizard Mode Switches, Freeze Monsters
+# fact: the goblin's Defense below 34 -- module data, lib/mon2.irh Monster "goblin": Def: 12; its only armor is 25% hide armour, which adds a few points, far below the 34 that a forced roll of 1 reaches
+# fact: where the goblin stands -- the key script answers the summon prompt with RIGHT then ENTER (tools/keys/natural-one-attack.keys), so it stands one square east, and the attack key is RIGHT
+# fact: settings -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: the verdict text -- the "Attack: 1d20 (n) ... vs. Def D [hit|miss]" line kept by OPT_STORE_ROLLS, matched by the forced roll n
 #
 # PROVED RED by --prove-red: the mutation `nonat1` deletes the natural-1 clause
 # and rebuilds. The forced-1 case then reads [hit] and this check exits 1.
@@ -57,8 +67,8 @@ check_mutation src/Fight.cpp \
 
 [ -x ./incursion-headless ] || _check_die 2 \
     "./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"
-[ -f tools/fixtures/chars/orc-mage-seed1-opt0822.sav ] || _check_die 2 \
-    "the frozen subject tools/fixtures/chars/orc-mage-seed1-opt0822.sav is missing."
+[ -f tools/fixtures/chars/orc-mage-seed1-opt0822.char ] || _check_die 2 \
+    "the frozen subject tools/fixtures/chars/orc-mage-seed1-opt0822.char is missing."
 [ -f tools/keys/natural-one-attack.keys ] || _check_die 2 \
     "the key script tools/keys/natural-one-attack.keys is missing."
 
@@ -118,7 +128,7 @@ do_check() {
         # the repository mod/ into it, so we pre-create mod/ with the scratch
         # module (headless's -sfn link lands beside it) exactly as
         # check_blind_fight_miss.sh and check_luck_mode.sh do.
-        export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+        export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char
         export INCURSION_RUN_DIR="$dir"
         export INCURSION_LOF_FORCE_ROLL="$roll"
         check_run tools/keys/natural-one-attack.keys 1
