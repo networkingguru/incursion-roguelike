@@ -52,10 +52,11 @@
 # Usage: tools/check_fixture_equivalence.sh             (the gate subset)
 #        tools/check_fixture_equivalence.sh --sweep     (every race by class pair)
 #   INCURSION_NEW_BIN=<binary>  the binary under test (default ./incursion-headless)
-#   C2_WALK_FILTER=<regex>      run only the walks whose name matches (gate or sweep;
-#                               gate coverage is then not judged)
+#   C2_WALK_FILTER=<regex>      --sweep only: run only the pairs whose name matches. The gate
+#                               runs every walk, so the gate REFUSES this variable (exit 2);
+#                               run a subset by hand with --sweep, or unset the variable.
 # Specimens: logs/c2/gate/ or logs/c2/sweep/.
-# Exit: 0 every walk SAME (gate mode: and full coverage); 1 otherwise; 2 bad usage or no binary.
+# Exit: 0 every walk SAME (gate mode: and full coverage); 1 otherwise; 2 bad usage, no binary, or C2_WALK_FILTER set in gate mode.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -67,6 +68,10 @@ case "${1:-}" in
     --sweep) MODE=sweep ;;
     *) echo "usage: $0 [--sweep]" >&2; exit 2 ;;
 esac
+if [ "$MODE" = gate ] && [ -n "${C2_WALK_FILTER:-}" ]; then
+    echo "C2_WALK_FILTER is set ($C2_WALK_FILTER). The gate runs every walk and judges coverage over all of them, so it refuses a filter. Unset C2_WALK_FILTER, or run a subset by hand with: $0 --sweep" >&2
+    exit 2
+fi
 NEW="${INCURSION_NEW_BIN:-./incursion-headless}"
 [ -x "$NEW" ] || { echo "$NEW is not built. Run: BACKEND=posix ./build_macos.sh" >&2; exit 2; }
 HDR=inc/CreationSource.h
@@ -164,7 +169,6 @@ else
     for row in "${GATE_WALKS[@]}"; do
         set -- $row
         name="$1"; keys="$2"; seed="$3"; opts="$4"
-        if [ -n "${C2_WALK_FILTER:-}" ] && ! [[ "$name" =~ $C2_WALK_FILTER ]]; then continue; fi
         n=$((n + 1))
         if round_trip "$name" "$keys" "$seed" "$opts" "$OUT"; then same=$((same + 1)); else fail=1; fi
     done
@@ -200,8 +204,6 @@ done <<<"$KEYS_IN"
 echo "walks: $n  same: $same  refused: $refused  wall: ${elapsed}s"
 if [ "$MODE" = sweep ]; then
     echo "coverage is judged by the gate mode only; the sweep does not compute it"
-elif [ -n "${C2_WALK_FILTER:-}" ]; then
-    echo "COVERAGE not judged (C2_WALK_FILTER is set)"
 elif [ -z "$missing" ]; then
     echo "COVERAGE ok: $nhit of $nkeys keys hit"
 else

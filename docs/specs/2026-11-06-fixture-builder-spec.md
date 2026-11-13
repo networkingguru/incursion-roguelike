@@ -134,6 +134,8 @@ an RNG stream shift) from silent into a named build failure.
   answering one `GrantGear`/`GrantBeginnerKit` draw (K-C3).
 - An `expect:` block, written by a person, lists the facts the fixture's
   checks rely on, compared at build. A wrong hand edit fails here (R-M-6).
+  Deferred to inc-41kqx (ruled 2026-11-12): no code reads it yet, and the
+  parser rejects the key.
 - Chained fixtures (made today by loading another fixture) are flattened
   into one full `.char`; there is no `from:` (K-m6).
 

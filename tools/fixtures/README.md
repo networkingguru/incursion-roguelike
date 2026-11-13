@@ -111,6 +111,15 @@ into a `.char`. They stay until the epic conversion (bead inc-pu6v.369) lands.
 file that made each old save. When the epic conversion lands, delete those
 rows and the tools.
 
+Conversion compares choices, not results. A conversion passes when every
+choice the build makes equals the choice the old save recorded. A computed
+value may still differ (a hit roll, a derived attribute, a feat a later rule
+grants), and each `.char` header lists those lines under `result:`. Three
+rulings from phase 13 of inc-10v7f shape this: a perk is not a choice, so
+perks are left out of the comparison; the Beginner's Kit is left out of it
+too; and the 11 fixtures that no check loaded were dropped instead of
+converted.
+
 ### Old fixtures that have no `.char`
 
 Two old fixtures keep their `.sav`, `.keys` and `.sheet.txt` in `chars/`. Both

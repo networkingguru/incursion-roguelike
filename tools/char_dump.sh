@@ -10,8 +10,12 @@
 #            tools/char_dump.sh lizardfolk-monk-seed1
 #        INCURSION_OPTIONS=... tools/char_dump.sh save/Jaoin.sav /tmp/jaoin.canon
 #
-# A bare name (no '/', no ".sav") means tools/fixtures/chars/<name>.sav. Output
-# goes to stdout, or to [out] when given; on failure [out] is not written.
+# A bare name (no '/', no ".sav") means the fixture tools/fixtures/chars/<name>.char,
+# built on demand: the save is the cached .sav that tools/fixture_cache.sh
+# prints. With no .char of that name, it means tools/fixtures/chars/<name>.sav,
+# then tools/fixtures/specimens/<name>.sav. A path ending in ".char" is served by
+# tools/fixture_cache.sh the same way. Any other path is the save, used as is.
+# Output goes to stdout, or to [out] when given; on failure [out] is not written.
 #
 # INCURSION_OPTIONS is mandatory, as for tools/headless.sh, so a run always
 # names its settings. -dump itself reads no settings: the variable is checked
@@ -48,11 +52,24 @@ if [ ! -f "$INCURSION_OPTIONS" ]; then
 fi
 echo "opts:  $INCURSION_OPTIONS" >&2
 
+CACHE_ARG=""
 case "$ARG" in
+    *.char)    CACHE_ARG="$ARG" ;;
     */*|*.sav) SAVE="$ARG" ;;
-    *)         SAVE="tools/fixtures/chars/$ARG.sav"
-               [ -f "$SAVE" ] || SAVE="tools/fixtures/specimens/$ARG.sav" ;;
+    *)         if [ -f "tools/fixtures/chars/$ARG.char" ]; then
+                   CACHE_ARG="$ARG"
+               else
+                   SAVE="tools/fixtures/chars/$ARG.sav"
+                   [ -f "$SAVE" ] || SAVE="tools/fixtures/specimens/$ARG.sav"
+               fi ;;
 esac
+if [ -n "$CACHE_ARG" ]; then
+    SAVE="$(tools/fixture_cache.sh "$CACHE_ARG")" || {
+        echo "the fixture cache could not serve $CACHE_ARG (tools/fixture_cache.sh failed)" >&2
+        exit 2
+    }
+    echo "save:  $SAVE" >&2
+fi
 if [ ! -f "$SAVE" ]; then
     echo "no such save or fixture: $ARG (looked for $SAVE)" >&2
     exit 2

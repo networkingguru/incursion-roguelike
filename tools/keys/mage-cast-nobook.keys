@@ -27,6 +27,11 @@ w y                     # wizard mode, confirm
 w
 @choose "Genocide Everything"
 @until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE             # Row 6: Ignore Spell Failure ON (the cast-success roll).
+ESC
+@until "HP:" ESC
 
 @dump:before-drop
 i
