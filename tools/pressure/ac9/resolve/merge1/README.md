@@ -1,5 +1,7 @@
 # AC9 merge 1: resolutions (master e8ab7697 = inc-cjos0 + inc-10v7f into the epic inc-pu6v d71c1823, in the scratch clone)
 
+Layout: the hunk text for conflicted path `<p>` is stored as `<p>.resolve` in this directory (so the tree's doc and source scans do not read another branch's text as this tree's). `README.md`, `post.patch`, `deletions.txt` and `keeps.txt` keep their names.
+
 Order: master's `tools/convert_tags_to_names.py --apply` runs on the epic first (commit `port: convert epic field tags to
 names (inc-ac9m)`, no hand edit; it reads master's `inc/SaveLegacyTags.h` because the epic has none). Then `git merge
 master`. Then `tools/pressure/resolve_conflict.py`: `deletions.txt`, `keeps.txt`, the hunks, `post.patch`, the unchanged mover

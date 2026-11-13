@@ -1,5 +1,7 @@
 # AC9 merge 2: resolutions (Maeve inc-pu6v.9 head 4ac7f9d5, 50 commits of her own, takes the merged epic)
 
+Layout: the hunk text for conflicted path `<p>` is stored as `<p>.resolve` in this directory (so the tree's doc and source scans do not read another branch's text as this tree's). `README.md`, `post.patch`, `deletions.txt` and `keeps.txt` keep their names.
+
 Preparation run: the merged epic is inc-ac9m (merge 1; resolutions here are applied to its tip 913971e7, and were first tried on da27203a, which the other agent has since replaced), not yet landed on inc-pu6v. `AC9_MERGE2_REF=inc-ac9m tools/pressure/ac9.sh <clone> merge2`
 merges that branch; without the variable the step merges inc-pu6v and needs land1, as before.
 

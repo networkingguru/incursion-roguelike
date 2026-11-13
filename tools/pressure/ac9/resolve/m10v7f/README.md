@@ -1,5 +1,7 @@
 # AC9: the clone's master (inc-cjos0 + clone-prep.patch) merged into the real branch inc-10v7f, then landed
 
+Layout: the hunk text for conflicted path `<p>` is stored as `<p>.resolve` in this directory (so the tree's doc and source scans do not read another branch's text as this tree's). `README.md`, `post.patch`, `deletions.txt` and `keeps.txt` keep their names.
+
 Side names: HEAD = inc-10v7f (4e374de2); master = the clone's master (87d031e1 = f8a70246 plus the mode change of
 `tools/check_family_cases.py`). The merge commit passes the hooks and the numbers-by-hand check (0 merge-made lines with a
 digit). `ac9.sh land10` then landed it on the clone's master with `INCURSION_FINISH_GATE=tools/pressure/ac9_cheapgate.sh`
@@ -24,7 +26,7 @@ Known gap, not fixed: the sourced skill screen carries `SK_LASTSKILL` ranks (`sr
 ## Landing fixes (post.patch, applied after the hunks)
 
 Both fail on the clone's master alone, so inc-10v7f's own landing makes them when it merges inc-cjos0:
-- `docs/specs/2026-11-06-fixture-builder-sites.md`: the two bare `Creature.h:149` / `Creature.h:1512` citations name `inc/Creature.h`
+- `docs/specs/2026-11-06-fixture-builder-sites.md`: the two bare citations of `Creature.h` (on branch inc-10v7f, with line numbers) name `inc/Creature.h`
   (master also holds a copy under `tools/pressure/cases/G27-conflict/resolve/inc/`, so the bare name resolved to two files).
 - `tools/check_player_fields.sh`: reads the calls inc-cjos0 saves with: `FIELD_ARRAY_ROWS` and the other `FIELD_*` names with underscores, and the
   element calls `FIELD_RID_AT` / `V1Str_AT` (member in the third argument, `ClassID[i]`). The table gains the four row counters

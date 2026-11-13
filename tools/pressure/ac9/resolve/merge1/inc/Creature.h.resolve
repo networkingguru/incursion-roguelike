@@ -1,3 +1,4 @@
+# stale-quote-ok: verbatim hunk text from another branch (AC9 rehearsal)
       FIELD_SKIP(LightAverseWasBright);   /* derived; never saved */
 @@@ next hunk
       static_assert(sizeof(Character) == 12656,

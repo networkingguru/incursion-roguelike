@@ -262,7 +262,10 @@ if os.path.isdir(rdir):
                 continue   # the table that explains the resolution is no resolution text
             fp = os.path.join(root, f)
             rel = os.path.relpath(fp, rdir)
-            txt = open(fp, encoding="utf-8", errors="replace").read().split("\n")
+            if rel.endswith(".resolve"):
+                rel = rel[:-len(".resolve")]   # <path>.resolve holds the hunk text of <path>
+            txt = open(fp, encoding="utf-8", errors="replace").read()
+            txt = re.sub(r"^# stale-quote-ok:[ \t]*\S[^\n]*\n", "", txt, count=1).split("\n")   # resolve_conflict.strip_marker
             if top and f == "post.patch":
                 cur = None
                 for ln in txt:

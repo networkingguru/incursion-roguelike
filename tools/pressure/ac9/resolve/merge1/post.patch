@@ -1,3 +1,4 @@
+# stale-quote-ok: verbatim patch text from another branch (AC9 rehearsal)
 --- a/inc/Creature.h
 +++ b/inc/Creature.h
 @@ -1437,7 +1437,7 @@

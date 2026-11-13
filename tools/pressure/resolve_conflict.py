@@ -5,7 +5,8 @@
   tools/pressure/resolve_conflict.py --selftest
 
 <worktree> is mid-merge. <resolve-dir> is tools/pressure/cases/<case>/resolve/, which holds one file per conflicted
-path, at that path: resolve/inc/Target.h resolves inc/Target.h. Such a file holds the text that replaces each
+path, at that path: resolve/inc/Target.h resolves inc/Target.h;
+so does resolve/inc/Target.h.resolve (the suffixed form, used where the tree scans files as source or docs). Such a file holds the text that replaces each
 conflict hunk of the path, in file order, the replacements separated by a line that reads exactly `@@@ next hunk`.
 (Text outside the hunks is git's own merge, so a resolution survives a change elsewhere in the file.)
 Each resolved path is `git add`ed; the caller commits the merge.
@@ -68,6 +69,37 @@ def git(w, *args):
     return subprocess.run(["git", "-C", w] + list(args), capture_output=True, text=True)
 
 
+CONTROL = ("README.md", "post.patch", "deletions.txt", "keeps.txt")
+SUFFIX = ".resolve"
+MARKER = re.compile(r"^# stale-quote-ok:[ \t]*\S[^\n]*\n")
+
+
+def strip_marker(text):
+    """Drop ONE leading `# stale-quote-ok: <why>` line (the exemption form tools/check_stale_quotes.sh reads) from a
+    resolution file or post.patch. Only line 1 counts; a second marker line or a marker lower down stays text."""
+    return MARKER.sub("", text, count=1)
+
+
+def load_resolution_files(rdir):
+    """Return ([paths with a resolution], {path: file holding it}), or (None, None) after a loud line.
+    A file `<path>.resolve` resolves <path>; a plain file `<path>` does too. Both for one path is refused."""
+    have, src_of = [], {}
+    for root, _, files in (os.walk(rdir) if os.path.isdir(rdir) else []):
+        for f in files:
+            full = os.path.join(root, f)
+            rel = os.path.relpath(full, rdir)
+            if rel in CONTROL:
+                continue   # the explaining table and the optional patch are no resolution of a path
+            if rel.endswith(SUFFIX):
+                rel = rel[:-len(SUFFIX)]
+            if rel in src_of:
+                print("resolve_conflict: FAIL: %s holds both %s and %s%s for one path" % (rdir, rel, rel, SUFFIX))
+                return None, None
+            src_of[rel] = full
+            have.append(rel)
+    return have, src_of
+
+
 def resolve(w, rdir):
     r = git(w, "diff", "--name-only", "--diff-filter=U")
     if r.returncode != 0:
@@ -120,13 +152,9 @@ def resolve(w, rdir):
     if unmerged and not os.path.isdir(rdir):
         print("resolve_conflict: no resolve dir %s" % rdir, file=sys.stderr)
         return 2
-    have = []
-    for root, _, files in (os.walk(rdir) if os.path.isdir(rdir) else []):
-        for f in files:
-            rel = os.path.relpath(os.path.join(root, f), rdir)
-            if rel in ("README.md", "post.patch", "deletions.txt", "keeps.txt"):
-                continue   # the explaining table and the optional patch are no resolution of a path
-            have.append(rel)
+    have, src_of = load_resolution_files(rdir)
+    if have is None:
+        return 1
     bad = 0
     for p in unmerged:
         if p not in have:
@@ -143,7 +171,7 @@ def resolve(w, rdir):
         return 1
     for p in unmerged:
         text = open(os.path.join(w, p), encoding="utf-8", errors="surrogateescape").read()
-        repl = open(os.path.join(rdir, p), encoding="utf-8", errors="surrogateescape").read()
+        repl = strip_marker(open(src_of[p], encoding="utf-8", errors="surrogateescape").read())
         repl = re.split(r"^" + re.escape(SEP) + r"\n", repl, flags=re.M)
         n = len(HUNK.findall(text))
         if n != len(repl):
@@ -164,7 +192,9 @@ def resolve(w, rdir):
     # generated files are rebuilt (the build reads these edits)
     post = os.path.join(rdir, "post.patch")
     if os.path.isfile(post):
-        a = git(w, "apply", "--index", post)
+        patch = strip_marker(open(post, encoding="utf-8", errors="surrogateescape").read())
+        a = subprocess.run(["git", "-C", w, "apply", "--index", "-"], input=patch.encode("utf-8", "surrogateescape"), capture_output=True)
+        a.stderr = a.stderr.decode("utf-8", "replace")
         if a.returncode != 0:
             print("resolve_conflict: FAIL: %s does not apply: %s" % (post, a.stderr.strip()[:300]))
             return 1
@@ -268,8 +298,40 @@ def selftest_keeps(d):
     return bad + (0 if ok else 1)
 
 
-def selftest():
+def selftest_suffix(d):
+    """A `<path>.resolve` file resolves <path>; both forms for one path are refused."""
+    rd = os.path.join(d, "suffixres")
+    os.makedirs(os.path.join(rd, "sub"))
+    open(os.path.join(rd, "sub", "a.h.resolve"), "w").write("x\n")
+    open(os.path.join(rd, "b.txt"), "w").write("y\n")
+    open(os.path.join(rd, "README.md"), "w").write("t\n")
+    have, src_of = load_resolution_files(rd)
+    ok = have is not None and sorted(have) == ["b.txt", "sub/a.h"] and src_of["sub/a.h"].endswith("a.h.resolve")
+    print("%s suffix and plain layouts both load" % ("ok  " if ok else "FAIL"))
+    bad = 0 if ok else 1
+    open(os.path.join(rd, "sub", "a.h"), "w").write("z\n")
+    have, _ = load_resolution_files(rd)
+    ok = have is None
+    print("%s a path held in both forms is refused" % ("ok  " if ok else "FAIL"))
+    return bad + (0 if ok else 1)
+
+
+def selftest_marker():
+    m = "# stale-quote-ok: why\n"
+    cases = [("one leading marker is stripped", m + "A\n", "A\n"),
+             ("a second marker line stays", m + m + "A\n", m + "A\n"),
+             ("a marker after line 1 stays", "A\n" + m, "A\n" + m),
+             ("a marker with no reason stays", "# stale-quote-ok:\nA\n", "# stale-quote-ok:\nA\n")]
     bad = 0
+    for name, got, want in cases:
+        ok = strip_marker(got) == want
+        print("%s %s" % ("ok  " if ok else "FAIL", name))
+        bad += 0 if ok else 1
+    return bad
+
+
+def selftest():
+    bad = selftest_marker()
     with tempfile.TemporaryDirectory() as d:
         w = os.path.join(d, "r")
         os.makedirs(w)
@@ -304,6 +366,7 @@ def selftest():
         os.makedirs(os.path.join(rdir, "g"), exist_ok=True)
         bad += selftest_generated(d)
         bad += selftest_keeps(d)
+        bad += selftest_suffix(d)
     print("resolve_conflict selftest: %s" % ("FAIL" if bad else "PASS"))
     return 1 if bad else 0
 
