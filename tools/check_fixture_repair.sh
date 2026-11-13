@@ -10,7 +10,7 @@
 #   (a) an edited .char, an edited options file and a different file standing in
 #       as the binary each MISS: the lookup builds again (one more line in the
 #       build log, a different entry), and the rebuilt character's canonical
-#       dump equals the original's, because none of the three edits touches the
+#       dump equals the original's, because the .char and binary edits do not touch the
 #       character. The module is in the key like the other three; its miss is not
 #       exercised here because the check does not rewrite mod/Incursion.Mod (B3).
 #   (b) a truncated cached .sav is served as it is: tools/headless.sh exits 8
@@ -30,7 +30,8 @@
 #
 # fact: the character -- tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, committed; built from the file alone, no key script and no walk
 # fact: the random stream -- the seed: line of that .char feeds the build; build_fixture.sh removes every other INCURSION_* variable; part (b) ends at the load error and reads no drawn value, and every other assertion compares dump hashes of one file under one seed
-# fact: the options -- the options: line of the .char names tools/fixtures/options-2026-08-22.dat; part (a) uses a scratch copy of it with one byte appended
+# fact: the options -- the options: line of the .char names tools/fixtures/options-2026-08-22.dat; part (a) uses a scratch copy of it with one byte changed in place (offset 407, length kept at 900)
+# fact: the Options: line of the dump -- both dumps come from one .char and one seed (the seed: line), so the options file is the only changed input; part (a) compares that line option by option
 # fact: the cache, the locks and the build log -- scratch directories made by this script (INCURSION_FIXTURE_CACHE); the worktree's real cache is never read or written, and INCURSION_FIXTURE_PIN is removed from the environment
 # fact: the binary -- INCURSION_BIN or ./incursion-headless; part (a) also runs a scratch copy of it with one byte appended
 # fact: the clock -- the age of the lock in (d) is set with touch -t (2 hours); the check waits at most a few seconds in all
@@ -64,8 +65,11 @@ fail=0
 ok()   { echo "ok   $1"; }
 bad()  { echo "FAIL $1"; fail=1; }
 lines() { if [ -f "$1" ]; then wc -l < "$1" | tr -d ' '; else echo 0; fi; }
+dumpto() { # <sav> <out>: writes the canonical dump, with the BASE binary
+    INCURSION_OPTIONS="$OPT" INCURSION_BIN="$BIN" tools/char_dump.sh "$1" "$2" > /dev/null 2>&1
+}
 dumpsha() { # <sav> -> the SHA-256 of its canonical dump, with the BASE binary
-    INCURSION_OPTIONS="$OPT" INCURSION_BIN="$BIN" tools/char_dump.sh "$1" "$W/dump.canon" > /dev/null 2>&1 || return 1
+    dumpto "$1" "$W/dump.canon" || return 1
     local h; h="$(shasum -a 256 < "$W/dump.canon")"; printf '%s' "${h%% *}"
 }
 # lookup <state-dir> [char-path]: the scratch cache is <state-dir>/cache; prints the .sav path.
@@ -74,21 +78,56 @@ lookup() {
     INCURSION_FIXTURE_CACHE="$st/cache" tools/fixture_cache.sh "$ch" 2> "$st/lookup.err"
 }
 
+# optcheck <orig.canon> <rebuilt.canon>: passes only when one line differs, it is the
+# Options: line, and its only change is that " 407=2" is gone (a zero option is not printed).
+optcheck() {
+    python3 -I - "$1" "$2" <<'PY'
+import sys
+a = open(sys.argv[1]).read().split("\n")
+b = open(sys.argv[2]).read().split("\n")
+if len(a) != len(b):
+    sys.exit("line counts differ: %d vs %d" % (len(a), len(b)))
+diff = [i for i in range(len(a)) if a[i] != b[i]]
+if len(diff) != 1:
+    sys.exit("%d lines differ (want 1)" % len(diff))
+i = diff[0]
+if not a[i].startswith("Options:"):
+    sys.exit("the differing line is not Options: (it starts %r)" % a[i][:20])
+ta, tb = a[i].split(), b[i].split()
+rm = sorted(set(ta) - set(tb))
+add = sorted(set(tb) - set(ta))
+if rm != ["407=2"] or add or [t for t in ta if t != "407=2"] != tb:
+    sys.exit("Options: differs beyond 407=2: removed %s, added %s" % (rm, add))
+print("one line differs (Options:), only 407=2 removed")
+PY
+}
+
 # ---------------------------------------------------------------- (a) misses ---
 A="$W/a"; mkdir -p "$A"
 P0="$(lookup "$A")" || { echo "INCONCLUSIVE: the first build failed: $(tail -1 "$A/lookup.err")"; exit 2; }
-D0="$(dumpsha "$P0")" || { echo "INCONCLUSIVE: the dump of the first build failed"; exit 2; }
+dumpto "$P0" "$W/orig.canon" || { echo "INCONCLUSIVE: the dump of the first build failed"; exit 2; }
+D0="$(shasum -a 256 < "$W/orig.canon")"; D0="${D0%% *}"
 N0="$(lines "$A/fixture-builds.tsv")"
 [ "$N0" = 1 ] || { echo "INCONCLUSIVE: expected one build line after the first build, found $N0"; exit 2; }
 
-miss() { # <label> <path-printed-by-the-lookup>
-    local label="$1" p="$2" n h
+miss() { # <label> <path-printed-by-the-lookup> [opt]: a build line, a new entry, and the same character
+    local label="$1" p="$2" n h why rc
     n="$(lines "$A/fixture-builds.tsv")"
-    h="$(dumpsha "$p")" || { bad "(a) $label: the dump of the rebuilt .sav failed"; return; }
-    if [ "$n" = "$((MISSN + 1))" ] && [ "$p" != "$PREV" ] && [ "$h" = "$D0" ]; then
-        ok "(a) $label: a miss, rebuilt once, same character (${h:0:12})"
+    if [ "${3:-}" = opt ]; then
+        dumpto "$p" "$W/rebuilt.canon" || { bad "(a) $label: the dump of the rebuilt .sav failed"; return; }
+        why="$(optcheck "$W/orig.canon" "$W/rebuilt.canon" 2>&1)"; rc=$?
+        if [ "$n" = "$((MISSN + 1))" ] && [ "$p" != "$PREV" ] && [ "$rc" = 0 ]; then
+            ok "(a) $label: a miss, rebuilt once, $why"
+        else
+            bad "(a) $label: build lines $MISSN -> $n, entry changed: $([ "$p" != "$PREV" ] && echo yes || echo no), $why"
+        fi
     else
-        bad "(a) $label: build lines $MISSN -> $n, entry changed: $([ "$p" != "$PREV" ] && echo yes || echo no), dump ${h:0:12} vs original ${D0:0:12}"
+        h="$(dumpsha "$p")" || { bad "(a) $label: the dump of the rebuilt .sav failed"; return; }
+        if [ "$n" = "$((MISSN + 1))" ] && [ "$p" != "$PREV" ] && [ "$h" = "$D0" ]; then
+            ok "(a) $label: a miss, rebuilt once, same character (${h:0:12})"
+        else
+            bad "(a) $label: build lines $MISSN -> $n, entry changed: $([ "$p" != "$PREV" ] && echo yes || echo no), dump ${h:0:12} vs original ${D0:0:12}"
+        fi
     fi
     MISSN="$n"; PREV="$p"
 }
@@ -105,9 +144,10 @@ sed "s#^options:.*#options: $W/e2/options.dat#" "$CHAR" > "$W/e2/$NAME.char"
 P="$(lookup "$A" "$W/e2/$NAME.char")" || { bad "(a) options file: the first lookup failed: $(tail -1 "$A/lookup.err")"; P=""; }
 if [ -n "$P" ]; then
     MISSN="$(lines "$A/fixture-builds.tsv")"; PREV="$P"
-    printf 'x' >> "$W/e2/options.dat"
+    # Flip OPT_DESC_ROOM (byte 407, a room-description setting) and keep the 900-byte length.
+    python3 -c 'import sys; p=sys.argv[1]; d=bytearray(open(p,"rb").read()); d[407] = 1 if d[407] == 0 else 0; open(p,"wb").write(d)' "$W/e2/options.dat"
     P="$(lookup "$A" "$W/e2/$NAME.char")" || { bad "(a) an edited options file: the lookup failed: $(tail -1 "$A/lookup.err")"; P=""; }
-    [ -n "$P" ] && miss "an edited options file" "$P"
+    [ -n "$P" ] && miss "an edited options file" "$P" opt
 fi
 
 mkdir -p "$W/e3"
