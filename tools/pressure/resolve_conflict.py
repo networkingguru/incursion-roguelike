@@ -9,6 +9,12 @@ path, at that path: resolve/inc/Target.h resolves inc/Target.h. Such a file hold
 conflict hunk of the path, in file order, the replacements separated by a line that reads exactly `@@@ next hunk`.
 (Text outside the hunks is git's own merge, so a resolution survives a change elsewhere in the file.)
 Each resolved path is `git add`ed; the caller commits the merge.
+A GENERATED path (src/yygram.cpp, inc/yygram.h, lib/dispatch.h) takes no hunk text: it needs no resolution file, and a
+resolution file for one FAILS. After every other path is resolved, the tool regenerates them in <worktree>: yygram with
+tools/regen_yygram.sh, lib/dispatch.h with `BACKEND=posix ./build_macos.sh` run twice (see .gitattributes). Then it
+`git add`s them.
+An optional <resolve-dir>/post.patch (a unified diff) is applied after the hunks and before the generated files are
+rebuilt; <resolve-dir>/README.md is the table that explains the resolution and is never read as one.
 Exit 0 every unmerged path resolved. Exit 1 and a loud line for: an unmerged path with no resolution file, a
 resolution file for a path that is not unmerged, a hunk count that differs from the path's, a marker left over.
 Exit 2 could not measure (not a git worktree, no resolve dir).
@@ -23,6 +29,41 @@ SEP = "@@@ next hunk"
 HUNK = re.compile(r"^<<<<<<< [^\n]*\n(.*?)^=======\n(.*?)^>>>>>>> [^\n]*\n", re.S | re.M)
 
 
+GENERATED = {"src/yygram.cpp": "yygram", "inc/yygram.h": "yygram", "lib/dispatch.h": "dispatch"}
+REGEN = {"yygram": [["tools/regen_yygram.sh"]],
+         "dispatch": [["./build_macos.sh"], ["./build_macos.sh"]]}
+
+
+def regenerate(w, paths):
+    """Take 'ours' for each generated path, run its generator, stage the result. 0 done, 1 a generator failed."""
+    for p in paths:
+        r = git(w, "checkout", "--ours", "--", p)
+        if r.returncode != 0:
+            print("resolve_conflict: FAIL: git checkout --ours %s: %s" % (p, r.stderr.strip()[:200]))
+            return 1
+    for kind in sorted(set(GENERATED[p] for p in paths)):
+        for cmd in REGEN[kind]:
+            env = dict(os.environ)
+            if kind == "dispatch":
+                env["BACKEND"] = "posix"
+            r = subprocess.run(cmd, cwd=w, env=env, capture_output=True, text=True)
+            if r.returncode != 0:
+                print("resolve_conflict: FAIL: %s failed (rc %d): %s" % (" ".join(cmd), r.returncode, (r.stdout + r.stderr)[-300:].strip()))
+                return 1
+        print("resolve_conflict: regenerated %s" % kind)
+    for p in paths:
+        a = git(w, "add", "--", p)
+        if a.returncode != 0:
+            print("resolve_conflict: git add %s failed: %s" % (p, a.stderr.strip()[:200]))
+            return 1
+        print("resolve_conflict: %s is generated output, staged" % p)
+    if any(GENERATED[p] == "yygram" for p in paths):
+        for q in ("src/yygram.cpp", "inc/yygram.h"):
+            if q not in paths and git(w, "status", "--porcelain", "--", q).stdout.strip():
+                git(w, "add", "--", q)
+    return 0
+
+
 def git(w, *args):
     return subprocess.run(["git", "-C", w] + list(args), capture_output=True, text=True)
 
@@ -32,21 +73,70 @@ def resolve(w, rdir):
     if r.returncode != 0:
         print("resolve_conflict: git diff failed: %s" % r.stderr.strip()[:200], file=sys.stderr)
         return 2
-    unmerged = [p for p in r.stdout.split("\n") if p]
-    if not os.path.isdir(rdir):
+    unmerged_all = [p for p in r.stdout.split("\n") if p]
+    # deletions.txt: one path per line, a modify/delete conflict resolved by taking the deletion (the other side removed
+    # the file, this side changed it). The path MUST be unmerged and MUST carry no conflict marker (a content conflict is
+    # never settled by deleting).
+    dfile = os.path.join(rdir, "deletions.txt")
+    if os.path.isfile(dfile):
+        for p in [l.strip() for l in open(dfile).read().split("\n") if l.strip() and not l.startswith("#")]:
+            if p not in unmerged_all:
+                print("resolve_conflict: FAIL: deletions.txt names %s, which is not in conflict" % p)
+                return 1
+            fp = os.path.join(w, p)
+            if os.path.exists(fp) and re.search(r"^<<<<<<< ", open(fp, errors="surrogateescape").read(), re.M):
+                print("resolve_conflict: FAIL: %s has conflict hunks; deleting it would drop a content conflict" % p)
+                return 1
+            a = git(w, "rm", "-q", "-f", "--", p)
+            if a.returncode != 0:
+                print("resolve_conflict: git rm %s failed: %s" % (p, a.stderr.strip()[:200]))
+                return 1
+            print("resolve_conflict: deleted %s (the other side removed it)" % p)
+        unmerged_all = [p for p in git(w, "diff", "--name-only", "--diff-filter=U").stdout.split("\n") if p]
+    # keeps.txt: one path per line, the mirror image of deletions.txt: the other side removed the file, this side kept
+    # it (an epic-only file that master's conversion did not cover), and this side's file stays. The path MUST be
+    # unmerged and MUST carry no conflict marker.
+    kfile = os.path.join(rdir, "keeps.txt")
+    if os.path.isfile(kfile):
+        for p in [l.strip() for l in open(kfile).read().split("\n") if l.strip() and not l.startswith("#")]:
+            if p not in unmerged_all:
+                print("resolve_conflict: FAIL: keeps.txt names %s, which is not in conflict" % p)
+                return 1
+            fp = os.path.join(w, p)
+            if not os.path.exists(fp):
+                print("resolve_conflict: FAIL: keeps.txt names %s, which this side no longer holds" % p)
+                return 1
+            if re.search(r"^<<<<<<< ", open(fp, errors="surrogateescape").read(), re.M):
+                print("resolve_conflict: FAIL: %s has conflict hunks; keeping it would drop a content conflict" % p)
+                return 1
+            a = git(w, "add", "--", p)
+            if a.returncode != 0:
+                print("resolve_conflict: git add %s failed: %s" % (p, a.stderr.strip()[:200]))
+                return 1
+            print("resolve_conflict: kept %s (the other side removed it)" % p)
+        unmerged_all = [p for p in git(w, "diff", "--name-only", "--diff-filter=U").stdout.split("\n") if p]
+    gen = [p for p in unmerged_all if p in GENERATED]
+    unmerged = [p for p in unmerged_all if p not in GENERATED]
+    if unmerged and not os.path.isdir(rdir):
         print("resolve_conflict: no resolve dir %s" % rdir, file=sys.stderr)
         return 2
     have = []
-    for root, _, files in os.walk(rdir):
+    for root, _, files in (os.walk(rdir) if os.path.isdir(rdir) else []):
         for f in files:
-            have.append(os.path.relpath(os.path.join(root, f), rdir))
+            rel = os.path.relpath(os.path.join(root, f), rdir)
+            if rel in ("README.md", "post.patch", "deletions.txt", "keeps.txt"):
+                continue   # the explaining table and the optional patch are no resolution of a path
+            have.append(rel)
     bad = 0
     for p in unmerged:
         if p not in have:
             print("resolve_conflict: FAIL: %s is in conflict and %s has no resolution for it" % (p, rdir))
             bad += 1
     for p in have:
-        if p not in unmerged:
+        if p in GENERATED:
+            print("resolve_conflict: FAIL: %s has a resolution for %s, which is generated output: it is regenerated, never given hunk text" % (rdir, p))
+            bad += 1
+        elif p not in unmerged:
             print("resolve_conflict: FAIL: %s has a resolution for %s, which is not in conflict" % (rdir, p))
             bad += 1
     if bad:
@@ -70,7 +160,112 @@ def resolve(w, rdir):
             print("resolve_conflict: git add %s failed: %s" % (p, a.stderr.strip()[:200]))
             return 1
         print("resolve_conflict: resolved %s (%d hunk(s))" % (p, n))
+    # edits outside the conflict hunks that the build or the commit checks need: a unified diff, applied before the
+    # generated files are rebuilt (the build reads these edits)
+    post = os.path.join(rdir, "post.patch")
+    if os.path.isfile(post):
+        a = git(w, "apply", "--index", post)
+        if a.returncode != 0:
+            print("resolve_conflict: FAIL: %s does not apply: %s" % (post, a.stderr.strip()[:300]))
+            return 1
+        print("resolve_conflict: applied post.patch")
+    # the project's own procedure (.claude/rules/epic-branches.md): the unchanged mover, before the generated files are
+    # rebuilt, because the build refuses two names that hold one stored value. Its unstaged diff is the record of what
+    # it moved (INCURSION_RESOLVE_MOVER_DIFF names the file); nobody edits a stored number by hand.
+    mover = os.path.join(w, "tools", "move_branch_values.py")
+    if unmerged and os.path.isfile(mover):
+        r = subprocess.run([sys.executable, mover], cwd=w, capture_output=True, text=True)
+        print((r.stdout + r.stderr).rstrip())
+        if r.returncode != 0:
+            print("resolve_conflict: FAIL: tools/move_branch_values.py failed (rc %d)" % r.returncode)
+            return 1
+        # the mover's files: changed in the work tree, and not one of the still-unmerged generated paths
+        still = set(git(w, "diff", "--name-only", "--diff-filter=U").stdout.split("\n"))
+        moved = [m for m in git(w, "diff", "--name-only").stdout.split("\n") if m and m not in still]
+        d = git(w, "diff", "--", *moved).stdout if moved else ""
+        if d:
+            out = os.environ.get("INCURSION_RESOLVE_MOVER_DIFF")
+            if out:
+                open(out, "w", encoding="utf-8", errors="surrogateescape").write(d)
+            if git(w, "add", "--", *moved).returncode != 0:
+                print("resolve_conflict: git add after the mover failed")
+                return 1
+            print("resolve_conflict: the mover moved values (diff saved)")
+    if gen:
+        return regenerate(w, gen)
     return 0
+
+
+def selftest_generated(d):
+    """A conflict in a generated path is regenerated, not resolved from hunk text; a resolution file for one fails."""
+    w = os.path.join(d, "gen")
+    os.makedirs(os.path.join(w, "src"))
+    os.makedirs(os.path.join(w, "inc"))
+    os.makedirs(os.path.join(w, "tools"))
+
+    def sh(*a):
+        subprocess.run(["git", "-C", w, "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), check=True, capture_output=True)
+    sh("init", "-q", "-b", "m")
+    open(os.path.join(w, "src/yygram.cpp"), "w").write("a\nb\nc\n")
+    open(os.path.join(w, "inc/yygram.h"), "w").write("h\n")
+    gen = os.path.join(w, "tools/regen_yygram.sh")
+    open(gen, "w").write("#!/bin/sh\nprintf 'regenerated\\n' > src/yygram.cpp\nprintf 'regenerated h\\n' > inc/yygram.h\n")
+    os.chmod(gen, 0o755)
+    sh("add", "."); sh("commit", "-q", "-m", "p")
+    sh("checkout", "-q", "-b", "x")
+    open(os.path.join(w, "src/yygram.cpp"), "w").write("a\nX\nc\n"); sh("commit", "-qam", "x")
+    sh("checkout", "-q", "m")
+    open(os.path.join(w, "src/yygram.cpp"), "w").write("a\nY\nc\n"); sh("commit", "-qam", "y")
+    if subprocess.run(["git", "-C", w, "merge", "x"], capture_output=True, text=True).returncode == 0:
+        print("FAIL selftest setup: no generated-path conflict")
+        return 1
+    bad = 0
+    res = os.path.join(d, "genres")
+    os.makedirs(os.path.join(res, "src"))
+    open(os.path.join(res, "src/yygram.cpp"), "w").write("hand text\n")
+    got = resolve(w, res)
+    ok = got == 1
+    print("%s generated path with a resolution file (rc %d, want 1)" % ("ok  " if ok else "FAIL", got))
+    bad += 0 if ok else 1
+    os.remove(os.path.join(res, "src/yygram.cpp"))
+    got = resolve(w, os.path.join(d, "no-such-dir"))
+    left = subprocess.run(["git", "-C", w, "diff", "--name-only", "--diff-filter=U"], capture_output=True, text=True).stdout.strip()
+    ok = got == 0 and not left and open(os.path.join(w, "src/yygram.cpp")).read() == "regenerated\n"
+    print("%s generated path regenerated, no resolve dir needed (rc %d, want 0)" % ("ok  " if ok else "FAIL", got))
+    bad += 0 if ok else 1
+    return bad
+
+
+def selftest_keeps(d):
+    """A modify/delete conflict listed in keeps.txt keeps this side's file; one not listed fails."""
+    w = os.path.join(d, "keep")
+    os.makedirs(w)
+
+    def sh(*a):
+        subprocess.run(["git", "-C", w, "-c", "user.name=t", "-c", "user.email=t@t"] + list(a), check=True, capture_output=True)
+    sh("init", "-q", "-b", "m")
+    open(os.path.join(w, "k.txt"), "w").write("a\n")
+    sh("add", "."); sh("commit", "-q", "-m", "p")
+    sh("checkout", "-q", "-b", "x")
+    open(os.path.join(w, "k.txt"), "w").write("a\nX\n"); sh("commit", "-qam", "x")
+    sh("checkout", "-q", "m")
+    sh("rm", "-q", "k.txt"); sh("commit", "-qm", "gone")
+    if subprocess.run(["git", "-C", w, "merge", "x"], capture_output=True, text=True).returncode == 0:
+        print("FAIL selftest setup: no modify/delete conflict")
+        return 1
+    rd = os.path.join(d, "keepres")
+    os.makedirs(rd)
+    open(os.path.join(rd, "keeps.txt"), "w").write("nosuch.txt\n")
+    got = resolve(w, rd)
+    ok = got == 1
+    print("%s keeps.txt naming a path not in conflict (rc %d, want 1)" % ("ok  " if ok else "FAIL", got))
+    bad = 0 if ok else 1
+    open(os.path.join(rd, "keeps.txt"), "w").write("k.txt\n")
+    got = resolve(w, rd)
+    left = subprocess.run(["git", "-C", w, "diff", "--name-only", "--diff-filter=U"], capture_output=True, text=True).stdout.strip()
+    ok = got == 0 and not left and open(os.path.join(w, "k.txt")).read() == "a\nX\n"
+    print("%s keeps.txt keeps this side's file (rc %d, want 0)" % ("ok  " if ok else "FAIL", got))
+    return bad + (0 if ok else 1)
 
 
 def selftest():
@@ -107,6 +302,8 @@ def selftest():
             print("%s %s (rc %d, want %d)" % ("ok  " if ok else "FAIL", name, got, want))
             bad += 0 if ok else 1
         os.makedirs(os.path.join(rdir, "g"), exist_ok=True)
+        bad += selftest_generated(d)
+        bad += selftest_keeps(d)
     print("resolve_conflict selftest: %s" % ("FAIL" if bad else "PASS"))
     return 1 if bad else 0
 

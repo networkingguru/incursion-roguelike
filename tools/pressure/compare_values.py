@@ -28,6 +28,10 @@ Narrow bookkeeping rules, each printed under its own word and none a failure (in
             so the last group's bounds moved) passes when the after side's entries a..b hash to the same value. An entry
             changed, or past the end of the after array, fails.
 
+  gonezero  (INCURSION_PRESSURE_REMOVED_ZERO=1, AC9 values1) a field or script variable missing after, with no other rule
+            covering it, whose master value is 0 (an int or uint of 0, or a null rid): the merged tree no longer has it and
+            it held nothing. A missing field that held a nonzero value still fails.
+
   tools/pressure/compare_values.py --selftest
 runs every rule on made-up value files, and a planted real change of each kind must still exit 1. Exit 0 pass, 1 fail.
 
@@ -200,6 +204,15 @@ def bare_scope(scope):
     return scope.split("/", 1)[1] if "/" in scope else scope
 
 
+def zero_value(kind, value):
+    """gonezero: an int or uint of 0 (`0[dt=DT_INT32]`, `Anger=0`, `x=0(?)`), or a null rid (`{null}[dt=DT_RID]`, `eID={null}`)."""
+    v = re.sub(r"\[dt=[A-Za-z0-9_]+\]$", "", value)
+    v = v.split("=", 1)[1] if "=" in v else v
+    if kind in ("int", "uint"):
+        return re.fullmatch(r"0(\(.*\))?", v) is not None
+    return kind == "rid" and v == "{null}"
+
+
 def count_of(value):
     try:
         return int(value.rsplit("=", 1)[1])
@@ -245,6 +258,7 @@ def selftest():
         G = "h1:t1/Game"
         REN = {"INCURSION_PRESSURE_RENAMES": "barbazu>barbazu;grw|flask>flask;retired"}
         GROWS = {"INCURSION_PRESSURE_GROWS": "1"}
+        RZ = {"INCURSION_PRESSURE_REMOVED_ZERO": "1"}
         H4, H5 = fnv_hash(bytes([1, 2, 3, 4])), fnv_hash(bytes([1, 2, 3, 4, 5]))
         Z = "00" * 896   # entries 0..895 are empty
         RAW5, RAW5C = Z + "0102030405", Z + "0102090405"
@@ -284,6 +298,14 @@ def selftest():
             ("C3b value changed", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..900] arr Options=len=5 h=x", C + " Options{bytes} bytes es=1:" + RAW5C], 1, "changed"),
             ("C3b entry gone", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..897] arr Options=len=2 h=x", C + " Options{bytes} bytes es=1:" + Z + "0102"], 1, "changed"),
             ("C3b no bytes", [C + " Options[896..899] arr Options=len=4 h=" + H4], [C + " Options[896..900] arr Options=len=5 h=" + H5], 1, "missing"),
+            ("gonezero int", [G + ".ScriptVariable Xel.dailySac int 0[dt=DT_INT16]"], [G + " Day int Day=0"], 0, "gonezero", RZ),
+            ("gonezero uint slot", [C + " Anger[3] uint Anger=0"], [C + " Other uint Other=1"], 0, "gonezero", RZ),
+            ("gonezero null rid", [C + " eID rid eID={null}"], [C + " Other uint Other=1"], 0, "gonezero", RZ),
+            ("gonezero nonzero fails", [G + ".ScriptVariable Xel.dailySac int 3[dt=DT_INT16]"], [G + " Day int Day=0"], 1, "missing", RZ),
+            ("gonezero nonzero uint fails", [C + " Anger[3] uint Anger=7"], [C + " Other uint Other=1"], 1, "missing", RZ),
+            ("gonezero named rid fails", [C + " eID rid eID=Essiah"], [C + " Other uint Other=1"], 1, "missing", RZ),
+            ("gonezero kept value changed fails", [C + " Kept uint Kept=0"], [C + " Kept uint Kept=1"], 1, "changed", RZ),
+            ("gonezero off by default", [C + " Anger[3] uint Anger=0"], [C + " Other uint Other=1"], 1, "missing"),
             ("A4 not in table", [C + " Other uint Other=1"], [C + " Other2 uint Other=1"], 1, "missing"),
         ]
         for name, b, a, rc, word, *env in cases:
@@ -315,6 +337,7 @@ def main(argv):
     bad = 0
     grows = os.environ.get("INCURSION_PRESSURE_GROWS") == "1"
     ren = renames()
+    removed_zero = os.environ.get("INCURSION_PRESSURE_REMOVED_ZERO") == "1"
     try:
         fren = rename_table()
         retired = retired_table()
@@ -355,6 +378,9 @@ def main(argv):
                 continue
             if grows and shape_line(k[0], k[1]):
                 print("shape    %s gone" % tag)
+                continue
+            if removed_zero and zero_value(*before[k]):
+                print("gonezero %s (was %s %s)" % (tag, *before[k]))
                 continue
             print("missing  %s (was %s %s)" % (tag, *before[k]))
             bad += 1

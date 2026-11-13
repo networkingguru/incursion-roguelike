@@ -1,0 +1,1270 @@
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1437,7 +1437,7 @@
+          which are real rIDs and are named. Upgrade path: write these as
+          rows keyed through the name table, the way the spec's "resource
+          memory segment" section already requires for MonMem/EffMem. */
+-      static_assert(sizeof(Character) == 12656,
++      static_assert(sizeof(Character) == 12832,
+                     "Character's coverage pin row pads assume this");
+       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
+       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
+@@ -2041,13 +2041,14 @@
+          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
+          not rIDs. Same ceiling and same upgrade path as the note in
+          Character's list above. */
+-      static_assert(sizeof(Player) == 23720,
++      static_assert(sizeof(Player) == 23896,
+                     "Player's coverage pin row pads assume this");
+       static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
+       static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");
+       static_assert(sizeof(QuickKey) == 16, "one embed per quick key");
+       static_assert(sizeof(String) == 24, "V1Str covers a whole String");
+       static_assert(sizeof(time_t) == 8, "start_second travels as 8 raw bytes");
++      FIELD_SKIP(LastFeatGranted);   /* set and read inside one feat grant; never saved */
+       /* Order-independent: MyTerm is the process's one terminal, not saved
+          state, and nothing below reads it. It stays where it has always
+          been. */
+--- a/src/Inv.cpp
++++ b/src/Inv.cpp
+@@ -329,8 +329,8 @@
+ 
+ /* inc-h5aql: Wield's two-hand test, shared with the weapon-set picker. */
+ bool Character::NeedsBothHands(Item *it) {
+-    return (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID) && !HasFeat(FT_MONKEY_GRIP)) ||
+-           (it->Size(this) + TITEM(it->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : HasFeat(FT_MONKEY_GRIP))));
++    return (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID) && !WeaponSizeBonus()) ||
++           (it->Size(this) + TITEM(it->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : WeaponSizeBonus())));
+ }
+ 
+ EvReturn Character::Wield(EventInfo &e) {
+--- a/src/Event.cpp
++++ b/src/Event.cpp
+@@ -165,7 +165,9 @@
+    docs/specs/2026-09-29-god-class-categories-spec.md Section 2. This phase
+    builds the data and the table only; consumers follow in later phases of
+    this same bead. */
++// no-family
+ #define MAX_GOD_CLASSES 256
++// end no-family
+ 
+ static rID   GodClassName[MAX_GOD_CLASSES];       /* every class resource    */
+ static int16 nGodClass;                           /* how many are loaded     */
+@@ -475,7 +477,9 @@
+    call time. A subrace follows its BaseRace. The contract is in
+    docs/specs/2026-09-30-god-race-lists-spec.md Sections 3 and 4. This phase
+    builds the data and the table only; consumers follow in later phases. */
++// no-family
+ #define MAX_GOD_RACES 256
++// end no-family
+ 
+ static rID   GodRaceName[MAX_GOD_RACES];          /* every base race        */
+ static int16 nGodRace;                            /* how many are loaded    */
+@@ -812,10 +816,12 @@
+    FavourTable, so no consumer reads FAVOUR_TABLE or scans a resource at call
+    time. See docs/specs/2026-10-02-god-favour-table-spec.md. Built in the
+    same pass as the class and race tables, above. */
++// no-family
+ #define FAVOUR_STATE_COUNT  6   /* FS_STRANGER..FS_ANATHEMA */
+ #define FAVOUR_COLUMN_COUNT 10  /* FC_DEVOTION..FC_HATE_PUNISH */
+ #define FAVOUR_TABLE_ROWS   64  /* generous: 6 states x 10 columns, minus the
+                                    cells Section 8 refuses, is well under this */
++// end no-family
+ 
+ static int8 FavourTable[MAX_GODS][FAVOUR_STATE_COUNT][FAVOUR_COLUMN_COUNT];
+ 
+--- a/src/Fight.cpp
++++ b/src/Fight.cpp
+@@ -1593,7 +1593,9 @@
+    order: VFShotVictim[VFShotN]=e.EVictim->myHandle, VFShotVVal[VFShotN]=
+    e.vVal, then VFShotN++ -- bounds-check VFShotN first. VolleyFireProbe
+    resets VFShotN to 0 before every call it makes. */
++// no-family
+ #define VOLLEY_PROBE_MAX 64
++// end no-family
+ static hObj  VFShotVictim[VOLLEY_PROBE_MAX];
+ static int32 VFShotVVal[VOLLEY_PROBE_MAX];
+ static int16 VFShotN = 0;
+--- a/src/GodCastProbe.cpp
++++ b/src/GodCastProbe.cpp
+@@ -12,9 +12,11 @@
+ #include "Incursion.h"
+ 
+ #define GODFLAG(e) ((e).isActOfGod = true, (e).isGodCast = true)
++// no-family
+ #define GODLEV 20
+ #define GODDC  33
+ #define HUGE_HP 5000
++// end no-family
+ /* Raising max HP (mHP) does not survive a cast: Character::CalcValues
+    (src/Values.cpp:1901) does "cHP -= mHP; mHP = 20" then rebuilds mHP from
+    class level, and "cHP += mHP" (line 1964) puts back only the rebuilt
+@@ -28,11 +30,15 @@
+    A_THP, sets cHP to mHP+GetAttr(A_THP) before every cast, and counts a hit
+    as cHP below that same effective maximum. Damage still lands for real --
+    only the pool is larger. */
++// no-family
+ #define THP_DUR 1000000
++// end no-family
+ /* Creature::AddBonus stores a bonus in int8 AttrAdj, so a grant above 127
+    wraps: 5000 became -120 A_THP and the first strike killed the player.
+    127 is the largest grant that holds; 20d6 averages 70. */
++// no-family
+ #define SHIELD_THP 127
++// end no-family
+ 
+ static int16 GodFullHP(Creature *c) {
+     return c->mHP + c->GetAttr(A_THP);
+--- a/src/KysulPulseProbe.cpp
++++ b/src/KysulPulseProbe.cpp
+@@ -14,7 +14,9 @@
+    $"Kysul",EActor) inside Effect "Kysul's Pulse", is invisible to it, so
+    the scan reports EV_PULSE_VOICE as a dead GODWATCH handler without this
+    line. Kept where the probe this bead also needs already lives. */
++// no-family
+ static const int16 kysulPulseVoiceThrownFromScript = EV_PULSE_VOICE;
++// end no-family
+ 
+ void KysulPulseProbe(int32 code, int32 a, int32 b, int32 c, int32 last) {
+     static FILE *log = NULL;
+--- a/src/Magic.cpp
++++ b/src/Magic.cpp
+@@ -4916,7 +4916,9 @@
+ /* The creatures in play that this caster can aim at: itself and anything it
+    perceives. One builder for the Q_TAR and Q_LOC pools, and it stops adding
+    when the pool is full. */
++// no-family
+ #define WILDMAGIC_POOL_MAX 1024
++// end no-family
+ static int16 WildMagicPool(Creature *caster, Creature *pool[WILDMAGIC_POOL_MAX])
+   {
+     int16 np = 0; Thing *t;
+--- a/src/Prayer.cpp
++++ b/src/Prayer.cpp
+@@ -34,7 +34,9 @@
+ /* inc-pu6v.96: a god-message capture stores each resolved line GodMessage
+    would print, in order, and prints nothing. Opened and closed around one
+    entry test; nesting is refused. */
++// no-family
+ #define GOD_CAPTURE_MAX 128
++// end no-family
+ static bool GodCaptureOpen = false;
+ static int GodCaptureN = 0;
+ static String GodCaptureLines[GOD_CAPTURE_MAX];
+@@ -1333,7 +1335,9 @@
+    with -> CPL_ORDINARY over those. (4) Otherwise CPL_INERT. The god never
+    grants a launcher. With none carried the callers behave as before.
+    Collect items into arrays first: FirstInv()/NextInv() use static cursors. */
++// no-family
+ enum { CPL_NONE, CPL_PROF, CPL_ORDINARY, CPL_INERT };
++// end no-family
+ static int16 ConjuredShotPlan(Creature *cr, Item **out, int16 *outN)
+   {
+     Item *it, *handW, *handR, *allOrd[SL_LAST], *profOrd[SL_LAST];
+@@ -4218,7 +4222,9 @@
+    like HATE_LADDER (src/Prayer.cpp, HATE_ROWS): GetList pads the tail with
+    three zeros, and a full buffer still terminates because no real aid code
+    or mode is ever zero (every AID_* code is 1 or above). */
++// no-family
+ #define AID_PRICES_ROWS 60
++// end no-family
+ 
+ /* inc-pu6v.129: the price of one aid (spec Section 6.1), before the guard.
+    Returns -1 and logs an Error (naming the god and the code) when the god
+@@ -4548,7 +4554,9 @@
+    a real setting that means "a standing curse". GetList reserves three blank
+    tail slots (src/Annot.cpp:333), so a full buffer still terminates; the
+    index bound guards the read regardless. */
++// no-family
+ #define HATE_ROWS 99
++// end no-family
+ 
+ void Character::applyHateRung(rID gID, int16 rung) {
+     rID ladder[HATE_ROWS + 3] = { 0 };
+@@ -4652,7 +4660,9 @@
+ 
+ /* inc-pu6v.201: one round is 60 theGame->Turn units (src/Main.cpp throws
+    EV_TURN when !(Turn%60); lib/religion.irh and the PRAYER_DELAY paths agree). */
++// no-family
+ #define APPROVAL_SQUELCH_ROUND (60)
++// end no-family
+ 
+ /* inc-pu6v.201: the last payment turn of each (god, reason) approval. A
+    standing act pays every interval (e.g. every 10 rounds); the approval line
+@@ -4662,12 +4672,16 @@
+    per reason, keyed by string content (NULL is its own key). Memory only: not
+    saved, so a load resets it and costs at most one extra line per reason --
+    acceptable for inc-pu6v.201, and it leaves every save format untouched. */
++// no-family
+ #define APPROVAL_SQUELCH_ROUNDS (20)
++// end no-family
+ /* ponytail: a fixed 64-entry table evicts the oldest entry at the ceiling.
+    A player has at most a handful of gods and a few reasons each, so 64 is
+    far above any live count; the upgrade path is a growable map keyed on
+    (god, reason) if a god script ever invents reasons in a loop. */
++// no-family
+ #define APPROVAL_SQUELCH_MAX (64)
++// end no-family
+ 
+ struct ApprovalSquelchEntry {
+   rID god;
+--- a/src/Sheet.cpp
++++ b/src/Sheet.cpp
+@@ -26,7 +26,9 @@
+    the next row and the prefix repeats. Keeping every row at most 38 leaves a
+    space at the boundary. The text budget is therefore 36 on the first row and
+    34 on a continuation. */
++// no-family
+ static const int32 SPIRIT_ROW_CELLS = 38;
++// end no-family
+ 
+ /* inc-pu6v.50: word-wrap one Spiritual line to SPIRIT_ROW_CELLS per row, the
+    first row preceded by "__" and each continuation by "____". A word longer
+--- a/src/Annot.cpp
++++ b/src/Annot.cpp
+@@ -411,7 +411,9 @@
+             listcoverEnabled = (lce && lce[0] == '1') ? 1 : 0;
+         }
+         if (listcoverEnabled) {
++// no-family
+             enum { LISTCOVER_SIZE = 4096, LISTCOVER_PROBE_LIMIT = 8 };
++// end no-family
+             struct CoverSlot { Resource *res; int16 ln; bool used; };
+             static CoverSlot table[LISTCOVER_SIZE];
+             uint32 h = (uint32)((size_t)this >> 3) * 2654435761u
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -193,7 +193,9 @@
+ /* Only offered/kept while creating a character (MO_CREATE); Character::
+    FeatPrereq refuses it otherwise. docs/specs/2026-09-30-god-race-lists-spec.md
+    Section 7.2 (inc-z8qn). */
++// no-family
+ #define FF_CREATION_ONLY        0x10000
++// end no-family
+ 
+ struct FeatConjunct { 
+   int32     elt;            // element  -- e.g., BAB,       IAttr
+--- a/inc/Map.h
++++ b/inc/Map.h
+@@ -556,7 +556,9 @@
+ #define DF_IGNORE_TERRAIN       2
+ /* A closed door that is neither locked nor secret counts as passable (the
+    walker opens it). */
++// no-family
+ #define DF_OPEN_DOORS           4
++// end no-family
+ 
+     uint16 PathPoint(int16 n);
+     uint16 RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
+--- a/inc/Res.h
++++ b/inc/Res.h
+@@ -1479,13 +1479,17 @@
+ #define MONMEM_SEEN      1
+ #define MONMEM_FOUGHT    2
+ #define MONMEM_KILL      4
++// no-family
+ #define MONMEM_LORE      8
++// end no-family
+ #define MONMEM_MAX_KILLS 255     /* MonMem::Kills is 8 bits wide. */
+ 
+ /* inc-pu6v.261: one bit of MonMem::Flags. Set when a script learns a kind's
+    lore; the description then reveals every Kills threshold as if the player
+    had met it that often. MonMemNote stays the only writer. */
++// no-family
+ #define MONMEM_FLAG_LORE 0x01
++// end no-family
+ 
+ void MonMemNote(Player *p, rID mID, int what);
+ 
+@@ -1513,8 +1517,10 @@
+    region description was shown for this character. Bit 1 is inc-pu6v.138:
+    this character has already been credited, to the gods, with first sight
+    of this region TYPE (a room or river, by sight). */
++// no-family
+ #define RM_SEEN_DESCRIBED   1u
+ #define RM_SEEN_FIRSTSIGHT  2u
++// end no-family
+ 
+ struct RegMem
+   {
+--- a/inc/Term.h
++++ b/inc/Term.h
+@@ -327,8 +327,10 @@
+ };
+ 
+ /* DrainKeys() result bits: a key other than Escape was read, Escape was read. */
++// no-family
+ #define DK_OTHER  1
+ #define DK_ESCAPE 2
++// end no-family
+ 
+ class Term {
+     friend class Map;
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2139,7 +2139,7 @@
+ #define SC_LIGHT     0x00020000
+ #define SC_DARKNESS  0x00040000
+ // end family: sc_all
+-// family: sp_flag stored bits u16 elem-of Character.Spells
++// family: sp_flag stored bits u32 elem-of Character.Spells
+ 
+ /* Spell Knowledge Flags */
+ #define SP_KNOWN     0x0001
+@@ -3244,7 +3244,7 @@
+ #define DSM_FLOAT     4
+ #define DSM_INCOR     5
+ // end family: dsm
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ 
+ 
+ #define GENERIC_STATI 0
+@@ -3260,7 +3260,7 @@
+   #define BLIND_UNWANTED        0
+   #define BLIND_EYES_CLOSED     1
+ // end family: val_blind
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define HALLU         4
+ #define STUNNED       5
+ #define CONFUSED      6
+@@ -3274,7 +3274,7 @@
+   #define SLEEP_PSYCH   4
+   #define SLEEP_DEEP    5
+ // end family: val_sleep
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define AGG_MON       8
+ #define PARALYSIS     9
+ // end family: stati
+@@ -3283,7 +3283,7 @@
+   #define PARA_HYPNOTIZED 1
+   #define PARA_DAZED 2
+ // end family: val_para
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define AFRAID        10
+ // end family: stati
+ // family: val_fear stored ordinal i16 val-of AFRAID
+@@ -3294,7 +3294,7 @@
+   #define FEAR_SKIRMISH 4
+   #define FEAR_COWED    5
+ // end family: val_fear
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define STUCK         11
+ // end family: stati
+ // family: val_stuck stored ordinal i16 val-of STUCK
+@@ -3306,7 +3306,7 @@
+     #define STUCK_BONDED  6
+     #define STUCK_WEB     7
+ // end family: val_stuck
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define BLEEDING      12
+ #define ILLUS_DMG     13
+ #define CHOKING       14
+@@ -3355,7 +3355,7 @@
+   #define GR_SWALLOWER 7
+   #define GR_ENGULFER  8
+ // end family: val_grabbed
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define GRAPPLED      63
+ #define GRAPPLING     64
+ #define HIDING        65
+@@ -3366,7 +3366,7 @@
+   #define HI_UNDER     3 /* hide under objects */
+   #define HI_WATER     4 /* hiding beneath the water */
+ // end family: val_hiding
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define RAGING        66
+ #define SUMMONED      67
+ #define ACTING        68 /* Eating, Digging, etc. */
+@@ -3386,7 +3386,7 @@
+   #define IL_SHADE40  32
+   #define IL_SHADE    (8 + 16 + 32)
+ // end family: val_illusion
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define CHARGING      75
+ #define TUMBLING      76
+ #define SINGING       77  
+@@ -3406,7 +3406,7 @@
+   #define TRIED_SONG_IMMUNE 32767
+   #define TRIED_DEEPSTONE   321 /* inc-pv0k: Deep Stone resolved this creature */
+ // end family: val_singing
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define ANIMAL_EMP_TRIED 78
+ #define TRAP_EVENT    79
+ #define HUNGER        80
+@@ -3420,7 +3420,7 @@
+   #define ELEV_TREE    1
+   #define ELEV_CEILING 2   
+ // end family: val_elevated
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define SUSPEND_ATTK  86 
+ #define MOUNTED       87
+ #define MOUNT         88
+@@ -3435,7 +3435,7 @@
+   #define EG_SWALLOW  1   
+   #define EG_ENGULF   2
+ // end family: val_engulfed
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define ENGULFER      95
+ #define DISB_TERRAIN  96
+ #define CORPSE_FLAG   97
+@@ -3447,7 +3447,7 @@
+   #define INV_NORMAL   1
+   #define INV_IMPROVED 2
+ // end family: val_invis
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define SEE_INVIS     101
+ #define PHASED        102
+ // end family: stati
+@@ -3459,7 +3459,7 @@
+   #define PHASE_SHADOW       4
+   #define PHASE_NEGATIVE     5
+ // end family: val_phased
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define POLYMORPH     103
+ #define RESIST        104
+ #define ADJUST_IDX    105 /* Kludge for StatiIterAdjust */
+@@ -3497,7 +3497,7 @@
+   #define REF_ABSORB    3 /* absorb physical magic -- Rod of Absorbtion */
+   #define REF_QUENCH    4 /* cancel area effect completely -- Rod of Fire Extinguishing */
+ // end family: val_reflecting
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define WATER_BREATHING 132
+ #define ANCHORED      133 /* no teleporting, etc. */
+ #define DETECTING     134       /* Val = MA_TYPE, Mag = Range */
+@@ -3513,7 +3513,7 @@
+ #define   CH_COMMAND  5   /*   Command Undead / Fire Creatures / etc. */
+ #define   CH_COMPEL   6   /*   scripted actions, i.e., Insatiable Thirst */
+ // end family: val_charmed
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define POSSESSED     138 /* You run the monster! (Magic Jar) */
+ #define ILLUMINATED   139 /* Faerie Fire; plusses to hit in ranged; '?' for invis */
+ #define SLOW_POISON   140
+@@ -3527,7 +3527,7 @@
+   #define MISS_RANGED  1
+   #define MISS_FULL    2
+ // end family: val_miss
+-// family: stati stored ordinal u8
++// family: stati stored ordinal u16
+ #define LIFESIGHT     146
+ #define ENRAGED       147
+ #define TRUE_SIGHT    148
+@@ -3620,7 +3620,7 @@
+   #define GR_REFLECT      1
+   #define GR_IMMUNE       2
+ // end family: val_gaze_reflection
+-// family: stati stored ordinal u8 sentinel LAST_STATI
++// family: stati stored ordinal u16 sentinel LAST_STATI
+ #define EYES_AVERTED      226
+ #define MY_CORPSE_IS      227
+ #define LOCKED            228
+@@ -3678,12 +3678,12 @@
+    lets a player aim it. RANDOM (3) defers to WildMagic. These are band
+    arguments, not stati numbers; nothing appends to Idx[]. */
+ // end family: stati
+-// family: subspell_band
++// family: subspell_band internal
+ #define SUBSPELL_USEFUL   1
+ #define SUBSPELL_NEUTRAL  2
+ #define SUBSPELL_RANDOM   3
+ // end family: subspell_band
+-// family: stati
++// family: stati stored ordinal u16
+ /* inc-pu6v.89: the singer's song grows with the rounds it is held. Append-only:
+    a stati number is a position in the save and in Idx[]. */
+ #define SWELLING_SONG     308
+@@ -3743,7 +3743,7 @@
+ /* inc-pu6v.117: pause after each compelled walk step, so the player can follow it. */
+ #define COMPEL_WALK_STEP_MS 100
+ // end no-family
+-// family: stati
++// family: stati stored ordinal u16
+ /* inc-pu6v.140: the holder is free of one terrain group's hindrance. Val = a
+    TG_ group (below). Each group's checks read HasStati(TERRAIN_FREE, TG_<group>).
+    Append-only: a stati number is a position in the save and in Idx[].
+@@ -3752,7 +3752,7 @@
+ /* inc-pu6v.140: terrain groups, the Val of TERRAIN_FREE. Distinct values, not
+    bit flags: HasStati compares Val for equality. bd inc-pu6v.140. */
+ // end family: stati
+-// family: tg
++// family: tg stored ordinal i16 val-of TERRAIN_FREE
+ #define TG_SLOWING        1
+ #define TG_STICKY         2
+ #define TG_SLIPPERY       3
+@@ -3764,7 +3764,7 @@
+    value, not a bit flag. bd inc-pu6v.141. */
+ #define TG_WALLS          8
+ // end family: tg
+-// family: stati
++// family: stati stored ordinal u16
+ /* inc-pu6v.255: the player's first-sight scrutiny of a creature carrying this
+    stati still runs its skill checks and still reveals/remembers it, but pays no
+    god's FAVOURED_SKILLS favor for those checks. A script grants it.
+@@ -4365,10 +4365,10 @@
+ #define SACRIFICE_LIST        26
+ #define FAVOUR_CHART           27
+ // end family: list_id
+-// family: list_id_hate
++// family: list_id_hate internal
+ #define HATE_CHART             35
+ // end family: list_id_hate
+-// family: list_id
++// family: list_id internal
+ #define GODSPEAK_LIST         28
+ #define CROWNING_GIFTS        29
+ #define AID_CHART             30
+@@ -4453,29 +4453,29 @@
+    substituting FLAT_CHARGE/FLAT_REWARD), or one rung down the favour chart
+    (amount ignored). Spec Section 3.1. */
+ // end family: list_id
+-// family: price_mode
++// family: price_mode internal
+ #define PRICE_FLAT             0
+ #define PRICE_CURVE            1
+ #define PRICE_RUNG             2
+ // end family: price_mode
+-// family: list_id
++// family: list_id internal
+ /* The category GodClassCategory() returns for a (god, class) pair. */
+ // end family: list_id
+-// family: gcc
++// family: gcc internal
+ #define GCC_ACCEPTED          0
+ #define GCC_SACRED            1
+ #define GCC_FORBIDDEN         2
+ // end family: gcc
+-// family: list_id
++// family: list_id internal
+ /* The category GodRaceCategory() returns for a (god, race) pair. Mirrors the
+    GCC_* values above (spec Section 3.1). */
+ // end family: list_id
+-// family: grc
++// family: grc internal
+ #define GRC_OPEN              0
+ #define GRC_NATIVE            1
+ #define GRC_FORBIDDEN         2
+ // end family: grc
+-// family: list_id
++// family: list_id internal
+ /* inc-pu6v.99: the favour table's states, columns and values (spec Section
+    3.2, docs/specs/2026-10-02-god-favour-table-spec.md). A state is the one
+    standing (of six) a character can have with one god (spec Section 2); a
+@@ -4483,7 +4483,7 @@
+    what the column does in that state (spec Section 2). Zero is never a
+    valid state, column or value: a zero row is a load-time error. */
+ // end family: list_id
+-// family: fav_state
++// family: fav_state internal
+ #define FS_STRANGER           1
+ #define FS_FOLLOWER           2
+ #define FS_PENITENT           3
+@@ -4491,9 +4491,9 @@
+ #define FS_CAST_OFF           5
+ #define FS_ANATHEMA           6
+ // end family: fav_state
+-// family: list_id
++// family: list_id internal
+ // end family: list_id
+-// family: fav_col
++// family: fav_col internal
+ #define FC_DEVOTION           1
+ #define FC_SCRIPT_PAY         2
+ #define FC_ALTAR              3
+@@ -4505,25 +4505,25 @@
+ #define FC_RIVAL_CONVERT      9
+ #define FC_HATE_PUNISH        10
+ // end family: fav_col
+-// family: list_id
++// family: list_id internal
+ // end family: list_id
+-// family: fav_val
++// family: fav_val internal
+ #define FV_COUNTS             1
+ #define FV_IGNORED            2
+ #define FV_PUNISHES           3
+ // end family: fav_val
+-// family: list_id
++// family: list_id internal
+ /* The set of gods Player::ChooseGod offers, chosen by the first class (spec
+    Section 6.2). GRC_OPEN/GRC_NATIVE are the race categories above and are not
+    reused here: CG_ALL is not a category, and CG_FEAT names the open category
+    positively rather than by the absence the other two leave. */
+ // end family: list_id
+-// family: choose_god
++// family: choose_god internal
+ #define CG_NATIVE             1
+ #define CG_ALL                2
+ #define CG_FEAT               3
+ // end family: choose_god
+-// family: list_id
++// family: list_id internal
+ /* God: what each hate rung does to a follower who has fallen that far. Rows
+    are rung-then-interval-then-effect. INTERVAL 0 is a standing curse, thrown
+    once when the rung is entered; above 0 it is timed harm, a PERIODIC stati
+@@ -4695,13 +4695,13 @@
+    named attribute gives the same result either way. Zero = BCAP_BEST. */
+ #define BLESS_CAP_MODE        164
+ // end family: const_id
+-// family: bcap
++// family: bcap internal
+ #define BCAP_BEST             0 /* God: BLESS_CAP_MODE -- the highest named attribute modifier. */
+ #define BCAP_AVERAGE          1 /* God: BLESS_CAP_MODE -- the mean of the named attribute modifiers, rounded down. */
+ // end family: bcap
+-// family: const_id
++// family: const_id internal
+ // end family: const_id
+-// family: const_id_favour
++// family: const_id_favour internal
+ #define FAVOUR_BASE            80 /* God: Curve base; zero uses the chart default. */
+ #define FAVOUR_SHARE           81 /* God: Percentage of absolute favour; zero defaults to 50. */
+ #define FAVOUR_EXPONENT        82 /* God: Magnitude exponent; zero defaults to 3. */
+@@ -4732,19 +4732,19 @@
+    Number 87 stays unused, not reused. */
+ #define ALIGNMENT_BREAK        88 /* God: what a forbidden alignment does; zero defaults to 3. */
+ // end family: const_id_favour
+-// family: const_id
++// family: const_id internal
+ // end family: const_id
+-// family: align_break
++// family: align_break internal
+   #define ALIGN_LET_GO         1 /* Favour to zero; the god accepts them back if the alignment returns. */
+   #define ALIGN_HUNT           2 /* Drop the follower, leave the favour where it stands, keep acting. */
+   #define ALIGN_LADDER         3 /* Down the ladder through Forsake(); today's behaviour. */
+ // end family: align_break
+-// family: const_id
++// family: const_id internal
+ /* God expulsion: the step bits and trigger values Character::Expel takes.
+    See docs/specs/2026-09-25-god-expulsion-spec.md Sections 4.2 and 4.4. Bit
+    0x0400 is reserved for the heretic state (Section 4.3), not defined here. */
+ // end family: const_id
+-// family: exp_bits
++// family: exp_bits internal
+ #define EXP_REFUSE            0x0001 /* Convert-away only: cancel the conversion; every other bit is ignored. */
+ #define EXP_WIPE_SACRIFICES   0x0002 /* Zero SacVals slots 0-9 for this god. */
+ #define EXP_ZERO_FAVOUR       0x0004 /* Move favour to exactly 0, from above or below. */
+@@ -4756,9 +4756,9 @@
+ #define EXP_CAST_OFF          0x0100 /* If gID is the patron, set GodID = 0. */
+ #define EXP_LOSE_RANKS        0x0200 /* SeedRankGifts, lose every rank, ReconcileRanks. */
+ // end family: exp_bits
+-// family: const_id
++// family: const_id internal
+ // end family: const_id
+-// family: expel_trigger
++// family: expel_trigger internal
+ #define EXPEL_LADDER_FORSAKE  1 /* Ladder reaches the forsake rung. */
+ #define EXPEL_LADDER_ANATHEMA 2 /* Ladder reaches the anathema rung. */
+ #define EXPEL_ALIGNMENT       3 /* Alignment turns forbidden. */
+@@ -4766,7 +4766,7 @@
+ #define EXPEL_SCRIPT          5 /* A god script called the routine. */
+ #define EXPEL_FORBIDDEN_CLASS 6 /* Follower took a level in a class the god forbids (inc-pu6v.97). */
+ // end family: expel_trigger
+-// family: const_id
++// family: const_id internal
+ #define STICK_TYPE            140 /* Terrain: The kind of sticky terrain that sticky terrain is. */
+ #define DRAGON_FEAR_DC        141 /* Monster: +/- modifier to fear saves versus this creature. */
+ #define UNIFORMITY_CHANCE     142 /* Unused? */
+@@ -5084,7 +5084,7 @@
+    exactly as it always has. See docs/specs/2026-09-18-god-pulse-request-spec.md
+    R1. */
+ // end family: gs
+-// family: gpr
++// family: gpr stored ordinal i16 mag-of HUNG_PULSE
+ #define GPR_PERIODIC     0  /* the ordinary periodic pulse */
+ #define GPR_REST         1  /* the follower rested */
+ #define GPR_DESCEND      2  /* the follower went down a level */
+@@ -5098,7 +5098,7 @@
+ #define GPR_WALK_END     9  /* a compelled walk reached the lowest level */
+ #define GPR_LAST         10
+ // end family: gpr
+-// family: gs
++// family: gs stored bits u16 elem-of Character.godFlags
+ 
+ /* A reason MAY carry one number with it. No caller raises GPR_SKILL_CHECK
+    since inc-pu6v.300, so every live request carries parameter 0; the value and
+@@ -5120,11 +5120,11 @@
+ #define GPR_REASON_MASK  0x000F
+ #define GPR_PARAM_MAX    2047 /* the widest parameter (param<<4)|reason holds */
+ // end no-family
+-// family: gs
++// family: gs stored bits u16 elem-of Character.godFlags
+ 
+ /* MonMem fields, in declaration order; zero is deliberately invalid. */
+ // end family: gs
+-// family: monmem
++// family: monmem internal
+ #define MM_BATTLES      1
+ #define MM_DEATHS       2
+ #define MM_KILLS        3
+@@ -5138,7 +5138,7 @@
+ #define MM_FLAGS        11
+ #define MM_LAST         12
+ // end family: monmem
+-// family: gs
++// family: gs stored bits u16 elem-of Character.godFlags
+ // end family: gs
+ // family: trouble internal
+ 
+@@ -6176,11 +6176,11 @@
+    FLIGHT_DISENGAGE. bd inc-pu6v.189. */
+ #define EV_FLIGHT       209
+ // end family: ev
+-// family: flight_kind
++// family: flight_kind internal
+ #define FLIGHT_FLEE     1
+ #define FLIGHT_DISENGAGE 2
+ // end family: flight_kind
+-// family: ev
++// family: ev internal
+ 
+ /* Thrown once per end of a POLYMORPH stati on a Character, by any path
+    (natural expiry, the cancel menu in src/Skills.cpp, dispel), via
+@@ -6210,12 +6210,12 @@
+    left. A pickup raises the purse and never throws. bd inc-pu6v.196. */
+ #define EV_PURSE_DEBIT   212
+ // end family: ev
+-// family: purse_cause
++// family: purse_cause internal
+ #define PURSE_LOSEMONEY  1
+ #define PURSE_DROP       2
+ #define PURSE_THEFT      3
+ // end family: purse_cause
+-// family: ev
++// family: ev internal
+ 
+ /* Thrown once per wait key press (KY_CMD_REST) in Player::Command, via
+    ThrowToGods so every god is offered GODWATCH(EV_WAIT). Payload: EActor is
+@@ -6313,7 +6313,7 @@
+    whose price was already scaled once at quote time (Character::aidPrice,
+    inc-pu6v.313), that MUST NOT be thrown. */
+ // end family: ev
+-// family: favsrc
++// family: favsrc internal
+ #define FAVSRC_NONE           0
+ #define FAVSRC_SCRIPT         1
+ #define FAVSRC_DEVOTION       2
+@@ -6322,7 +6322,7 @@
+ #define FAVSRC_AID_PRICE      5
+ #define FAVSRC_FAVORED_SKILL  6
+ // end family: favsrc
+-// family: ev
++// family: ev internal
+ 
+ /* inc-pu6v.251: Item::Describe offers this to the item's own script, its
+    effect eID's script, and the script of each of its stati (the receivers
+--- a/src/Debug.cpp
++++ b/src/Debug.cpp
+@@ -1139,7 +1139,7 @@
+         IPrint(Format("Woke %d creatures.", (int)woke));
+         break;
+     }
+-    case 40: {
++    case 46: {
+         /* inc-aoi4i: fire damage to the worn armour, with NO actor and no
+            random number. A null actor never equals the owner, so
+            Item::Damage keeps the item's hardness (the "attacking your own
+--- a/src/Dump.cpp
++++ b/src/Dump.cpp
+@@ -493,7 +493,7 @@
+     static void XP(Player *p, long val) { p->XP = (uint32)val; }
+     static rID *CellList(Map *m, bool terrain) { return terrain ? m->TerrainList : m->RegionList; }
+     static void God(Player *p, int g, const std::string &f, long v) {
+-        if (f == "favour") p->FavourLev[g] = (int32)v; else if (f == "anger") p->Anger[g] = (int16)v; else p->godFlags[g] = (uint16)v; }
++        if (f == "favour") p->FavourLev[g] = (int32)v; else if (f == "anger") p->HateLev[g] = (int16)v; else p->godFlags[g] = (uint16)v; }
+     static void MaxDepth(Player *p, int i, long d) { p->MaxDepths[i] = (int16)d; }
+     static void Ability(Player *p, int i, long v) { p->Abilities[i] = (uint8)v; }
+     static void Slot(Player *p, int i, Item *it) { p->Inv[i] = it->myHandle; }
+--- a/src/DamageClassProbe.cpp
++++ b/src/DamageClassProbe.cpp
+@@ -45,7 +45,7 @@
+     dcSiteB[site] = e.bDmg;
+     dcSiteV[site] = e.vDmg;
+     if (site == DC_SITE_GOD_AFTER && dcGodNum >= 0 && e.EVictim->isCharacter())
+-        dcPenAtSite = e.EPVictim->FavPenalty[dcGodNum];
++        dcPenAtSite = 0;   /* the epic has no FavPenalty (spec Section 6.7) */
+ }
+ 
+ void DamageClassDamageEntry(EventInfo &e)
+@@ -309,13 +309,13 @@
+     rID oGod = pl->GodID;
+     int16 oHP = pl->cHP, oMHP = pl->mHP, oFF = pl->FFCount;
+     uint16 oFlags = pl->godFlags[gn];
+-    int16 oAnger = pl->Anger[gn], oPen = pl->FavPenalty[gn];
++    int16 oAnger = pl->HateLev[gn];   /* the epic's HateLev stands where Anger stood */
+     int32 oSac[MAX_SAC_CATS + 2];
+     memcpy(oSac, pl->SacVals[gn], sizeof(oSac));
+     /* stage */
+     pl->GodID = hes;
+     pl->godFlags[gn] = GS_INVOLVED;
+-    pl->Anger[gn] = 0; pl->FavPenalty[gn] = 0;
++    pl->HateLev[gn] = 0;
+     memset(pl->SacVals[gn], 0, sizeof(oSac));
+     pl->cHP = pl->mHP = 100;
+     bool ok = true;
+@@ -344,7 +344,7 @@
+     /* restore */
+     pl->RemoveStati(STUCK);
+     pl->GodID = oGod; pl->godFlags[gn] = oFlags;
+-    pl->Anger[gn] = oAnger; pl->FavPenalty[gn] = oPen;
++    pl->HateLev[gn] = oAnger;
+     memcpy(pl->SacVals[gn], oSac, sizeof(oSac));
+     pl->cHP = oHP; pl->mHP = oMHP; pl->FFCount = (int8)oFF;
+     return ok;
+--- a/tools/craft_bad_v1_saves.py
++++ b/tools/craft_bad_v1_saves.py
+@@ -508,7 +508,7 @@
+     """
+     base = open(src_path, "rb").read()
+     v1 = V1File(base)
+-    off = player_array_element(v1, base, CHAR_FAVOURLEV_TAG,
++    off = player_array_element(v1, base, v1.tag(*CHAR_FAVOURLEV),
+                                struct.calcsize("<h"), MAX_GODS,
+                                "Character::FavourLev")
+     cur, = struct.unpack_from("<h", base, off)
+--- a/tools/check_weapon_types.sh
++++ b/tools/check_weapon_types.sh
+@@ -33,9 +33,7 @@
+ # SEED-INDEPENDENT (bd inc-1pfq): every fact the check reads, and its control.
+ # fact: character -- fixture orc-mage-seed4-gate (INCURSION_LOAD)
+ # fact: settings -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
+-# fact: follower is not proficient with bows or bolts -- the fixture's sheet (Long Blades, Staves, Impact, Polearms, Spears, Daggers)
+-# fact: each item Kysul rolls as a gift -- INCURSION_GENITEM_FORCE list, armed by the probe right before the pulse (GenItemForceArm)
+-# fact: the bow and the bolt were offered and refused -- consumed=2, counted by GenItemForceConsumed before and after the pulse
++# fact: acid damage roll (2000 trials per item) -- not a roll the verdict reads: energy items take no damage in any trial and plain controls take some, so every trial is judged, not a count
+ # fact: githzerai gear roll (50% quarterstaff or spiked chain) -- both branches call Item::GenItem, so GenItemForceArm("spiked chain") fixes the weapon; consumed=1
+ # fact: drow gear -- fixed in lib/mon*.irh (a hand crossbow, no random weapon choice)
+ # fact: map, monsters, item rolls in the other runs -- the probe builds each item with Item::Create or places it on a cell it picks; nothing is generated
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -4,3 +4,7 @@
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
+ Character SpellsU16
++Character Anger
++Character FavPenalty
++Character PrayerTimeout
++Character AngerThisTurn
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -11,6 +11,10 @@
+ 
+ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+   { "Character", "SpellsU16" },
++  { "Character", "Anger" },
++  { "Character", "FavPenalty" },
++  { "Character", "PrayerTimeout" },
++  { "Character", "AngerThisTurn" },
+   { NULL, NULL }
+ };
+ 
+--- a/src/Debug.cpp
++++ b/src/Debug.cpp
+@@ -533,7 +533,13 @@
+     Thing *t; int i;
+ Restart:
+     MapIterate(m,t,i)
+-        if (t->isMonster() && !(t->Flags & F_DELETE)) {
++        /* inc-pu6v.299. A held creature is leaving the map: a PRE(EV_DEATH)
++           handler that stopped its death with HoldOffMap() has queued its
++           handle for ReleaseHeldOffMap() to drain after this action, and
++           it is still on the map and not F_DELETE until then. Killing it
++           again here would intercept the same death forever, so skip it. */
++        if (t->isMonster() && !(t->Flags & F_DELETE) &&
++            !theGame->IsHeldOffMap(t->myHandle)) {
+             ThrowDmg(EV_DEATH,AD_NORM,0,"debug genocide",t,t);
+             goto Restart;
+         }
+@@ -1152,7 +1158,7 @@
+         ThrowDmg(EV_DAMAGE,AD_FIRE,10,NULL,NULL,arm);
+         break;
+     }
+-    case 41: {
++    case 47: {
+         /* inc-10v7f: lower the worn armour's hit points by a typed amount,
+            with no roll. tools/check_repair_cost.sh calls it (through
+            tools/keys/repair-cost.keys) to damage a built fixture's armour
+--- a/src/VMachine.cpp
++++ b/src/VMachine.cpp
+@@ -282,7 +282,7 @@
+ {
+     /* n dice of s sides (a die of 0 sides counts 1, as random(0) is 0 and Roll adds 1), no bonus. */
+     int32 top = (int32)n * (s > 0 ? (int32)s : 1);
+-    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return Dice::Roll(n, s); },
++    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return ScriptDiceRoll(n, s); },
+         NULL, CreationRange(n > 0 ? (int32)n : 0, top > 0 ? top : 0));
+ }
+ 
+--- a/src/Create.cpp
++++ b/src/Create.cpp
+@@ -2633,6 +2633,8 @@
+         godTest = (GodID != 0);
+         int16 hiddenRerolls = 0;
+         if (!do_redraw) {
++            /* The five sets are candidates of the set pick, not decisions. */
++            CreationCandidates candidates;
+             do {
+                 for (i=0,j=0;i!=5;i++) {
+ RerollThisOne:
+@@ -4956,12 +4958,14 @@
+     if (!nOffered)
+         Fatal("No suitable God to choose from among the loaded resources!");
+ 
+-    if (godlessLine)
++    if (godlessLine) {
+         MyTerm->LOption(godlessLabel, 0,
+             (offeredSet == CG_FEAT) ?
+             "Choose a different feat instead. This feat is not spent." :
+             "You begin the game worshipping no god. You may still convert "
+                 "at an altar later.");
++        godPicks.Add(godlessLabel, 0);
++    }
+ 
+     int flags = MENU_3COLS | MENU_DESC | MENU_ESC;
+     i = (int)SourcedPick(CK_GOD, godPicks, [&]() { return (int32)MyTerm->LMenu(flags, "<15>Choose a God:",
+--- a/src/Dump.cpp
++++ b/src/Dump.cpp
+@@ -1536,10 +1536,12 @@
+ 
+     printf("=== Weapon Sets ===\n");
+     {
+-        static const char *const label[8] = { "M main", "M off-hand",
+-            "R main", "ammo", "X main", "X off-hand", "S main", "S off-hand" };
+-        for (int k = 0; k != 8; k++) {
+-            Item *it = oItem(p->DefaultItem(k));
++        static const char *const label[4] = { "M main", "M off-hand",
++            "R main", "ammo" };
++        const hObj hs[4] = { p->defMelee, p->defOffhand, p->defRanged,
++            p->defAmmo };
++        for (int k = 0; k != 4; k++) {
++            Item *it = oItem(hs[k]);
+             if (it)
+                 printf("  %s: Inv#%d iID=%s\n", label[k],
+                     InvOrdinal(p, it), CNm(it->iID).c_str());
+@@ -1609,9 +1611,9 @@
+     printf("=== Religion ===\n");
+     v.clear();
+     for (i = 0; i != MAX_GODS; i++) {
+-        bool any = p->FavourLev[i] || p->TempFavour[i] || p->Anger[i] ||
+-                   p->FavPenalty[i] || p->PrayerTimeout[i] ||
+-                   p->AngerThisTurn[i] || p->lastPulse[i] || p->godFlags[i];
++        bool any = p->FavourLev[i] || p->TempFavour[i] ||
++                   p->GiftsGiven[i] || p->AidWaitEnd[i] || p->HateLev[i] ||
++                   p->lastPulse[i] || p->godFlags[i];
+         for (j = 0; j != MAX_SAC_CATS + 2; j++)
+             if (p->SacVals[i][j])
+                 any = true;
+@@ -1629,16 +1631,17 @@
+             snprintf(b, sizeof(b), "%s%d", j ? "," : "", (int)p->SacVals[i][j]);
+             sv += b;
+         }
+-        snprintf(b, sizeof(b), "God %s: FavourLev=%d TempFavour=%d Anger=%d "
+-                 "FavPenalty=%d PrayerTimeout=%d AngerThisTurn=%d "
++        snprintf(b, sizeof(b), "God %s: FavourLev=%d TempFavour=%d "
++                 "GiftsGiven=0x%x AidWaitEnd=%u HateLev=%d "
+                  "lastPulse=%d godFlags=0x%x SacVals=%s", gn.c_str(),
+-            (int)p->FavourLev[i], (int)p->TempFavour[i], (int)p->Anger[i],
+-            (int)p->FavPenalty[i], (int)p->PrayerTimeout[i],
+-            (int)p->AngerThisTurn[i], (int)p->lastPulse[i],
++            (int)p->FavourLev[i], (int)p->TempFavour[i],
++            (unsigned)p->GiftsGiven[i], (unsigned)p->AidWaitEnd[i],
++            (int)p->HateLev[i], (int)p->lastPulse[i],
+             (unsigned)p->godFlags[i], sv.c_str());
+         v.push_back(b);
+     }
+     PrintSorted(v);
++    printf("GodlessXP=%u\n", (unsigned)p->GodlessXP);
+     printf("\n");
+ 
+     printf("=== Player State ===\n");
+--- a/src/VMachine.cpp
++++ b/src/VMachine.cpp
+@@ -175,7 +175,7 @@
+    random(n) a script makes returns min(k, n-1), 0 when n is 0. The real draw
+    is still taken, so the stream position is the same set or unset. Only
+    dispatch.h (script calls) is redirected here; C++ random() is untouched. */
+-static int16 ScriptRandom(int16 mx)
++static int16 ForceScriptRandom(int16 r, int16 mx)
+ {
+     static bool done = false;
+     static long force = -1;
+@@ -191,7 +191,6 @@
+                 force = v;
+         }
+     }
+-    int16 r = random(mx);
+     if (force < 0 || mx <= 0)
+         return r;
+     return (int16)(force < mx - 1 ? force : mx - 1);
+@@ -205,7 +204,6 @@
+    ingly. */
+ #define ItemWeight Weight
+ #define rnd random
+-#define random ScriptRandom
+ #define ArmourPenalty Penalty
+ #define TFlags Flags
+ #define ieID eID
+@@ -274,7 +272,7 @@
+        0 .. mx-1, and 0 draws 0. */
+     int32 lo = mx < 0 ? -32768 : 0;
+     int32 hi = mx < 0 ? 32767 : (mx > 0 ? (int32)mx - 1 : 0);
+-    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return census_random(mx, f, l, fn); },
++    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return ForceScriptRandom((int16)census_random(mx, f, l, fn), mx); },
+         NULL, CreationRange(lo, hi));
+ }
+ 
+--- a/tools/check_player_fields.sh
++++ b/tools/check_player_fields.sh
+@@ -103,14 +103,17 @@
+ Character|resChance|excluded|resurrection chance of play; set when the character dies
+ Character|FavourLev|derived|favor level, set when the god pick joins the god
+ Character|TempFavour|excluded|favor of play; zero when the character is made
+-Character|Anger|stated|the Transgress roll an Elf of another god makes when made (script_roll); zero for every other character
+ Character|SacValsRow|excluded|row count of the sacrifice tally of play; zero when the character is made
+ Character|SacVals|excluded|sacrifice tally of play; zero when the character is made
+-Character|FavPenalty|excluded|favor penalty of play; zero when the character is made
+-Character|PrayerTimeout|excluded|prayer clock of play
+-Character|AngerThisTurn|excluded|god anger of the current turn
+ Character|lastPulse|excluded|clock of the last god pulse
+ Character|godFlags|derived|set when the god pick joins the god
++Character|GiftsGiven|excluded|permanent gifts of play; zero when the character is made
++Character|HateLev|excluded|hate rung of play; zero when the character is made
++Character|AidWaitEnd|excluded|clock of the next aid a god may give; zero when the character is made
++Character|exAidWaitStart|excluded|retired field, read and dropped on load; always zero on save
++Character|exFavPenalty|excluded|retired field, read and dropped on load; always zero on save
++Character|exPrayerTimeout|excluded|retired field, read and dropped on load; always zero on save
++Character|GodlessXP|excluded|experience of play counted while godless; zero when the character is made
+ Character|desiredAlign|derived|the alignments the god accepts, set when the god pick joins the god
+ Character|Proficiencies|derived|weapon proficiencies, worked out from class and feats
+ Player|MapMemoryMask|excluded|map memory of play
+@@ -167,6 +170,7 @@
+ Player|deathCount|excluded|deaths of play; zero when the character is made (the spec names a deaths key; none exists yet)
+ Player|rerollCount|stated|the rerolls line
+ Player|statMethod|stated|the stat_method line
++Player|skip:LastFeatGranted|excluded|set and read inside one feat grant; never saved
+ '
+ 
+ measure() {
+--- a/tools/pressure/family_coverage.txt
++++ b/tools/pressure/family_coverage.txt
+@@ -30,3 +30,5 @@
+ dt map group 1g (type byte of a script variable inside the Variables blob): a pressure case for it is a later brief
+ v1_kind map group 1g (file framing, the kind byte after every tag): a pressure case for it is a later brief
+ v1_pool map group 1g (file framing, the pool byte of a memory-segment row): a pressure case for it is a later brief
++gpr stored family the epic added (the pending god-pulse request in the Mag of a HUNG_PULSE stati); no pressure case has been written for it, a case for it is a later brief
++tg stored family the epic added (the terrain group in the Val of a TERRAIN_FREE stati); no pressure case has been written for it, a case for it is a later brief
+--- a/docs/specs/2026-11-06-fixture-builder-sites.md
++++ b/docs/specs/2026-11-06-fixture-builder-sites.md
+@@ -1,5 +1,6 @@
+ # Fixture builder: decision sites and fixture tools (inc-10v7f)
+ <!-- citations: this-port -->
++<!-- stale-quote-ok: the sites list quotes the worship question master's god menu asked; the epic's god menu removed that literal -->
+ 
+ Phases 1 and 2 of `docs/specs/2026-11-06-fixture-builder-brief.md`. Part A is the
+ phase-1 site list (every `MO_RECREATE`, `MO_CREATE`, `reincarnate` and `RInf` site,
+diff --git a/tools/char_convert.sh b/tools/char_convert.sh
+index dad8da38..5882ecb5 100755
+--- a/tools/char_convert.sh
++++ b/tools/char_convert.sh
+@@ -19,6 +19,9 @@
+ #        CHAR_CONVERT_LOGS=<dir>             specimens (default logs/char-convert)
+ #        CHAR_CONVERT_MANIFEST=<file>        the MANIFEST (default tools/fixtures/specimens/MANIFEST)
+ #        CHAR_CONVERT_DIR=<dir>              where <name>.sav lives (default tools/fixtures/specimens)
++#        CHAR_CONVERT_OLD_CANON_DIR=<dir>    where the old save's dump <name>.canon lives already (default: dump the old .sav
++#                                            here). The inc-cjos0 AC9 epic fixtures are epic saves this build cannot read;
++#                                            their dumps are the oracle files made by the pre-merge epic binary.
+ #
+ # STEPS (the spec's, numbered as in the bead):
+ #   1. Read the fixture's MANIFEST row (name, key script, seed, settings file).
+@@ -138,8 +141,13 @@ walk() {   # walk <settings file> <tag>: records $OD/skeleton.char and its walk
+ walk "$OPTS" ""
+ 
+ # 2. The oracle.
++if [ -n "${CHAR_CONVERT_OLD_CANON_DIR:-}" ]; then
++    cp "$CHAR_CONVERT_OLD_CANON_DIR/$NAME.canon" "$OD/old.canon" 2> /dev/null \
++        || { echo "char_convert: no oracle dump $CHAR_CONVERT_OLD_CANON_DIR/$NAME.canon" >&2; exit 2; }
++else
+ INCURSION_OPTIONS="$OPTS" tools/char_dump.sh "$SAV" "$OD/old.canon" > /dev/null 2>&1 \
+     || { echo "char_convert: cannot dump $SAV" >&2; exit 2; }
++fi
+ 
+ # 1b. The settings the old .sav was made under.
+ # The newest save a run left that is not the one it loaded, the backup, or the gallery.
+diff --git a/tools/char_convert_map.py b/tools/char_convert_map.py
+index ff642a95..629f41fb 100755
+--- a/tools/char_convert_map.py
++++ b/tools/char_convert_map.py
+@@ -1224,6 +1224,11 @@ KNOWN_DIFFERENCES = [
+     {"name": "devouring-to-cannibalism", "cause": "commit 4e1fc266",
+      "kinds": ["ability CA_DEVOURING 1 -> Feats: Cannibalism"],
+      "old_to_built": lambda old: "Feats: Cannibalism" if old == "ability CA_DEVOURING 1" else None},
++    # A row with "adds" excuses one built-only line that has no old partner: a rule change gave every such character a new line.
++    {"name": "ranger-gains-fasting", "cause": "commit 802083dc",
++     "kinds": ["(nothing) -> ability CA_FASTING 1 (the Ranger gets the Fasting ability its help promises, inc-4us6)"],
++     "adds": "ability CA_FASTING 1",
++     "old_to_built": lambda old: None},
+ ]
+ 
+ 
+@@ -1232,6 +1237,9 @@ def excuse(old_only, built_only):
+     pair consumes one old-only and one built-only line; nothing else is dropped."""
+     old_rest, built_rest, excused = list(old_only), list(built_only), []
+     for row in KNOWN_DIFFERENCES:
++        if row.get("adds") in built_rest:
++            built_rest.remove(row["adds"])
++            excused.append(("(nothing)", row["adds"], row))
+         for old in list(old_rest):
+             want = row["old_to_built"](old)
+             if want is not None and want in built_rest:
+diff --git a/tools/check_creation_source_sites.sh b/tools/check_creation_source_sites.sh
+index 768a05f0..093c4a8c 100755
+--- a/tools/check_creation_source_sites.sh
++++ b/tools/check_creation_source_sites.sh
+@@ -46,8 +46,10 @@
+ # SCRIPTS (inc-10v7f phase 6c). A creation script's draws and prompts are
+ # sourced decisions too. scan_script fails when Resource::Event stops pushing a
+ # CreationScope for a creation event (Annot.cpp), when the VM stops routing a
+-# script's random(n), its dice rolls (the ROLL opcode) or Transgress through
+-# SourcedRoll(CK_SCRIPT_ROLL, ...) (VMachine.cpp, Prayer.cpp), or when a
++# script's random(n) or its dice rolls (the ROLL opcode) through
++# SourcedRoll(CK_SCRIPT_ROLL, ...) (VMachine.cpp), when the transgression path
++# (Character::Transgress and applyTransgression, Prayer.cpp) gains an unsourced
++# random( or Dice::Roll draw beyond the one play-only A_WIS abuse roll, or when a
+ # script's yn, ChoicePrompt or LMenu stops going through SourcedPick with
+ # CK_SCRIPT_YN, CK_SCRIPT_CHOICE or CK_SCRIPT_MENU (VMachine.cpp).
+ #
+@@ -249,8 +251,24 @@ a, v, p = mask(annot), mask(vm), mask(prayer)
+ # string literals are blanked, so the key names (identifiers) stay visible.
+ ev = body(a, r"^EvReturn Resource::Event\(EventInfo &e, rID xID, int16 Event\)")
+ tr = body(p, r"^void Character::Transgress\(")
++at = body(p, r"^void Character::applyTransgression\(")
+ rd = body(v, r"^static int16 ScriptRandom\(")
+ dc = body(v, r"^static int16 ScriptDice\(")
++
++def unsourced_draws(b):
++    """The lines of a masked body that draw (random( or Dice::Roll() with no SourcedRoll on the line. The one draw of
++    the epic's applyTransgression is the play-only wisdom abuse roll after a charge (never inside a creation window:
++    a script reaches Transgress from play events only); it is allowed once, by its exact text."""
++    out = []
++    for ln in b.split("\n"):
++        if re.search(r"\brandom\s*\(|\bDice::Roll\s*\(|\.Roll\s*\(", ln) and "SourcedRoll" not in ln:
++            out.append(re.sub(r"\s+", "", ln))
++    return out
++ABUSE = "Abuse(A_WIS,Dice::Roll((int8)mag,10));"
++at_draws = unsourced_draws(at)
++tdraws = unsourced_draws(tr) + [d for d in at_draws if d != ABUSE]
++if at_draws.count(ABUSE) > 1:
++    tdraws.append(ABUSE + " (more than once)")
+ inc = vm.find('#include "dispatch.h"')   # the masked text blanks the quoted name; offsets agree
+ pre = v[:inc] if inc >= 0 else ""
+ pre = pre[pre.rfind("#pragma push_macro"):] if "#pragma push_macro" in pre else ""
+@@ -267,8 +285,8 @@ RULES = [
+     ("draw-dice", dc and re.search(r"SourcedRoll\s*\(\s*CK_SCRIPT_ROLL\b", dc)
+         and re.search(r"case\s+ROLL\s*:[^;]*\bScriptDice\s*\(", v),
+      "a script's dice roll (the ROLL opcode) is not routed through SourcedRoll(CK_SCRIPT_ROLL) (src/VMachine.cpp)"),
+-    ("draw-transgress", tr and re.search(r"SourcedRoll\s*\(\s*CK_SCRIPT_ROLL\b", tr),
+-     "Character::Transgress's random(60) is not routed through SourcedRoll(CK_SCRIPT_ROLL) (src/Prayer.cpp)"),
++    ("draw-transgress", tr and at and not tdraws,
++     "the transgression path (Character::Transgress, applyTransgression in src/Prayer.cpp) holds an unsourced draw: " + "; ".join(tdraws)[:200]),
+     ("prompt-yn", yn and re.search(r"SourcedPick\s*\(\s*CK_SCRIPT_YN\b", yn)
+         and re.search(r"#define\s+yn\s+ScriptYn\b", pre),
+      "a script's yn is not routed through SourcedPick(CK_SCRIPT_YN) (src/VMachine.cpp)"),
+@@ -371,11 +389,12 @@ if [ "${1:-}" = "--selftest" ]; then
+     mutate_script j scope-push annot 's/CreationScope creationScope\(/Unscoped creationScope(/'
+     mutate_script k draw-dice vm 's/case ROLL: REGS\(0\) = ScriptDice\(/case ROLL: REGS(0) = Dice::Roll(/'
+     mutate_script l draw-random vm 's/#define random\(mx\) ScriptRandom\(/#define random(mx) census_random(/'
+-    mutate_script m draw-transgress prayer 's/SourcedRoll\(CK_SCRIPT_ROLL, \[&\]\(\) -> int32 \{ return random\(60\); \}\)/random(60)/'
++    mutate_script m draw-transgress prayer 's/^    applyTransgression\(gID,mag,doWrath,reason,false\);/    random(60); applyTransgression(gID,mag,doWrath,reason,false);/'
++    mutate_script m2 draw-transgress prayer 's/^    else if \(mag <= 0\) return;/    else if (mag <= 0) return; Dice::Roll(1,6);/'
+     mutate_script n prompt-yn vm 's/SourcedPick\(CK_SCRIPT_YN,/Unsourced(CK_SCRIPT_YN,/'
+     mutate_script o prompt-choice vm 's/SourcedPick\(CK_SCRIPT_CHOICE,/Unsourced(CK_SCRIPT_CHOICE,/'
+     mutate_script q prompt-menu vm 's/SourcedPick\(CK_SCRIPT_MENU,/Unsourced(CK_SCRIPT_MENU,/'
+-    [ $fail -eq 0 ] && echo "selftest: all 16 mutations caught"
++    [ $fail -eq 0 ] && echo "selftest: all 17 mutations caught"
+     exit $fail
+ fi
+ 
+diff --git a/tools/check_damage_class.sh b/tools/check_damage_class.sh
+index 9b82b7f1..33c18c47 100755
+--- a/tools/check_damage_class.sh
++++ b/tools/check_damage_class.sh
+@@ -55,7 +55,7 @@
+ # module the run loads is the checkout's mod/Incursion.Mod; build the binary and
+ # the module together with BACKEND=posix ./build_macos.sh.
+ #
+-# fact: loaded character, race, class, attributes, inventory and map -- catalog fixture control: INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
++# fact: loaded character, race, class, attributes, inventory and map -- catalog fixture control: INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
+ # fact: settings -- frozen INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
+ # fact: the seed -- not read; the probe stages every input in process and rolls no die for an asserted value, and the harness seed only has to exist
+ # fact: clear lit floor, no fields, fixed actor placement, empty neighbouring cells -- probe-built arena in src/DamageClassProbe.cpp (DCCells), readback or SETUP_ERROR
+@@ -86,7 +86,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ cd "$ROOT" || exit 2
+ 
+ OPTS=tools/fixtures/options-2026-08-22.dat
+-FIX=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
++FIX=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
+ EXPECT=tools/fixtures/damage-class.expected
+ CHAR_EXPECT=tools/fixtures/damage-class-char.expected
+ BIN="${INCURSION_BIN:-./incursion-headless}"
+diff --git a/tools/check_undeath_to_death_pool.sh b/tools/check_undeath_to_death_pool.sh
+index 7d4ea9b9..bf1c1349 100755
+--- a/tools/check_undeath_to_death_pool.sh
++++ b/tools/check_undeath_to_death_pool.sh
+@@ -77,12 +77,12 @@ fail() { echo "FAIL: $*"; exit 1; }
+ }
+ export INCURSION_LOAD="$FIXTURE"
+ 
+-mkdir -p logs/inc-kgzx/pool
++mkdir -p "$ROOT/logs/inc-kgzx/pool"
+ 
+ PASS_SEEDS=""
+ 
+ for SEED in $(seq 1 10); do
+-    RUN="logs/inc-kgzx/pool/seed-$SEED"
++    RUN="$ROOT/logs/inc-kgzx/pool/seed-$SEED"
+     rm -rf "$RUN"
+     OUT="$(INCURSION_TARGET_PROBE=1 INCURSION_HDPOOL_PROBE=1 \
+         INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$RUN" \
+diff --git a/tools/keys/bard-song-save.keys b/tools/keys/bard-song-save.keys
+index 0ea5fc91..fec04047 100644
+--- a/tools/keys/bard-song-save.keys
++++ b/tools/keys/bard-song-save.keys
+@@ -55,7 +55,11 @@ RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ ENTER y # leave the Skill Manager and keep the ranks
+ @while "wish to worship" n
+ @choose "The Witty Thrillseeker"    # personality archetype
+-@choose "Sleep"                     # the bard's first spell
++@expect "Learn Spells: Level"    # the bard's first spell: Sleep is row 27 of level 1 by name (master's checklist, inc-g045)
++DOWN*26
++SPACE
++@expect "Learn now"
++ENTER   # the bard's first spell
+ @until "Afoot" ESC
+ 
+ w y     # wizard mode, and confirm entering it
+diff --git a/tools/keys/innate-status-drow-seed40-save.keys b/tools/keys/innate-status-drow-seed40-save.keys
+index dd2199ae..aa640d8a 100644
+--- a/tools/keys/innate-status-drow-seed40-save.keys
++++ b/tools/keys/innate-status-drow-seed40-save.keys
+@@ -71,7 +71,7 @@ a       # In-game [a] Apply: keep this key before ESC closes the menu.
+ # spell menu. Photograph the arrival, then open the System Menu and save.
+ @dump:arrival
+ 
+-ESC                     # System Menu -- and NOT a cancel; see the header
++@until "System Menu" ESC   # System Menu -- and NOT a cancel; see the header. @until: a god's speech may need a first ESC (chargen-default-save.keys)
+ @expect "System Menu"   # refuse to press a letter into any other screen
+ b                       # [b] Save and Continue
+ 

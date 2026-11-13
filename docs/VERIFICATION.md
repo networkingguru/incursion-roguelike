@@ -241,9 +241,9 @@ quietly stopped checking anything looks exactly like a check that passes.
 Two branches can each take the same next number, and git merges both with no
 conflict. On 2026-11-05 master and the epic `inc-pu6v` both took Character save
 tags 449-451, and 17 of 88 fixtures then failed to load (bead inc-cjos0). The
-inventory of every such shared space is section 4 of
-`docs/superpowers/specs/2026-11-07-names-in-the-file-design.md`. Each space has
-one of two protections:
+inventory of every such shared space is `docs/SHARED-SPACES.md`, and
+`tools/check_space_mutations.sh` plants one duplicate in each space and requires
+its detector to refuse it. The two main protections:
 
 - **A name, not a number.** A saved field (`docs/SAVE-SCHEMA-SPEC.md`, "Field
   names and class layout"), a script variable (loaded by owner and name), and a
@@ -265,7 +265,10 @@ A new shared space MUST get one of these two protections in the commit that
 creates it. A new `#define` family or enum with no `// family:` class fails
 `tools/check_define_dups.py`; a new field call that passes a number fails to
 compile. Any other new space (a new kind of file, a new numbered list a save
-holds) MUST be added to the inventory and to a check in that commit.
+holds) MUST be added to the inventory, to a check and to a row of
+`tools/check_space_mutations.sh` in that commit. A space that no check can read
+MAY take the third protection the inventory describes: the line that takes the
+number or name carries its owner bead id, so two branches conflict as text.
 `tools/check_number_values.sh` proves the direction backward: every field in
 every committed fixture and in fresh saves from its key scripts loads in this
 build.

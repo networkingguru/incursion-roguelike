@@ -4,10 +4,11 @@
 # fact: scope of a field -- tools/convert_tags_to_names.py site_scope (the owner by number_values.py's scope rule, plus every open V1EmbedBegin name); --selftest builds its own scratch tree
 # fact: retired and renamed names -- tools/retired_field_names.txt (the file the engine's inc/SaveRetiredNames.h copies; tools/check_field_names.sh keeps the two equal)
 # fact: migration names -- the v1Migrations[] table in src/SaveV1.cpp, read as text
+# fact: the revision owner -- the trailing `rev owner:` comment on the SCHEMA_REV define in src/SaveV1.cpp, read as text
 # fact: the base tree -- a git ref (default master, re-read on every run) whose inc/ and src/ `git archive` gives; the migration functions it registers
 """Static checks of the names a save file carries (inc-cjos0, spec 5.3 and 8).
 
-  check_save_names.py [--root ROOT] [--base REF]  run every check; exit 0 pass, 1 refuse, 2 cannot measure
+  check_save_names.py [--root ROOT] [--base REF] [--fast]  run every check (--fast: all but check 4); exit 0 pass, 1 refuse, 2 cannot measure
   check_save_names.py migrations all           print the comma list the writer saves (every registered name)
   check_save_names.py migrations run REV       print the comma list a load runs for a file of revision REV
                                                that holds no applied migration
@@ -25,6 +26,9 @@ Checks
      name is permanent and its function is frozen once it lands: a file that lists the name
      skips the migration, so a changed function never reaches it.  Only the named function's
      text is compared (comments and spacing ignored); a helper it calls is not.
+  5. The SCHEMA_REV define must end in `/* rev owner: <bead id> */` (or `pre-registry`).  Two branches that
+     each bump the revision write two different owner ids on that one line, so git stops on a conflict
+     instead of merging two container changes into one revision number.
 V1ArrayWiden16 reads its OLD name on purpose; only its new name is checked.  A name a macro
 argument carries (AC8_X("name", m)) is invisible here: the engine refuses it at run time
 (v1WNameId and v1Find in src/SaveV1.cpp).
@@ -69,7 +73,12 @@ def literal(u, a):
     return t[1:-1] if len(t) >= 2 and t[0] == '"' and t[-1] == '"' and '"' not in t[1:-1] else None
 
 
+_UNITS = {}   # root -> units, filled only while run_all runs (one parse of the tree, not one per check)
+
+
 def load_units(root):
+    if _UNITS.get(root) is not None:
+        return _UNITS[root]
     units = []
     for sub in ("inc", "src"):
         for dp, dn, fn in os.walk(os.path.join(root, sub)):
@@ -78,7 +87,10 @@ def load_units(root):
                 rel = os.path.relpath(os.path.join(dp, f), root)
                 if f.endswith(ct.EXTS) and rel != ct.HEADER_REL:
                     units.append(ct.Unit(root, rel))
-    return sorted(units, key=lambda u: u.rel)
+    units = sorted(units, key=lambda u: u.rel)
+    if root in _UNITS:
+        _UNITS[root] = units
+    return units
 
 
 def named_sites(root):
@@ -336,31 +348,54 @@ def check_migrations(root):
     return bad, len(rows)
 
 
-def run_all(root, base="master"):
+REV_DEFINE = re.compile(r"^[ \t]*#[ \t]*define[ \t]+SCHEMA_REV[ \t]+\d+(.*)$", re.M)
+REV_OWNER = re.compile(r"^\s*/\*\s*rev owner:\s*(inc-[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*|pre-registry)\s*\*/\s*$")
+
+
+def check_rev_owner(root):
+    """-> [FAIL line] unless the SCHEMA_REV define carries one `rev owner:` comment naming a bead id."""
+    t = open(os.path.join(root, SAVEV1_REL), encoding="utf-8", errors="replace").read()
+    rows = REV_DEFINE.findall(t)
+    if len(rows) != 1:
+        raise ValueError("%d `#define SCHEMA_REV <n>` lines in %s, expected 1" % (len(rows), SAVEV1_REL))
+    if not REV_OWNER.match(rows[0]):
+        return ["%s: the SCHEMA_REV define has no valid owner comment (found %r). End it with "
+                "`/* rev owner: <bead id> */`, the bead that set this value; a second branch that bumps "
+                "the revision then conflicts here instead of sharing revision %s"
+                % (SAVEV1_REL, rows[0].strip(), "number")]
+    return []
+
+
+def run_all(root, base="master", fast=False):
     rp = os.path.join(root, RETIRED_REL)
     if not os.path.isfile(rp) or not os.path.isfile(os.path.join(root, SAVEV1_REL)):
         print("UNMEASURED: %s or %s is missing under %s" % (RETIRED_REL, SAVEV1_REL, root))
         return 2
+    _UNITS[root] = None   # ask load_units to keep its result for this run
     try:
         fb, nsites = check_fields(root, rp)
         fb += check_macros(root)
         fb += check_literal_args(root)
         mb, nmig = check_migrations(root)
-        tmp = tempfile.mkdtemp(prefix="save_names_base.")
-        try:
-            extract_base(base, tmp, root)
-            fb2, _n = check_frozen(tmp, root)
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
-        mb += fb2
+        mb += check_rev_owner(root)
+        if not fast:  # check 4 alone needs the base snapshot (git archive, ~4 s)
+            tmp = tempfile.mkdtemp(prefix="save_names_base.")
+            try:
+                extract_base(base, tmp, root)
+                fb2, _n = check_frozen(tmp, root)
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+            mb += fb2
     except ValueError as e:
         print("UNMEASURED: %s" % e)
         return 2
+    finally:
+        _UNITS.pop(root, None)
     for b in fb + mb:
         print("REFUSED: " + b)
     if fb or mb:
         return 1
-    print("check_save_names: PASS (%d named field calls, %d migrations)" % (nsites, nmig))
+    print("check_save_names:%s PASS (%d named field calls, %d migrations)" % (" fast (check 4 skipped)" if fast else "", nsites, nmig))
     return 0
 
 
@@ -485,6 +520,39 @@ def selftest():
             check("unmeasured: a base with no body for a registered function", False)
         except ValueError:
             check("unmeasured: a base with no body for a registered function", True)
+    # item 5: the SCHEMA_REV owner comment
+    with tempfile.TemporaryDirectory() as rd:
+        os.makedirs(os.path.join(rd, "src"))
+
+        def rev(line):
+            open(os.path.join(rd, SAVEV1_REL), "w").write("x\n" + line + "\nstatic int y;\n")
+            return check_rev_owner(rd)
+        check("green: SCHEMA_REV with a bead owner passes", not rev("#define SCHEMA_REV 7 /* rev owner: inc-cjos0 */"))
+        check("green: a dotted bead id and pre-registry pass",
+              not rev("#define SCHEMA_REV 7 /* rev owner: inc-eikp.3 */") and not rev("#define SCHEMA_REV 7 /* rev owner: pre-registry */"))
+        check("red: SCHEMA_REV with no owner comment is refused", len(rev("#define SCHEMA_REV 7")) == 1)
+        check("red: a malformed owner is refused",
+              len(rev("#define SCHEMA_REV 7 /* rev owner: bob */")) == 1 and len(rev("#define SCHEMA_REV 7 /* rev owner: inc- */")) == 1
+              and len(rev("#define SCHEMA_REV 7 /* owner: inc-x */")) == 1)
+        check("green: restored owner passes again", not rev("#define SCHEMA_REV 8 /* rev owner: inc-abc */"))
+    # --fast end to end: check 1-3, 5 still refuse; only check 4 (the base snapshot) is skipped.
+    def e2e(src, fast, base):
+        import io, contextlib
+        with tempfile.TemporaryDirectory() as d:
+            for sub in ("inc", "src", "tools"):
+                os.makedirs(os.path.join(d, sub))
+            open(os.path.join(d, "inc/Foo.h"), "w").write(src)
+            open(os.path.join(d, RETIRED_REL), "w").write("")
+            open(os.path.join(d, SAVEV1_REL), "w").write(
+                "#define SCHEMA_REV 7 /* rev owner: inc-abc */\n"
+                'static const V1Migration v1Migrations[] = {\n    { "A", 5, &Player::Fn },\n};\n')
+            with contextlib.redirect_stdout(io.StringIO()):
+                return run_all(d, base, fast)
+    one = "class Foo {\n void FieldsV1(Registry &r)\n {\n FIELD_U8(\"a\", a);\n }\n};\n"
+    dup = one.replace(' }\n};', ' FIELD_U8("a", c);\n }\n};')
+    check("green: --fast passes a clean tree and never reads the base ref", e2e(one, True, "no-such-ref-xyz") == 0)
+    check("red: --fast refuses one name at two sites in one scope", e2e(dup, True, "no-such-ref-xyz") == 1)
+    check("green: full mode does read the base ref (a bad ref cannot be measured)", e2e(one, False, "no-such-ref-xyz") != 0)
     print("selftest: %s" % ("FAILED: " + ", ".join(bad) if bad else "passed"))
     return 1 if bad else 0
 
@@ -494,6 +562,7 @@ def main(argv):
     ap.add_argument("--root", default=os.path.dirname(HERE))
     ap.add_argument("--base", default="master")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--fast", action="store_true", help="skip check 4 (needs the base snapshot)")
     ap.add_argument("what", nargs="*")
     a = ap.parse_args(argv)
     if a.selftest:
@@ -510,7 +579,7 @@ def main(argv):
         ap.error("usage: migrations all | migrations run REV")
     if a.what:
         ap.error("unknown argument")
-    return run_all(a.root, a.base)
+    return run_all(a.root, a.base, a.fast)
 
 
 if __name__ == "__main__":

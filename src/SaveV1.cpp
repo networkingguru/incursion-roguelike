@@ -71,7 +71,7 @@ extern size_t typeSize(int8 Type);
    a name-table record (V1_REC_NAMES) and every field carries the id of its
    row in that table (bead inc-cjos0). Revisions 3 to 6 carry the old tag
    numbers; the reader maps them to names through inc/SaveLegacyTags.h. */
-#define SCHEMA_REV 7
+#define SCHEMA_REV 7 /* rev owner: inc-cjos0 */
 static uint32 v1FileRevision = 0;
 
 /* The OLDEST revision this binary can still read. A file older than this is
