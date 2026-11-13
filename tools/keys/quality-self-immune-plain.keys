@@ -2,7 +2,7 @@
 # The negative control for quality-self-immune-quality.keys (bd inc-to9x).
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed5-opt0822.char \
 #       tools/headless.sh tools/keys/quality-self-immune-plain.keys 5
 #
 # Nothing is added to the suit here. The wizard burn must therefore

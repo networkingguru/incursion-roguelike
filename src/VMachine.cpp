@@ -200,7 +200,45 @@ inline bool WithinRect(Rect r, int16 x, int16 y)
 inline void ClearCandidates()
   { memset(Candidates,0,sizeof(hObj)*2048); nCandidates = 0; }
 
+/* Script draws and prompts as sourced decisions (bead inc-10v7f, phase 6c).
+   While character creation is open, a script's random(n), its dice rolls (the
+   ROLL opcode below) and its yn, ChoicePrompt and LMenu are each one decision
+   of the creation source, keyed by the (resource, event) the script runs under
+   (CreationScope, Resource::Event). Outside the window each is a pass-through
+   to the call it replaced, with the same draws in the same order. dispatch.h is
+   generated, so the routing is done here, by macros that last for the include:
+   `random` becomes the sourced draw, and the names yn, ChoicePrompt and LMenu
+   become the members that wrap the prompt. */
+static int16 ScriptRandom(int16 mx, const char *f, int l, const char *fn)
+{
+    /* random(mx) is genrand_int32() % mx. A negative mx converts to a huge unsigned divisor,
+       so the remainder is the draw itself, cut to 16 bits: any int16 value. A positive mx draws
+       0 .. mx-1, and 0 draws 0. */
+    int32 lo = mx < 0 ? -32768 : 0;
+    int32 hi = mx < 0 ? 32767 : (mx > 0 ? (int32)mx - 1 : 0);
+    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return census_random(mx, f, l, fn); },
+        NULL, CreationRange(lo, hi));
+}
+
+static int16 ScriptDice(int8 n, int8 s)
+{
+    /* n dice of s sides (a die of 0 sides counts 1, as random(0) is 0 and Roll adds 1), no bonus. */
+    int32 top = (int32)n * (s > 0 ? (int32)s : 1);
+    return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return Dice::Roll(n, s); },
+        NULL, CreationRange(n > 0 ? (int32)n : 0, top > 0 ? top : 0));
+}
+
+#pragma push_macro("random")
+#undef random
+#define random(mx) ScriptRandom((mx),__FILE__,__LINE__,__func__)
+#define yn ScriptYn
+#define ChoicePrompt ScriptChoicePrompt
+#define LMenu ScriptLMenu
 #include "dispatch.h"
+#undef yn
+#undef ChoicePrompt
+#undef LMenu
+#pragma pop_macro("random")
 
 #undef ItemWeight
 #undef rnd
@@ -219,6 +257,88 @@ inline void ClearCandidates()
 #undef DirX
 #undef DirY
 #undef TermUpdate
+
+/* The prompts a script asks, as sourced decisions (phase 6c). Outside the
+   creation window each is the call it wraps, untouched. */
+static const CreationPickList &ScriptYesNo()
+{
+    static CreationPickList list;
+    if (list.names.empty()) {
+        list.Add("no", 0);
+        list.Add("yes", 1);
+    }
+    return list;
+}
+
+/* A ChoicePrompt names its options by letter only; the answer the source holds
+   is the option's text. ponytail: the text is read from the prompt's own
+   wording (the words after the last colon, else all of it, minus filler words,
+   the first whose initial is the letter); a prompt whose wording does not name
+   an option falls back to the letter. Upgrade path: an explicit text per letter
+   in the script API. */
+static void ScriptChoiceList(const char *msg, const char *choices, CreationPickList &list)
+{
+    static const char *filler[] = { "do", "you", "want", "to", "or", "and", "the",
+        "a", "an", "of", "is", "it", "would", "like", NULL };
+    std::string m = msg ? msg : "";
+    size_t colon = m.rfind(':');
+    if (colon != std::string::npos)
+        m = m.substr(colon + 1);
+    std::vector<std::string> words;
+    std::string w;
+    for (size_t i = 0; i <= m.size(); i++) {
+        char c = i < m.size() ? m[i] : ' ';
+        if (isalpha((unsigned char)c) || (c == '-' && !w.empty()))
+            w += (char)tolower((unsigned char)c);
+        else if (!w.empty()) {
+            while (!w.empty() && w[w.size() - 1] == '-')
+                w.erase(w.size() - 1);
+            bool skip = false;
+            for (int f = 0; filler[f]; f++)
+                if (w == filler[f]) skip = true;
+            if (!skip && !w.empty())
+                words.push_back(w);
+            w.clear();
+        }
+    }
+    for (const char *c = choices; c && *c; c++) {
+        char lc = (char)tolower((unsigned char)*c);
+        std::string text(1, lc);
+        for (size_t i = 0; i != words.size(); i++)
+            if (words[i][0] == lc) { text = words[i]; break; }
+        list.Add(text.c_str(), (int32)(unsigned char)lc);
+    }
+}
+
+bool Creature::ScriptYn(const char *msg, bool def)
+{
+    if (!CreationWindowOpen())
+        return yn(msg, def);
+    return SourcedPick(CK_SCRIPT_YN, ScriptYesNo(),
+        [&]() -> int32 { return yn(msg, def) ? 1 : 0; }) != 0;
+}
+
+int8 Creature::ScriptChoicePrompt(const char *msg, const char *choices, char def,
+    int8 col1, int8 col2, bool preprompt)
+{
+    if (!CreationWindowOpen())
+        return ChoicePrompt(msg, choices, def, col1, col2, preprompt);
+    CreationPickList list;
+    ScriptChoiceList(msg, choices, list);
+    return (int8)SourcedPick(CK_SCRIPT_CHOICE, list, [&]() -> int32 {
+        return (int32)ChoicePrompt(msg, choices, def, col1, col2, preprompt); });
+}
+
+int32 Term::ScriptLMenu(uint16 fl, const char *title, int8 MWin, const char *help, int8 pos)
+{
+    if (!CreationWindowOpen())
+        return LMenu(fl, title, MWin, help, pos);
+    CreationPickList list;
+    for (int16 i = 0; i != OptionCount; i++)
+        list.Add((const char*)Option[i].Text, Option[i].Val);
+    return SourcedPick(CK_SCRIPT_MENU, list,
+        [&]() -> int32 { return LMenu(fl, title, MWin, help, pos); });
+}
 
 #ifndef  DISPATCH
 void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) { }
@@ -562,7 +682,7 @@ int32 VMachine::Execute(EventInfo *e, rID _xID, hCode CP)
           case MOD: REGS(0) = Value1(vc) % Value2(vc);  break;
           case INC: *LValue1(vc) += Value2(vc); break;
           case DEC: *LValue1(vc) -= Value2(vc); break;
-          case ROLL: REGS(0) = Dice::Roll((int8)Value1(vc),(int8)Value2(vc)); break;
+          case ROLL: REGS(0) = ScriptDice((int8)Value1(vc),(int8)Value2(vc)); break;
           case MIN:  REGS(0) = min(Value1(vc),Value2(vc)); break;
           case MAX:  REGS(0) = max(Value1(vc),Value2(vc)); break;
           case MOV: *LValue1(vc) = Value2(vc);         break;

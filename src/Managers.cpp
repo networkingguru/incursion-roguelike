@@ -2217,11 +2217,14 @@ Recount:
                         LITERAL_CHAR, LITERAL_CHAR1(GLYPH_ARROW_RIGHT), LITERAL_CHAR2(GLYPH_ARROW_RIGHT)));
                     break;
                 }
-                for (i = 0; i != SK_COUNT; i++)
+                {
+                    int8 kept[SK_LAST];
+                    for (i = 0; i != SK_LAST; i++)
+                        kept[i] = (int8)(p->SkillRanks[i] + Alloc[i][0] + Alloc[i][1] + Alloc[i][2] + Alloc[i][3] + Alloc[i][4] + Alloc[i][5]);
+                    p->CommitSkillRanks(kept, usp);
+                }
+                for (i = SK_LAST; i != SK_COUNT; i++)
                     p->SkillRanks[i] += Alloc[i][0] + Alloc[i][1] + Alloc[i][2] + Alloc[i][3] + Alloc[i][4] + Alloc[i][5];
-
-                for (i = 0; i != 6; i++)
-                    p->SpentSP[i] = p->TotalSP[i] - usp[i];
                 goto Leave;
             case KY_ESC:
                 /* The footer has always promised "[ESC] Abort". It still

@@ -14,7 +14,7 @@
 # save does not move, because the v1 save schema converts every saved rID
 # through that save's own per-module manifest (v1ConvertManifestRid,
 # src/SaveV1.cpp). So this script produces the .sav that
-# tools/make_char_fixture.sh freezes, and one fixture made here serves every
+# the retired fixture maker freezes, and one fixture made here serves every
 # check that includes chargen.keys at the same seed and settings.
 # See bd inc-1fjk and bd inc-vrt8.
 #

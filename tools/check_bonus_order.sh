@@ -39,7 +39,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-SUBJECT=tools/fixtures/chars/lizardfolk-monk-seed1.sav
+SUBJECT=tools/fixtures/chars/lizardfolk-monk-seed1.char
 KEYS=tools/keys/load-char-sheet.keys
 
 [ -x ./incursion-headless ] || _check_die 2 \

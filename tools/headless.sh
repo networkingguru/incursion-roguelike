@@ -39,7 +39,9 @@
 #       asking for keys, which is the signature of a hang), 5 the run never
 #       entered a map and so measured nothing, 6 a @choose, @cursorto or
 #       @expect was told to find something the screen never showed, 7 the
-#       engine logged an ASSERT that tools/known_asserts.txt does not list.
+#       engine logged an ASSERT that tools/known_asserts.txt does not list,
+#       8 a cache-served fixture did not load (FIXTURE LOAD FAILED; see the
+#       INCURSION_LOAD block, and tools/fixture_cache.sh).
 #
 # A death, or a session stuck at the threat-disengage prompt, is deliberately
 # NOT its own exit code: whether either should FAIL a run, versus merely be
@@ -152,9 +154,58 @@ fi
 # the sandbox -- and treats anything else as a path to open where it stands.
 # Passing the fixture's own path would therefore both read and later WRITE the
 # original file, which is the trap the copy above exists to avoid.
+#
+# A FIXTURE WITH A .char FILE COMES FROM THE CACHE (bead inc-10v7f, phase 9).
+# INCURSION_LOAD=<name> (no '/', no ".sav") and the path form
+# tools/fixtures/chars/<name>.char (or the old <name>.sav) both map to <name> when
+# tools/fixtures/chars/<name>.char exists. tools/fixture_cache.sh serves the
+# cached .sav for the current .char, options file, binary and module, building
+# it first on a miss, and the copy below then proceeds as for any other file.
+# A fixture with no .char keeps the old behavior: INCURSION_LOAD names a file.
+#
+# EXIT 8. A cache-served .sav that fails to load is a loader or writer defect,
+# not a stale file: the run ends with exit 8 and "FIXTURE LOAD FAILED: <name>
+# (<key>)", and the entry is never rebuilt. The signal is the binary's own: a
+# failed -load makes main() return 2 (src/Wposix.cpp, the `retval = 2` after
+# LoadNamedGame), and LoadNamedGame has logged one of the three lines matched
+# below to logs/errors.log (src/Registry.cpp, "Error reading saved game",
+# "Null map/player after saved game loaded!", "Error loading module"). Exit 2
+# alone is not enough: a key script that fails a directive also exits 2.
 LOAD="${INCURSION_LOAD:-}"
 LOAD_ARGS=()
+FIX_NAME=""
+FIX_KEY=""
 if [ -n "$LOAD" ]; then
+    ROOTP="$(cd "$ROOT" && pwd -P)"
+    case "$LOAD" in
+        */*)
+            LOAD_EXT="${LOAD##*.}"
+            if [ "$LOAD_EXT" = sav ] || [ "$LOAD_EXT" = char ]; then
+                LOAD_DIR="$(cd "$(dirname "$LOAD")" 2>/dev/null && pwd -P)"
+                LOAD_BASE="$(basename "$LOAD" ".$LOAD_EXT")"
+                if [ "$LOAD_DIR" = "$ROOTP/tools/fixtures/chars" ] && [ -f "$ROOT/tools/fixtures/chars/$LOAD_BASE.char" ]; then
+                    FIX_NAME="$LOAD_BASE"
+                fi
+            fi ;;
+        *.sav) ;;
+        *)
+            if [ -f "$ROOT/tools/fixtures/chars/$LOAD.char" ]; then
+                FIX_NAME="$LOAD"
+            elif [ -f "$ROOT/tools/fixtures/chars/$LOAD.sav" ]; then
+                LOAD="tools/fixtures/chars/$LOAD.sav"
+            else
+                echo "INCURSION_LOAD names no fixture: $LOAD (no tools/fixtures/chars/$LOAD.char)"
+                exit 2
+            fi ;;
+    esac
+    if [ -n "$FIX_NAME" ]; then
+        LOAD="$(INCURSION_BIN="$BIN" "$ROOT/tools/fixture_cache.sh" "$FIX_NAME")" || {
+            FIX_RC=$?
+            echo "INCURSION_LOAD: the fixture cache could not serve $FIX_NAME (exit $FIX_RC)"
+            exit "$FIX_RC"
+        }
+        FIX_KEY="$(basename "$(dirname "$LOAD")")"
+    fi
     if [ ! -f "$LOAD" ]; then
         echo "INCURSION_LOAD names a file that is not there: $LOAD"
         exit 2
@@ -190,6 +241,7 @@ echo "opts:  $OPTIONS"
 # file rather than from the seed, and saying so here is the only place a
 # reader of the report would find that out.
 [ -n "$LOAD" ] && echo "load:  $LOAD (copied to $RUN/save/$LOAD_NAME)"
+[ -n "$FIX_KEY" ] && echo "fixture: $FIX_NAME (cache key $FIX_KEY)"
 echo "run:   $RUN"
 echo
 
@@ -210,6 +262,12 @@ fi
 
 echo
 echo "--- after the session ---"
+
+# EXIT 8: a cache-served fixture that did not load. See the INCURSION_LOAD block.
+if [ -n "$FIX_KEY" ] && [ "$STATUS" -eq 2 ] && [ -f "$RUN/logs/errors.log" ] &&
+    grep -Eq 'Error reading saved game|Null map/player after saved game loaded|Error loading module' "$RUN/logs/errors.log"; then
+    STATUS=8
+fi
 
 # Did the game ever actually play? Game::Play writes logs/session.log on the
 # first completed turn, unconditionally, so the file exists if and only if the
@@ -272,6 +330,9 @@ case $STATUS in
     7) echo "ended:      ASSERT -- the engine tripped an assertion that" ;
        echo "            tools/known_asserts.txt does not list:" ;
        echo "$NEW_ASSERTS" | sed 's/^/              /' ;;
+    8) echo "FIXTURE LOAD FAILED: $FIX_NAME ($FIX_KEY)"
+       echo "ended:      the cached fixture did not load. This is a loader or writer"
+       echo "            defect; the entry is kept and is never rebuilt." ;;
     *) echo "ended:      exit $STATUS" ;;
 esac
 

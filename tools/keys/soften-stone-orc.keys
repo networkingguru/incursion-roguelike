@@ -7,7 +7,7 @@
 # cast happened (V opens View Messages, src/Tables.cpp) with no "softens"/
 # "slows down" text.
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char \
 #       tools/headless.sh tools/keys/soften-stone-orc.keys 1
 #
 # THE READ. While the "Soften Stone" aim prompt is up (mode 9), the cursor

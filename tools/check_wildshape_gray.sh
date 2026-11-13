@@ -1,6 +1,10 @@
 #!/bin/bash
 # gate: live
 # inc-5v47: a gray Wild Shape choice must return safely without changing form.
+# fact: character -- fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat
+# fact: the Wild Shape menu text -- game strings, no dice
 # Usage: tools/check_wildshape_gray.sh
 # Specimens: logs/wildshape-gray/run-<timestamp>-<pid>/ and its .out file.
 set -uo pipefail
@@ -8,7 +12,7 @@ cd "$(dirname "$0")/.." || exit 2
 mkdir -p logs/wildshape-gray
 run="logs/wildshape-gray/run-$(date +%Y%m%d-%H%M%S)-$$"
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
 INCURSION_RUN_DIR="$run" tools/headless.sh tools/keys/wildshape-gray.keys 1 > "$run.out" 2>&1
 status=$?
 echo "headless exit: $status; specimens: $run (report: $run.out)"

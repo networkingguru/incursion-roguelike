@@ -67,7 +67,7 @@ cd "$ROOT"
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
 KEYS=tools/keys/inc-skc6-biocurrent-touch.keys
-FIXTURE=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+FIXTURE=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 [ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: fixture $FIXTURE is not there"; exit 2; }
 export INCURSION_LOAD="$FIXTURE"
 export INCURSION_LOF_FORCE_ROLL=20

@@ -1,7 +1,8 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/orc-rogue-seed1-opt0822.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the probe scene runs on the old save's surroundings (its search turn passes there)
 # inc-yp23: watcher-side pair re-tests; 0 GREEN, 1 RED, 2 INCONCLUSIVE.
-# fact: character and starting map -- INCURSION_LOAD fixture orc-rogue-seed1-opt0822.sav
+# fact: character and starting map -- INCURSION_LOAD fixture orc-rogue-seed1-opt0822.char
 # fact: options -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: creatures, squares, hiding and sight state -- INCURSION_HIDE_PAIRS_PROBE scene setup (brief-authorized probe control)
 # fact: same/next round -- probe holds Turn fixed or advances HIDE_ROUND_TICKS
@@ -15,7 +16,7 @@ mkdir -p logs
 RUN="$(mktemp -d "$PWD/logs/hide-pairs-XXXXXX")"
 INCURSION_HIDE_PAIRS_PROBE=1 INCURSION_RUN_DIR="$RUN" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/specimens/orc-rogue-seed1-opt0822.sav \
  tools/headless.sh tools/keys/hide-pairs.keys "${1:-1}" > "$RUN.out" 2>&1
 status=$?
 python3 - "$RUN" "$status" <<'PY'

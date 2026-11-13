@@ -1,0 +1,36 @@
+# inc-10v7f phase 6c: make a Dwarf Barbarian with no god and SAVE him. The Dwarf
+# race's EV_BIRTH (lib/races.irh, Dwarf;race) asks "Do you wish to worship
+# Ekliazeh?" (P37), a script yn, and the answer here is yes. The Barbarian's
+# EV_ADVANCE draws 1d2 twice (CK_SCRIPT_ROLL). Used by
+# tools/compare_creation_walks.sh and phase 6c's .char check.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Dwarf"
+@choose "Dwarf (Standard)"
+@choose "Barbarian"
+a       # Attributes: the first of the five offered sets. The sets have no
+        #   names, so this one stays positional.
+@choose "Neutral"   # and not Neutral Good or Neutral Evil: a name that
+                    #   matches an entry outright beats one that is merely
+                    #   a prefix of it.
+a       # First feat.  Which feats are offered depends on the attribute
+a       # Second feat. rolls, so these two stay counted.
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+
+@dump:arrival
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved

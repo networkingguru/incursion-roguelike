@@ -50,7 +50,7 @@
 #   ... which on the unguarded source aborts the run with
 #   "src/Skills.cpp:NNNN: runtime error: division by zero".
 #
-# fact: character, kit, pickaxe in the weapon hand -- fixture gnome-warrior-wis3-pickaxe-seed1-opt0822
+# fact: character, kit, pickaxe in the weapon hand, and the map -- tools/fixtures/specimens/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the dig aims at square (0,0), which the built level does not make Indestructible Rock
 # fact: Mining rating 0 (the divisor) -- fixture; its sheet reads "Mining +0 (0 ranks, -4 WIS, +2 train, +2 kit)"
 # fact: dig target is square (0,0), Indestructable Rock -- Player::YuseMenu leaves e.EXVal/e.EYVal at 0; the fixture pins the dungeon
 # fact: the result message -- deterministic arithmetic, max(0, 100 - PercentSI), no roll
@@ -65,7 +65,7 @@ cd "$ROOT"
 KEYS=tools/keys/dig-zero-skill.keys
 SEED=1
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

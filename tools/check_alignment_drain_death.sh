@@ -25,8 +25,10 @@
 # Usage: tools/check_alignment_drain_death.sh   (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
 
+# fact: character -- the base character quality-item-magic-seed5-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: wizard mode, the cleared level, level 1 with 0 XP -- tools/keys/setup-alignment-drain-level1.keys (the old alignment-drain-level1 .sav held them; V7-1 moved them into the check)
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/alignment-drain-level1.sav
+FIXTURE=quality-item-magic-seed5-opt0822   # the base character; tools/keys/setup-alignment-drain-level1.keys derives level 1
 # The mutation removes the isDead() guard in Character::Swap, the one that stops CalcValues
 # running on the dead wielder; alone it brings back the ASSERT and exit 139.
 check_mutation src/Inv.cpp \
@@ -34,7 +36,7 @@ check_mutation src/Inv.cpp \
         return true;
 ' ''
 
-[ -f "$FIXTURE" ] || _check_die 2 "the fixture is missing: $FIXTURE"
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "the fixture is missing: tools/fixtures/chars/$FIXTURE.char"
 export INCURSION_LOAD="$FIXTURE"
 check_run tools/keys/alignment-drain-die.keys 1
 unset INCURSION_LOAD

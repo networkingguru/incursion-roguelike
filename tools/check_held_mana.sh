@@ -22,7 +22,8 @@
 # point: every session replays the same fixture, settings and seed, so a longer
 # script passes through the shorter script's state.
 #
-# fact: priest-mage character, knows Shield and Cure Light Wounds -- fixture human-priest-mage-seed4-gate, INCURSION_LOAD
+# fact: priest-mage character, knows Shield and Cure Light Wounds -- fixture human-priest-mage-seed4-gate (built from its .char, served by tools/fixture_cache.sh), INCURSION_LOAD
+# fact: the wizard mode, Free Advancement and the Mage level (Priest 1 / Mage 1) -- tools/keys/setup-human-priest-mage-seed4-gate.keys (the old .sav held them; V7-1 moved them into the check)
 # fact: mage character, knows Shield and Burning Hands, Concentration +3 -- fixture orc-mage-seed4-gate, INCURSION_LOAD
 # fact: settings -- CHECK_OPTIONS=tools/gates/Options.Dat 
 # fact: Shield's cost in mana -- derived: held after one casting minus held at baseline, both read from the save dump; INCONCLUSIVE when not positive
@@ -42,9 +43,9 @@
 
 CHECK_OPTIONS=tools/gates/Options.Dat
 SEED=4
-PM=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
-OM=tools/fixtures/chars/orc-mage-seed4-gate.sav
-PMW=tools/fixtures/chars/human-priest-mage-wounded-seed4-gate.sav
+PM=human-priest-mage-seed4-gate
+OM=tools/fixtures/chars/orc-mage-seed4-gate.char
+PMW=human-priest-mage-wounded-seed4-gate
 
 # --prove-red performs the FIRST declared mutation only (tools/check_lib.sh), so
 # HELD_MUT chooses which one is first: A (default) = no release, D = undo the
@@ -63,7 +64,7 @@ case "${HELD_MUT:-A}" in
 esac
 _mut_a; _mut_d; _mut_c
 
-[ -f "$PM" ] && [ -f "$OM" ] && [ -f "$PMW" ] || _check_die 2 "a fixture is missing: $PM, $OM or $PMW"
+[ -f "tools/fixtures/chars/$PM.char" ] && [ -f "$OM" ] && [ -f "tools/fixtures/chars/$PMW.char" ] || _check_die 2 "a fixture is missing: $PM, $OM or $PMW"
 
 # <run dir> -> "spent held" from the session's own save
 _dump() {
@@ -121,8 +122,10 @@ else
 fi
 
 echo "== property 2: healing does not hold =="
+export INCURSION_LOF_FORCE_ROLL=20 INCURSION_FORCE_DAMAGE_ROLL=3   # the setup's giant rat bites for a known amount
 _session "$PMW" tools/keys/held-mana-heal-pre.keys;  PRE_RUN="$CHECK_RUN"; read -r P_SPENT P_HELD <<<"$(_dump "$CHECK_RUN")"
 _session "$PMW" tools/keys/held-mana-heal-cast.keys; CAST_RUN="$CHECK_RUN"; read -r H_SPENT H_HELD <<<"$(_dump "$CHECK_RUN")"
+unset INCURSION_LOF_FORCE_ROLL INCURSION_FORCE_DAMAGE_ROLL
 HP_PRE="$(_hp_of "$PRE_RUN" hurt)"; HP_CAST_BEFORE="$(_hp_of "$CAST_RUN" hurt)"; HP_AFTER="$(_hp_of "$CAST_RUN" healed)"
 [ -n "$HP_PRE" ] && [ -n "$HP_CAST_BEFORE" ] && [ -n "$HP_AFTER" ] || _check_die 2 "cannot read HP off the hurt/healed screens."
 [ "$HP_PRE" -eq "$HP_CAST_BEFORE" ] || _check_die 2 "the pre and cast sessions were wounded differently ($HP_PRE vs $HP_CAST_BEFORE HP)."

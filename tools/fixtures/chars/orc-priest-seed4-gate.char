@@ -1,0 +1,152 @@
+# orc-priest-seed4-gate: converted from tools/fixtures/chars/orc-priest-seed4-gate.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/chargen-priest-save.keys, seed 4, settings tools/gates/Options.Dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 554 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/chargen-priest-save.keys 4 47 73 34:36:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (9), skeleton value -> old value:
+#   scalar: name: Gell -> Henk
+#   scalar: surname: the Wise -> the Blooded
+#   scalar: character_name: Gell the Wise -> Henk the Blooded
+#   scalar: store_seed: 37 -> 40
+#   scalar: attr_dex: 11 -> 13
+#   scalar: attr_con: 13 -> 17
+#   scalar: attr_int: 17 -> 16
+#   scalar: attr_cha: 16 -> 13
+#   scalar: attr_luc: 13 -> 14
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (boots) and 2 skill tools (healing kit, heal 2; craftsman's tools, craft 2) | built: 0 perk items (-) and 2 skill tools (healing kit, heal 2; craftsman's tools, craft 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 6 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: domain: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 47 kept as the walk recorded it; the old character holds this annotation's item (longspear, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 69 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 4 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 21 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 11 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 99 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 18 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 82 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 16 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 99 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a22]: 10 kept as the walk recorded it; the old character holds this annotation's item (coat of plates, quantity 1), so its roll is within the annotation's chance
+#   differs: ability CA_DEVOURING 1 -> Feats: Cannibalism -- commit 4e1fc266
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/gates/Options.Dat
+seed: 4
+alter_options: no
+explore_continue: yes
+formula_seed: 5
+race: Orc
+subrace: Orc
+name: Henk
+surname: the Blooded
+class: Priest
+god: Aiswin
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Blind Fight
+perk_type [1]: PERK_RESIST
+perk_resist [1]: save fear
+attr_str: 11
+attr_dex: 13
+attr_con: 17
+attr_int: 16
+attr_wis: 16
+attr_cha: 13
+attr_luc: 14
+alignment: Lawful Good
+domain: Fate
+domain: Knowledge
+domain: Night
+feat: Acrobatic
+feat: Enlarge Spell
+hp_roll [Priest]: 8
+mana_roll [Priest]: 12
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 0
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 2
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 1
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 31
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 10
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 47
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Priest]: 32
+kit_item [Priest;a1]: heavy mace, quantity 1
+kit_item [Priest;a2]: flask, effect water, flag blessed, quantity 17
+kit_item [Priest;a3]: potion, effect Healing, quantity 5
+kit_item [Priest;a4]: gold piece, quantity 68
+kit_item [Priest;a5]: clerical vestment, quantity 1
+gear_stream [Universal Gear]: 33
+gear_chance [Universal Gear;a3]: 69
+gear_chance [Universal Gear;a4]: 4
+gear_chance [Universal Gear;a6]: 21
+gear_chance [Universal Gear;a7]: 11
+gear_chance [Universal Gear;a10]: 99
+gear_chance [Universal Gear;a14]: 18
+gear_chance [Universal Gear;a18]: 82
+gear_chance [Universal Gear;a19]: 16
+gear_chance [Universal Gear;a20]: 99
+gear_chance [Universal Gear;a22]: 10
+kit_item [Universal Gear;a22]: coat of plates, quantity 1
+thrown_quantity: 6
+personality: The Ambitious Conqueror
+spell_learn: Bane [Divine]
+spell_learn: Call Companions [Divine]
+spell_learn: Call Light [Divine]
+spell_learn: Command [Divine]
+store_seed: 40
+character_name: Henk the Blooded
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

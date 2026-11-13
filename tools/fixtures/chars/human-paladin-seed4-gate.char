@@ -1,0 +1,130 @@
+# human-paladin-seed4-gate: converted from tools/fixtures/chars/human-paladin-seed4-gate.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/chargen-paladin-save.keys, seed 4, settings tools/gates/Options.Dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 315 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/chargen-paladin-save.keys 4 19 128 26:28:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (5), skeleton value -> old value:
+#   scalar: name: Kethad -> Vorkai
+#   scalar: surname: Ringal -> Oswin
+#   scalar: character_name: Kethad Ringal -> Vorkai Oswin
+#   scalar: store_seed: 29 -> 30
+#   kit: kit_item [Human;a1]: food ration, quantity 6 -> food ration, quantity 14
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 2) | built: 1 perk item (ring) and 1 skill tool (craftsman's tools, craft 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 3 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Universal Gear;a3]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 45 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 5 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 40 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 21 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/gates/Options.Dat
+seed: 4
+alter_options: no
+explore_continue: yes
+formula_seed: 5
+race: Human
+name: Vorkai
+surname: Oswin
+natural_aptitude: Athletics
+natural_aptitude: Diplomacy
+class: Paladin
+god: Erich
+perk_type [0]: PERK_TALENT
+perk_spell [0]: Cell Adjustment
+perk_type [1]: PERK_ITEM
+perk_item [1]: ring, effect Channeling, plus 2
+perk_type [2]: PERK_IMMUNE
+perk_immune [2]: Paralysis
+attr_str: 10
+attr_dex: 17
+attr_con: 12
+attr_int: 15
+attr_wis: 12
+attr_cha: 13
+attr_luc: 16
+alignment: Lawful Good
+feat: Acrobatic
+feat: Alertness
+feat: Acute Senses
+hp_roll [Paladin]: 10
+mana_roll [Paladin]: 8
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Human]: 25
+kit_item [Human;a0]: medium backpack, quantity 1
+kit_item [Human;a1]: food ration, quantity 14
+kit_item [Human;a2]: torch, quantity 5
+gear_stream [Paladin]: 26
+kit_item [Paladin;a3]: long sword, plus 1, quantity 1
+kit_item [Paladin;a4]: light lance, quantity 1
+kit_item [Paladin;a6]: kite shield, quantity 1
+kit_item [Paladin;a7]: noble attire, quantity 1
+kit_item [Paladin;a8]: gold piece, quantity 11
+kit_item [Paladin;a9]: potion, effect Healing, quantity 4
+kit_item [Paladin;a10]: flask, effect water, flag blessed, quantity 9
+gear_stream [Universal Gear]: 27
+gear_chance [Universal Gear;a3]: 40
+gear_chance [Universal Gear;a4]: 45
+gear_chance [Universal Gear;a6]: 5
+gear_chance [Universal Gear;a7]: 40
+gear_chance [Universal Gear;a10]: 21
+kit_item [Universal Gear;a13]: leather armour, plus 3, quantity 1
+personality: The Ambitious Conqueror
+store_seed: 30
+character_name: Vorkai Oswin
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

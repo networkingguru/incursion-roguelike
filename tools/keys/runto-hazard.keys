@@ -3,7 +3,7 @@
 #
 #   INCURSION_RUNTO_PROBE=1 INCURSION_RUNTO_STAGE=T|D|S \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/runto-hazard.keys 3
 #
 # INCURSION_RUNTO_STAGE makes the game wall in a ten-square corridor east of
@@ -15,6 +15,8 @@
 # found" prompt: [n]. On today's build no such prompt opens, so that [n] is
 # read as a command in play.
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 .*2
 l o
 @dump:map-open

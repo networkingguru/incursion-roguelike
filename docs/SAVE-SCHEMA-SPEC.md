@@ -749,7 +749,7 @@ every existing value unchanged:
 18. **A resource append moves every slot.** Append an Effect that declares a
     variable. Every older variable keeps its value although its slot moved.
 19. **Rename a variable in place.** Loads silently, value at its position.
-20. **Old saves.** Every `tools/fixtures/chars/*.sav` loads, and so do
+20. **Old saves.** Every `tools/fixtures/specimens/*.sav` and every old `tools/fixtures/chars/*.sav` loads, and so do
     `save/Keos.sav` and `save/Zakfienal.sav` (copies, in a sandbox). The test
     MUST name one IS1.3 fixture whose recovered slots are non-zero in a whole
     unit and in each partial unit (17, 18 and 21 bits), and MUST check each

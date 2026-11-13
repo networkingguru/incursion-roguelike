@@ -3,7 +3,7 @@
 # tools/check_stale_death_prompt.sh.
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.char \
 #       tools/headless.sh tools/keys/engulf-stale-prompt.keys <seed>
 #
 # THE DEFECT. While the player is engulfed, the map pane shows the engulfer's
@@ -12,7 +12,7 @@
 # yes/no prompt stayed on screen. (src/Term.cpp)
 #
 # THE STAGING. A frozen character (Hurk, an orc barbarian with DEX 7, Reflex -1;
-# tools/fixtures/chars/low-dex-orc-barbarian-seed18-gate.sheet.txt) is loaded, so
+# the built sheet of low-dex-orc-barbarian-seed18-gate, tools/fixture_sheet.sh) is loaded, so
 # no chargen or lib change can alter him. His low Dex is why the Reflex save
 # fails often. Wizard mode (w, y) offers
 # "Monster Summoning" (src/Debug.cpp case 6); the stunjelly lands one square

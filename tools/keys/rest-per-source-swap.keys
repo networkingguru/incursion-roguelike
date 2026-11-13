@@ -1,5 +1,5 @@
 # inc-4999 phase 3: Priest swap with no book. Read by tools/check_rest_per_source.sh
-# case b. Load tools/fixtures/chars/orc-priest-seed4-gate.sav (not in wizard
+# case b. Load tools/fixtures/chars/orc-priest-seed4-gate.char (not in wizard
 # mode, so `w y` is needed). Descend to depth 2, genocide everything, open Learn
 # Spells (the table sorts by source then name; this character holds only divine
 # spells, so the rows are in name order -- this character holds 6 of 4 level-1

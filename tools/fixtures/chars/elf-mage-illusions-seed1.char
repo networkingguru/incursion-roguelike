@@ -1,0 +1,176 @@
+# elf-mage-illusions-seed1: converted from tools/fixtures/chars/elf-mage-illusions-seed1.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/elf-mage-illusions-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 450 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/elf-mage-illusions-save.keys 1 82 77 28:27:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (5), skeleton value -> old value:
+#   scalar: name: Faridhir -> Quarion
+#   scalar: surname: Moonbrook -> Moonwhisper
+#   scalar: character_name: Faridhir Moonbrook -> Quarion Moonwhisper
+#   scalar: store_seed: 28 -> 31
+#   quantity: ammo_quantity: 36 -> 32
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 1) | built: 1 perk item (wand) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 1)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 17 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: specialist_school: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Elf;a2]: 45 kept as the walk recorded it; the old character holds this annotation's item (cloak, effect Elvenkind;cloak, plus 1, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Mage;a17]: 58 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a18]: 81 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a19]: 95 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a20]: 19 kept as the walk recorded it; the old character holds this annotation's item (scroll, effect Phantom Steed, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Mage;a21]: 55 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 15 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 56 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 77 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 56 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Elf
+subrace: Elf
+name: Quarion
+surname: Moonwhisper
+class: Mage
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Larcenous
+perk_type [1]: PERK_ITEM
+perk_item [1]: wand, effect cracked, plus 3
+attr_str: 12
+attr_dex: 12
+attr_con: 12
+attr_int: 15
+attr_wis: 14
+attr_cha: 16
+attr_luc: 15
+craft_formula [Alchemy]: tanglefoot bag
+perk_charges [wand]: 36
+alignment: Neutral
+specialist_school: Illusion
+feat: Acrobatic
+feat: Alertness
+hp_roll [Mage]: 4
+mana_roll [Mage]: 20
+craft_formula [Potion]: See Invisibility;potion
+craft_formula [Potion]: Light;potion
+craft_formula [Potion]: Vitality
+craft_formula [Potion]: Dimension Door
+craft_formula [Scroll]: Cause Fear
+craft_formula [Scroll]: Grease
+craft_formula [Scroll]: Dismissal
+craft_formula [Scroll]: See Invisibility
+craft_formula [Scroll]: Identify;scroll
+craft_formula [Scroll]: Wall of Fire
+craft_formula [Scroll]: Negative Plane Protection
+craft_formula [Scroll]: Polymorph Self
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 1
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: Scentblind
+craft_formula [Alchemy]: eggshell smoke-bomb
+gear_stream [Elf]: 22
+kit_item [Elf;a0]: medium backpack, quantity 1
+kit_item [Elf;a1]: ring, effect Evasion, quantity 1
+gear_chance [Elf;a2]: 45
+kit_item [Elf;a2]: cloak, effect Elvenkind;cloak, plus 1, quantity 1
+kit_item [Elf;a4]: piece of elven waybread, quantity 8
+kit_item [Elf;a6]: short bow, quantity 1
+kit_item [Elf;a7]: long sword, quantity 1
+kit_item [Elf;a8]: torch, quantity 3
+gear_stream [Mage]: 23
+kit_item [Mage;a0]: dagger, quantity 5
+kit_item [Mage;a1]: quarterstaff, quantity 1
+kit_item [Mage;a2]: gold piece, quantity 169
+kit_item [Mage;a3]: robes, quantity 1
+kit_item [Mage;a4]: potion, effect Mana, quantity 8
+kit_item [Mage;a5]: stone, effect Channeling, plus 2, quantity 1
+kit_item [Mage;a6]: spellbook [Adventurers' Arts], quantity 1
+kit_item [Mage;a7]: spellbook [Fundamentals of Magick], quantity 1
+kit_item [Mage;a8]: spellbook [Ars Mortis], quantity 1
+kit_item [Mage;a9]: spellbook [Elemental Endurance], quantity 1
+kit_item [Mage;a10]: scroll, effect Improved Phantasmal Force, quantity 8
+kit_item [Mage;a11]: scroll, effect Spectral Force, quantity 2
+kit_item [Mage;a12]: scroll, effect Magic Circle vs. Evil, quantity 1
+kit_item [Mage;a13]: scroll, effect Protection from Undead, quantity 1
+kit_item [Mage;a14]: scroll, effect Wall of Fire, quantity 1
+kit_item [Mage;a15]: scroll, effect See Invisibility, quantity 1
+kit_item [Mage;a16]: scroll, effect Wizard Sight, quantity 1
+gear_chance [Mage;a17]: 58
+gear_chance [Mage;a18]: 81
+gear_chance [Mage;a19]: 95
+gear_chance [Mage;a20]: 19
+kit_item [Mage;a20]: scroll, effect Phantom Steed, quantity 1
+gear_chance [Mage;a21]: 55
+gear_stream [Universal Gear]: 24
+gear_chance [Universal Gear;a3]: 15
+gear_chance [Universal Gear;a4]: 56
+gear_chance [Universal Gear;a6]: 77
+gear_chance [Universal Gear;a7]: 56
+kit_item [Universal Gear;a9]: gold piece, quantity 1
+ammo_quantity: 32
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: twilight salve
+spell_learn: Alarm [Arcane]
+spell_learn: Change Self [Arcane]
+spell_learn: Charm Person [Arcane]
+spell_learn: Chromatic Orb [Arcane]
+store_seed: 31
+character_name: Quarion Moonwhisper
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

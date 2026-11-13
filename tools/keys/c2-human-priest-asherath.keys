@@ -1,0 +1,43 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): a human priest
+# of Asherath made with a rolled attribute set, SAVED at the end of creation
+# with nothing played. The set the walk takes offers an ability perk, so the
+# walk hits perk_ability; WHICH perks a rolled set offers is decided by the seed
+# in the check's line for this walk (inc-10v7f), because a walk cannot choose a
+# set by its perk. The priest also meets the domain menus, the worship yn and
+# the starting-spells checklist. The domain menus offer names the stream
+# decides, so they take the first entry offered: the one choice here that is
+# not by name. The attribute set is a prompt, not a menu.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Poison Use"
+@choose "Spot"
+@choose "Priest"
+@choose "Asherath"
+c       # Attributes: the third of the offered sets
+@choose "Neutral"
+@while "Choose a Domain" a
+@choose "Alertness"
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN   # spend every rank
+@while "Unspent Skill Ranks" ENTER y   # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Unspent Skill Ranks" ENTER y
+@while "turn or command" t       # a prompt, not a menu: turn undead
+@choose "Athletic"
+@choose "Acrobatic"
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Unspent Skill Ranks" ENTER y
+@choose "The Ambitious Conqueror"
+@expect "Learn Spells: Level"    # the starting-spells checklist
+UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE
+ENTER
+@while "Learn Spells: Level" ENTER
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

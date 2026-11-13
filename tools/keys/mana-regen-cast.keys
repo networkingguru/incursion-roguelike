@@ -3,7 +3,7 @@
 # turns without resting, with no forced state anywhere. (bd inc-41kg)
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char \
 #       tools/headless.sh tools/keys/mana-regen-cast.keys 4
 #
 # WHY 35 CASTS OF BURNING HANDS. Henk (the fixture) starts at 72/72 mana.

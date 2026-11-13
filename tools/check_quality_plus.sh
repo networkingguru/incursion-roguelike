@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # Owner ruling 2026-10-26, bead inc-qt2c: all 18 armor qualities and WQ_DEFENDING offend only at GetPlus() == 0; negative plus is allowed.
-# fact: character/map -- loaded orc-mage-seed4-gate.sav, options-2026-08-22.dat
+# fact: character/map -- loaded orc-mage-seed4-gate.char, options-2026-08-22.dat
 # fact: depth/luck/category -- probe passes depths 1-10, luck 10, selected DungeonItems rows
 # fact: random item qualities/plus -- random-output invariant exception in docs/VERIFICATION.md;
 #       probe seeds 1,17,101,2026; no exact random counts or names asserted
@@ -17,7 +17,7 @@ run=$(mktemp -d "$PWD/logs/runs/quality-plus.XXXXXX") || exit 2
 echo "Specimens: $run"
 if ! INCURSION_RUN_DIR="$run" INCURSION_QUALITY_PLUS_PROBE=1 \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+    INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char \
     tools/headless.sh tools/keys/roark-stock.keys 1 >"$run/harness.txt" 2>&1; then
     cat "$run/harness.txt"
     echo 'QUALITY_PLUS INCONCLUSIVE harness failed'

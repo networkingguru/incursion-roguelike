@@ -14,13 +14,14 @@
 # THE ORACLE is the Skill Manager's "Unspent Skill Ranks (Priest):" line, one
 # '*' per unspent rank, read before and after one level. Only the DELTA is read:
 # the fixture starts with one unspent rank. Fixture: Human Priest 1 / Mage 1,
-# Domains Night, Fate, Knowledge (human-priest-mage-seed4-gate.sheet.txt).
+# Domains Night, Fate, Knowledge (the built sheet of human-priest-mage-seed4-gate).
 # A priest level adds class points 4 + Human racial 2 + Knowledge 1 = 7.
 #
 # fact: the Priest rank pool at the start -- only the delta is read
 # fact: Priest skill points per level, 4 -- lib/classes.irh Priest Desc "Skills: 4", INT 11 gives +0 (frozen fixture)
 # fact: Human racial bonus, 2 on the advanced class -- lib/races.irh EV_ADVANCE GainBonusSkills(e.eID,2)
-# fact: the fixture's domains and class levels -- frozen .sav (INCURSION_LOAD)
+# fact: the fixture's domains and class levels -- fixture human-priest-mage-seed4-gate (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Free Advancement and the Mage level (Priest 1 / Mage 1) -- tools/keys/setup-human-priest-mage-seed4-gate.keys (the old .sav held them; V7-1 moved them into the check)
 # fact: the feat menu offers an 'a' entry at the new level -- @until answers it, not seed-dependent
 # fact: dungeon, rolls, monsters -- none read; only the sheet and Skill Manager
 #
@@ -29,8 +30,8 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
-[ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE."
+FIXTURE=human-priest-mage-seed4-gate
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "no tools/fixtures/chars/$FIXTURE.char."
 
 check_mutation lib/domains.irh \
     'if (e.eID != $"priest") return NOTHING;' \

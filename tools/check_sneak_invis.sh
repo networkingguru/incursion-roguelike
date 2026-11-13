@@ -14,8 +14,8 @@
 #          even when the victim has Blind-Fight (SRD: melee only).
 
 # SEED-INDEPENDENT (bead inc-b4l3g.30). One run per case, loading the frozen
-# rogue tools/fixtures/chars/orc-rogue-sneak-seed1.sav (knife in the pack, Move
-# Silently ranks; made by tools/keys/sneak-invis-rogue-save.keys). Every run
+# rogue tools/fixtures/chars/orc-rogue-sneak-seed1.char (knife in the pack, Move
+# Silently ranks; recorded in the .char file). Every run
 # forces INCURSION_LOF_FORCE_ROLL=20 (every attack lands) and
 # INCURSION_FORCE_DAMAGE_ROLL=1; the Move Silently vs Listen contest is forced
 # by INCURSION_SNEAK_FORCE_LISTEN=heard|unheard. Counts are exact, so
@@ -69,7 +69,7 @@ cd "$ROOT"
 
 # Exact counts: every forced case yields one blow, so one is enough.
 MIN_COUNT=1
-FIXTURE=tools/fixtures/chars/orc-rogue-sneak-seed1.sav
+FIXTURE=tools/fixtures/chars/orc-rogue-sneak-seed1.char
 OPTIONS=tools/fixtures/options-sneak-invis-maxhp.dat
 [ -f "$OPTIONS" ] || { echo "INCONCLUSIVE: settings file $OPTIONS is not there"; exit 2; }
 [ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: fixture $FIXTURE is not there"; exit 2; }

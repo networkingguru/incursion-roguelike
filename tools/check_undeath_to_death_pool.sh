@@ -44,7 +44,7 @@
 # A MISSING OR EMPTY PROBE LOG IS A FAIL, not an inconclusive: the probe IS the
 # measurement, and a run that left none measured nothing.
 #
-# fact: character (orc priest of Aiswin, Priest 1, Lawful Good) -- fixture orc-priest-seed1-opt0822 (INCURSION_LOAD)
+# fact: character (orc priest of Aiswin, Priest 1, Lawful Good) -- tools/fixtures/specimens/orc-priest-seed1-opt0822.sav (INCURSION_LOAD), frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: arrival map and caster square (81,76) -- the same fixture (a save pins the dungeon)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat (INCURSION_OPTIONS)
 # fact: level 11 and the spell learned (Undeath to Death) -- wizard-mode Free Advancement and Learn Any Spell in tools/keys/undeath-to-death-pool-setup.keys, no dice
@@ -61,7 +61,7 @@ cd "$ROOT"
 
 KEYS=tools/keys/undeath-to-death-pool.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/orc-priest-seed1-opt0822.sav
 POOL_MIN=11
 POOL_MAX=44
 

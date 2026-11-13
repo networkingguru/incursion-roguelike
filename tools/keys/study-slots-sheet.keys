@@ -1,0 +1,3 @@
+# load-char-sheet.keys after the setup the old Bard 7 .sav held (bd inc-10v7f), for tools/check_study_slots.sh.
+@include setup-prestige-geomancy-seed1-opt0822.keys
+@include load-char-sheet.keys

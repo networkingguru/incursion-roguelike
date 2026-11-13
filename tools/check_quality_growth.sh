@@ -34,7 +34,7 @@
 #
 # fact: the key script -- read from this tree (tools/keys/quality-grow.keys), a fixed answer list
 # fact: the files under test -- the tracked files as they are on disk, copied by this check; the patch is committed (tools/fixtures/quality-grow.patch)
-# fact: loaded character -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav, copied into the scratch tree
+# fact: loaded character -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, copied into the scratch tree
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: the seed -- not read; items are Item::Create from named resources with qualities written directly, no GenItem, no random bane
 # fact: item identity, known flags, quality slots -- in-process staging with readback in src/QualityClassProbe.cpp, SETUP_ERROR on mismatch
@@ -54,7 +54,7 @@ unmeasured() { echo "UNMEASURED: $*"; exit 2; }
 
 [ -f "$PATCH" ] || unmeasured "missing $PATCH"
 for f in tools/keys/quality-grow.keys tools/fixtures/options-2026-08-22.dat \
-         tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav; do
+         tools/fixtures/chars/orc-barbarian-seed1-opt0822.char; do
     [ -f "$f" ] || unmeasured "missing $f"
 done
 
@@ -89,7 +89,7 @@ patch -p1 -d "$SCR" -s < "$PATCH" >/dev/null 2>&1 || unmeasured "the patch faile
 RUNDIR="$SCR/run"
 ( cd "$SCR" && INCURSION_BIN="$SCR/incursion-headless" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
     INCURSION_RUN_DIR="$RUNDIR" INCURSION_QUALITY_CLASS_PROBE=grow \
     tools/headless.sh "$ROOT/tools/keys/quality-grow.keys" 1 > "$SCR/session.out" 2>&1 </dev/null )
 rc=$?

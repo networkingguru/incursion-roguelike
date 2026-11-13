@@ -1,0 +1,3 @@
+# rest-per-source-restonly.keys after the setup the old orc bard .sav held (bd inc-10v7f), for tools/check_rest_per_source.sh case c.
+@include setup-orc-bard-reapply-seed1.keys
+@include rest-per-source-restonly.keys

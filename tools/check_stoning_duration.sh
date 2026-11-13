@@ -7,7 +7,7 @@
 # status must last 20 units with cause SS_ATTK. Before the fix the Duration and
 # Cause arguments were swapped, so the clock lasted SS_ATTK (6) units.
 # FAIL, INCONCLUSIVE or missing results exit nonzero.
-# fact: map layout and adjacent open square -- loaded fixture sav (tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav pins the dungeon), probe INCONCLUSIVE if none
+# fact: map layout and adjacent open square -- loaded fixture sav (tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav pins the dungeon), probe INCONCLUSIVE if none -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: victim save result -- LOFSetForcedSaveThrowRoll(1) forces a natural 1
 # fact: victim identity and living type -- FIND("kobold"), fixed resource
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
@@ -21,7 +21,7 @@ cd "$ROOT"
 SEED=1
 KEYS=tools/keys/bane-radius.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+LOAD=tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

@@ -1,0 +1,55 @@
+# inc-10v7f phase 6c: make an Elf Priest of Aiswin and SAVE him. The Elf race's
+# EV_BIRTH (lib/races.irh, Elf;race) calls Transgress against Maeve when the
+# character follows another god, and Transgress draws random(60) on that path:
+# the script draw this walk reaches (CK_SCRIPT_ROLL). The priest class is
+# CF_RELIGIOUS, so the god is asked at class time and is never Maeve here.
+# Used by tools/compare_creation_walks.sh and phase 6c's .char check.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Elf"
+@choose "Elf (Standard)"
+@choose "Priest"
+@choose "Aiswin"        # God, asked here rather than after the skill ranks,
+                        #   because the priest class is CF_RELIGIOUS.
+c                       # Attributes: the third of the five offered sets. The
+                        #   sets have no names, so this one stays positional.
+                        #   It is 'c' and not 'a' because 'c' is what the
+                        #   off-by-one stream was really pressing here.
+@while "Choose a skill" a   # Set c can carry the bonus feat Natural Aptitude, which asks
+                        #   for a skill first; whether it does follows the roll.
+@choose "Lawful Good"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+                        #   the attribute rolls, so this one stays counted.
+
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+y       # Do you wish to worship <god>? -- yes
+
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+
+a       # Personality archetype
+
+@expect "Learn Spells: Level"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+
+@dump:arrival
+
+@until "System Menu" ESC
+
+@expect "System Menu"
+b                       # [b] Save and Continue
+
+@dump:saved

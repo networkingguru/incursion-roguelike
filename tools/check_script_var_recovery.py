@@ -25,7 +25,8 @@ from script_vars_save_diff import records
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORK = pathlib.Path(tempfile.mkdtemp(prefix='script-var-recovery.', dir=ROOT/'logs'))
 BIN = ROOT/'incursion-headless'
-SAVE_DIRS = [ROOT/'tools/fixtures/chars']
+# fact: the IS1.3 saves -- the frozen old saves in tools/fixtures/specimens (kept as the old bytes the check reads; 16 of the 22 are IS1.3, and their names show the classes barbarian, mage, monk, paladin, priest and rogue), plus the old saves that stay in tools/fixtures/chars (one of the 7, levitate-bottom-seed1, is IS1.3); a built fixture is IS1.6 and is not a specimen
+SAVE_DIRS = [ROOT/'tools/fixtures/chars', ROOT/'tools/fixtures/specimens']
 print(f'Specimens: {WORK}', flush=True)
 for d in ['save', 'logs']:
     (WORK/d).mkdir()

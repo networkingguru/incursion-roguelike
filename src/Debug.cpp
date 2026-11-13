@@ -527,6 +527,18 @@ DoneStats:
 }
 
           
+/* Kill every monster on this map by EV_DEATH, restarting the walk after each kill (a death changes the
+   map's thing list). Wizard Genocide Everything and the test probes' scenes share this one body. */
+void Player::KillEveryMonster() {
+    Thing *t; int i;
+Restart:
+    MapIterate(m,t,i)
+        if (t->isMonster() && !(t->Flags & F_DELETE)) {
+            ThrowDmg(EV_DEATH,AD_NORM,0,"debug genocide",t,t);
+            goto Restart;
+        }
+}
+
 void Player::WizardOptions() {
     int16 i,j,k,l,ch; 
     Item *it; Monster *mn; rID xID; Thing *t;
@@ -575,6 +587,8 @@ void Player::WizardOptions() {
     MyTerm->LOption("Wake Every Creature", 39);
     /* inc-aoi4i: appended last so no existing entry's menu letter moves. */
     MyTerm->LOption("Burn Worn Armour", 40);
+    /* inc-10v7f: appended last so no existing entry's menu letter moves. */
+    MyTerm->LOption("Damage Worn Armour", 41);
 
     switch(MyTerm->LMenu(MENU_ESC|MENU_BORDER|MENU_2COLS,"Wizard Mode Options:",WIN_MENUBOX)) {
     case -1:
@@ -716,13 +730,8 @@ void Player::WizardOptions() {
         GainTempStati(POLYMORPH,NULL,100,SS_MISC,0,0,mn->mID);
         break;
     case 10:
-Restart:
-        MapIterate(m,t,i)
-            if (t->isMonster() && !(t->Flags & F_DELETE)) {
-                ThrowDmg(EV_DEATH,AD_NORM,0,"debug genocide",t,t);
-                goto Restart;
-            }
-            break;
+        KillEveryMonster();
+        break;
     case 11:
         for(it=FirstInv();it;it=NextInv())
             it->MakeKnown(0xFF);
@@ -1108,6 +1117,31 @@ Restart:
             break;
         }
         ThrowDmg(EV_DAMAGE,AD_FIRE,10,NULL,NULL,arm);
+        break;
+    }
+    case 41: {
+        /* inc-10v7f: lower the worn armour's hit points by a typed amount,
+           with no roll. tools/check_repair_cost.sh calls it (through
+           tools/keys/repair-cost.keys) to damage a built fixture's armour
+           instead of depending on a random decay trap. */
+        Item *arm = InSlot(SL_ARMOUR);
+        if (!arm) {
+            IPrint("You wear no armour.");
+            break;
+        }
+        MyTerm->SetWin(WIN_INPUT);
+        MyTerm->Color(YELLOW);
+        MyTerm->Write(0,0,"Enter Damage: ");
+        MyTerm->Color(MAGENTA);
+        MyTerm->ReadLine();
+        MyTerm->Clear();
+        i = (int16)atoi(MyTerm->GetTypedString());
+        if (i <= 0 || i >= arm->GetHP()) {
+            IPrint("Invalid damage.");
+            break;
+        }
+        arm->LoseHP(i);
+        IPrint(Format("Armour damaged by %d.", (int)i));
         break;
     }
     case 38: {

@@ -8,6 +8,7 @@
 # which is a wield (Character::Wield).
 #
 # Dumps: sheet-0-baseline, stamped, wielded (the message line shows "uneasy" or not), sheet-1-wielded.
+# The caller's fixture setup comes first: alignment-drain-balance-lawneutral.keys or alignment-drain-balance-warrior.keys (bd inc-10v7f).
 s
 d
 @expect "Align  "

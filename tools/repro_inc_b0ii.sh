@@ -6,7 +6,7 @@
 # Needs ./incursion-headless (BACKEND=posix ./build_macos.sh). Specimens: logs/b0ii/<case>/
 . "$(dirname "$0")/check_lib.sh"
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-SAV=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+SAV=druid-shoulder-metal-seed7-opt0822
 [ -x ./incursion-headless ] || _check_die 2 "build ./incursion-headless first"
 
 body() { case "$1" in

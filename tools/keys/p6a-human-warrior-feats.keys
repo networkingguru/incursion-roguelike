@@ -1,0 +1,40 @@
+# inc-10v7f phase 6a: a Human Warrior built by point buy, to walk the feat
+# menu and its weapon sub-menus at creation (Create.cpp GainFeat: CK_FEAT,
+# CK_FEAT_WEAPON, CK_SKILL_FOCUS) and the point-buy screen
+# (CK_POINTBUY_CONFIRM). Used by tools/compare_creation_walks.sh.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+p       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+TAB     # the next page of feats: the toggle row
+@choose "(Show All Feats)"   # a toggle is not an answer
+@choose "Cleave Asunder"     # unavailable: the game refuses it (P21)...
+SPACE   # ...and the player acknowledges
+@dump:rejected
+@choose "Skill Focus"   # P22: the feat opens the skill sub-menu
+@choose "Climb"
+@choose "Exotic Weapon"   # P28: the feat opens the exotic weapon sub-menu
+@choose "kukri"
+TAB     # the next page of feats
+@choose "Weapon Focus"   # P27: the feat opens the weapon sub-menu
+@choose "battleaxe"
+@choose "long sword"   # the Warrior's own focus pick: the same sub-menu again
+
+RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue (see tools/keys/chargen-default-save.keys for the tail)
+@dump:saved

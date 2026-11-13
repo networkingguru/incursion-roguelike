@@ -1,0 +1,70 @@
+# Prepares the base character quality-item-magic-seed5-opt0822 (an orc warrior, Chaotic Good, built from its .char)
+# as the old fixture alignment-drain-level2 (a .sav derived from it by play) was (bd inc-10v7f, inc-qaav4): level 1's state plus 20 presses of Generate 50 XP Ticks (1000 XP) and one level-up, Warrior 2.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@include setup-alignment-drain-level1.keys
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+w
+@choose "Generate 50 XP Ticks"
+@while "more --" SPACE
+d
+@expect "Align  Chaotic Good"
+@expect "XP     1000"
+G
+@until "Class  Warrior 2" a
+ESC

@@ -35,6 +35,9 @@ void CompanionTrapProbe(Player *p) {
     ctMode = getenv("INCURSION_COMPANION_TRAP_PROBE");
     if (!ctMode || !*ctMode || !p || !p->m) { ctMode = NULL; return; }
     Map *m = p->m;
+    /* inc-10v7f: clear the level as wizard Genocide Everything does; the loop below skips things when
+       Remove() disturbs the map's iterator. The wolf is created after this. */
+    p->KillEveryMonster();
     for (Thing *t = m->FirstThing(); t; ) {
         Thing *next = m->NextThing();
         if (t != p) t->Remove(true);

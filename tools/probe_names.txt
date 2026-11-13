@@ -43,6 +43,8 @@ INCURSION_DOORPICK_PROBE	pre-registry	-
 INCURSION_DOOR_BOLT_PROBE	pre-registry	-
 INCURSION_DOOR_LOCK_ROLL	pre-registry	-
 INCURSION_DOOR_PROBE	pre-registry	-
+INCURSION_DRAW_CENSUS	inc-10v7f	file to log every random draw made during character creation (census)
+INCURSION_DUMP_CANONICAL	inc-10v7f	file to write the canonical character dump to
 INCURSION_DURATION_PROBE	pre-registry	-
 INCURSION_DURATION_PROBE_BLASPHEMY	pre-registry	-
 INCURSION_DURATION_PROBE_BLASPHEMY_CL	pre-registry	-
@@ -87,6 +89,8 @@ INCURSION_IBLESSING_PROBE	pre-registry	-
 INCURSION_INH_PROBE	pre-registry	-
 INCURSION_INH_PROBE_OFFSET	pre-registry	-
 INCURSION_INV_CURSOR_PROBE	pre-registry	-
+INCURSION_KEYS_PREPEND	inc-10v7f	key script played in front of the remaining keys after the builder hook
+INCURSION_KEYS_SKIP	inc-10v7f	skip the creation part of the key script for a built fixture
 INCURSION_KILLXP_PROBE	pre-registry	-
 INCURSION_KIT_GRANT	pre-registry	-
 INCURSION_KIT_PROBE	pre-registry	-
@@ -108,6 +112,7 @@ INCURSION_MANA_FLOOR_PROBE	pre-registry	-
 INCURSION_MAPREAD_PROBE	pre-registry	-
 INCURSION_MAP_AUDIT	pre-registry	-
 INCURSION_MAP_PROBE	pre-registry	-
+INCURSION_MAP_STREAM	inc-10v7f	random stream used for the first map of a built fixture
 INCURSION_MAX_KEYS	pre-registry	-
 INCURSION_MONINIT_PROBE	pre-registry	-
 INCURSION_MONSTER_FEAT_PROBE	pre-registry	-
@@ -123,6 +128,7 @@ INCURSION_NAMES_PLANT	pre-registry	-
 INCURSION_NATHEAL_PROBE	pre-registry	-
 INCURSION_OOB_PROBE	pre-registry	-
 INCURSION_OPENXY_PROBE	pre-registry	-
+INCURSION_OPTIONS	inc-10v7f	options file recorded in a .char fixture
 INCURSION_OWNER_DAMAGE_PROBE	pre-registry	-
 INCURSION_PAD_HELP	pre-registry	-
 INCURSION_PAIN_PROBE	pre-registry	-
@@ -138,6 +144,7 @@ INCURSION_QUALITY_PLUS_PROBE	pre-registry	-
 INCURSION_QUIET_PROBE	pre-registry	-
 INCURSION_RANGED_ILLUSION_PROBE	pre-registry	-
 INCURSION_READ_LIGHT_PROBE	pre-registry	-
+INCURSION_RECORD_CHAR	inc-10v7f	file to record the creation decisions to as a .char text
 INCURSION_REMOVE_PROBE	pre-registry	-
 INCURSION_RENAMED_EXTRA	pre-registry	-
 INCURSION_RETIRED_EXTRA	pre-registry	-
@@ -160,6 +167,7 @@ INCURSION_SAVE_FAIL_AT	pre-registry	-
 INCURSION_SAVE_PROBE	pre-registry	-
 INCURSION_SCRIPT_COV	pre-registry	-
 INCURSION_SEED	pre-registry	-
+INCURSION_SEED_TICK	inc-10v7f	seed tick so a built and a walked character share one first-turn stream
 INCURSION_SELFAIM_PROBE	pre-registry	-
 INCURSION_SENESCHAL_PROBE	pre-registry	-
 INCURSION_SHOP_MARKUP_PROBE	pre-registry	-
@@ -188,6 +196,7 @@ INCURSION_TEMPLATE_PAIR_PROBE	pre-registry	-
 INCURSION_TERRAFORM_EDGE_PROBE	pre-registry	-
 INCURSION_TOUCHDEF_PROBE	pre-registry	-
 INCURSION_TRAP_ATTACK_PROBE	pre-registry	-
+INCURSION_TRIPWIRE_PROBE	inc-10v7f	test hook for the creation-source tripwire
 INCURSION_TRIP_AOO_PROBE	pre-registry	-
 INCURSION_TRUESIGHT_PROBE	pre-registry	-
 INCURSION_TRUE_BLOWS_PROBE	pre-registry	-

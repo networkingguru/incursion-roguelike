@@ -1,6 +1,8 @@
 # inc-47ws: the player stays put. 30 single "wait one turn" keys give the
 # companion time to walk the scene; the probe logs one line per player action.
 @while "-- more --" SPACE
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 .*30
 @dump:companion-trap
 @quit

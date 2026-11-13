@@ -13,7 +13,7 @@ No source, module, fixture or existing check is edited by this driver.
 
 Fact inventory of the existing check (including its five key scripts):
 # fact: mage race/class/stats/kit/name/skills/innate spells/HP/world/options --
-#       INCURSION_LOAD=elf-mage-illusions-seed1.sav (same bytes on both sides)
+#       INCURSION_LOAD=elf-mage-illusions-seed1 (the same .char and setup keys on both sides)
 # fact: settings -- options-2026-08-22.dat; loaded settings also come from save
 # fact: seed -- original seed 1; historical comparison only, not a control
 #       that makes a new check independent of random monster selection
@@ -72,7 +72,8 @@ archives = {s: Path('/tmp/inc-orn8n-' + s).resolve() for s in ('a', 'b')}
 inputs = ['tools/check_concentration.sh', 'tools/check_lib.sh',
           'tools/headless.sh', 'tools/known_asserts.txt', 'tools/gametime.awk',
           'tools/fixtures/options-2026-08-22.dat',
-          'tools/fixtures/chars/elf-mage-illusions-seed1.sav']
+          'tools/fixtures/chars/elf-mage-illusions-seed1.char',
+          'tools/keys/setup-elf-mage-illusions-seed1.keys']
 inputs += ['tools/keys/concentration-' + s + '.keys'
            for s in ('core', 'block', 'damage', 'tail', 'monster')]
 manifest = []

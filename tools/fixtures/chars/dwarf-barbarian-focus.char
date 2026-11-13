@@ -1,0 +1,134 @@
+# dwarf-barbarian-focus: converted from tools/fixtures/chars/dwarf-barbarian-focus.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/dwarven-focus-save.keys, seed 1, settings tools/fixtures/options-dwarven-focus.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 0 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/dwarven-focus-save.keys 1 111 69 25:24:0
+# roll search: MATCH: script_roll [Barbarian;EV_153] #0, script_roll [Barbarian;EV_153] #1 = [2, 1] (recorded [2, 1]); other matches none; 4 tries in 2.7 s (0.66 s per try); record logs/phase13e/dwarf-barbarian-focus/roll-search.txt
+# rolls: script_roll|Barbarian;EV_153|0|1|2
+# rolls: script_roll|Barbarian;EV_153|1|1|2
+# Values set from the old dump: none (the skeleton already matched).
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (wand) and 2 skill tools (healing kit, heal 2; craftsman's tools, craft 2) | built: 1 perk item (wand) and 2 skill tools (healing kit, heal 2; craftsman's tools, craft 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Barbarian;a1]: 90 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 92 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 47 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 17 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 98 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 31 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 13 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 28 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 42 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 5 kept as the walk recorded it; the old character holds this annotation's item (banded mail, quantity 1), so its roll is within the annotation's chance
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-dwarven-focus.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Dwarf
+subrace: Dwarf
+name: Brottor
+surname: Ashrager
+class: Barbarian
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Larcenous
+perk_type [1]: PERK_ITEM
+perk_item [1]: wand, effect cracked, plus 3
+attr_str: 12
+attr_dex: 12
+attr_con: 12
+attr_int: 15
+attr_wis: 14
+attr_cha: 16
+attr_luc: 15
+perk_charges [wand]: 36
+alignment: Neutral
+script_roll [Barbarian;EV_153]: 2
+script_roll [Barbarian;EV_153]: 1
+feat: Acrobatic
+feat: Alertness
+hp_roll [Barbarian]: 12
+mana_roll [Barbarian]: 4
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 0
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 2
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Dwarf]: 21
+kit_item [Dwarf;a0]: medium backpack, quantity 1
+kit_item [Dwarf;a1]: food ration, quantity 5
+kit_item [Dwarf;a2]: dwarven waraxe, quantity 1
+kit_item [Dwarf;a4]: pickaxe, quantity 1
+gear_stream [Barbarian]: 22
+gear_chance [Barbarian;a1]: 90
+kit_item [Barbarian;a6]: greataxe, quantity 1
+kit_item [Barbarian;a9]: loincloth, quantity 1
+kit_item [Barbarian;a10]: gold piece, quantity 16
+gear_stream [Universal Gear]: 23
+gear_chance [Universal Gear;a3]: 92
+gear_chance [Universal Gear;a4]: 47
+gear_chance [Universal Gear;a6]: 17
+gear_chance [Universal Gear;a7]: 98
+gear_chance [Universal Gear;a10]: 31
+gear_chance [Universal Gear;a14]: 13
+gear_chance [Universal Gear;a18]: 28
+gear_chance [Universal Gear;a19]: 42
+gear_chance [Universal Gear;a20]: 5
+kit_item [Universal Gear;a20]: banded mail, quantity 1
+script_yn [Dwarf;EV_150]: yes
+personality: The Manipulative Plotter
+store_seed: 25
+character_name: Brottor Ashrager
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

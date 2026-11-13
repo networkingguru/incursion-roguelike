@@ -533,6 +533,11 @@ class Creature: public Thing, public Magic
             return choices[random(strlen(choices))];
           else
             return def; } 
+      /* What a script's yn and ChoicePrompt call (src/VMachine.cpp): the same
+         prompt, as one sourced decision while character creation is open. */
+      bool ScriptYn(const char* msg,bool def=true);
+      int8 ScriptChoicePrompt(const char*msg, const char*choices, char def=0,
+                     int8 col1=BROWN,int8 col2=YELLOW,bool preprompt=true);
       virtual bool canTalk(Creature *to=NULL);
       int32 ChargeBonus();
       uint32 getArmourType(bool count_shield, bool count_spells = true);
@@ -855,6 +860,8 @@ class Character: public Creature
     friend void MusicChoirProbe(Player *caster);
     friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT writes a feat bit, skill ranks, a base score */
     friend void BlasphemyProbe(Player *caster);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
+    friend struct CreationAccess; /* src/CreationSource.cpp: the gallery entry, inc-10v7f */
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
@@ -1479,10 +1486,12 @@ class Player: public Character
   {
     friend void Map::VisionThing(int16 p, Creature *c, bool do_clear);
     friend bool Game::SaveGame(Player &p);
+    friend bool Game::SaveRecordedWalk(Player &p, const char *path);
     friend bool Game::LoadGame(bool backup);
     friend bool Game::LoadNamedGame(const char *savefile);
     friend void HelpCustom(String &helpText, Player *p);
     friend class TextTerm; 
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     private:
 	 	  /* Parser Par; */
       /* History Hist; */
@@ -1587,6 +1596,9 @@ class Player: public Character
       virtual void GainFeat(int16 list, int32 param=0);
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource);
       bool LearnSpell(bool left = false);
+      /* The one commit of a skill-rank screen: SkillRanks and SpentSP. The
+         Skill Manager and the creation source both call it (inc-10v7f 6b). */
+      void CommitSkillRanks(const int8 *ranks, const int8 *unspent);
       void ApplySpellSelection();
       bool InherentPickable(int16 sn);
       bool ChooseInherentSpell();
@@ -1655,6 +1667,7 @@ class Player: public Character
 
       /* Debug Mode Functions */
  	 	  void WizardOptions();
+ 	 	  void KillEveryMonster();
 	 	  void BrowseThings(bool nearby);
 	 	  void ListLevelTreasure();
 	 	  void ListChestContents();

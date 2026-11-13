@@ -5,7 +5,7 @@
 # outside the buffer.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
 #       tools/headless.sh tools/keys/readline-overflow.keys 1
 #
 # WHY THE CHARACTER SHEET'S FILENAME PROMPT, NOT KY_CMD_JOURNAL. The bead

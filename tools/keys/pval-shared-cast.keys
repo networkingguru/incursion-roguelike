@@ -1,7 +1,7 @@
 # inc-q4kjl: cast Mage Armour once. Read by tools/check_pval_shared.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/human-priest-mage-seed4-gate.char \
 #   INCURSION_PVAL_PROBE=<path> tools/headless.sh tools/keys/pval-shared-cast.keys 4
 #
 # THE CHARACTER. Kethad, Priest 1 / Mage 1, who knows Mage Armour (arcane). His
@@ -11,6 +11,8 @@
 # which cancels the spell, so the keys take it off (inventory slot j, as
 # tools/keys/cast-rules-noarmor.keys does).
 # Ignore Spell Failure (the 6th wizard switch) makes the cast certain.
+# The fixture holds only the created character; setup-human-priest-mage-seed4-gate.keys makes the state the old save held (bd inc-10v7f).
+@include setup-human-priest-mage-seed4-gate.keys
 s
 w
 @choose "Genocide Everything"

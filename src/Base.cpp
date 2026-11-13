@@ -760,6 +760,8 @@ template class Array<DebugInfo,1000,1000>;   /* Module::DI */
 
 int16 Dice::Roll()
 	{
+		CensusDice cd(__builtin_return_address(0));
+		CreationT2Dice t2d(__builtin_return_address(0));
 		int i,n;
 		n=0;
     if (Sides < 0)
@@ -780,6 +782,8 @@ int16 Dice::Roll()
 
 int16 Dice::Roll(int8 Number, int8 Sides, int8 Bonus,int8 e)
 	{
+		CensusDice cd(__builtin_return_address(0));
+		CreationT2Dice t2d(__builtin_return_address(0));
 		int i,n;
 		n=0;
     if (Number < 0 || Sides < 0)
@@ -1399,9 +1403,17 @@ void SymbolTable::Bind(int32 id, Binding *b)
 static unsigned long mt[N]; /* the array for the state vector  */
 static int mti=N+1; /* mti==N+1 means mt[N] is not initialized */
 
+/* The position in the stream: the seed of the last init_genrand and the draws
+   taken since. init_genrand(seed) then that many draws rebuilds the exact state
+   (RngPosition, RngRestore; used by the character tools, src/Main.cpp). */
+static unsigned long rngSeedNow = 5489UL;
+static unsigned long long rngDrawsNow = 0;
+
 /* initializes mt[N] with a seed */
 void init_genrand(unsigned long s)
 {
+    rngSeedNow = s & 0xffffffffUL;
+    rngDrawsNow = 0;
     mt[0]= s & 0xffffffffUL;
     for (mti=1; mti<N; mti++) {
         mt[mti] = 
@@ -1575,7 +1587,21 @@ unsigned long genrand_int32(void)
     y ^= (y << 15) & 0xefc60000UL;
     y ^= (y >> 18);
 
+    rngDrawsNow++;
     return y;
+}
+
+void RngPosition(unsigned long *seed, unsigned long long *draws)
+{
+    *seed = rngSeedNow;
+    *draws = rngDrawsNow;
+}
+
+void RngRestore(unsigned long seed, unsigned long long draws)
+{
+    init_genrand(seed);
+    while (draws--)
+        (void)genrand_int32();
 }
 
 /* THE COSMETIC STREAM: random numbers that reach the screen and nothing else.

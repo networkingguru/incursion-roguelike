@@ -1,0 +1,26 @@
+# Reincarnate the first character in the gallery and SAVE the new incarnation.
+#
+#   INCURSION_OPTIONS=<settings> INCURSION_RUN_DIR=<dir> \
+#       tools/headless.sh tools/keys/chargen-default-save.keys <seed>    # session 1
+#   INCURSION_OPTIONS=<settings> INCURSION_RUN_DIR=<dir> \
+#       tools/headless.sh tools/keys/reincarnate-save.keys <seed>        # session 2, same <dir>
+#
+# Session 1 makes a character and so writes save/gallery.dat in <dir>. This
+# script is session 2 and MUST run in the SAME run directory, or the gallery is
+# empty and the start menu refuses (src/Create.cpp, Player::Reincarnate).
+# tools/compare_creation_walks.sh --reincarnate runs the pair under two
+# binaries; bead inc-10v7f phase 4 uses it to show that the gallery path
+# (Player::Reincarnate -> Create(true), the Replay creation source) gives the
+# same character as before the creation-source refactor.
+#
+# The start menu entry and the gallery menu are chosen by name or position 'a'
+# (the first gallery entry). Every creation question is answered from the
+# gallery, so no other key is needed until the character is in play.
+
+@choose "Reincarnate a Character"
+a       # Choose a character: the first (only) entry
+
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

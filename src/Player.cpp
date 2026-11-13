@@ -3533,8 +3533,16 @@ String & Player::GetLevelStats() {
     String s;
     s = "\n";
 
-    s += "Lvl | Act | Key | Turns | Secs |  XP | Explored\n";
-    s += "----+-----+-----+-------+------+-----+------------------\n";
+    /* The canonical dump (INCURSION_DUMP_CANONICAL, src/Dump.cpp) MUST NOT
+       print a wall-clock value, so it leaves the Secs column out (inc-10v7f). */
+    bool canon = getenv("INCURSION_DUMP_CANONICAL") != NULL;
+    if (canon) {
+        s += "Lvl | Act | Key | Turns |  XP | Explored\n";
+        s += "----+-----+-----+-------+-----+------------------\n";
+    } else {
+        s += "Lvl | Act | Key | Turns | Secs |  XP | Explored\n";
+        s += "----+-----+-----+-------+------+-----+------------------\n";
+    }
 
     // rID mID = RES(m->dID)->GetConst(BELOW_DUNGEON);
 
@@ -3561,6 +3569,17 @@ String & Player::GetLevelStats() {
                     }
                 }
 
+            if (canon)
+                s += Format("%-4d|%5d|%5d|%7d|%5d|%4d / %4d = %d~\n",
+                    i,
+                    (int32)GameTimeInfo.LTI[i].actions,
+                    (int32)GameTimeInfo.LTI[i].keystrokes,
+                    (int32)GameTimeInfo.LTI[i].turns,
+                    (int32)GameTimeInfo.LTI[i].xp,
+                    explored,
+                    open,
+                    100 * explored / open);
+            else
             s += Format("%-4d|%5d|%5d|%7d|%6ld|%5d|%4d / %4d = %d~\n",
                 i,
                 (int32)GameTimeInfo.LTI[i].actions,

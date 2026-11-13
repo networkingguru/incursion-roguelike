@@ -5,7 +5,7 @@
 #   INCURSION_DISBELIEF_PROBE=1 INCURSION_RUNTO_SKILL_ROLL=1 \
 #   INCURSION_FORCE_SAVE_ROLL=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.char \
 #       tools/headless.sh tools/keys/illusion-spotted-force-goblin.keys 1
 #
 @include illusion-spotted-setup.keys

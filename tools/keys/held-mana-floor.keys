@@ -6,7 +6,7 @@
 # Generated body: 30 x (m, @choose "Burning Hands", RIGHT).
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char \
 #       tools/headless.sh tools/keys/held-mana-floor.keys 4
 @dump:arrival
 @until "Select Spell" m

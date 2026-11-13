@@ -26,6 +26,8 @@
 
 #include <vector>
 #include <map>
+#include <string>
+#include <algorithm>
 #include "Incursion.h"
 
 extern void InitGodArrays();
@@ -231,7 +233,10 @@ static void CaptureScriptVariables()
     }
 }
 
-static bool PrintScriptVariables(bool values)
+/* canon: the canonical mode (INCURSION_DUMP_CANONICAL, CanonDump below) prints
+   a handle-typed variable as set or unset and an rID-typed one by resource
+   name. The default report passes false and is unchanged. */
+static bool PrintScriptVariables(bool values, bool canon = false)
 {
     for (int ms = 0; ms < MAX_MODULES; ++ms) {
         Module *mod = Game::Modules[ms];
@@ -269,8 +274,17 @@ static bool PrintScriptVariables(bool values)
             if (values) {
                 int32 value;
                 memcpy(&value, varSeg + slot * 4, sizeof(value));
-                printf("  slot=%u owner=%s ordinal=%d ident=%.*s type=%s value=%d\n",
-                       (unsigned)slot, name, ordinal, 31, d->Ident, type, (int)value);
+                if (canon && d->DataType == DT_HOBJ)
+                    printf("  slot=%u owner=%s ordinal=%d ident=%.*s type=%s value=%s\n",
+                           (unsigned)slot, name, ordinal, 31, d->Ident, type,
+                           value ? "(handle set)" : "(handle unset)");
+                else if (canon && d->DataType == DT_RID)
+                    printf("  slot=%u owner=%s ordinal=%d ident=%.*s type=%s value=%s\n",
+                           (unsigned)slot, name, ordinal, 31, d->Ident, type,
+                           SafeResName((rID)value));
+                else
+                    printf("  slot=%u owner=%s ordinal=%d ident=%.*s type=%s value=%d\n",
+                           (unsigned)slot, name, ordinal, 31, d->Ident, type, (int)value);
             } else {
                 int array = -1; int32 position = -1;
                 if (owner) ScriptVariableOwner(mod, owner, array, position);
@@ -1108,6 +1122,653 @@ bool RunRecoverVars(const char *path) {
     return PrintScriptVariables(true);
 }
 
+/* The two per-player memory tables, as report lines in module order. Shared by
+   the default report (printed in this order, byte for byte as before) and the
+   canonical one (sorted by name). */
+static void EffectMemoryLines(Player *p, std::vector<std::string> &out) {
+    char buf[512];
+    for (int ms = 0; ms != MAX_MODULES; ms++) {
+        Module *mod = Game::Modules[ms];
+        if (!mod)
+            continue;
+        for (int32 j = 0; j != mod->szEff; j++) {
+            rID eID = mod->EffectID((uint16)j);
+            EffMem *em = EFFMEM(eID, p);
+            if (!em->FlavorID && !em->PFlavorID && !em->Known &&
+                    !em->Tried && !em->PKnown && !em->PTried)
+                continue;
+            std::string nm = SafeResName(eID);
+            std::string fl = SafeResName((rID)em->FlavorID);
+            std::string pf = SafeResName((rID)em->PFlavorID);
+            snprintf(buf, sizeof(buf),
+                "  %s: flavor=%s pflavor=%s Known=%d Tried=%d "
+                "PKnown=%d PTried=%d",
+                nm.c_str(), fl.c_str(), pf.c_str(),
+                (int)em->Known, (int)em->Tried,
+                (int)em->PKnown, (int)em->PTried);
+            out.push_back(buf);
+        }
+    }
+}
+
+static void MonsterMemoryLines(Player *p, std::vector<std::string> &out) {
+    char buf[512];
+    for (int ms = 0; ms != MAX_MODULES; ms++) {
+        Module *mod = Game::Modules[ms];
+        if (!mod)
+            continue;
+        for (int32 j = 0; j != mod->szMon; j++) {
+            rID mID = mod->MonsterID((uint16)j);
+            MonMem *mm = MONMEM(mID, p);
+            if (!mm->Seen && !mm->Fought && !mm->Kills && !mm->Battles &&
+                    !mm->Deaths && !mm->pKills && !mm->Attacks &&
+                    !mm->Resists && !mm->Immune && !mm->Feats && !mm->Flags)
+                continue;
+            snprintf(buf, sizeof(buf),
+                "  %s: Seen=%d Fought=%d Kills=%d Battles=%d Deaths=%d "
+                "pKills=%d Attacks=%d Resists=%d Immune=%d Feats=%d "
+                "Flags=%d",
+                SafeResName(mID),
+                (int)mm->Seen, (int)mm->Fought, (int)mm->Kills,
+                (int)mm->Battles, (int)mm->Deaths, (int)mm->pKills,
+                (int)mm->Attacks, (int)mm->Resists, (int)mm->Immune,
+                (int)mm->Feats, (int)mm->Flags);
+            out.push_back(buf);
+        }
+    }
+}
+
+/* ------------------------------------------------------------- canonical --
+   INCURSION_DUMP_CANONICAL=1 makes -dump print the character in a form two
+   loads of one file, or two builds of one character, can be compared byte for
+   byte (bd inc-10v7f phase 3; docs/specs/2026-11-06-fixture-builder-spec.md
+   A7). Rules:
+     - every rID prints as its resource name (SafeResName), never a number;
+     - no handle and no pointer prints: a handle is only "set" or "unset";
+     - no wall-clock value prints (GameTimeInfo seconds, the file path);
+     - a table the engine keys by resource position (spells, gods, memory,
+       dungeons, stati) prints sorted by name, so a module that reorders its
+       resources does not change the text;
+     - the default report is untouched: this mode is a separate walk.
+   A field the walk does not print is not compared, so it reads every saved
+   field of Creature, Character and Player and of every kit Item. Not printed:
+   Thing::Next, Thing::hm and Thing::backRefs (handles), Item::Parent (handle),
+   the map, and RInf (the creation-time perk record is not part of a save; its
+   effects arrive as feats, abilities, spells, stati and kit). */
+static std::string CNm(rID x) { return std::string(SafeResName(x)); }
+
+static std::string ConstNm(TextVal *tbl, int32 v) {
+    const char *s = LookupOnly(tbl, v);
+    if (s)
+        return std::string(s);
+    char b[32];
+    snprintf(b, sizeof(b), "#%d", (int)v);
+    return std::string(b);
+}
+
+static std::string SpellNm(int n) {
+    char b[48];
+    if (n >= 0 && n < (int)theGame->LastSpell())
+        return CNm(theGame->SpellID((uint16)n));
+    snprintf(b, sizeof(b), "(no spell %d)", n);
+    return std::string(b);
+}
+
+/* One line of text with colour bytes stripped and newlines escaped. */
+static void PrintPlainLine(const char *s) {
+    if (!s)             /* an empty String holds no buffer */
+        return;
+    for (; *s; s++) {
+        char ch = *s;
+        if (ch == '~') ch = '%';
+        if (ch <= 0) continue;
+        if (ch == '\n') { fputs("\\n", stdout); continue; }
+        putchar((unsigned char)ch);
+    }
+}
+
+static void PrintSorted(std::vector<std::string> &v) {
+    std::sort(v.begin(), v.end());
+    for (size_t i = 0; i != v.size(); i++)
+        printf("%s\n", v[i].c_str());
+}
+
+struct CanonDump {
+    static void Stati(Thing *t, int ind);
+    static void Item_(Item *it, int ind);
+    static int  InvOrdinal(Player *p, Item *want);
+    static bool Run(Player *p, Map *m);
+};
+
+void CanonDump::Stati(Thing *t, int ind) {
+    std::vector<std::string> v;
+    char b[512];
+    StatiIter(t)
+        std::string nat = ConstNm(STATI_CONSTNAMES, S->Nature);
+        std::string src = ConstNm(SS_CONSTNAMES, S->Source);
+        std::string eid = CNm((rID)S->eID);
+        snprintf(b, sizeof(b),
+            "Nature=%s Val=%d Mag=%d Duration=%d Source=%s CLev=%u Dis=%u "
+            "Once=%u eID=%s",
+            nat.c_str(), (int)S->Val, (int)S->Mag, (int)S->Duration,
+            src.c_str(), (unsigned)S->CLev, (unsigned)S->Dis,
+            (unsigned)S->Once, eid.c_str());
+        v.push_back(b);
+    StatiIterEnd(t)
+    std::sort(v.begin(), v.end());
+    for (size_t i = 0; i != v.size(); i++)
+        printf("%*sStati: %s\n", ind, "", v[i].c_str());
+    if (v.empty())
+        printf("%*sStati: (none)\n", ind, "");
+}
+
+void CanonDump::Item_(Item *it, int ind) {
+    std::string iid = CNm(it->iID), eid = CNm(it->eID);
+    printf("%*s- Item iID=%s eID=%s Type=%s\n", ind, "", iid.c_str(),
+        eid.c_str(), ConstNm(T_CONSTNAMES, it->Type).c_str());
+    std::string home = CNm(it->homeID);
+    printf("%*s  Known=0x%x Plus=%d Charges=%d DmgType=%d GenNum=%d Flavor=%d "
+           "homeID=%s HP=%d Age=%d Swing=%u Quantity=%u IFlags=0x%x\n",
+        ind, "", (unsigned)it->Known, (int)it->Plus, (int)it->Charges,
+        (int)it->DmgType, (int)it->GenNum, (int)it->Flavor, home.c_str(),
+        (int)it->cHP, (int)it->Age, (unsigned)it->swingCount,
+        (unsigned)it->Quantity, (unsigned)it->IFlags);
+    printf("%*s  Thing: Image=0x%x Timeout=%d StoredMoveTimeout=%d "
+           "Flags=0x%x Named=", ind, "", (unsigned)it->Image,
+        (int)it->Timeout, (int)it->StoredMovementTimeout,
+        (unsigned)it->Flags);
+    PrintPlainLine((const char*)it->Named);
+    printf("\n");
+    printf("%*s  Inscription: ", ind, "");
+    PrintPlainLine((const char*)it->Inscrip);
+    printf("\n");
+    printf("%*s  GenStats: ", ind, "");
+    PrintPlainLine((const char*)it->GenStats);
+    printf("\n");
+
+    if (it->isQItem()) {
+        QItem *q = (QItem*)it;
+        TextVal *qt = it->isArmour() ? AQ_CONSTNAMES : WQ_CONSTNAMES;
+        printf("%*s  Qualities:", ind, "");
+        int any = 0;
+        for (int k = 0; k != 8; k++)
+            if (q->Qualities[k]) {
+                printf(" [%d]=%s", k, ConstNm(qt, q->Qualities[k]).c_str());
+                any++;
+            }
+        if (!any)
+            printf(" (none)");
+        printf(" Known=0x%x\n", (unsigned)q->KnownQualities);
+    }
+    if (it->isWeapon())
+        printf("%*s  Bane: %s\n", ind, "",
+            ConstNm(MA_CONSTNAMES, ((Weapon*)it)->Bane).c_str());
+    if (it->Type == T_FOOD || it->Type == T_CORPSE)
+        printf("%*s  Eaten: %d\n", ind, "", (int)((Food*)it)->Eaten);
+    if (it->Type == T_CORPSE) {
+        Corpse *c = (Corpse*)it;
+        printf("%*s  Corpse: mID=%s TurnCreated=%u LastDiseaseDCCheck=%d\n",
+            ind, "", CNm(c->mID).c_str(), (unsigned)c->TurnCreated,
+            (int)c->LastDiseaseDCCheck);
+    }
+    Stati(it, ind + 2);
+
+    if (it->isContainer()) {
+        Container *c = (Container*)it;
+        int shown = 0;
+        for (Thing *t = oThing(c->Contents); t; t = oThing(t->Next))
+            if (t->isItem()) {
+                Item_((Item*)t, ind + 4);
+                shown++;
+            }
+        if (!shown)
+            printf("%*s  (empty)\n", ind + 2, "");
+    }
+}
+
+/* Position of `want` in the carried list, or -1. A handle cannot print, and
+   two identical daggers differ only by where they sit. */
+int CanonDump::InvOrdinal(Player *p, Item *want) {
+    int n = 0;
+    if (!want)
+        return -1;
+    for (Item *it = p->FirstInv(); it; it = p->NextInv(), n++)
+        if (it == want)
+            return n;
+    return -1;
+}
+
+bool CanonDump::Run(Player *p, Map *m) {
+    int i, j, c;
+    std::vector<std::string> v;
+    char b[1024];
+    printf("=== Canonical character dump ===\n");
+
+    printf("=== Identity ===\n");
+    printf("Name: ");
+    PrintPlainLine((const char*)p->Named);
+    printf("\n");
+    printf("Type: %s\n", ConstNm(T_CONSTNAMES, p->Type).c_str());
+    printf("mID: %s\n", CNm(p->mID).c_str());
+    printf("tmID: %s\n", CNm(p->tmID).c_str());
+    printf("Race: %s\n", CNm(p->RaceID).c_str());
+    printf("God: %s\n", CNm(p->GodID).c_str());
+    for (i = 0; i != 6; i++)
+        printf("Class[%d]: %s\n", i, CNm(p->ClassID[i]).c_str());
+    for (i = 0; i != 3; i++)
+        printf("Level[%d]: %d\n", i, (int)p->Level[i]);
+    printf("XP: %u  XP_Drained: %u  xpTicks: %d  NotifiedLevel: %d\n",
+        (unsigned)p->XP, (unsigned)p->XP_Drained, (int)p->xpTicks,
+        (int)p->NotifiedLevel);
+    printf("PartyID: %d\n", (int)p->PartyID);
+    {
+        Creature *mt = oCreature(p->Mount);
+        printf("Mount: %s\n", mt ? CNm(mt->mID).c_str() : "-");
+    }
+    printf("\n");
+
+    printf("=== Level Rolls (hit points and mana, per class and level) ===\n");
+    for (c = 0; c != 3; c++) {
+        printf("HitRolls[%d:%s]:", c, CNm(p->ClassID[c]).c_str());
+        for (j = 0; j != MAX_CHAR_LEVEL; j++)
+            printf(" %d", (int)p->hpRolls[c][j]);
+        printf("\n");
+        printf("ManaRolls[%d:%s]:", c, CNm(p->ClassID[c]).c_str());
+        for (j = 0; j != MAX_CHAR_LEVEL; j++)
+            printf(" %d", (int)p->manaRolls[c][j]);
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("=== Skill Ranks (per skill, and the skill-point pool per class) ===\n");
+    for (i = 0; i != SK_LASTSKILL; i++)
+        if (p->SkillRanks[i])
+            printf("Skill %s: %d\n", ConstNm(SK_CONSTNAMES, i).c_str(),
+                (int)p->SkillRanks[i]);
+    for (c = 0; c != 6; c++)
+        printf("SkillPool[%d:%s]: spent=%d bonus=%d total=%d\n", c,
+            CNm(p->ClassID[c]).c_str(), (int)p->SpentSP[c],
+            (int)p->BonusSP[c], (int)p->TotalSP[c]);
+    for (i = 0; i != STUDY_LAST; i++)
+        if (p->IntStudy[i])
+            printf("IntStudy %s: %d\n", ConstNm(StudyNames, i).c_str(),
+                (int)p->IntStudy[i]);
+    printf("\n");
+
+    printf("=== Perk Block (the creation record a save keeps) ===\n");
+    printf("statMethod: %d\n", (int)p->statMethod);
+    printf("rerollCount: %d\n", (int)p->rerollCount);
+    printf("rerolledPerks: %d\n", (int)p->rerolledPerks);
+    printf("formulaSeed: %d\n", (int)p->formulaSeed);
+    printf("storeSeed: %d\n", (int)p->storeSeed);
+    printf("deathCount: %d\n", (int)p->deathCount);
+    printf("Personality: 0x%x\n", (unsigned)p->Personality);
+    printf("Proficiencies: 0x%x\n", (unsigned)p->Proficiencies);
+    printf("\n");
+
+    printf("=== Feats ===\n");
+    {
+        static bool named[FT_LAST + 1];
+        memset(named, 0, sizeof(named));
+        v.clear();
+        for (j = 0; FeatInfo[j].feat; j++) {
+            int ft = FeatInfo[j].feat;
+            if (ft < 0 || ft > FT_LAST)
+                continue;
+            named[ft] = true;
+            if (p->Feats[ft / 8] & (1 << (ft % 8)))
+                v.push_back(std::string("Feat ") + FeatInfo[j].name);
+        }
+        for (int ft = 0; ft <= FT_LAST; ft++)
+            if (!named[ft] && (p->Feats[ft / 8] & (1 << (ft % 8)))) {
+                /* Bits below FT_FIRST are skill numbers: the engine keeps a
+                   per-skill flag in the same array. */
+                if (ft < FT_FIRST)
+                    snprintf(b, sizeof(b), "SkillFlag %s",
+                        ConstNm(SK_CONSTNAMES, ft).c_str());
+                else
+                    snprintf(b, sizeof(b), "Feat (unnamed bit %d)", ft);
+                v.push_back(b);
+            }
+        PrintSorted(v);
+    }
+    printf("\n");
+
+    printf("=== Abilities ===\n");
+    for (i = 0; i != CA_LAST; i++)
+        if (p->Abilities[i])
+            printf("Ability %s: %d\n", ConstNm(CA_CONSTNAMES, i).c_str(),
+                (int)p->Abilities[i]);
+    for (i = 0; i != 4; i++)
+        if (p->TurnTypes[i] || p->TurnLevels[i])
+            printf("Turn[%d]: type=%s level=%d\n", i,
+                ConstNm(MA_CONSTNAMES, p->TurnTypes[i]).c_str(),
+                (int)p->TurnLevels[i]);
+    for (i = 0; i != 12; i++)
+        if (p->FavTypes[i] || p->FavLevels[i])
+            printf("FavoredEnemy[%d]: type=%s level=%d\n", i,
+                ConstNm(MA_CONSTNAMES, p->FavTypes[i]).c_str(),
+                (int)p->FavLevels[i]);
+    printf("FocusWCount: %d  FocusSCount: %d  ExoticCount: %d\n",
+        (int)p->FocusWCount, (int)p->FocusSCount, (int)p->ExoticCount);
+    printf("aStoryPluses: %d  tStoryPluses: %d  RageCount: %d\n",
+        (int)p->aStoryPluses, (int)p->tStoryPluses, (int)p->RageCount);
+    printf("\n");
+
+    printf("=== Attributes ===\n");
+    for (i = 0; i != 7; i++)
+        printf("BaseAttr %s: %d\n", ConstNm(ATTR_CONSTNAMES, i).c_str(),
+            (int)p->BAttr[i]);
+    for (i = 0; i != ATTR_LAST; i++)
+        printf("KnownAttr %s: %d\n", ConstNm(ATTR_CONSTNAMES, i).c_str(),
+            (int)p->KAttr[i]);
+    for (i = 0; i != ATTR_LAST; i++)
+        printf("Attr %s: %d\n", ConstNm(ATTR_CONSTNAMES, i).c_str(),
+            (int)p->Attr[i]);
+    printf("TouchDef: %d\n", (int)p->TouchDef);
+    for (i = 0; i != 7; i++)
+        for (j = 0; j != 15; j++)
+            if (p->GainAttr[i][j])
+                printf("GainAttr %s[%d]: %d\n",
+                    ConstNm(ATTR_CONSTNAMES, i).c_str(), j,
+                    (int)p->GainAttr[i][j]);
+    for (i = 0; i != 16; i++)
+        if (p->SaveBonus[i])
+            printf("SaveBonus[%d]: %d\n", i, (int)p->SaveBonus[i]);
+    printf("\n");
+
+    printf("=== Creature State ===\n");
+    printf("HP: %d / %d  Subdual: %d  cFP: %d\n", (int)p->cHP, (int)p->mHP,
+        (int)p->Subdual, (int)p->cFP);
+    printf("Mana: spent=%d max=%d held=%d pulse=%d\n", (int)p->uMana,
+        (int)p->mMana, (int)p->hMana, (int)p->ManaPulse);
+    printf("concentUsed: %d  LastMoveDir: %d  AoO: %d  FFCount: %d  "
+           "HideVal: %d  AttrDeath: %d\n", (int)p->concentUsed,
+        (int)p->LastMoveDir, (int)p->AoO, (int)p->FFCount, (int)p->HideVal,
+        (int)p->AttrDeath);
+    printf("StateFlags: 0x%x\n", (unsigned)p->StateFlags);
+    printf("Ranges: tremor=%u sight=%u light=%u blind=%u infra=%u percep=%u "
+           "telep=%u scent=%u shadow=%u nature=%u\n",
+        (unsigned)p->TremorRange, (unsigned)p->SightRange,
+        (unsigned)p->LightRange, (unsigned)p->BlindRange,
+        (unsigned)p->InfraRange, (unsigned)p->PercepRange,
+        (unsigned)p->TelepRange, (unsigned)p->ScentRange,
+        (unsigned)p->ShadowRange, (unsigned)p->NatureSight);
+    printf("Targets: count=%u retarget=%d\n", (unsigned)p->ts.tCount,
+        (int)p->ts.shouldRetarget);
+    for (i = 0; i < (int)p->ts.tCount && i < NUM_TARGETS; i++)
+        printf("Target[%d]: type=%d priority=%u vis=%u\n", i,
+            (int)p->ts.t[i].type, (unsigned)p->ts.t[i].priority,
+            (unsigned)p->ts.t[i].vis);
+    printf("Thing: Image=0x%x Timeout=%d StoredMoveTimeout=%d Flags=0x%x\n",
+        (unsigned)p->Image, (int)p->Timeout, (int)p->StoredMovementTimeout,
+        (unsigned)p->Flags);
+    printf("Alignment: GE=%d LC=%d desired=0x%x  polyTicks=%d LastRest=%d "
+           "fracFatigue=%d fallenPaladin=%d resChance=%d\n",
+        (int)p->alignGE, (int)p->alignLC, (unsigned)p->desiredAlign,
+        (int)p->polyTicks, (int)p->LastRest, (int)p->fracFatigue,
+        (int)p->isFallenPaladin, (int)p->resChance);
+    printf("\n");
+
+    printf("=== Player Stati ===\n");
+    Stati(p, 0);
+    printf("\n");
+
+    printf("=== Equipped Slots (Inv# is the kit ordinal below) ===\n");
+    {
+        int shown = 0;
+        for (int8 slot = 0; slot < NUM_SLOTS; slot++) {
+            Item *it = p->InSlot(slot);
+            if (!it)
+                continue;
+            printf("  %s: Inv#%d iID=%s eID=%s\n", SlotNames[slot],
+                InvOrdinal(p, it), CNm(it->iID).c_str(),
+                CNm(it->eID).c_str());
+            shown++;
+        }
+        if (!shown)
+            printf("  (nothing equipped)\n");
+    }
+    printf("\n");
+
+    printf("=== Weapon Sets ===\n");
+    {
+        static const char *const label[8] = { "M main", "M off-hand",
+            "R main", "ammo", "X main", "X off-hand", "S main", "S off-hand" };
+        for (int k = 0; k != 8; k++) {
+            Item *it = oItem(p->DefaultItem(k));
+            if (it)
+                printf("  %s: Inv#%d iID=%s\n", label[k],
+                    InvOrdinal(p, it), CNm(it->iID).c_str());
+            else
+                printf("  %s: (none)\n", label[k]);
+        }
+    }
+    printf("\n");
+
+    printf("=== Kit (every carried item, recursive into containers) ===\n");
+    {
+        int n = 0;
+        for (Item *it = p->FirstInv(); it; it = p->NextInv()) {
+            printf("Inv#%d\n", n++);
+            Item_(it, 2);
+        }
+        if (!n)
+            printf("  (empty)\n");
+    }
+    printf("\n");
+
+    printf("=== Spells ===\n");
+    v.clear();
+    for (i = 0; i != MAX_SPELLS + 1; i++)
+        if (p->Spells[i]) {
+            snprintf(b, sizeof(b), "Spell %s: flags=0x%x",
+                SpellNm(i).c_str(), (unsigned)p->Spells[i]);
+            v.push_back(b);
+        }
+    PrintSorted(v);
+    v.clear();
+    for (i = 0; i != MAX_SPELLS; i++)
+        if (p->MMArray[i]) {
+            snprintf(b, sizeof(b), "MetaMagic %s: 0x%x", SpellNm(i).c_str(),
+                (unsigned)p->MMArray[i]);
+            v.push_back(b);
+        }
+    PrintSorted(v);
+    for (i = 0; i != 10; i++)
+        if (p->SpellsLearned[i] || p->SpellSlots[i] || p->BonusSlots[i])
+            printf("SpellLevel[%d]: learned=%d slots=%d bonus=%d\n", i,
+                (int)p->SpellsLearned[i], (int)p->SpellSlots[i],
+                (int)p->BonusSlots[i]);
+    for (i = 0; i != 10; i++)
+        if (p->RecentSpells[i])
+            printf("RecentSpell[%d]: %s\n", i,
+                SpellNm(p->RecentSpells[i]).c_str());
+    for (i = 0; i != 5; i++)
+        if (p->RecentSkills[i])
+            printf("RecentSkill[%d]: %s\n", i,
+                ConstNm(SK_CONSTNAMES, p->RecentSkills[i]).c_str());
+    for (i = 0; i != 5; i++)
+        if (p->RecentItems[i])
+            printf("RecentItem[%d]: %u\n", i, (unsigned)p->RecentItems[i]);
+    for (i = 0; i != 10; i++)
+        if (p->Tattoos[i])
+            printf("Tattoo[%d]: %s\n", i, CNm(p->Tattoos[i]).c_str());
+    for (i = 0; i != 12; i++)
+        if (p->SpellKeys[i] >= 0)       /* -1 is the empty key */
+            printf("SpellKey[%d]: %s\n", i, SpellNm(p->SpellKeys[i]).c_str());
+    printf("AutoBuffs:");
+    for (i = 0; i != 64 && p->AutoBuffs[i]; i++)
+        printf(" %s", SpellNm(p->AutoBuffs[i]).c_str());
+    printf("\n");
+    printf("\n");
+
+    printf("=== Religion ===\n");
+    v.clear();
+    for (i = 0; i != MAX_GODS; i++) {
+        bool any = p->FavourLev[i] || p->TempFavour[i] || p->Anger[i] ||
+                   p->FavPenalty[i] || p->PrayerTimeout[i] ||
+                   p->AngerThisTurn[i] || p->lastPulse[i] || p->godFlags[i];
+        for (j = 0; j != MAX_SAC_CATS + 2; j++)
+            if (p->SacVals[i][j])
+                any = true;
+        if (!any)
+            continue;
+        std::string gn;
+        if (i < (int)theGame->LastGod())
+            gn = CNm(theGame->GodID((uint16)i));
+        else {
+            snprintf(b, sizeof(b), "(no god %d)", i);
+            gn = b;
+        }
+        std::string sv;
+        for (j = 0; j != MAX_SAC_CATS + 2; j++) {
+            snprintf(b, sizeof(b), "%s%d", j ? "," : "", (int)p->SacVals[i][j]);
+            sv += b;
+        }
+        snprintf(b, sizeof(b), "God %s: FavourLev=%d TempFavour=%d Anger=%d "
+                 "FavPenalty=%d PrayerTimeout=%d AngerThisTurn=%d "
+                 "lastPulse=%d godFlags=0x%x SacVals=%s", gn.c_str(),
+            (int)p->FavourLev[i], (int)p->TempFavour[i], (int)p->Anger[i],
+            (int)p->FavPenalty[i], (int)p->PrayerTimeout[i],
+            (int)p->AngerThisTurn[i], (int)p->lastPulse[i],
+            (unsigned)p->godFlags[i], sv.c_str());
+        v.push_back(b);
+    }
+    PrintSorted(v);
+    printf("\n");
+
+    printf("=== Player State ===\n");
+    printf("MapMemoryMask: %d  GallerySlot: %d  MapSP: %d  HungerShown: %d\n",
+        (int)p->MapMemoryMask, (int)p->GallerySlot, (int)p->MapSP,
+        (int)p->HungerShown);
+    printf("Flags: statiChanged=%d shownFF=%d Victory=%d Quit=%d UpdateMap=%d "
+           "Dig=%d Wizard=%d Explore=%d\n", (int)p->statiChanged,
+        (int)p->shownFF, (int)p->VictoryFlag, (int)p->QuitFlag,
+        (int)p->UpdateMap, (int)p->DigMode, (int)p->WizardMode,
+        (int)p->ExploreMode);
+    v.clear();
+    for (i = 0; i != MAX_DUNGEONS; i++)
+        if (p->MaxDepths[i]) {
+            std::string dn;
+            if (i < (int)Game::Modules[0]->szDgn)
+                dn = CNm(Game::Modules[0]->DungeonID((uint16)i));
+            else {
+                snprintf(b, sizeof(b), "(no dungeon %d)", i);
+                dn = b;
+            }
+            snprintf(b, sizeof(b), "MaxDepth %s: %d", dn.c_str(),
+                (int)p->MaxDepths[i]);
+            v.push_back(b);
+        }
+    PrintSorted(v);
+    for (i = 0; i != MAX_MACROS; i++)
+        if (p->Macros[i])
+            printf("Macro[%d]: %s\n", i, CNm(p->Macros[i]).c_str());
+    for (i = 0; i != MAX_QKEYS; i++) {
+        QuickKey &qk = p->QuickKeys[i];
+        if (!qk.Value && !qk.Type && !qk.hItem && !qk.MM)
+            continue;
+        Item *qi = oItem(qk.hItem);
+        std::string what;
+        if (qk.Type == QKY_SPELL) {
+            what = SpellNm(SpellVersionSpell((int32)qk.Value));
+            snprintf(b, sizeof(b), " src=%d", (int)SpellVersionSrcCode((int32)qk.Value));
+            what += b;
+        } else {
+            snprintf(b, sizeof(b), "0x%x", (unsigned)qk.Value);
+            what = b;
+        }
+        printf("QuickKey[%d]: Type=%d Value=%s MM=0x%x item=%s\n", i,
+            (int)qk.Type, what.c_str(), (unsigned)qk.MM,
+            qi ? CNm(qi->iID).c_str() : (qk.hItem ? "(dead handle)" : "-"));
+    }
+    for (i = 0; i != 5; i++)
+        if (p->RecentVerbs[i] != -1)
+            printf("RecentVerb[%d]: %d\n", i, (int)p->RecentVerbs[i]);
+    printf("Options:");
+    for (i = 0; i != OPT_LAST; i++)
+        if (p->Options[i])
+            printf(" %d=%d", i, (int)p->Options[i]);
+    printf("\n");
+    printf("\n");
+
+    printf("=== Journal and Time ===\n");
+    printf("Journal: ");
+    PrintPlainLine((const char*)p->Journal);
+    printf("\n");
+    printf("GraveText: ");
+    PrintPlainLine((const char*)p->GraveText);
+    printf("\n");
+    for (i = 0; i != 8; i++) {
+        printf("MessageQueue[%d]: ", i);
+        PrintPlainLine((const char*)p->MessageQueue[i]);
+        printf("\n");
+    }
+    printf("JournalInfo: bestItem=");
+    PrintPlainLine((const char*)p->JournalInfo.bestItem);
+    printf(" (%d) bestMonster=", (int)p->JournalInfo.bestItemVal);
+    PrintPlainLine((const char*)p->JournalInfo.bestMonster);
+    printf(" (%d) numMonSeen=%d\n", (int)p->JournalInfo.bestMonsterVal,
+        (int)p->JournalInfo.numMonSeen);
+    for (i = 0; i != MA_LAST_REAL; i++)
+        if (p->JournalInfo.numMonOfType[i])
+            printf("MonOfType %s: %d\n", ConstNm(MA_CONSTNAMES, i).c_str(),
+                (int)p->JournalInfo.numMonOfType[i]);
+    /* LTI.seconds and start_second are wall-clock time: they differ between a
+       character and its rebuild, so they do not print. */
+    for (i = 0; i != 11; i++) {
+        LevelTimeInfo &l = p->GameTimeInfo.LTI[i];
+        if (l.turns || l.actions || l.keystrokes || l.xp)
+            printf("LevelTime[%d]: turns=%u actions=%u keystrokes=%u xp=%d\n",
+                i, (unsigned)l.turns, (unsigned)l.actions,
+                (unsigned)l.keystrokes, (int)l.xp);
+    }
+    printf("GameTime: start_turn=%u actions=%u keystrokes=%u start_xp=%d\n",
+        (unsigned)p->GameTimeInfo.start_turn,
+        (unsigned)p->GameTimeInfo.actions,
+        (unsigned)p->GameTimeInfo.keystrokes,
+        (int)p->GameTimeInfo.start_xp);
+    printf("\n");
+
+    printf("=== Location ===\n");
+    printf("Position: (%d,%d)\n", (int)p->x, (int)p->y);
+    if (m)
+        printf("Map: dID=%s depth=%d\n", CNm((rID)m->dID).c_str(),
+            (int)m->Depth);
+    printf("\n");
+
+    printf("=== Effect Memory (flavours and Known/Tried) ===\n");
+    v.clear();
+    EffectMemoryLines(p, v);
+    PrintSorted(v);
+    if (v.empty())
+        printf("  (no effect memory)\n");
+    printf("\n");
+
+    printf("=== Script Variables ===\n");
+    if (!PrintScriptVariables(true, true))
+        return false;
+    printf("\n");
+
+    printf("=== Monster Memory (Seen/Fought/Kills) ===\n");
+    v.clear();
+    MonsterMemoryLines(p, v);
+    PrintSorted(v);
+    if (v.empty())
+        printf("  (no monster memory)\n");
+    printf("\n");
+
+    printf("=== Derived Sheet ===\n");
+    {
+        String cd;
+        T1->CreateCharDump(cd);
+        PrintPlain(cd);
+    }
+    printf("\n=== end of canonical dump ===\n");
+    return true;
+}
+
 bool RunSaveDump(const char *path) {
     fileHeader fhdr;
     if (!LoadSaveForReport(path, fhdr)) return false;
@@ -1126,6 +1787,14 @@ bool RunSaveDump(const char *path) {
     T1->SetPlayer(p);
     T1->SetMap(m);
 
+    /* Canonical mode: a separate walk, so the default report below stays
+       byte for byte what 26 tools and key scripts parse. */
+    {
+        const char *canon = getenv("INCURSION_DUMP_CANONICAL");
+        if (canon && *canon && strcmp(canon, "0")) {
+            return CanonDump::Run(p, m);
+        }
+    }
     if (const char *spec = getenv("INCURSION_PLANT")) {
         const char *out = getenv("INCURSION_PLANT_OUT");
         if (!out || !*out) { fprintf(stderr, "incursion -dump: plant: INCURSION_PLANT_OUT is unset\n"); exit(2); }
@@ -1245,28 +1914,11 @@ bool RunSaveDump(const char *path) {
        and a new game gives them zeroed memory. */
     printf("=== Effect Memory (flavours and Known/Tried) ===\n");
     {
-        int shown = 0;
-        for (int ms = 0; ms != MAX_MODULES; ms++) {
-            Module *mod = Game::Modules[ms];
-            if (!mod)
-                continue;
-            for (int32 j = 0; j != mod->szEff; j++) {
-                rID eID = mod->EffectID((uint16)j);
-                EffMem *em = EFFMEM(eID, p);
-                if (!em->FlavorID && !em->PFlavorID && !em->Known &&
-                        !em->Tried && !em->PKnown && !em->PTried)
-                    continue;
-                printf("  %s: flavor=%s pflavor=%s Known=%d Tried=%d "
-                       "PKnown=%d PTried=%d\n",
-                    SafeResName(eID),
-                    SafeResName((rID)em->FlavorID),
-                    SafeResName((rID)em->PFlavorID),
-                    (int)em->Known, (int)em->Tried,
-                    (int)em->PKnown, (int)em->PTried);
-                shown++;
-            }
-        }
-        if (!shown)
+        std::vector<std::string> lines;
+        EffectMemoryLines(p, lines);
+        for (size_t li = 0; li != lines.size(); li++)
+            printf("%s\n", lines[li].c_str());
+        if (lines.empty())
             printf("  (no effect memory)\n");
     }
     printf("\n");
@@ -1285,30 +1937,11 @@ bool RunSaveDump(const char *path) {
        carries no row for a kind the player has never met. */
     printf("=== Monster Memory (Seen/Fought/Kills) ===\n");
     {
-        int shown = 0;
-        for (int ms = 0; ms != MAX_MODULES; ms++) {
-            Module *mod = Game::Modules[ms];
-            if (!mod)
-                continue;
-            for (int32 j = 0; j != mod->szMon; j++) {
-                rID mID = mod->MonsterID((uint16)j);
-                MonMem *mm = MONMEM(mID, p);
-                if (!mm->Seen && !mm->Fought && !mm->Kills && !mm->Battles &&
-                        !mm->Deaths && !mm->pKills && !mm->Attacks &&
-                        !mm->Resists && !mm->Immune && !mm->Feats && !mm->Flags)
-                    continue;
-                printf("  %s: Seen=%d Fought=%d Kills=%d Battles=%d Deaths=%d "
-                       "pKills=%d Attacks=%d Resists=%d Immune=%d Feats=%d "
-                       "Flags=%d\n",
-                    SafeResName(mID),
-                    (int)mm->Seen, (int)mm->Fought, (int)mm->Kills,
-                    (int)mm->Battles, (int)mm->Deaths, (int)mm->pKills,
-                    (int)mm->Attacks, (int)mm->Resists, (int)mm->Immune,
-                    (int)mm->Feats, (int)mm->Flags);
-                shown++;
-            }
-        }
-        if (!shown)
+        std::vector<std::string> lines;
+        MonsterMemoryLines(p, lines);
+        for (size_t li = 0; li != lines.size(); li++)
+            printf("%s\n", lines[li].c_str());
+        if (lines.empty())
             printf("  (no monster memory)\n");
     }
     printf("\n");

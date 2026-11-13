@@ -61,7 +61,7 @@ cd "$(dirname "$0")/.."
 # The save the bat's aura rolls is a die; force it to a natural 1, which always
 # fails, so the debt in states 1 and 2 is always taken.
 export INCURSION_FORCE_SAVE_ROLL=1
-export INCURSION_LOAD=tools/fixtures/chars/spook-mount-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/spook-mount-seed5-opt0822.char
 RUN=$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat ./tools/headless.sh tools/keys/spook-mount-loaded.keys 2 2>&1 | sed -n 's/^run:  *//p')
 [ -n "$RUN" ] || { echo "FAIL: the run produced no directory"; exit 1; }
 S="$RUN/logs/screens"

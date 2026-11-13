@@ -6,7 +6,7 @@
 #   tools/check_cloak_damage_live.sh   exit 0 every point holds, 1 a point
 #                                      fails or nothing could be measured
 #
-# fact: character, options, slots -- fixture orc-mage-seed4-gate.sav, options-2026-08-22.dat; probe empties the cloak slot
+# fact: character, options, slots -- fixture orc-mage-seed4-gate.char, options-2026-08-22.dat; probe empties the cloak slot
 # fact: damage amount -- probe throws a fixed 20 through the real EV_DAMAGE; no dice
 # fact: attacker and resistances -- probe summons a kobold and removes RESIST stati; baseline must equal 20
 # fact: cloaks -- probe builds "cloak" with the real effect and wears it by EV_WIELD; stati line proves the grant
@@ -21,7 +21,7 @@ mkdir -p logs/runs
 run=$(mktemp -d "$PWD/logs/runs/cloak-damage.XXXXXX")
 echo "Specimens: $run"
 export INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char
 export INCURSION_RUN_DIR="$run"
 export INCURSION_CLOAK_DMG_PROBE=1
 if ! tools/headless.sh tools/keys/cloak-damage.keys 1 >"$run/harness.txt" 2>&1; then

@@ -2,7 +2,7 @@
 # and that square becomes "shallow mud". (inc-wqql)
 #   INCURSION_RUN_DIR=logs/run-p4-<x> \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char \
 #       tools/headless.sh tools/keys/soften-stone-wall.keys 1
 # The fixture druid has wizard mode, Infinite Mana and Freeze Monsters on.
 #

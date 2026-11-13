@@ -1,0 +1,3 @@
+# load-char-sheet.keys after the setup the old orc bard .sav held (bd inc-10v7f), for tools/check_legend_lore.sh.
+@include setup-orc-bard-reapply-seed1.keys
+@include load-char-sheet.keys

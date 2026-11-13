@@ -91,7 +91,7 @@ for _i in "${!CHECK_ARGS[@]}"; do
 done
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav
+export INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.char
 export INCURSION_DISBELIEF_PROBE=1
 export INCURSION_RUNTO_SKILL_ROLL=1
 export INCURSION_FORCE_SAVE_ROLL=1

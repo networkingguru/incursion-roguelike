@@ -1442,6 +1442,8 @@ EvReturn Creature::RAttack(EventInfo &e)
   int8 oldSlot;
   int8 i;
   bool startedAfraid = HasStati(AFRAID);
+  extern void TrapAttackProbeBegin(Creature*);
+  TrapAttackProbeBegin(this); /* inc-w91w: attack-local time baseline */
   if (!e.EItem2)
     return ABORT;
 

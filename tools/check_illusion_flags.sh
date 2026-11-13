@@ -66,8 +66,11 @@
 
 . "$(dirname "$0")/check_lib.sh"
 
+# fact: character -- fixture elf-mage-illusions-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Infinite Mana, Freeze Monsters and the four illusion spells -- tools/keys/setup-elf-mage-illusions-seed1.keys (the old .sav held them; V7-1 moved them into the checks)
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav
+export INCURSION_LOAD=elf-mage-illusions-seed1
 
 # Put the defect back: read the flag out of the save DC again.
 check_mutation src/Creature.cpp \

@@ -4,6 +4,8 @@
 # opens the Illusion prompt and a later @choose would stop the run as
 # "script drifted" (exit 6), which reads as could-not-measure and not as red.
 # Keys as in concentration-core.keys.
+# The fixture holds only the created character; setup-elf-mage-illusions-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-elf-mage-illusions-seed1.keys
 @until "Select Spell" m
 @choose "Phantasmal Force"
 c

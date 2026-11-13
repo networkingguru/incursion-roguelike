@@ -21,7 +21,7 @@
 # sheaf arrow 5 cp and crossbow bolt 10 cp (TITEM Cost, hundredths of a gp).
 # inc-6i0x: count also holds six ammunition rows (sheaf arrow, flight arrow, crossbow
 # bolt, hand crossbow dart, dart, sling stone) at exactly 50, mundane (plus 0, no effect).
-# fact: character -- fixture orc-mage-seed4-gate.sav, options-2026-08-22.dat
+# fact: character -- fixture orc-mage-seed4-gate.char, options-2026-08-22.dat
 # fact: shop contents -- probe sets p->storeSeed and builds InitShopkeeper; RestockShop tops to tier
 # fact: game day -- probe sets theGame->Turn directly
 # fact: list cost -- TITEM Cost read directly, no roll
@@ -37,7 +37,7 @@ run_check() {
     run=$(mktemp -d "$PWD/logs/runs/roark-stock.XXXXXX")
     echo "Specimens: $run"
     export INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
-    export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav
+    export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char
     for mode in count price refill craft cost; do
         mkdir -p "$run/$mode"
         if ! INCURSION_RUN_DIR="$run/$mode" INCURSION_ROARK_STOCK_PROBE=$mode \

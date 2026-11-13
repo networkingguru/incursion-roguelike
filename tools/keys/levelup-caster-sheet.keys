@@ -12,7 +12,7 @@
 # itself is untouched.
 #
 # The character is the single-class Orc Mage 1 of
-# tools/fixtures/chars/orc-mage-seed4-opt0822.sav: ClassID[1] is 0, so
+# tools/fixtures/chars/orc-mage-seed4-opt0822.char: ClassID[1] is 0, so
 # AdvanceLevel asks no class menu; its level-2 feat menu is answered with 'a'
 # (the first entry), which the engine accepts as an ordinary choice.
 

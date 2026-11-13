@@ -2,6 +2,7 @@
 #include "Incursion.h"
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 extern void LOFSetForcedRoll(int8);
 extern void LOFSetForcedSaveThrowRoll(int8);
@@ -13,6 +14,13 @@ static Monster *probeMon;       // staged creature (shot-under, shot-between)
 static int probeMonHP;
 static bool probeAttackRan;     // AttackTrap resolved the shot against the trap
 static int probeShots;
+
+/* Called on entry to every ranged attack: the time baseline is taken here,
+   after the load's Timeout reset, so only the attack's own charge is measured. */
+void TrapAttackProbeBegin(Creature *actor) {
+    if (!probeTrap || !probeMode || actor != theGame->GetPlayer(0)) return;
+    initialTimeout = ((Player*)actor)->Timeout;
+}
 
 /* Called at the end of every ranged shot, whatever it hit. */
 void TrapAttackProbeShot(Creature *actor, EventInfo &e) {
@@ -45,11 +53,17 @@ void TrapAttackProbe(Player *p) {
     if (!probeMode || !*probeMode || !p || !p->m) return;
     Map *m = p->m;
     // Fix the world independently of generation, including all possible AI.
-    for (Thing *t = m->FirstThing(); t; ) {
-        Thing *next = m->NextThing();
-        if (t != p) t->Remove(true);
-        t = next;
-    }
+    // Snapshot the handles: Remove() compacts m->Things, so removing while
+    // iterating it skips the entry after each removal.
+    std::vector<hObj> doomed;
+    for (Thing *t = m->FirstThing(); t; t = m->NextThing())
+        if (t != p) doomed.push_back(t->myHandle);
+    for (size_t i = 0; i < doomed.size(); ++i)
+        if (Thing *t = oThing(doomed[i])) t->Remove(true);
+    int others = 0;
+    for (Thing *t = m->FirstThing(); t; t = m->NextThing())
+        if (t != p && t->isCreature()) ++others;
+    Error("TRAP_ATTACK scene creatures=%d",others);
     int px = m->SizeX()/2, py = m->SizeY()/2;
     for (int x=px-12; x<=px+12; ++x)
         for (int y=py-12; y<=py+12; ++y)
@@ -76,7 +90,7 @@ void TrapAttackProbe(Player *p) {
     probeTrap->SetImage();
     m->At(probeTrap->x,probeTrap->y).Memory = probeTrap->Image;
     m->At(probeTrap->x,probeTrap->y).Visibility = VI_DEFINED;
-    initialHP = p->cHP; initialXP = p->GetXP(); initialTimeout = p->Timeout;
+    initialHP = p->cHP; initialXP = p->GetXP();
     Error("TRAP_ATTACK stage mode=%s class=%s armed=1 hp=%d blind=%d lit=%d distance=%d",
         probeMode,NAME(p->ClassID[0]),p->cHP,p->HasStati(BLIND),
         p->HasEffStati(ILLUMINATED,FIND("faerie fire")),distance);
@@ -85,6 +99,7 @@ void TrapAttackProbe(Player *p) {
         Error("TRAP_ATTACK rogue armed=%d",!(probeTrap->TrapFlags & TS_DISARMED));
     } else if (area) {
         EventInfo e; e.Clear();
+        initialTimeout = p->Timeout;   // baseline right before the attack
         p->AttackTrap(e,probeTrap,p->EInSlot(SL_WEAPON));
     } else if (shot) {
         /* inc-w91w ranged: the player fires or throws through the real fire

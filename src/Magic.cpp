@@ -236,6 +236,7 @@ String & TEffect::Power(int8 Mod, Creature *Caster, rID spID, Item *it)
     EffectValues *ef; bool printed,percent;
     String str; printed = false;
     Dice d; EventInfo e;
+    unstatedDraw("builds a description string; the rolled value reaches no saved field");
     e.Clear();
     e.EActor = Caster;
     e.EVictim = Caster;
@@ -708,6 +709,24 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
 
           return damage;
       };
+      /* In the creation window a damage roll that draws is a stated decision,
+         keyed by the effect's name (inc-10v7f R2). A dice count of 0 draws
+         nothing and stays outside the decision, and so does a roll inside an
+         unstatedDraw scope (it decides no saved fact). Live: the same Roll(),
+         in the same order. */
+      auto dmgRoll = [&]() -> int16 {
+          if (!CreationWindowOpen() || g_unstatedDepth > 0 || e.Dmg.Number == 0)
+              return e.Dmg.Roll();
+          CreationScope effectScope(NAME(e.eID), 0);
+          /* Dice::Roll(): |Number| dice of Sides (0 sides counts 1), then the bonus; a
+             positive Number floors at 0, a negative one subtracts the bonus and caps at 0. */
+          int32 dice = abs((int32)e.Dmg.Number), face = e.Dmg.Sides > 0 ? (int32)e.Dmg.Sides : 1;
+          int32 lo = dice, hi = dice * face;
+          if (e.Dmg.Number > 0) { lo = max(0, lo + e.Dmg.Bonus); hi = max(0, hi + e.Dmg.Bonus); }
+          else { lo = min(0, lo - e.Dmg.Bonus); hi = min(0, hi - e.Dmg.Bonus); }
+          return (int16)SourcedRoll(CK_EFFECT_ROLL, [&]() -> int32 { return e.Dmg.Roll(); },
+              NULL, CreationRange(lo, hi));
+      };
       auto rollDamage = [&]() {
           if (e.MM & MM_MAXIMIZE)
               e.vDmg = max(0,e.Dmg.Number) * abs(e.Dmg.Sides) + e.Dmg.Bonus;
@@ -716,7 +735,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
                   e.Dmg.Sides = -e.Dmg.Sides;
               if (e.Dmg.Number < 0)
                   e.Dmg.Number = 0;
-              e.vDmg = e.Dmg.Roll();
+              e.vDmg = dmgRoll();
           }
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
@@ -745,7 +764,7 @@ int16 EffectDuration(TEffect *te, int casterLev, uint32 MM, bool mystic) {
           if (e.MM & MM_MAXIMIZE)
               e.vDmg = e.Dmg.Number * e.Dmg.Sides + e.Dmg.Bonus;
           else
-              e.vDmg = e.Dmg.Roll();
+              e.vDmg = dmgRoll();
           if (e.MM & MM_EMPOWER)
               e.vDmg = (e.vDmg*150)/100;
       } else if (e.vCasterLev != oldCasterLev || e.EMagic == &e.EMagicCopy) {

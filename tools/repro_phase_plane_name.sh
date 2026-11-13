@@ -19,7 +19,7 @@ echo "specimens: $RUN_ROOT"
 rc=0
 INCURSION_RUN_DIR="$RUN_ROOT/run" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
     tools/headless.sh tools/keys/phase-plane-name.keys 1 > "$RUN_ROOT/session.log" 2>&1 || rc=$?
 if [ "$rc" -ne 0 ]; then
     echo "UNMEASURED: harness exit $rc (see $RUN_ROOT/session.log)"

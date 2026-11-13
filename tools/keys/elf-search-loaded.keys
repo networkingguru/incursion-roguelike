@@ -1,5 +1,5 @@
 # elf-search.keys with its chargen removed: lines 33-end, unchanged.
-# The character comes from tools/fixtures/chars/elf-search-seed1-opt0818.sav. bd inc-vrt8.
+# The character comes from tools/fixtures/chars/elf-search-seed1-opt0818.char. bd inc-vrt8.
 
 ESC     # dismiss the arrival-room description; now in play
 d       # character sheet

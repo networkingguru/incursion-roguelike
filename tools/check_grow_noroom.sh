@@ -34,7 +34,7 @@ check_mutation src/Values.cpp \
 '            if (0 && !PlaceNearSearch(x,y,true,(int8)Attr[A_SIZ])) {'
 
 export INCURSION_GROW_NOROOM_PROBE=1
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char
 
 check_run tools/keys/load-char-sheet.keys 1
 

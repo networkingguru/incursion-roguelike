@@ -11,6 +11,8 @@ void Error(const char*,...) __attribute__((format(printf,1,2)));
 
 void init_genrand(unsigned long s);
 unsigned long genrand_int32(void);
+void RngPosition(unsigned long *seed, unsigned long long *draws);
+void RngRestore(unsigned long seed, unsigned long long draws);
 
 /* THE COSMETIC STREAM. A second generator, seeded from the run's seed but
    advanced entirely separately, for draws whose value reaches nothing but the
@@ -339,6 +341,8 @@ extern Term *T1;
    gave, but the same series in every run. That is what makes a scripted
    session repeatable and therefore a regression test. See src/Main.cpp. */
 unsigned long NextSeed(void);
+unsigned long NextSeedTick(void);
+void SetNextSeedTick(unsigned long t);
 
 /* The identity a save file and a module are actually keyed on: a digest of the
    memory layout they were written with. Registry::SaveGroup() writes whole C++

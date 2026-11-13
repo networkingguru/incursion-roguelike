@@ -37,7 +37,7 @@
 # script-thrown event, so ThrowDmg(...,AD_DACO,N,...) takes 1 point whatever N is.
 # A fix that passes N and nothing else reads 1,1,1 here and FAILs.
 #
-# fact: character -- fixture human-paladin-seed4-gate (INCURSION_LOAD); no chargen in the key script
+# fact: character -- fixture human-paladin-seed4-gate (INCURSION_LOAD); no chargen in the key script -- human-paladin-seed4-gate is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/human-paladin-seed4-gate.sav)
 # fact: the map and other monsters -- wizard "Genocide Everything", then "Monster Summoning" of one ogre
 # fact: the ogre's gear and blows -- INCURSION_SUMMON_NO_GEAR=1 (the ogre punches)
 # fact: the touch hits -- INCURSION_LOF_FORCE_ROLL=15 (attack roll)
@@ -55,7 +55,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SEED=11   # any seed gives the same verdict (inc-nea6j); the controls below fix the facts
-export INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-gate.sav
+export INCURSION_LOAD=tools/fixtures/specimens/human-paladin-seed4-gate.sav
 KEYS=tools/keys/mark-of-punishment.keys
 OPTIONS=tools/gates/Options.Dat
 

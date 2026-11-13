@@ -9,9 +9,10 @@
 # where a feat's name belongs. Before the fix the cheetah carried FT_DASH.
 #
 # Facts and their controls (this check reads only what the header names):
-#   # fact: character and its druid level -- fixture druid-shoulder-metal-seed7-opt0822.sav
-#   # fact: the Wild Shape menu's entries -- lib/ monster data, fixed by the module
-#   # fact: the description text -- the cheetah's Feats: list in lib/mon1.irh
+# fact: character and its druid level -- fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
+# fact: the Wild Shape menu's entries -- lib/ monster data, fixed by the module
+# fact: the description text -- the cheetah's Feats: list in lib/mon1.irh
 # A loaded fixture fixes the character, so no seed decides a fact the check reads.
 #
 # Usage: tools/check_wildshape_cheetah_desc.sh
@@ -21,7 +22,7 @@ cd "$(dirname "$0")/.." || exit 2
 mkdir -p logs/wildshape-cheetah-desc
 run="logs/wildshape-cheetah-desc/run-$(date +%Y%m%d-%H%M%S)-$$"
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
 INCURSION_RUN_DIR="$run" tools/headless.sh tools/keys/wildshape-cheetah-desc.keys 1 > "$run.out" 2>&1
 status=$?
 echo "headless exit: $status; specimens: $run (report: $run.out)"

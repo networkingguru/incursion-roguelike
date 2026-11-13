@@ -39,7 +39,7 @@ AFTER="${1:?after tree}"; BEFORE="${2:?before tree}"; N="${3:-40}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$(mktemp -d "$ROOT/logs/hide-strike-XXXXXX")"
 OPTS="$ROOT/tools/fixtures/options-2026-08-22-noroomdesc.dat"
-SAV="$ROOT/tools/fixtures/chars/orc-rogue-seed1-opt0822.sav"
+SAV="$ROOT/tools/fixtures/chars/orc-rogue-seed1-opt0822.char"
 for t in "$AFTER" "$BEFORE"; do [ -x "$t/incursion-headless" ] || { echo "INCONCLUSIVE: no posix build in $t"; exit 2; }; done
 for arm in after before; do
   tree="$AFTER"; [ $arm = before ] && tree="$BEFORE"

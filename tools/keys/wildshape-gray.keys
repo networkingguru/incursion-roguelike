@@ -2,11 +2,13 @@
 # Real Wild Shape (src/Skills.cpp:5565) from a LOADED druid, so every seed
 # starts from the same character. Run through tools/check_wildshape_gray.sh, or:
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char \
 #       tools/headless.sh tools/keys/wildshape-gray.keys <seed>
 # The fixture is already in wizard mode, so 'w' opens the wizard menu with no
 # y/n question. Free Advancement + Cheat Death are the first and third switches.
 # Druid 3 (three druid levels) is the Wild Shape threshold.
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 @dump:arrival
 w
 @choose "Wizard Mode Switches"

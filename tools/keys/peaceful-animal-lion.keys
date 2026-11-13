@@ -6,6 +6,8 @@
 # look line is the observation: "peaceful" alone means it is friendly to the
 # player; "hostile formerly peaceful" means MS_PEACEFUL is set yet the monster
 # still rates the player Enemy (src/Message.cpp:1038, src/Target.cpp:566).
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 ENTER
 w
 @choose "Monster Summoning"

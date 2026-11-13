@@ -18,7 +18,7 @@
 #              Total 4 is at or above DC 1, so [failure] comes only from the rule.
 # A session that prints no matching line is inconclusive (exit 2), never a pass.
 #
-# fact: character and save bonuses -- fixture human-paladin-seed4-gate, loaded by INCURSION_LOAD
+# fact: character and save bonuses -- fixture human-paladin-seed4-gate, loaded by INCURSION_LOAD -- human-paladin-seed4-gate is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/human-paladin-seed4-gate.sav)
 # fact: map and player position -- the fixture save; no run changes depth
 # fact: monsters on the level -- wizard switch Freeze Monsters (tools/keys/wizard-switches.keys)
 # fact: the d20 roll -- INCURSION_FORCE_SAVE_ROLL (20 in session A, 1 in session B)
@@ -34,7 +34,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/gates/Options.Dat
-FIXTURE=tools/fixtures/chars/human-paladin-seed4-gate.sav
+FIXTURE=tools/fixtures/specimens/human-paladin-seed4-gate.sav
 SEED=4
 
 # The mutation this check defends: the special-cased natural 20/1 verdict,

@@ -1,0 +1,31 @@
+# Prepares the built fixture human-priest-mage-wounded-seed4-gate for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state (bd inc-b4l3g.5, tools/check_held_mana.sh property 2): wizard mode
+# on; a Mage level added to the Priest (Priest 1 / Mage 1, the base setup); Ignore Spell Failure on, because Cure Light Wounds
+# fails on a roll the seed decides; the character wounded; every monster gone; the status bar reading Exploring.
+# WOUNDED: a summoned giant rat bites while the character waits. The wait is cut short while a hostile is in
+# view, so many waits are sent. The caller MUST export INCURSION_LOF_FORCE_ROLL=20 and
+# INCURSION_FORCE_DAMAGE_ROLL=3 for the run: they make the rat bite for a known amount, so the wound is the
+# same on every seed. Then every monster is cleared and the character searches once.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@include setup-human-priest-mage-seed4-gate.keys   # wizard on, Free Advancement, Priest 1 / Mage 1
+
+w
+@choose "Wizard Mode Switches"
+DOWN*5
+SPACE                   # Ignore Spell Failure
+ESC
+
+w
+@choose "Monster Summoning"
+@choose "Animals"
+@choose "giant rat"
+RIGHT ENTER
+@while "more --" SPACE
+@until "HP:" ESC
+. . . . . . . . . .
+. . . . . . . . . .
+. . . . .
+
+w
+@choose "Genocide Everything"
+s

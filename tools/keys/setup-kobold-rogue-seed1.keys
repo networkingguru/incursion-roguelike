@@ -1,0 +1,11 @@
+# Prepares the built fixture kobold-rogue-seed1 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: the whip dropped from the Weapon Hand to the floor. A reach weapon
+# makes a monster pass a Reflex save to close with its wielder (src/Move.cpp:826-903), and a monster that fails
+# stops short of the square it wanted, which is the trapped square; so the checks fight with empty hands.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+i                       # Inventory Mode
+b                       # Weapon Hand
+d                       # Drop the weapon.
+@expect "Weapon Hand  :Empty"
+ESC                     # leave Inventory Mode, back to play

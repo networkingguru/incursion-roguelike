@@ -8,7 +8,7 @@
 # belt bag holds a matching stack (floor item), f) the same for an item taken
 # out of a chest, g) the matching bag refuses on weight, h) no matching stack.
 # Builds nothing; needs incursion-headless.
-# fact: character and abilities -- fixture orc-rogue-seed1-opt0822.sav
+# fact: character and abilities -- fixture orc-rogue-seed1-opt0822.char
 # fact: options -- options-2026-08-22.dat (AutoLoot macro does not read AUTOPICKUP)
 # fact: terrain and absence of threats -- probe picks an isolated empty floor cell
 # fact: items, quantities, identification, slots, chest -- probe Item::Create, MakeKnown, forced Insert
@@ -25,7 +25,7 @@ for c in a b c d e f g h; do
     run="$base/$c"
     INCURSION_AUTOLOOT_PACKS_PROBE="$c" INCURSION_RUN_DIR="$run" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-        INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav \
+        INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.char \
         tools/headless.sh tools/keys/autoloot-packs.keys 1 > "$base/$c-harness.log" 2>&1
     rc=$?
     log="$run/logs/autoloot-packs.log"

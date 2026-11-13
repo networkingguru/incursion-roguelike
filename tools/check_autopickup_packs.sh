@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # inc-4reo: AutoPickupFloor must search unlocked containers held in slots.
-# fact: character and abilities -- fixture orc-rogue-seed1-opt0822.sav
+# fact: character and abilities -- fixture orc-rogue-seed1-opt0822.char
 # fact: options -- options-2026-08-22.dat; probe sets AUTOPICKUP=2, AUTOMORE=1
 # fact: terrain and absence of threats -- probe builds cleared floor scene (RUNTO_STAGE pattern)
 # fact: items, quantities, identification, slots, nesting and locks -- probe Item::Create/MakeMagical and forced Insert (Item Acquisition equivalents)
@@ -21,7 +21,7 @@ for c in a b c d e f g h; do
     run="$base/$c"
     INCURSION_AUTOPICKUP_PACKS_PROBE="$c" INCURSION_RUN_DIR="$run" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-        INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav \
+        INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.char \
         tools/headless.sh tools/keys/autopickup-packs.keys 1 > "$base/$c-harness.log" 2>&1
     rc=$?
     log="$run/logs/autopickup-packs.log"

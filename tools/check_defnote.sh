@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/orc-mage-seed4-gate.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the goblin attack in the shield-hit scene comes from the old save's level
 # Do the sidebar and the character sheet show the defense a resource adds inside
 # each strike? (bd inc-7v2i)
 #
@@ -42,7 +43,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-mage-seed4-gate.sav
+FIXTURE=tools/fixtures/specimens/orc-mage-seed4-gate.sav
 SEED=4
 [ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE."
 

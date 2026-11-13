@@ -1,0 +1,137 @@
+# alignment-drain-lawful-neutral: converted from tools/fixtures/chars/alignment-drain-lawful-neutral.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/alignment-drain-lawneutral-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 0 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/alignment-drain-lawneutral-save.keys 1 21 50 22:21:0
+# roll search: MATCH: script_roll [Warrior] #0, script_roll [Warrior;EV_150] #0, script_roll [Warrior;EV_150] #1 = [2, 1, 2] (recorded [2, 1, 2]); other matches [[2, 2, 2], [3, 1, 2], [3, 2, 2]]; 63 tries in 55.8 s (0.89 s per try); record logs/phase13e/alignment-drain-lawful-neutral/roll-search.txt
+# rolls: script_roll|Warrior|0|1|3
+# rolls: script_roll|Warrior;EV_150|0|0|2
+# rolls: script_roll|Warrior;EV_150|1|0|6
+# Values set from the old dump: none (the skeleton already matched).
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (wand) and 0 skill tools (-) | built: 1 perk item (wand) and 0 skill tools (-)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 3 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Universal Gear;a3]: 32 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 51 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 88 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 4 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 25 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 51 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 74 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 17 kept as the walk recorded it; the old character holds this annotation's item (splint mail, quantity 1), so its roll is within the annotation's chance
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Human
+name: David
+surname: Faravis
+natural_aptitude: Athletics
+natural_aptitude: Diplomacy
+class: Warrior
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Larcenous
+perk_type [1]: PERK_ITEM
+perk_item [1]: wand, effect cracked, plus 3
+perk_type [2]: PERK_RESIST
+perk_resist [2]: Lightning
+attr_str: 12
+attr_dex: 12
+attr_con: 12
+attr_int: 15
+attr_wis: 14
+attr_cha: 16
+attr_luc: 15
+perk_charges [wand]: 36
+alignment: Lawful Neutral
+feat: Acrobatic
+feat: Alertness
+feat: Acute Senses
+hp_roll [Warrior]: 10
+mana_roll [Warrior]: 6
+feat_weapon: arbalest
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Human]: 18
+kit_item [Human;a0]: medium backpack, quantity 1
+kit_item [Human;a1]: food ration, quantity 6
+kit_item [Human;a2]: torch, quantity 4
+gear_stream [Warrior]: 19
+kit_item [Warrior;a0]: gold piece, quantity 290
+kit_item [Warrior;a1]: potion, effect Oil of Transformation, quantity 3
+script_roll [Warrior]: 2
+kit_item [Warrior;a3]: kite shield, quantity 1
+kit_item [Warrior;a4]: dagger, quantity 1
+kit_item [Warrior;a5]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 20
+gear_chance [Universal Gear;a3]: 32
+gear_chance [Universal Gear;a4]: 51
+gear_chance [Universal Gear;a6]: 88
+gear_chance [Universal Gear;a7]: 4
+gear_chance [Universal Gear;a10]: 25
+gear_chance [Universal Gear;a14]: 51
+gear_chance [Universal Gear;a18]: 74
+gear_chance [Universal Gear;a19]: 17
+kit_item [Universal Gear;a19]: splint mail, quantity 1
+ammo_quantity: 36
+script_roll [Warrior;EV_150]: 1
+script_roll [Warrior;EV_150]: 2
+personality: The Ambitious Conqueror
+store_seed: 22
+character_name: David Faravis
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

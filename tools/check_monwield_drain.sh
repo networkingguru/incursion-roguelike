@@ -24,7 +24,7 @@
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 SEED=3
 KEYS=tools/keys/monwield-probe.keys
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char
 
 # The mutation removes the drain: Monster::Wield no longer lowers the stati.
 check_mutation src/Inv.cpp \

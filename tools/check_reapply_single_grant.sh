@@ -8,7 +8,7 @@
 # S2 Storycraft on a worn Periapt of Proof against Poisons (orc bard, seed 1):
 #    +1 -> +2 must take Will "vs. poison" from +2 to +4. The key script's
 #    header traces Storycraft -> SetInherentPlus -> ReApply by file:line. S2
-#    and S5 start from a frozen character, tools/fixtures/chars/orc-bard-reapply-seed1.sav
+#    and S5 start from a frozen character, tools/fixtures/chars/orc-bard-reapply-seed1.char
 #    (tools/fixtures/README.md), rather than building one fresh: a live build
 #    on this seed draws a permanent "Save Bonus: +4 vs. Poison" attribute-set
 #    perk (src/Create.cpp:1690's random(FT_LAST - FT_FIRST) draw, shifted by
@@ -27,7 +27,8 @@
 # All measured values print even when an assertion fails. Missing gameplay,
 # routes, expected text or measurement screens fail as "measured nothing".
 # inc-frim: the verdict must not depend on the seed. Facts the check reads:
-# fact: character (S2, S5) -- fixture orc-bard-reapply-seed1 (INCURSION_LOAD)
+# fact: character (S2, S5) -- fixture orc-bard-reapply-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the bard's wizard mode and level (Bard 6, level cleared) -- tools/keys/setup-orc-bard-reapply-seed1.keys (the old .sav held them; V7-1 moved them into the check)
 # fact: character (S1, S3, S4) -- fixture orc-barbarian-reapply-seed4 (INCURSION_LOAD)
 # fact: items (Bloodspear, Periapt, Girdle, Nine Lives Stealer, scrolls) -- wizard menu "Item Acquisition"
 # fact: scroll read succeeds (Decipher d20, "The magic runs amok!") -- INCURSION_RUNTO_SKILL_ROLL=20
@@ -76,10 +77,10 @@ need_screen() {
 # S2 and S5 share a frozen orc bard (tools/fixtures/README.md) instead of
 # building one fresh each run; see check_reapply_single_grant.sh's S2 comment
 # above for why.
-FIXTURE=tools/fixtures/chars/orc-bard-reapply-seed1.sav
+FIXTURE=orc-bard-reapply-seed1
 # S1, S3 and S4 share a frozen orc barbarian (inc-frim), for the same reason:
 # a fresh chargen.keys build drew a different character on every seed.
-BARB=tools/fixtures/chars/orc-barbarian-reapply-seed4.sav
+BARB=tools/fixtures/chars/orc-barbarian-reapply-seed4.char
 status=0
 for section in S1 S2 S3 S4 S5; do
     allow_death=
@@ -198,7 +199,10 @@ if section == 'S1':
         text = screen(label)
         require('Cost: It has a base value' in text, label + ' description footer not reached')
         value(label + ' Magic Weapon description count', text.count('Magic Weapon:'), expected)
-    evidence('rested', r'You awaken feeling well.*rested and\b.*?\brecovered', 'rest completed')
+    rest_text = screen('rested') + screen('rested-end')   # the message may wait behind a -- more -- on the first
+    found = re.search(r'You awaken feeling well.*rested and\b.*?\brecovered', rest_text, re.I | re.S)
+    print(f'{section} rest completed: {bool(found)}')
+    require(found is not None, 'rest completed')
 elif section == 'S2':
     will('sheet-without-periapt', 0, 'poison')
     will('sheet-with-periapt', 2, 'poison')
