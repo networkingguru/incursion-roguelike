@@ -103,7 +103,7 @@ void WroughtHardnessProbe(Player *pl) {
             dmg, hp0, hp1, gone ? 1 : 0, lost, dmg - 10);
         if (gone || lost != dmg - 10) fail = true;
         Error("WROUGHT_HARD_PROBE: line=[%s]", line);
-        const bool vs10 = strstr(line, "vs. 10 (") != NULL;
+        const bool vs10 = strstr(line, "vs. 10 (") != NULL || strstr(line, "vs. 10 [") != NULL; // inc-o94cu: a name that carries the material drops the note
         const bool dmgTxt = strstr(line, "damage") != NULL;
         const bool immune = strstr(line, "vs. Immune") != NULL;
         Error("WROUGHT_HARD_PROBE: line vs10=%d damage=%d immune=%d", vs10, dmgTxt, immune);
