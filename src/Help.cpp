@@ -90,11 +90,11 @@ static void HelpTClass(String & helpText, TClass *tc) {
     h += Format("\n\n<10>CLASS SKILLS<2>\n__The class skills of the %s are ",
         (const char*)tc->GetName(0));
     int scount = 0;
-    for (i = 1; i != SK_LAST; i++)
-        if (tc->HasSkill(i))
+    for (i = 1; i != SK_COUNT; i++)
+        if (tc->HasSkill(SkillByIndex(i)))
             scount++;
-    for (i = 1; i != SK_LAST; i++)
-        if (tc->HasSkill(i)) {
+    for (i = 1; i != SK_COUNT; i++)
+        if (tc->HasSkill(SkillByIndex(i))) {
             scount--;
             if (!scount)
                 h += ("and ");
@@ -1005,12 +1005,12 @@ String & DescribeSkill(int16 sk);
 static bool HelpSkills(String & helpText)
 {
   bool are_unimp = false; int16 i;
-  for (i = 1; i < SK_LAST; i++) 
+  for (i = 1; i < SK_COUNT; i++) 
     {
       PurgeStrings();
       helpText += XPrint(Format("\n<11>%s<3>\n%s\n",
         SkillInfo[i].name,
-        (const char*)DescribeSkill(i)));
+        (const char*)DescribeSkill(SkillByIndex(i))));
     }
 
   if (!are_unimp)
@@ -1357,15 +1357,15 @@ void HelpCustom(String &helpText, Player *p)
       }
 
     helpText += BoxIt("My Skills {K}",YELLOW,GREY);
-    for (i=0;i!=SK_LAST;i++)
+    for (i=0;i!=SK_COUNT;i++)
       {
-        if (!p->GetSkillRanks(i))
+        if (!p->GetSkillRanks(SkillByIndex(i)))
           continue;
-        for (int16 j=0;j!=SK_LAST;j++)
-          if (SkillInfo[j].sk == i)
+        for (int16 j=0;j!=SK_COUNT;j++)
+          if (SkillInfo[j].sk == SkillByIndex(i))
             helpText += XPrint("<13><Str><5>\n",
                           (const char*) Upper(SkillInfo[i].name));
-        helpText += XPrint(DescribeSkill(i));
+        helpText += XPrint(DescribeSkill(SkillByIndex(i)));
         helpText += "\n\n";
       }
 
@@ -2720,10 +2720,10 @@ static void WikiCollectFeats(WikiData &wd) {
 }
 
 static void WikiCollectSkills(WikiData &wd) {
-    for (int16 i = 1; i < SK_LAST; i++) {
+    for (int16 i = 1; i < SK_COUNT; i++) {
         PurgeStrings();
         std::string name = SkillInfo[i].name;
-        std::string body = XPrint((const char*)DescribeSkill(i));
+        std::string body = XPrint((const char*)DescribeSkill(SkillByIndex(i)));
         int e = wd.AddEntry(WIKI_SKILL, name, body);
         wd.AddToGroup(WIKI_IX_SKILLS, "", e);
     }
@@ -3649,7 +3649,7 @@ String & Monster::Describe(Player *p) {
         str += "It has the ";
         feats = skills = 0;
         for (i = 0; tm->Feats[i] && i != 16; i++)
-            if (tm->Feats[i] > SK_LAST)
+            if (!IsSkill(tm->Feats[i]))
                 feats++;
             else
                 skills++;
@@ -3657,12 +3657,12 @@ String & Monster::Describe(Player *p) {
             str += feats == 1 ? "feat " : "feats ";
             lc = 0;
             for (i = 0; tm->Feats[i] && i != 16; i++)
-                if (tm->Feats[i] > SK_LAST) {
+                if (!IsSkill(tm->Feats[i])) {
                     str += XPrint("<5><str><7>", FeatName(tm->Feats[i]));
                     if (tm->Feats[i] == FT_SKILL_FOCUS)
                         str += XPrint(" <5>(<str>)<7>",
-                        tm->Feats[i + 1] < SK_LASTSKILL ?
-                        SkillInfo[tm->Feats[i + 1]].name : "invalid");
+                        IsSkill(tm->Feats[i + 1]) ?
+                        SkillInfo[SkillIndex(tm->Feats[i + 1])].name : "invalid");
                     lc++;
                     if (lc >= 511)
                         break;
@@ -3681,8 +3681,8 @@ String & Monster::Describe(Player *p) {
             str += skills == 1 ? "skill " : "skills ";
             lc = 0;
             for (i = 0; tm->Feats[i] && i != 16; i++)
-                if (tm->Feats[i] <= SK_LAST) {
-                    str += XPrint("<2><str><7>", SkillInfo[tm->Feats[i]].name);
+                if (IsSkill(tm->Feats[i])) {
+                    str += XPrint("<2><str><7>", SkillInfo[SkillIndex(tm->Feats[i])].name);
                     /* Kludge! */
                     if (mm->Kills > 20)
                         str += Format(" (%+d)", SkillLevel(tm->Feats[i]) -
@@ -3804,7 +3804,7 @@ String & Monster::Describe(Player *p) {
     for (i = 0; i < NUM_TMON_STATI; i++) {
         Status * S = &tm->Stati[i];
         if (S->Nature == SKILL_BONUS) {
-            List[lc++] = XPrint(Format("<2>%s<7> (%+d)", SkillInfo[S->Val].name, S->Mag));
+            List[lc++] = XPrint(Format("<2>%s<7> (%+d)", SkillInfo[SkillIndex(S->Val)].name, S->Mag));
             if (lc >= 511)
                 break;
         }
@@ -4184,7 +4184,7 @@ SkipMonsterStats:
                 str += "It has the bonus ";
                 feats = skills = 0;
                 for (i = 0; tt->NewFeats[i] && i != 16; i++)
-                    if (tt->NewFeats[i] > SK_LAST)
+                    if (!IsSkill(tt->NewFeats[i]))
                         feats++;
                     else
                         skills++;
@@ -4192,10 +4192,10 @@ SkipMonsterStats:
                     str += feats == 1 ? "feat " : "feats ";
                     lc = 0;
                     for (i = 0; tt->NewFeats[i] && i != 16; i++)
-                        if (tt->NewFeats[i] > SK_LAST) {
+                        if (!IsSkill(tt->NewFeats[i])) {
                             str += XPrint("<5><str><7>", FeatName(tt->NewFeats[i]));
                             if (tt->NewFeats[i] == FT_SKILL_FOCUS)
-                                str += XPrint(" <5>(<Str>)<7>", SkillInfo[tt->NewFeats[i + 1]].name);
+                                str += XPrint(" <5>(<Str>)<7>", SkillInfo[SkillIndex(tt->NewFeats[i + 1])].name);
                             lc++;
                             if (lc >= 511)
                                 break;
@@ -4214,8 +4214,8 @@ SkipMonsterStats:
                     str += skills == 1 ? "skill " : "skills ";
                     lc = 0;
                     for (i = 0; tt->NewFeats[i] && i != 16; i++)
-                        if (tt->NewFeats[i] <= SK_LAST) {
-                            str += XPrint("<2><str><7>", SkillInfo[tt->NewFeats[i]].name);
+                        if (IsSkill(tt->NewFeats[i])) {
+                            str += XPrint("<2><str><7>", SkillInfo[SkillIndex(tt->NewFeats[i])].name);
                             lc++;
                             if (lc >= 511)
                                 break;
@@ -4237,7 +4237,7 @@ SkipMonsterStats:
             lc = 0;
             for (i = 0; i < NUM_TMON_STATI; i++)
                 if (tt->Stati[i].Nature == SKILL_BONUS) {
-                    List[lc++] = Format("<2>%s<7> (%+d)", SkillInfo[tt->Stati[i].Val].name, tt->Stati[i].Mag);
+                    List[lc++] = Format("<2>%s<7> (%+d)", SkillInfo[SkillIndex(tt->Stati[i].Val)].name, tt->Stati[i].Mag);
                 }
             if (lc) {
                 str += "It gains a racial skill bonus to ";
@@ -5621,7 +5621,7 @@ String & DescribeFeat(int16 ft) {
                             break;
                         }
                         case FP_SKILL:
-                            s += Format("<2>%s >= %+d<7>", SkillInfo[fc->arg].name, fc->val);
+                            s += Format("<2>%s >= %+d<7>", SkillInfo[SkillIndex(fc->arg)].name, fc->val);
                             break;
                         case FP_CR:
                             s += Format("<4>Challenge Rating >= %d<7>", fc->arg); break;

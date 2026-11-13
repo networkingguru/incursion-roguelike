@@ -20,6 +20,32 @@ appear as a quoted string in lib/landed-<bead>.irh; a new variable as a whole
 word. Comments in the landed file do not count. Where else the name is
 declared does not matter.
 
+Two kinds of name are NOT new to the bead, though the base ledger lacks them:
+
+  Merged-in (a master-into-epic merge bead, whose base is the epic). Every
+  parent of a merge commit on base..HEAD other than its first parent, and
+  MERGE_HEAD while a merge is uncommitted, is a merged parent. The first parent
+  is the bead's own line and never counts. A name that the ledger of a merged
+  parent holds, or that a lib/landed-<other bead>.irh holds, is not new, when
+  that file is in the merged parent's tree, not in the base's, and is not this
+  bead's own. Master's gate already admitted them. A resource the bead adds
+  itself, outside its landed file, is still new and refused. A parent with no
+  ledger holds nothing.
+
+  Renamed in place. In the same array, a name that sits at a position where the
+  base ledger (or a merged parent's ledger) holds a different name, and that
+  old name is absent from the whole array in the tree, is not new (an in-place
+  rename: docs/SAVE-SCHEMA-SPEC.md Amendment 1). The ledger records positions
+  (the E lines, in order). A rename whose old name still exists elsewhere in the
+  array is an addition plus a move, and stays new.
+
+  Retired (kept: the rule above needs the same position, and this one does not,
+  e.g. a merged-parent name that sits at another position in the epic).
+  "X;retired" (a tombstone: a retired name keeps its slot) is not new
+  when the base ledger, or a merged parent, holds "X" or "X;retired". Retire
+  means a name that master had. A name that is retired on its first appearance
+  has no live name to retire, so it stays new.
+
 It also refuses a lib/landed-*.irh that lib/landed.irc does not include, and
 an include line in lib/landed.irc that names a missing file or is not an
 include line.
@@ -105,18 +131,32 @@ def module_vars(rep):
     return out
 
 
-def new_names(dump, base):
-    """[(kind, array name or '', name)] the dump holds and the base does not."""
+RETIRED = ";retired"
+
+
+def new_names(dump, base, parents=()):
+    """[(kind, array name or '', name)] the dump holds and neither the base nor a merged parent does."""
     out = []
-    b_arr = array_entries(base)
+    held = [array_entries(r) for r in (base,) + tuple(parents)]
     for arr, names in array_entries(dump).items():
-        have = set(b_arr.get(arr, []))
+        have = set()
+        present = set(names)
+        for h in held:
+            have.update(h.get(arr, []))
+            old = h.get(arr, [])
+            for i, o in enumerate(old[:len(names)]):
+                if o != names[i] and o not in present:
+                    have.add(names[i])
         seen = set()
         for nm in names:
+            if nm.endswith(RETIRED) and nm[:-len(RETIRED)] in have:
+                continue
             if nm not in have and nm not in seen:
                 seen.add(nm)
                 out.append(("resource", arr, nm))
     have = set(module_vars(base))
+    for r in parents:
+        have.update(module_vars(r))
     seen = set()
     for nm in module_vars(dump):
         if nm not in have and nm not in seen:
@@ -125,7 +165,13 @@ def new_names(dump, base):
     return out
 
 
-def check(bead, dump, base, lib):
+def declared_in(kind, nm, body):
+    if kind == "resource":
+        return ('"%s"' % nm) in body
+    return re.search(r"(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % re.escape(nm), body) is not None
+
+
+def check(bead, dump, base, lib, parents=(), parent_bodies=()):
     """Return the list of refusal messages (empty = clean)."""
     refusals = []
     landed_irc = lib / "landed.irc"
@@ -154,12 +200,10 @@ def check(bead, dump, base, lib):
         body = strip_comments((lib / mine).read_text(encoding="utf-8", errors="replace"))
     except OSError:
         body = None
-    for kind, arr, nm in new_names(dump, base):
-        if kind == "resource":
-            found = body is not None and ('"%s"' % nm) in body
-        else:
-            found = body is not None and re.search(
-                r"(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % re.escape(nm), body) is not None
+    for kind, arr, nm in new_names(dump, base, parents):
+        found = body is not None and declared_in(kind, nm, body)
+        if not found and any(declared_in(kind, nm, pb) for pb in parent_bodies):
+            continue
         if not found:
             refusals.append(
                 'new %s %r (%s) is not declared in lib/%s: declare it there and append '
@@ -167,7 +211,38 @@ def check(bead, dump, base, lib):
     return refusals
 
 
-def run(bead, dump_path, base_path, lib):
+def merged_parents(bead, base_name):
+    """(reports, landed bodies) of the merged parents of this branch; see the docstring."""
+    shas = []
+    rc, out = git("rev-list", "--merges", "--parents", "%s..HEAD" % base_name)
+    if rc == 0:
+        for ln in out.splitlines():
+            shas.extend(ln.split()[2:])
+    rc, out = git("rev-parse", "-q", "--verify", "MERGE_HEAD")
+    if rc == 0 and out.strip():
+        shas.append(out.strip())
+    rc, out = git("ls-tree", "-r", "--name-only", base_name, "lib/")
+    in_base = set(out.split("\n")) if rc == 0 else set()
+    reports, bodies = [], []
+    for sha in dict.fromkeys(shas):
+        rc, text = git("show", "%s:tools/resource_order.ledger" % sha)
+        if rc == 0:
+            try:
+                reports.append(roc.parse(text))
+            except ValueError as e:
+                raise Cannot("ledger of merged parent %s unreadable: %s" % (sha[:10], e))
+        rc, out = git("ls-tree", "-r", "--name-only", sha, "lib/")
+        for path in (out.split("\n") if rc == 0 else []):
+            fn = path[len("lib/"):]
+            if (path.startswith("lib/landed-") and path.endswith(".irh") and path not in in_base
+                    and fn != "landed-%s.irh" % bead):
+                rc, text = git("show", "%s:%s" % (sha, path))
+                if rc == 0:
+                    bodies.append(strip_comments(text))
+    return reports, bodies
+
+
+def run(bead, dump_path, base_path, lib, parent_paths=None):
     if bead is None:
         rc, out = git("rev-parse", "--abbrev-ref", "HEAD")
         if rc != 0:
@@ -198,7 +273,17 @@ def run(bead, dump_path, base_path, lib):
             raise Cannot("base ledger unreadable: %s" % e)
     else:
         base = read_report(base_path, "base ledger")
-    return check(bead, dump, base, lib)
+    if parent_paths is None:
+        rc, base_name = git("config", "--get", "branch.%s.incursionBase" % bead)
+        base_name = base_name.strip() if rc == 0 and base_name.strip() else "master"
+        parents, bodies = merged_parents(bead, base_name)
+    else:
+        parents = [read_report(p, "merged parent ledger") for p in parent_paths]
+        bodies = []
+        for p in parent_paths:
+            for f in sorted(pathlib.Path(str(p) + ".landed").glob("*.irh")):
+                bodies.append(strip_comments(f.read_text(encoding="utf-8", errors="replace")))
+    return check(bead, dump, base, lib, parents, bodies)
 
 
 def selftest():
@@ -222,7 +307,7 @@ def selftest():
     n = [0]
 
     def case(label, want, *, bead="inc-t1", dump=None, base=None, irc="", files=None,
-             badbead=None, nodump=False, nobase=False):
+             badbead=None, nodump=False, nobase=False, parent=None, parent_landed=None):
         n[0] += 1
         d = work / ("c%d" % n[0])
         lib = d / "lib"
@@ -238,8 +323,17 @@ def selftest():
         bp.write_text(base if base is not None else rec(base_arrays, ["v1"]))
         if nobase:
             bp.write_text("garbage line\n")
+        pp = []
+        if parent is not None:
+            pl = d / "parent"
+            pl.write_text(parent)
+            pp = [pl]
+            if parent_landed:
+                (d / "parent.landed").mkdir()
+                for fn, body in parent_landed.items():
+                    (d / "parent.landed" / fn).write_text(body)
         try:
-            got = 1 if run(badbead or bead, dp, bp, lib) else 0
+            got = 1 if run(badbead or bead, dp, bp, lib, pp) else 0
         except Cannot:
             got = 2
         if got != want:
@@ -269,6 +363,36 @@ def selftest():
     case("unreadable ledger", 2, nobase=True)
     dupe = rec([("Effect", ["Fire", "Ice"]), ("Flavour", ["red", "red", "blue", "red"])], ["v1"])
     case("repeated Flavour name", 0, dump=dupe)
+    # merge bead: base is the epic, a merged parent (master) holds what the epic lacks
+    master = rec([("Effect", ["Fire", "Ice", "Zap"]), ("Flavour", ["red", "red", "blue"])], ["v1"])
+    case("merged-parent resource accepted", 0, dump=plus, parent=master)
+    case("merge bead's own stray resource refused", 1, dump=plus, parent=rec(base_arrays, ["v1"]))
+    case("merged-parent landed file accepted", 0, dump=plus, parent=rec(base_arrays, ["v1"]),
+         parent_landed={"landed-inc-t9.irh": 'Effect "Zap" : 1 { }\n'})
+    case("merged-parent landed file comment only", 1, dump=plus, parent=rec(base_arrays, ["v1"]),
+         parent_landed={"landed-inc-t9.irh": '// "Zap"\n'})
+    case("merged-parent variable accepted", 0, dump=plusv,
+         parent=rec(base_arrays, ["v1", "newvar"]))
+    ret = rec([("Effect", ["Fire", "Ice;retired"]), ("Flavour", ["red", "red", "blue"])], ["v1"])
+    case("tombstone of a base name accepted", 0, dump=ret)
+    case("tombstone already in the base accepted", 0, dump=ret,
+         base=rec([("Effect", ["Fire", "Ice;retired"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    case("tombstone of a merged-parent name accepted", 0, dump=rec(
+         [("Effect", ["Fire", "Ice", "Zap;retired"]), ("Flavour", ["red", "red", "blue"])], ["v1"]),
+         parent=master)
+    case("brand-new retired name refused", 1, dump=rec(
+         [("Effect", ["Fire", "Ice", "Zap;retired"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    ren = rec([("Effect", ["Fire", "Ice;grw"]), ("Flavour", ["red", "red", "blue"])], ["v1"])
+    case("in-place rename accepted", 0, dump=ren)
+    case("rename in place of a merged-parent name accepted", 0, dump=ren,
+         parent=rec([("Effect", ["Fire", "Ice"]), ("Flavour", ["red", "red", "blue"])], ["v1"]),
+         base=rec([("Effect", ["Fire", "Ice;grw"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    case("rename with old name still present refused", 1, dump=rec(
+         [("Effect", ["Fire", "Ice", "Ice;grw"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    case("old name moved to another slot, new name added, refused", 1, dump=rec(
+         [("Effect", ["Ice", "Fire2"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    case("new name at a new position refused", 1, dump=rec(
+         [("Effect", ["Fire", "Ice", "Zap2"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
     shutil.rmtree(work, ignore_errors=True)
     if fails:
         for f in fails:

@@ -17,7 +17,7 @@
      bool TMonster::isMType(int8 mt) 
      bool Creature::isMType(int8 mt) 
      String Player::BonusBreakdown(int8 at, int16 maxlen)
-     String Player::SkillBreakdown(int8 sk, int16 maxlen)
+     String Player::SkillBreakdown(int16 sk, int16 maxlen)
      String Player::SpellBreakdown(int8 sp, int16 maxlen)
      String Player::ResistBreakdown(int8 dt, int16 maxlen)
 
@@ -2514,7 +2514,8 @@ void TMonster::InitializeMTypeCache(rID tmid)
   Monster * m = new Monster(tmid);
   m->CalcValues();
   memset(MTypeCache,0,sizeof(MTypeCache));
-  for (i=0; i<MA_LAST; i++) {
+  for (int k=0; k<MaAllCount(); k++) {
+    i = MaAllType(k);
     bool res = false;
     if (i == MType[0] || i == MType[1] || i == MType[2])
       res = true;
@@ -2769,7 +2770,7 @@ bool Creature::isMType(int32 mt)
     case MA_LAST:
       return false; 
     default:
-      if (mt >= MA_LAST)
+      if (mt >= MA_LAST && !IsRealMonType(mt))
         Error("Strange MA_XXX constant sent to TMonster::isMType!");
       return false;
   }
@@ -3014,7 +3015,7 @@ String & Creature::BonusBreakdown(int8 at, int16 maxlen)
     return *tmpstr((Long.GetLength() > maxlen) ? Short : Long);
   }
 
-String & Player::SkillBreakdown(int8 sk, int16 maxlen)
+String & Player::SkillBreakdown(int16 sk, int16 maxlen)
   {
     return *tmpstr("");
   }

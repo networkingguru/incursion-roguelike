@@ -1,0 +1,39 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..7bf4eb1 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1219,6 +1219,8 @@ class Character: public Creature
+       FIELD_H  ("Mount", Mount);
+       FIELD_U32("XP", XP);
+       FIELD_U32("XP_Drained", XP_Drained);
++      uint32 ac8N03B = 29;
++      FIELD_U32("Ac8N03B", ac8N03B);
+       FIELD_ARRAY("SpellsLearned", SpellsLearned, sizeof(uint8), 10);
+       FIELD_ARRAY("SpellSlots", SpellSlots, sizeof(uint8), 10);
+       FIELD_ARRAY("BonusSlots", BonusSlots, sizeof(uint8), 10);
+diff --git a/inc/Defines.h b/inc/Defines.h
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2182,8 +2182,8 @@ typedef signed int        hObj;
+ #define SK_USE_MAGIC  47
+ #define SK_WILDERNESS 48
+ #define SK_WILD_LORE  48  /* alias of SK_WILDERNESS */
+-#define SK_LASTSKILL  49
+-#define SK_LAST       49  /* alias of SK_LASTSKILL */
++#define SK_LASTSKILL  50
++#define SK_LAST       50  /* alias of SK_LASTSKILL */
+ #define SK_AC8_P 800
+ #define SK_ANY -1
+ /* SK_HIGH_END is one past the last high skill. */
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index fe8ba3f..3e204bf 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4845,6 +4845,7 @@ SkillInfoStruct SkillInfo[] = {
+      "It also gives you a chance to identify mushrooms and herbs, and "
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
++  { 49, "Ac8 Low", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { SK_AC8_P, "Ac8 P", true, false, "__Ac8 test skill.", A_INT, A_INT, false, 0 },
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;

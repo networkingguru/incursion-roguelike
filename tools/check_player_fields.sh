@@ -81,9 +81,12 @@ Character|fracFatigue|excluded|fatigue remainder of play
 Character|fallen|excluded|fallen-paladin flag of play; false when the character is made
 Character|skip:isFallenPaladin|excluded|a bool staged through the fallen field, never stored itself
 Character|Level|stated|the class pick and the level lines
+Character|hpRollsRow|derived|the row count of hpRolls, worked out from the class levels
 Character|hpRolls|stated|the hp_roll lines, one per class level
+Character|manaRollsRow|derived|the row count of manaRolls, worked out from the class levels
 Character|manaRolls|stated|the mana_roll lines, one per class level
 Character|SaveBonus|derived|worked out from race, class and feats
+Character|GainAttrRow|derived|the row count of GainAttr, worked out from the level_attr picks
 Character|GainAttr|stated|the level_attr picks (the attribute gained at levels 4, 8 and so on)
 Character|NotifiedLevel|excluded|interface record of the last level announced
 Character|ClassID[i]|stated|the class pick and the addclass lines
@@ -104,6 +107,7 @@ Character|resChance|excluded|resurrection chance of play; set when the character
 Character|FavourLev|derived|favor level, set when the god pick joins the god
 Character|TempFavour|excluded|favor of play; zero when the character is made
 Character|Anger|stated|the Transgress roll an Elf of another god makes when made (script_roll); zero for every other character
+Character|SacValsRow|excluded|row count of the sacrifice tally of play; zero when the character is made
 Character|SacVals|excluded|sacrifice tally of play; zero when the character is made
 Character|FavPenalty|excluded|favor penalty of play; zero when the character is made
 Character|PrayerTimeout|excluded|prayer clock of play
@@ -209,7 +213,7 @@ def block(cls):
 
 def fields(body):
     found = []
-    for m in re.finditer(r"\b(FIELD_[A-Z0-9]+|V1Str)\s*\(", body):
+    for m in re.finditer(r"\b(FIELD_[A-Z0-9_]+|V1Str_AT|V1Str)\s*\(", body):
         a = args_of(body, m.end() - 1)
         if a is None:
             print("INCONCLUSIVE: unbalanced %s call" % m.group(1)); sys.exit(2)
@@ -218,7 +222,8 @@ def fields(body):
         else:
             if len(a) < 2:
                 print("INCONCLUSIVE: %s call with one argument" % m.group(1)); sys.exit(2)
-            key = a[1].lstrip("&")
+            # an element call (FIELD_RID_AT, V1Str_AT) names its member in the third argument: ClassID[i]
+            key = (a[2] if m.group(1).endswith("_AT") and len(a) > 2 else a[1]).lstrip("&")
         found.append(re.sub(r"\s+", "", key))
     return found
 
@@ -273,16 +278,16 @@ if [ "${1:-}" = "--selftest" ]; then
     python3 - "$T/Creature.h" <<'PY'
 import sys
 p = sys.argv[1]; s = open(p).read()
-a = "      FIELD_I16(543, statMethod);\n"
+a = "      FIELD_I16(\"statMethod\", statMethod);\n"
 assert s.count(a) == 1
-open(p, "w").write(s.replace(a, a + "      FIELD_I16(544, mutationNew);\n"))
+open(p, "w").write(s.replace(a, a + "      FIELD_I16(\"mutationNew\", mutationNew);\n"))
 PY
     expect_red "a FIELD_ line is added to the Player block" "C7 Player field mutationNew is saved"
     fresh
     python3 - "$T/Creature.h" <<'PY'
 import sys
 p = sys.argv[1]; s = open(p).read()
-a = "      FIELD_U32(409, Personality);\n"
+a = "      FIELD_U32(\"Personality\", Personality);\n"
 assert s.count(a) == 1
 open(p, "w").write(s.replace(a, ""))
 PY

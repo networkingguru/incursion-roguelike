@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3368,6 +3368,7 @@
+ // end family: stati
+ // family: val_invis stored ordinal i16 val-of INVIS
+   #define INV_NORMAL   1
++  #define INV_GRWA 3
+   #define INV_IMPROVED 2
+ // end family: val_invis
+ // family: stati stored ordinal u8

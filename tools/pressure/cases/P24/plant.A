@@ -1,0 +1,3 @@
+# P24: side A's new ts member TS_GRWA (= 0x20), planted by name
+trap light trap
+set trap TrapFlags TS_GRWA

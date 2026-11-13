@@ -1,0 +1,13 @@
+diff --git a/src/Tables.cpp b/src/Tables.cpp
+index 34bd619..e9efecb 100644
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -4845,6 +4845,8 @@ SkillInfoStruct SkillInfo[] = {
+      "It also gives you a chance to identify mushrooms and herbs, and "
+      "increases your success ratio while decreasing time spent for hunting.", 
+      A_WIS, A_WIS, false, 0}, 
++  /* ac8 high skill slot A */
++  /* ac8 high skill slot B */
+   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
+ } ;
+ 

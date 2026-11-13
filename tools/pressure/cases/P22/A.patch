@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -165,6 +165,7 @@
+ 
+ 
+ #define FIRST_DIR 0
++#define DIR_GRWA 11
+ #define NORTH     0  /* alias of FIRST_DIR */
+ #define SOUTH     1
+ #define EAST      2

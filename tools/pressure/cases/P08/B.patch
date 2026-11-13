@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3187,6 +3187,7 @@
+ // family: val_blind stored ordinal i16 val-of BLINDNESS
+   #define BLIND_UNWANTED        0
+   #define BLIND_EYES_CLOSED     1
++  #define BLIND_GRWB 2
+ // end family: val_blind
+ // family: stati stored ordinal u8
+ #define HALLU         4

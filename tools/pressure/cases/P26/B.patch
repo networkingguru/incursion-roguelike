@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2582,6 +2582,7 @@
+ #define DF_BROKEN   0x40
+ #define DF_SEARCHED 0x80
+ #define DF_PICKED   0x80  /* alias of DF_SEARCHED */
++#define DF_GRWB 0x1
+ // end family: df_door
+ // family: ft stored ordinal u16 grows FT_LAST
+ 

@@ -754,7 +754,7 @@ race_entry:
                                   theRace->FavouredClass[1] = rr2; 
                                   theRace->FavouredClass[2] = rr3; }
   | SKILLS (':')? {int8 skn = 0;}
-      ( cexpr3<sk> { theRace->Skills[skn++] = (int8)sk; } (',')? )* ';'
+      ( cexpr3<sk> { theRace->Skills[skn++] = (int16)sk; } (',')? )* ';'
   | cexpr3<n> (':')? LITERAL<lv> ';' { switch(n) {
                                          case MALE_NAMES  : theRace-> MNames = lv; break;
                                          case FEMALE_NAMES: theRace-> FNames = lv; break;
@@ -786,7 +786,7 @@ class_entry:
   | GRANTS (':')? (special_ability<AbT,Abil,p,l1,l2> (',')?
       { theClass->AddAbility((int8)AbT,(int16)Abil,p,(int8)l1,(int8)l2); } )* ';'
   | SKILLS ('[') cexpr3<sp> (']')  { theClass->SkillPoints = (uint8)sp; int8 skn = 0; }
-      (':')? ( cexpr3<sk> { theClass->Skills[skn++] = (uint8)sk; } (',')? )* ';'
+      (':')? ( cexpr3<sk> { theClass->Skills[skn++] = (int16)sk; } (',')? )* ';'
   | PROFICIENCIES (':')?
       (cexpr3<pr> { theClass->Proficiencies |= pr; } (',')? )* ';'
   | FLAGS (':')?  (cexpr3<n> ('|' | ',')? { theClass->SetFlag((uint16)n); } )* ';'
@@ -1359,12 +1359,13 @@ s_object_decl: { BSysObj *b; }
   ;
 
 
+/* inc-cjos0: a variable name MUST be declared once per scope (module, or one resource body); saves key a variable by (owner, name). */
 g_declaration: { BGlobalVar *b; }
   type_name<ty> IDENT<vn>
     { if (ty == DT_STRING)
         Error("Global variables of type String cannot be created!");
       if (theSymTab.GetBinding(vn,0,0,GLOB_VAR))
-        Error("Global variable '%s' declared twice!",theSymTab[vn]);
+        yyerror(Format("Variable '%s' declared twice in scope module (the compile line is the second declaration).",theSymTab[vn]));
       else if (theSymTab.GetBinding(vn,0,1,ANY))
         yyerror(Format("Identifier conflict: '%s'.", theSymTab[vn]));
       b = new BGlobalVar();
@@ -1377,7 +1378,7 @@ g_declaration: { BGlobalVar *b; }
       theSymTab.Bind(vn,b); }
   (',' IDENT<vn>
     { if (theSymTab.GetBinding(vn,0,0,GLOB_VAR))
-        Error("Global variable '%s' declared twice!",theSymTab[vn]);
+        yyerror(Format("Variable '%s' declared twice in scope module (the compile line is the second declaration).",theSymTab[vn]));
       else if (theSymTab.GetBinding(vn,0,1,ANY))
         yyerror(Format("Identifier conflict: '%s'.", theSymTab[vn]));
       b = new BGlobalVar();
@@ -1437,7 +1438,7 @@ r_declaration: { BResVar *b; String scope_id; }
                        theSymTab[vn], theModule->GetText(theRes->Name)));
       b->Event = 0;
       if (theSymTab.GetBinding(vn,b->xID,b->Event,RES_VAR))
-        Error("Resource variable '%s' declared twice!",theSymTab[vn]);
+        yyerror(Format("Variable '%s' declared twice in scope resource '%s' (the compile line is the second declaration).",theSymTab[vn],theModule->GetText(theRes->Name)));
       b->VarType = (int8)ty; 
       b->Address = HeapHead++;
       b->type    = RES_VAR;
@@ -1450,7 +1451,7 @@ r_declaration: { BResVar *b; String scope_id; }
                        theSymTab[vn], theModule->GetText(theRes->Name)));
       b->Event = 0;
       if (theSymTab.GetBinding(vn,b->xID,b->Event,RES_VAR))
-        Error("Resource variable '%s' declared twice!",theSymTab[vn]);
+        yyerror(Format("Variable '%s' declared twice in scope resource '%s' (the compile line is the second declaration).",theSymTab[vn],theModule->GetText(theRes->Name)));
       b->VarType = (int8)ty; 
       b->Address = HeapHead++;
       b->type    = RES_VAR;

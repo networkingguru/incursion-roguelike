@@ -1,0 +1,26 @@
+diff --git a/lib/landed-inc-g04b.irh b/lib/landed-inc-g04b.irh
+new file mode 100644
+index 0000000..70c6e0c
+--- /dev/null
++++ b/lib/landed-inc-g04b.irh
+@@ -0,0 +1,14 @@
++Dungeon "Grw B Cellar"
++  {
++    Constants:
++      * TURN_CHANCE 20,
++      * STUBBORN_CORRIDOR 4,
++      * STAIRS_UP $"up stairs",
++      * STAIRS_DOWN $"down stairs",
++      * DIGGING_REGION $"Rough-Hewn Tunnel",
++      * DUN_DEPTH 3;
++    Specials:
++      * $"arena chamber" at level 1;
++    Desc: "A growth-test dungeon.";
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..8828833 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g04b.irh"

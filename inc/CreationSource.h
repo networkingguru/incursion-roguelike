@@ -141,7 +141,9 @@ enum CreationKey {
     CK_COUNT
 };
 
+// no-family
 enum CreationKind { CKIND_ROLL, CKIND_PICK, CKIND_ITEM };
+// end no-family
 
 const char    *CreationKeyName(CreationKey k);   /* lower case: "attr_str" */
 CreationKind   CreationKeyKind(CreationKey k);

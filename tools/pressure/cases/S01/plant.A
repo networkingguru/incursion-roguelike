@@ -1,0 +1,2 @@
+# S01: side A adds a staged field; the content save is a fixture re-saved through the real writer, so the oracle sees the field by value after the merge
+resave

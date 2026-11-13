@@ -2437,7 +2437,7 @@ Wizard Spell "Animate Rope" : EA_GENERIC
         hObj hItem, hAnim; int16 percent;                            
         /* Send damage the animated object takes directly to its     
            actual Item object, and adjust cHP accordingly. */         
-        if (e.DType <= AD_LAST_PHYSICAL)                             
+        if (DTypeTakesHP(e.DType))                             
           {                                                          
             hItem = EVictim->GetStatiObj(TRANSFORMED);               
             hAnim = GetHandle(EVictim);                              
@@ -4323,6 +4323,9 @@ Wizard Spell "Lorecall" : EA_INFLICT
         {
           found = false;
           for(i=0;i!=SK_LASTSKILL;i++)
+            if (EActor->HasSkill(i) && EActor->GetSkillRanks(i))
+              { found = true; ETerm->LOption(SkillName(i),i); }
+          for(i=SK_HIGH_FIRST;i!=SK_HIGH_END;i++)
             if (EActor->HasSkill(i) && EActor->GetSkillRanks(i))
               { found = true; ETerm->LOption(SkillName(i),i); }
           if (!found)

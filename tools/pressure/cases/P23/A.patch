@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -318,6 +318,7 @@
+ // family: f_flag stored bits u32 field-of Thing.Flags
+ 
+ #define F_SOLID          0x0001 /* Prevents Travel            */
++#define F_GRWA 0x20
+ #define F_XSOLID         0x0002 /* Prevents Ethereal Travel   */
+ #define F_INVIS          0x0004
+ #define F_DELETE         0x0008 /* Marked for deletion        */

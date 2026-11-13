@@ -1,0 +1,13 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..7bf4eb1 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1219,6 +1219,8 @@ class Character: public Creature
+       FIELD_H  ("Mount", Mount);
+       FIELD_U32("XP", XP);
+       FIELD_U32("XP_Drained", XP_Drained);
++      uint32 ac8N03B = 29;
++      FIELD_U32("Ac8N03B", ac8N03B);
+       FIELD_ARRAY("SpellsLearned", SpellsLearned, sizeof(uint8), 10);
+       FIELD_ARRAY("SpellSlots", SpellSlots, sizeof(uint8), 10);
+       FIELD_ARRAY("BonusSlots", BonusSlots, sizeof(uint8), 10);

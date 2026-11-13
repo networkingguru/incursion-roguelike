@@ -65,13 +65,52 @@ Player::~Player() {
     /* m->RemovePlayer(this); */
 }
 
+/* The options file is one byte per option and OPT_LAST may grow, so a player's
+   file can be shorter than OPT_LAST (an older build wrote it) or longer (a newer
+   build did). Short: the bytes it has are read, every later option takes its
+   default. Long: it is not read, one line names both lengths, and the caller
+   MUST NOT write over it. Returns false for a long file. Tracking: inc-cjos0. */
+static bool ReadOptionsFile(Term *T, const char *fn, int8 *buf) {
+    int32 n; int16 i;
+    T->OpenRead(fn);
+    T->Seek(0, SEEK_END);
+    n = T->Tell();
+    T->Seek(0, SEEK_SET);
+    if (n > OPT_LAST) {
+        T->Close();
+        fprintf(stderr, "incursion: %s is %ld bytes, this build reads %d; left untouched, running on defaults\n",
+            fn, (long)n, (int)OPT_LAST);
+        Error("%s is %ld bytes, this build reads %d; left untouched, running on defaults",
+            fn, (long)n, (int)OPT_LAST);
+        return false;
+    }
+    memset(buf, 0, OPT_LAST);
+    for (i = 0; OptionList[i].Val; i++)
+        buf[OptionList[i].Val] = OptionList[i].Default;
+    if (n > 0)
+        T->FRead(buf, n);
+    T->Close();
+    return true;
+}
+
+/* True when the file on disk is longer than this build reads. */
+static bool OptionsFileTooLong(Term *T, const char *fn) {
+    int32 n;
+    if (!T->Exists(fn))
+        return false;
+    T->OpenRead(fn);
+    T->Seek(0, SEEK_END);
+    n = T->Tell();
+    T->Close();
+    return n > OPT_LAST;
+}
+
 void Player::UpdateOptions(bool specific_game) {
     int8 tOptions[OPT_LAST]; int16 i;
     MyTerm->ChangeDirectory(".");
     if (MyTerm->Exists(SC(MyTerm->OptionsSubDir()) + OPT_FILE)) {
-        MyTerm->OpenRead(SC(MyTerm->OptionsSubDir()) + OPT_FILE);
-        MyTerm->FRead(tOptions, OPT_LAST);
-        MyTerm->Close();
+        if (!ReadOptionsFile(MyTerm, SC(MyTerm->OptionsSubDir()) + OPT_FILE, tOptions))
+            return;
     } else {
         memset(tOptions, 0, OPT_LAST);
         for (i = 0; OptionList[i].Val; i++)
@@ -109,9 +148,11 @@ void Player::LoadOptions(bool new_game) {
     memcpy(vOptions, Options, OPT_LAST);
     MyTerm->ChangeDirectory(".");
     if (MyTerm->Exists(SC(MyTerm->OptionsSubDir()) + OPT_FILE)) {
-        MyTerm->OpenRead(SC(MyTerm->OptionsSubDir()) + OPT_FILE);
-        MyTerm->FRead(Options, OPT_LAST);
-        MyTerm->Close();
+        if (!ReadOptionsFile(MyTerm, SC(MyTerm->OptionsSubDir()) + OPT_FILE, (int8*)Options)) {
+            memset(Options, 0, OPT_LAST);
+            for (i = 0; OptionList[i].Val; i++)
+                Options[OptionList[i].Val] = OptionList[i].Default;
+        }
     } else {
         memset(Options, 0, OPT_LAST);
         for (i = 0; OptionList[i].Val; i++)
@@ -137,6 +178,8 @@ void Player::ResetOptions() {
     for (i = 0; OptionList[i].Val; i++)
         Options[OptionList[i].Val] = OptionList[i].Default;
     MyTerm->ChangeDirectory(".");
+    if (OptionsFileTooLong(MyTerm, SC(MyTerm->OptionsSubDir()) + OPT_FILE))
+        return;
     MyTerm->OpenWrite(SC(MyTerm->OptionsSubDir()) + OPT_FILE);
     MyTerm->FWrite(Options, OPT_LAST);
     MyTerm->Close();
@@ -3135,9 +3178,11 @@ String & Player::GetJournal() {
 const char* Player::GetMonstersEncountered() {
     static String mons;
     mons = Format("  Total: %d\n", JournalInfo.numMonSeen);
-    for (int i = 1; i < MA_LAST_REAL; i++)
-        if (JournalInfo.numMonOfType[i] > 0 && LookupOnly(MTypeNames, i))
-            mons += Format("  %4d %s\n", JournalInfo.numMonOfType[i], (const char*)Pluralize(Lookup(MTypeNames, i), 0));
+    for (int k = 1; k < MA_COUNT; k++) {
+        int i = MaByIndex(k);
+        if (JournalInfo.numMonOfType[k] > 0 && LookupOnly(MTypeNames, i))
+            mons += Format("  %4d %s\n", JournalInfo.numMonOfType[k], (const char*)Pluralize(Lookup(MTypeNames, i), 0));
+    }
     return mons;
 }
 
@@ -3193,9 +3238,9 @@ found_it:;
     if (!m->HasStati(HALLU)) {
         m->GainPermStati(HALLU, 0, SS_MISC);
         JournalInfo.numMonSeen++;
-        for (int i = 1; i < MA_LAST_REAL; i++)
-            if (m->isMType(i))
-                JournalInfo.numMonOfType[i]++;
+        for (int k = 1; k < MA_COUNT; k++)
+            if (m->isMType(MaByIndex(k)))
+                JournalInfo.numMonOfType[k]++;
     }
 }
 

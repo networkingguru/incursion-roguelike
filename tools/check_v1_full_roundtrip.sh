@@ -41,6 +41,10 @@
 # Modelled on tools/check_dump_save.sh: same deterministic seed-1 +
 # smoke.keys save, same sandboxing (nothing here can touch the real save/).
 #
+# fact: character name, HP and race asserted in the dump -- seed 1 with tools/keys/smoke.keys and options-2026-08-22.dat; generated characters drift with content, tracked by inc-ye7o
+# fact: the save's field ids -- read from the save's own name table, never a number
+# fact: the volatile fields -- the named allowlist in this check, each entry with its reason
+#
 # Usage: tools/check_v1_full_roundtrip.sh   (exits 0 on pass, 1 on fail)
 set -uo pipefail
 
@@ -169,19 +173,21 @@ ALLOW = {
     # Game: the cc* profiling counters (tags 800-807) and their two
     # per-nature arrays (811, 812) count perception/AI/CalcValues work
     # done since process start; the load path itself does such work.
-    **{(1, str(t)): "profiling counter" for t in range(800, 808)},
-    (1, "811"): "profiling counter array",
-    (1, "812"): "profiling counter array",
+    **{(1, n): "profiling counter" for n in
+       ("ccHasEffStati", "ccHasValStati", "ccHasNatStati", "ccHasStatiTrue",
+        "ccHasStatiFalse", "ccHSPerceive", "ccHSMonAI", "ccHSCalcVal")},
+    (1, "ccStatiNat"): "profiling counter array",
+    (1, "ccStatiVal"): "profiling counter array",
     # Game.Turn: the quick-quit save costs one game tick, every
     # generation (measured: exactly +1 per cycle).
-    (1, "814"): "quick-quit tick",
+    (1, "Turn"): "quick-quit tick",
     # Player.GameTimeInfo.LTI[]: StoreLevelStats folds wall-clock seconds
     # and the session's menu keystrokes into the depth row on every save.
-    (7, "527.1"): "wall-clock/keystroke level stats",
+    (7, "GameTimeInfo.GameTimeInfo_LTI"): "wall-clock/keystroke level stats",
     # Player.GameTimeInfo.start_turn: reset to Game.Turn on save.
-    (7, "527.2"): "follows Turn",
+    (7, "GameTimeInfo.GameTimeInfo_start_turn"): "follows Turn",
     # Player.GameTimeInfo.start_second: time(NULL) at the save.
-    (7, "527.5"): "wall clock",
+    (7, "GameTimeInfo.GameTimeInfo_start_second"): "wall clock",
 }
 
 def parse(path):
@@ -199,17 +205,26 @@ def parse(path):
         sys.exit(f"{path}: raw file but compSize != groupSize")
     pos = 124
     recs = []
+    names = {}      # id -> field name, from the group's name table record (type 200)
     for _ in range(objc):
         typ = d[pos]
         handle, reclen = struct.unpack_from("<II", d, pos + 1)
-        recs.append((handle, typ, d[pos + 9:pos + 9 + reclen]))
+        body = d[pos + 9:pos + 9 + reclen]
         pos += 9 + reclen
-    return recs
+        if typ == 200:
+            q = 0
+            while q != len(body):
+                nid, sl = struct.unpack_from("<HH", body, q); q += 4 + sl
+                nl, = struct.unpack_from("<H", body, q); q += 2
+                names[nid] = body[q:q + nl].decode(); q += nl
+            continue
+        recs.append((handle, typ, body))
+    return recs, names
 
 FIXED = {1: 1, 2: 1, 3: 2, 4: 2, 5: 4, 6: 4, 9: 4, 10: 4}
 
-def fields(stream, prefix=""):
-    """Leaf fields of one record's field stream as {tagpath: (kind, bytes)}."""
+def fields(stream, names, prefix=""):
+    """Leaf fields of one record's field stream as {namepath: (kind, bytes)}."""
     pos, out = 0, {}
     while True:
         tag, = struct.unpack_from("<H", stream, pos); pos += 2
@@ -226,20 +241,17 @@ def fields(stream, prefix=""):
             n = 8 + c * e; pay = stream[pos:pos + n]; pos += n
         else:
             sys.exit(f"unknown kind {kind}")
-        tp = f"{prefix}{tag}"
+        tp = f"{prefix}{names[tag]}"
         if kind == 12:
-            out.update(fields(pay, tp + "."))
+            out.update(fields(pay, names, tp + "."))
         else:
             out[tp] = (kind, pay)
     return out
 
-# Records only, not the trailing separator/name table. Sound because the
-# table is a pure function of the record walk (entries are interned in
-# first-use order as the rID fields are written, and the separator is a
-# constant), and no rID-kind field is allowlisted -- so any table
-# divergence necessarily shows up as a differing K_RID index inside a
-# record, which this compare catches.
-a, b = parse(sys.argv[1]), parse(sys.argv[2])
+# Records only; the field-name table (record type 200) is read to name the
+# ids and is not compared. Fields are keyed by NAME (inc-cjos0), so the ids
+# of two generations need not agree.
+(a, na), (b, nb) = parse(sys.argv[1]), parse(sys.argv[2])
 if [(h, t) for h, t, s in a] != [(h, t) for h, t, s in b]:
     sys.exit("record sets differ between the two generations")
 
@@ -247,7 +259,7 @@ bad = 0
 for (h, t, sa), (_, _, sb) in zip(a, b):
     if sa == sb:
         continue
-    fa, fb = fields(sa), fields(sb)
+    fa, fb = fields(sa, na), fields(sb, nb)
     for tp in sorted(set(fa) | set(fb)):
         if fa.get(tp) == fb.get(tp):
             continue

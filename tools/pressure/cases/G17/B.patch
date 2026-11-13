@@ -1,0 +1,16 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..a7dcfcc 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2344,9 +2344,10 @@ typedef signed int        hObj;
+ #define CA_TATTOOS           138
+ #define CA_ACROBATIC_FIGHTING 139
+ #define CA_GRANT_ITEM        140
++#define CA_GRWB 143
+ #define CA_MASTER_ARTISAN    141
+ #define CA_HIDE_IN_PLAIN_SIGHT 142
+-#define CA_LAST              143
++#define CA_LAST              144
+ // end family: ca
+ // family: phd internal
+ 

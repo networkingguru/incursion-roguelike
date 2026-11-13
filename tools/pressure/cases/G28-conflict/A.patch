@@ -1,0 +1,34 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 4c9aa4f..437c23c 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1175,7 +1175,7 @@ class Character: public Creature
+       FIELD_I16("ExoticCount", ExoticCount);
+       FIELD_I16("aStoryPluses", aStoryPluses);
+       FIELD_I16("tStoryPluses", tStoryPluses);
+-      FIELD_U8 ("RageCount", RageCount);
++      FIELD_U8 ("RageCounter", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
+       FIELD_I16("polyTicks", polyTicks);
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index f87c653..0afd505 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -15,6 +15,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+ };
+ 
+ static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
++  { "Character", "RageCount", "RageCounter" },
+   { NULL, NULL, NULL }
+ };
+ 
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index 39f7316..70d4660 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -4,3 +4,4 @@
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
+ Character SpellsU16
++rename Character RageCount RageCounter

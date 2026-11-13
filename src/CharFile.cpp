@@ -20,7 +20,9 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+// no-family
 #define EXIT_BUILD_FAILED 10
+// end no-family
 
 void CreationBuildFail(const char *fmt, ...)
 {

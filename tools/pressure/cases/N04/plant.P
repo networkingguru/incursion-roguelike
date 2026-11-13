@@ -1,0 +1,3 @@
+# N04: rows at the last old column, P's own build
+roll hp 1 10 31
+roll mana 2 10 42

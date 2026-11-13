@@ -1,0 +1,8 @@
+docs/specs/2026-11-06-fixture-builder-sites.md	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	| Create.cpp:835 `Create(bool reincarnate)`; Main.cpp:129 `NewGame`; inc/Creature.h:1512; Res.h:1346 | 895; 132; 1832; 1367 | declarations |
+docs/specs/2026-11-06-fixture-builder-sites.md	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	| (none) | Create.cpp:3401 comment, 3410 `creating=(Mode==MO_CREATE)` in ChooseDomains; 6215 FeatPrereq refuses a `FF_CREATION_ONLY` feat unless `Mode==MO_CREATE`; inc/Creature.h:149 comment; Create.cpp:4833 comment | epic: behavior that depends on the mode value |
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	for m in re.finditer(r"\b(FIELD_[A-Z0-9_]+|V1Str_AT|V1Str)\s*\(", body):
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	# an element call (FIELD_RID_AT, V1Str_AT) names its member in the third argument: ClassID[i]
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	key = (a[2] if m.group(1).endswith("_AT") and len(a) > 2 else a[1]).lstrip("&")
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	a = "      FIELD_I16(\"statMethod\", statMethod);\n"
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	open(p, "w").write(s.replace(a, a + "      FIELD_I16(\"mutationNew\", mutationNew);\n"))
+tools/check_player_fields.sh	fit	inc-10v7f landing fix: the checks read the names inc-cjos0 saves	a = "      FIELD_U32(\"Personality\", Personality);\n"

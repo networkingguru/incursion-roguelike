@@ -11,10 +11,10 @@
 class Feature: public Thing
 	{
     ARCHIVE_CLASS(Feature,Thing,r)
-      FIELD_I16(176, cHP);
-      FIELD_I16(177, mHP);
-      FIELD_RID(178, fID);
-      FIELD_I8 (179, MoveMod);
+      FIELD_I16("cHP", cHP);
+      FIELD_I16("mHP", mHP);
+      FIELD_RID("fID", fID);
+      FIELD_I8 ("MoveMod", MoveMod);
     END_ARCHIVE
 		public:
     int16 cHP, mHP; 
@@ -57,8 +57,8 @@ class Feature: public Thing
 class Door: public Feature
 	{
     ARCHIVE_CLASS(Door,Feature,r)
-      FIELD_I8 (192, DoorFlags);
-      FIELD_U32(193, SecretSavedGlyph);
+      FIELD_I8 ("DoorFlags", DoorFlags);
+      FIELD_U32("SecretSavedGlyph", SecretSavedGlyph);
     END_ARCHIVE
 
 		public:
@@ -98,8 +98,8 @@ class Door: public Feature
 class Trap: public Feature
   {
     ARCHIVE_CLASS(Trap,Feature,r)
-      FIELD_U8 (208, TrapFlags);
-      FIELD_RID(209, tID);
+      FIELD_U8 ("TrapFlags", TrapFlags);
+      FIELD_RID("tID", tID);
     END_ARCHIVE
     public:
       uint8 TrapFlags; rID tID;

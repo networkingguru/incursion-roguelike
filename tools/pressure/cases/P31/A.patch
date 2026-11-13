@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4400,6 +4400,7 @@
+ // family: gs stored bits u16 elem-of Character.godFlags
+ 
+ #define GS_INVOLVED      0x0001
++#define GS_GRWA 0x80
+ #define GS_FORSAKEN      0x0002
+ #define GS_ABANDONED     0x0004
+ #define GS_CROWNED       0x0008

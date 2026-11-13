@@ -2952,7 +2952,8 @@ char TextTerm::ChoicePrompt(const char*msg,const char*choices,int8 col1, int8 co
 
 int32 TextTerm::MonsterTypePrompt(const char * prompt, int minCount, int maxCount, Player *recallFor) {
   int i; String desc;
-  for (i=1; i<=MA_LAST_REAL; i++) {
+  for (int k=1; k<MA_COUNT; k++) {
+    i = MaByIndex(k);
     desc = "";
     int count_in_this_ma = 0; 
     for (int modIdx = 0; modIdx < 1; modIdx++) {

@@ -1,0 +1,36 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 53b563d..7d5720f 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -893,6 +893,7 @@ class Character: public Creature
+     public:
+       uint16 desiredAlign;
+       uint32 Proficiencies;
++      int32 GrwAidWait = 17;
+       /* General Stuff */
+ 	    Character(rID mID,int16 _Type);
+       virtual String & Describe(Player* p);
+@@ -1248,6 +1249,7 @@ class Character: public Creature
+       FIELD_ARRAY("lastPulse", lastPulse, sizeof(int32), MAX_GODS);
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
++      FIELD_I32("GrwAidWait", GrwAidWait);
+       FIELD_U32("Proficiencies", Proficiencies);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+@@ -1466,6 +1468,7 @@ class Player: public Character
+ 	 	  int16 MapMemoryMask;
+ 	 	  int16 GallerySlot;
+       int8  MapSP;
++      int32 GrwJournalMark = 41;
+       friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets MaxDepths */
+       int16 MaxDepths[MAX_DUNGEONS];
+       uint32 MMArray[MAX_SPELLS];
+@@ -1761,6 +1764,7 @@ class Player: public Character
+       FIELD_I32("deathCount", deathCount);
+       FIELD_I32("rerollCount", rerollCount);
+       FIELD_I16("statMethod", statMethod);
++      FIELD_I32("GrwJournalMark", GrwJournalMark);
+       if (!isSave)
+         {
+           /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry

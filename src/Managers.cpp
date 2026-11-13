@@ -1921,8 +1921,14 @@ SellItem:
 
 void TextTerm::SkillManager(bool initial) {
 #define SKILLS_SHOWN 15
-    int8 height, width, cc, i, j, k, x1, x2, y1, y2, sl, ln, old_curr, usp[6];
-    int8 Alloc[SK_LAST][6], Ranks[SK_LAST], Show[SK_LAST * 2], MRanks[SK_LAST], Spent[6], offset, last_class, last_universal, last_imp;
+    int8 height, width, cc, x1, x2, y1, y2, sl, usp[6];
+    /* i, j, k, ln, old_curr, offset and last_* count skill rows (SK_COUNT, past
+       127 once high skills exist), so they are int16. Show[] holds skill
+       INDEXES (SkillIndex), not skill numbers; Alloc[], Ranks[], MRanks[] are
+       indexed the same way. */
+    int16 i, j, k, ln, old_curr, offset, last_class, last_universal, last_imp;
+    int8 Alloc[SK_COUNT][6], Ranks[SK_COUNT], MRanks[SK_COUNT], Spent[6];
+    int16 Show[SK_COUNT * 2];
     int16 ch;
     bool maxed;
     String desc;
@@ -1936,10 +1942,10 @@ void TextTerm::SkillManager(bool initial) {
 
 Reset:
 
-    memset(Alloc, 0, SK_LAST * 6);
-    memset(Ranks, 0, SK_LAST);
-    memset(Show, 0, SK_LAST * 2);
-    memset(MRanks, 0, SK_LAST);
+    memset(Alloc, 0, SK_COUNT * 6);
+    memset(Ranks, 0, SK_COUNT);
+    memset(Show, 0, sizeof(Show));
+    memset(MRanks, 0, SK_COUNT);
     Spent[0] = Spent[1] = Spent[2] = Spent[3] = Spent[4] = Spent[5] = 0;
     usp[0] = usp[1] = usp[2] = usp[3] = usp[4] = usp[5] = 0;
 
@@ -2014,29 +2020,29 @@ Recount:
     do {
 
         j = 0;
-        for (i = 1; i != SK_LAST; i++)
-            if (tc->HasSkill(i) && (SkillInfo[i].imp || 1))
+        for (i = 1; i != SK_COUNT; i++)
+            if (tc->HasSkill(SkillByIndex(i)) && (SkillInfo[i].imp || 1))
                 Show[j++] = i;
         last_class = j;
 
-        for (i = 1; i != SK_LAST; i++)
-            if (tr->HasSkill(i) || p->HasStati(EXTRA_SKILL, i) || isFamiliar(i))
-                if (!tc->HasSkill(i))
+        for (i = 1; i != SK_COUNT; i++)
+            if (tr->HasSkill(SkillByIndex(i)) || p->HasStati(EXTRA_SKILL, SkillByIndex(i)) || isFamiliar(SkillByIndex(i)))
+                if (!tc->HasSkill(SkillByIndex(i)))
                     if (SkillInfo[i].imp || 1)
                         Show[j++] = i;
         last_universal = j;
 
-        for (i = 1; i != SK_LAST; i++)
-            if (!(tc->HasSkill(i) || tr->HasSkill(i) || isFamiliar(i) || p->HasStati(EXTRA_SKILL, i)))
+        for (i = 1; i != SK_COUNT; i++)
+            if (!(tc->HasSkill(SkillByIndex(i)) || tr->HasSkill(SkillByIndex(i)) || isFamiliar(SkillByIndex(i)) || p->HasStati(EXTRA_SKILL, SkillByIndex(i))))
                 if (SkillInfo[i].imp || 1)
                     Show[j++] = i;
         last_imp = j;
 
-        for (i = 1; i != SK_LAST; i++)
+        for (i = 1; i != SK_COUNT; i++)
             if (0 && !SkillInfo[i].imp)
                 Show[j++] = i;
         Show[j] = 0;
-        ASSERT(SK_LAST >= j)
+        ASSERT(SK_COUNT >= j)
             ln = 0;
 
     ReDraw:
@@ -2057,7 +2063,7 @@ Recount:
         for (i = offset, j = 0; Show[i] && j < SKILLS_SHOWN; i++)
             if (Show[i]) {
                 PurgeStrings();
-                maxed = p->SkillRanks[Show[i]] == p->MaxRanks(Show[i]);
+                maxed = p->SkillRanks[Show[i]] == p->MaxRanks(SkillByIndex(Show[i]));
 
                 if (i < last_class)
                     Color(maxed ? GREEN : EMERALD);
@@ -2071,11 +2077,11 @@ Recount:
                 Color(GREY);
                 Write(24, sl + j, Format("%d", p->SkillRanks[Show[i]] /*+
                                 Alloc[i][0] + Alloc[i][1] + Alloc[i][2]*/));
-                Write(30, sl + j, Format("%d", p->MaxRanks(Show[i])));
+                Write(30, sl + j, Format("%d", p->MaxRanks(SkillByIndex(Show[i]))));
                 static const char *AttrNames[] = { "Str", "Dex", "Con", "Int", "Wis", "Cha", "Luc" };
 
-                Write(34, sl + j, Format("%s", AttrNames[p->SkillAttr(Show[i])]));
-                Write(40, sl + j, Format("%+d", p->SkillLevel(Show[i])));
+                Write(34, sl + j, Format("%s", AttrNames[p->SkillAttr(SkillByIndex(Show[i]))]));
+                Write(40, sl + j, Format("%+d", p->SkillLevel(SkillByIndex(Show[i]))));
                 Color(AZURE);
                 for (k = 0; k != Alloc[Show[i]][cc]; k++)
                     PutChar(50 + k, sl + j, '*');
@@ -2101,7 +2107,7 @@ Recount:
                 ClearScroll();
                 desc = Upper(Format("%c%s%c ",
                     -PINK, SkillInfo[Show[offset + ln]].name, -GREY));
-                desc += XPrint(DescribeSkill(Show[offset + ln]));
+                desc += XPrint(DescribeSkill(SkillByIndex(Show[offset + ln])));
                 SWrapWrite(0, 0, desc, WinSizeX() - 2, WIN_MENUDESC);
                 UpdateScrollArea(0, WIN_MENUDESC);
                 SetWin(WIN_CUSTOM);
@@ -2145,7 +2151,7 @@ Recount:
                 break;
             case KY_CMD_SOUTH:
                 if (ln >= min(j, SKILLS_SHOWN)) {
-                    if (offset + SKILLS_SHOWN < (SK_LAST - 1)) {
+                    if (offset + SKILLS_SHOWN < (SK_COUNT - 1)) {
                         offset++;
                         goto ReDraw;
                     }
@@ -2164,7 +2170,7 @@ Recount:
 
                 if (!usp[cc] || p->SkillRanks[Show[offset + ln]] + Alloc[Show[offset + ln]][0] +
                     Alloc[Show[offset + ln]][1] + Alloc[Show[offset + ln]][2] >=
-                    p->MaxRanks(Show[offset + ln]))
+                    p->MaxRanks(SkillByIndex(Show[offset + ln])))
                     break;
                 usp[cc]--;
                 PutChar((usp[cc] % 50) + 2, 1 + usp[cc] / 50, ' ');
@@ -2217,6 +2223,8 @@ Recount:
                         kept[i] = (int8)(p->SkillRanks[i] + Alloc[i][0] + Alloc[i][1] + Alloc[i][2] + Alloc[i][3] + Alloc[i][4] + Alloc[i][5]);
                     p->CommitSkillRanks(kept, usp);
                 }
+                for (i = SK_LAST; i != SK_COUNT; i++)
+                    p->SkillRanks[i] += Alloc[i][0] + Alloc[i][1] + Alloc[i][2] + Alloc[i][3] + Alloc[i][4] + Alloc[i][5];
                 goto Leave;
             case KY_ESC:
                 /* The footer has always promised "[ESC] Abort". It still
@@ -2805,13 +2813,13 @@ void TextTerm::DisplayCharSheet() {
         case 'F':
             s.Empty();
             if (!p->Opt(OPT_HELP_MODE)) {
-                for (i = SK_LAST; i != FT_LAST; i++)
+                for (i = FT_FIRST; i != FT_LAST; i++)
                     if (p->HasFeat(i)) {
                         s += Format("%s\n", XPrint(DescribeFeat(i)));
                     }
                 Box(WIN_CSHEET, 0, YELLOW, GREY, s);
             } else {
-                for (i = SK_LAST; i < FT_LAST; i++)
+                for (i = FT_FIRST; i < FT_LAST; i++)
                     if (p->HasFeat(i)) {
                         LOption(FeatName(i), i, DescribeFeat(i));
                     }

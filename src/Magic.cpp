@@ -208,13 +208,13 @@ int16 Creature::SpellDmgBonus(rID eID)
       return 0;
     db = Mod(A_WIS) + AbilityLevel(CA_ARCANE_WILL);
     if (( (te->Vals(0)->eval == EA_BLAST && 
-           te->Vals(0)->xval <= AD_LAST_PHYSICAL) ||
+           DTypeTakesHP(te->Vals(0)->xval)) ||
           (te->Vals(1) && te->Vals(1)->eval == EA_BLAST && 
-           te->Vals(1)->xval <= AD_LAST_PHYSICAL) ||
+           DTypeTakesHP(te->Vals(1)->xval)) ||
           (te->Vals(2) && te->Vals(2)->eval == EA_BLAST && 
-           te->Vals(2)->xval <= AD_LAST_PHYSICAL) ||
+           DTypeTakesHP(te->Vals(2)->xval)) ||
           (te->Vals(3) && te->Vals(3)->eval == EA_BLAST && 
-           te->Vals(3)->xval <= AD_LAST_PHYSICAL)) &&
+           DTypeTakesHP(te->Vals(3)->xval))) &&
         HasAbility(CA_SPELL_FURY) &&
         (te->HasSource(AI_WIZARDRY) || te->HasSource(AI_SORCERY)))
       {

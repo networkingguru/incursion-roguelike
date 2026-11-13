@@ -1,0 +1,20 @@
+diff --git a/inc/Item.h b/inc/Item.h
+index 57f06c9..5b3ce17 100644
+--- a/inc/Item.h
++++ b/inc/Item.h
+@@ -31,6 +31,7 @@ class Item: public Thing, public Magic
+       FIELD_I16("Age", Age);
+       FIELD_U8 ("swingCount", swingCount);
+       FIELD_U32("Quantity", Quantity);
++      FIELD_U8 ("GrwMood", GrwMood);
+       FIELD_STR("Inscrip", Inscrip);
+       FIELD_STR("GenStats", GenStats);
+       FIELD_RID("iID", iID);
+@@ -51,6 +52,7 @@ class Item: public Thing, public Magic
+       int16 Age;
+       uint8 swingCount;
+ 			uint32 Quantity;
++			uint8 GrwMood = 3;
+       String Inscrip;
+       String GenStats;
+       rID iID, eID;

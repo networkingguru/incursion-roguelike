@@ -233,9 +233,9 @@ static void KitProbe(Player *p)
        monster-torch predicate; ranks lists every skill with ranks. */
     {
         String ranks;
-        for (i = 0; i < SK_LASTSKILL; i++)
-            if (p->GetSkillRanks(i) > 0)
-                ranks += Format("%d,", (int)i);
+        for (int k = 0; k < SK_COUNT; k++)
+            if (p->GetSkillRanks(SkillByIndex(k)) > 0)
+                ranks += Format("%d,", SkillByIndex(k));
         Error("KIT_FACTS dark=%d ranks=%s",
             (p->HasAbility(CA_INFRAVISION) || p->HasAbility(CA_TREMORSENSE) ||
              p->HasAbility(CA_BLINDSIGHT)) ? 1 : 0, (const char*)ranks);
@@ -928,7 +928,7 @@ bool Player::Create(bool) {
     XP = 0;
 
     x = -1; 
-    for(i=0;i!=(FT_LAST/8)+1;i++)
+    for(i=0;i!=(FEATBITS_LAST/8)+1;i++)
         Feats[i] = 0;
     for(i=0;i!=(MAX_SPELLS/8)+1;i++)
         Spells[i] = 0;
@@ -939,7 +939,7 @@ bool Player::Create(bool) {
     // Every other loop over SkillRanks in this codebase uses "i!=SK_LAST"
     // with no "+1" (Debug.cpp:1677, Create.cpp:2958/2990, Managers.cpp:1821,
     // Help.cpp:82); this is the only outlier. UBSan, Traced, inc-bd2, not sent.
-    for(i=0;i!=SK_LAST;i++)
+    for(i=0;i!=SK_COUNT;i++)
         SkillRanks[i] = 0;
 
     MyTerm->SetMode(MO_PLAY);
@@ -1503,7 +1503,7 @@ SkipThisFocus:;
         //{ SK_LOCKPICKING, "lockpicks" },
         { 0, NULL } };
     for (i=0;SkillKits[i].Val;i++)
-        if (SkillRanks[SkillKits[i].Val]) {
+        if (SkillRanks[SkillIndex(SkillKits[i].Val)]) {
             Item * it = Item::Create(FIND(SkillKits[i].Text));
             GainItem(it,true);
         }
@@ -4311,7 +4311,7 @@ Restart:
     //Win = WIN_SCREEN; 
     OneFeat = false;
 
-    if (feat >= FT_FIRST)
+    if (feat >= FT_FIRST && !IsSkill(feat))
         goto SelectedFeat;
 
     switch(ofeat) {
@@ -4430,8 +4430,9 @@ SelectedFeat:
         else {
             Found = false;
             pl.Clear();
-            for(i=1;i!=SK_LAST;i++)
-                if (SkillInfo[i].imp) {
+            for(int k=1;k!=SK_COUNT;k++) {
+                i = SkillByIndex(k);
+                if (SkillInfo[k].imp) {
                     bool taken; taken = false;
                     StatiIterNature(this, SKILL_BONUS)
                         if (S->Val == i && S->Source == SS_PERM)
@@ -4439,13 +4440,14 @@ SelectedFeat:
                     StatiIterEnd(this)
                         if (taken)
                             continue;
-                    if (!SkillInfo[i].name)
+                    if (!SkillInfo[k].name)
                         continue;
-                    MyTerm->LOption(SkillInfo[i].name,i,
-                        DescribeSkill(SkillInfo[i].sk));
-                    pl.Add(SkillInfo[i].name, i);
+                    MyTerm->LOption(SkillInfo[k].name,i,
+                        DescribeSkill(SkillInfo[k].sk));
+                    pl.Add(SkillInfo[k].name, i);
                     Found = true; 
                 }
+            }
                 if (!Found) {
                     if (ofeat != feat)
                         feat = ofeat; 
@@ -4464,14 +4466,16 @@ SelectedFeat:
         else {
             Found = false;
             pl.Clear();
-            for(i=0;i!=SK_LAST;i++)
+            for(int k=0;k!=SK_COUNT;k++) {
+                i = SkillByIndex(k);
                 if (!HasSkill(i))                
-                    if (SkillInfo[i].name && SkillInfo[i].imp)
+                    if (SkillInfo[k].name && SkillInfo[k].imp)
                         if (!HasStati(EXTRA_SKILL,i)) {
-                            MyTerm->LOption(SkillInfo[i].name,i,DescribeSkill(SkillInfo[i].sk));
-                            pl.Add(SkillInfo[i].name, i);
+                            MyTerm->LOption(SkillInfo[k].name,i,DescribeSkill(SkillInfo[k].sk));
+                            pl.Add(SkillInfo[k].name, i);
                             Found = true;
                         }
+            }
             if (!Found) {
                 if (ofeat != feat)
                     feat = ofeat; 
@@ -5520,7 +5524,7 @@ bool Character::HasFeat(int16 ft, bool inh, bool list)
                                 The range guard keeps skill ids out: Feats[] is shared
                                 between feats and class/race skills, and a template's
                                 Feats: list may hold either. */
-                                if (ft >= FT_FIRST && TMON(tmID)->HasFeat(ft))
+                                if (ft >= FT_FIRST && !IsSkill(ft) && TMON(tmID)->HasFeat(ft))
                                     return true;
 
                                 /* A monk's training IS Two-Weapon Style and
@@ -5805,12 +5809,12 @@ int16 Creature::SkillLevel(int16 sk)
     if (isCharacter()) {
         for (i=0;Synergies[i][0];i++)
             if (Synergies[i][0] == sk)
-                if (thisp->SkillRanks[Synergies[i][1]])
-                    s_syn += thisp->SkillRanks[Synergies[i][1]] /
+                if (thisp->SkillRanks[SkillIndex(Synergies[i][1])])
+                    s_syn += thisp->SkillRanks[SkillIndex(Synergies[i][1])] /
                     Synergies[i][2];
 
 
-        sr = thisp->SkillRanks[sk];
+        sr = thisp->SkillRanks[SkillIndex(sk)];
         if (HasStati(ANC_MEM,sk))
         {
             int16 mr = thisp->MaxRanks(sk);
@@ -5917,7 +5921,7 @@ FoundFocus:
         if (HasStati(SINGING) && sk != SK_PERFORM)
             s_circ -= 2;
 
-        if (SkillInfo[sk].armour_penalty) {
+        if (SkillInfo[SkillIndex(sk)].armour_penalty) {
             Item *it; 
             static int16 armourSlots[] = {
                 SL_ARMOUR, SL_READY, SL_WEAPON, 0
@@ -5934,7 +5938,7 @@ FoundFocus:
                         if (sk == SK_SWIM && it->HasQuality(IQ_FEATHERLIGHT))
                             s_armour += pval;
                         else
-                            s_armour += SkillInfo[sk].armour_penalty * pval;
+                            s_armour += SkillInfo[SkillIndex(sk)].armour_penalty * pval;
                     } 
                 } 
             }
@@ -5969,8 +5973,8 @@ int16 Creature::ISkillLevel(int16 sk)
 
 int16 Creature::SkillAttr(int16 sk) {
     int8 attr1, attr2; 
-    attr1 = SkillInfo[sk].attr1;
-    attr2 = SkillInfo[sk].attr2;
+    attr1 = SkillInfo[SkillIndex(sk)].attr1;
+    attr2 = SkillInfo[SkillIndex(sk)].attr2;
     if (HasFeat(FT_ONE_BODY_ONE_SOUL) || (Attr[A_CON] == 0))  {
         if (Attr[A_WIS] > Attr[A_CON]) {
             if (attr1 == A_CON) attr1 = A_WIS;
@@ -5983,7 +5987,7 @@ int16 Creature::SkillAttr(int16 sk) {
     if (attr1 == attr2) 
         return attr1;
     else {
-        if (SkillInfo[sk].take_min) 
+        if (SkillInfo[SkillIndex(sk)].take_min) 
             return Attr[attr1] > Attr[attr2] ? attr2 : attr1;
         else 
             return Attr[attr1] > Attr[attr2] ? attr1 : attr2;

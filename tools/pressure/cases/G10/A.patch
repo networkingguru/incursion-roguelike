@@ -1,0 +1,20 @@
+diff --git a/inc/Item.h b/inc/Item.h
+index 57f06c9..62e523c 100644
+--- a/inc/Item.h
++++ b/inc/Item.h
+@@ -36,6 +36,7 @@ class Item: public Thing, public Magic
+       FIELD_RID("iID", iID);
+       FIELD_RID("eID", eID);
+       FIELD_U16("IFlags", IFlags);
++      FIELD_I16("GrwCharges2", GrwCharges2);
+     END_ARCHIVE
+     protected:
+ 			uint16 Known;
+@@ -55,6 +56,7 @@ class Item: public Thing, public Magic
+       String GenStats;
+       rID iID, eID;
+ 			uint16 IFlags;
++			int16 GrwCharges2 = 5;
+       Item(Item *i);
+ 
+       /* General Functions */

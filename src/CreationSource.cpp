@@ -57,7 +57,9 @@ bool CreationKeyIsInput(CreationKey k)
     return k >= 0 && k < CK_COUNT && keyDefault[k] != NULL;
 }
 
+// no-family
 enum { CKU_SEEN = 0, CKU_UNSEEN = 1 };
+// end no-family
 static const bool keyUnseen[CK_COUNT] = {
 #define X(n,k,d,r,u) CKU_##u == CKU_UNSEEN,
     CREATION_KEY_LIST(X)
@@ -327,7 +329,9 @@ std::string CreationItemText(const CreationItem &it) { return ItemText(it); }
 
 /* ---- reading the names back ---------------------------------------------- */
 
+// no-family
 enum { FIND_ITEM, FIND_EFFECT };
+// end no-family
 
 /* The one resource of `which` kind named `name` across every loaded module.
    Fails on none and on more than one. */
@@ -651,7 +655,9 @@ const CreationPerkField CreationPerkFields[] = {
     { PERK_RESIST,  CK_PERK_RESIST,  PerkResistWrite,  PerkResistRead },
     { PERK_IMMUNE,  CK_PERK_IMMUNE,  PerkImmuneWrite,  PerkImmuneRead },
 };
+// no-family
 const int CreationPerkFieldCount = (int)(sizeof(CreationPerkFields) / sizeof(CreationPerkFields[0]));
+// end no-family
 
 /* The retained perk set, one named line per field (spec section 3). */
 static void EmitPerks(const PerkSet &set)

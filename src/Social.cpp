@@ -2793,7 +2793,8 @@ int16 Player::CommandTypeOf(Creature *c) {
     if (type)
         return type;
     int16 best = -32768;
-    for (int16 t = 1; t < MA_LAST; ++t)
+    for (int k = 1; k < MaAllCount(); ++k) {
+        int16 t = (int16)MaAllType(k);
         if (HasStati(COMMAND_ABILITY, t) && c->isMType(t)) {
             int16 power = SumStatiMag(COMMAND_ABILITY, t);
             if (power > best) {
@@ -2801,6 +2802,7 @@ int16 Player::CommandTypeOf(Creature *c) {
                 type = t;
             }
         }
+    }
     return type;
 }
 
@@ -2892,8 +2894,10 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR, int16 CommandType) {
         /* upstream: party absorbs the sum of per-type excesses in XCR,
            never spare capacity in another command type. Plain arithmetic
            fails on Win32 alike. Traced, inc-sgre, not sent. */
-        for (int16 type = 0; type < MA_LAST; ++type)
+        for (int k = 0; k < MaAllCount(); ++k) {
+            int16 type = (int16)MaAllType(k);
             CRCubed += max(0, GetCommandXCR(type) - MaxCommandXCR(type));
+        }
     }
 
     /* PHD_UNDEAD can also overflow into PHD_MAGIC -- any mage can
@@ -2913,9 +2917,11 @@ int32 Player::GetGroupXCR(int16 CompType, int16 AddCR, int16 CommandType) {
 int32 Player::MaxGroupXCR(int16 CompType) {
     if (CompType == PHD_COMMAND) {
         int32 total = 0;
-        for (int16 type = 1; type < MA_LAST; ++type)
+        for (int k = 1; k < MaAllCount(); ++k) {
+            int16 type = (int16)MaAllType(k);
             if (HasStati(COMMAND_ABILITY, type))
                 total += MaxCommandXCR(type);
+        }
         return total;
     }
     return XCR(MaxGroupCR(CompType));

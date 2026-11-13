@@ -57,7 +57,7 @@ Notes: D14 and D15 read `T1->GetMode()`, not `MyTerm`. Under `File` the global m
 | inc/Term.h:205 (MO_CREATE), 207 (MO_RECREATE) | same lines | declarations |
 | inc/Globals.h:310 `extern RInf` | 358 | declaration |
 | Create.cpp:58 `ReincarnationInfo RInf;` | 63 | definition |
-| Create.cpp:835 `Create(bool reincarnate)`; Main.cpp:129 `NewGame`; Creature.h:1512; Res.h:1346 | 895; 132; 1832; 1367 | declarations |
+| Create.cpp:835 `Create(bool reincarnate)`; Main.cpp:129 `NewGame`; inc/Creature.h:1512; Res.h:1346 | 895; 132; 1832; 1367 | declarations |
 | Main.cpp:160 `if (reincarnate)` -> `pp->Reincarnate()` | 163 | dispatch to Reincarnate (not a decision) |
 | Main.cpp:136 `T1->SetMode(MO_CREATE)` | 139 | mode set |
 | Create.cpp:862 `SetMode(MO_PLAY)` is not a hit; 870, 884, 888 (`SetMode(MO_CREATE/RECREATE)`), 2645 (after RollAttributes) | 931, 945, 949, 2945; 2940 (epic bounce branch) | mode set |
@@ -68,7 +68,7 @@ Notes: D14 and D15 read `T1->GetMode()`, not `MyTerm`. Under `File` the global m
 | MultiSelectProbe.cpp:43-76 (`RInf` save/restore, `SetMode(MO_CREATE)` 48, `SetMode(MO_RECREATE)` 66, comments 47, 59) | same | test hook, off unless `INCURSION_MULTISELECT_PROBE` |
 | Create.cpp:3772 (ChooseGod window), 4139 (GainFeat window) | 4822, 5276 | choose a screen window, not a decision |
 | Term.cpp:71, 319, 380; Managers.cpp:721 | same | display gating on `Mode` |
-| (none) | Create.cpp:3401 comment, 3410 `creating=(Mode==MO_CREATE)` in ChooseDomains; 6215 FeatPrereq refuses a `FF_CREATION_ONLY` feat unless `Mode==MO_CREATE`; Creature.h:149 comment; Create.cpp:4833 comment | epic: behavior that depends on the mode value |
+| (none) | Create.cpp:3401 comment, 3410 `creating=(Mode==MO_CREATE)` in ChooseDomains; 6215 FeatPrereq refuses a `FF_CREATION_ONLY` feat unless `Mode==MO_CREATE`; inc/Creature.h:149 comment; Create.cpp:4833 comment | epic: behavior that depends on the mode value |
 | Create.cpp:1457-1464 etc. | (counted in D12) | |
 | RInf in TextTerm.cpp (49 hits) and Term.cpp (10) | TextTerm 49, Term 10 | the recorder/replayer bodies of D3-D7 (ranges: TextTerm 1016-1018, 1286-1298, 1359-1361, 1421, 1429-1437, 1776-1789, 1872-1880, 2100-2114, 2258-2272; Term 2897-2898, 2946-2948, 3423-3424, 3449-3451; epic +69 to +140) |
 | Annot.cpp:43 `extern RInf` and 586-642 (9 hits) | 43, 729-785 | D14, D15 plus the extern |

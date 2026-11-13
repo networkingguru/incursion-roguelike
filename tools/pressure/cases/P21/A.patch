@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3541,6 +3541,7 @@
+ // end family: stati
+ // family: val_gaze_reflection stored ordinal i16 val-of GAZE_REFLECTION
+   #define GR_REFLECT      1
++  #define GR_GRWA 3
+   #define GR_IMMUNE       2
+ // end family: val_gaze_reflection
+ // family: stati stored ordinal u8 sentinel LAST_STATI

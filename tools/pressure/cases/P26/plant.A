@@ -1,0 +1,3 @@
+# P26: side A's new df_door member DF_GRWA (= 0x1), planted by name
+door oak door
+set door DoorFlags DF_GRWA

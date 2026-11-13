@@ -1,0 +1,6 @@
+# G06: A's content, a templated monster, a terrain cell, a region cell, the text through an rID variable
+monster dragon
+template grw-a hatchling @ dragon
+terrain grw-a ooze
+region Grw A Run
+varrid grw-a carrier grw_a_ref @ help::grw-a

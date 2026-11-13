@@ -1,0 +1,14 @@
+diff --git a/inc/Target.h b/inc/Target.h
+index baf1c16..55e156e 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -104,7 +104,8 @@ typedef enum {
+     TargetResents,
+     /* inc-9622 phase 1: append only. TargetWhy::type is stored in saves as a
+        raw int, so every existing value keeps its number. Phase 2 uses this. */
+-    TargetLostTrack
++    TargetLostTrack,
++    TargetGrwA
+ } TargetWhyType;
+ // end family: target_why_type
+ 

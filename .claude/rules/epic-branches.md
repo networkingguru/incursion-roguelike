@@ -3,7 +3,7 @@
 ## merge-master-into-an-epic-through-a-bead
 NEVER commit `git merge master` directly on an epic branch (a bead of type `epic`, such as `inc-pu6v`). Other beads branch from an epic and land into it, so an ungated merge breaks every later landing. Use the gated path:
 1. File a bead under the epic: `tools/bead_new.sh "<title>" ... --parent <epic>`.
-2. `tools/worktree.sh <bead> <epic>`, then `git merge master` in that worktree.
+2. `tools/worktree.sh <bead> <epic>`, then `git merge master` in that worktree. Then run `python3 tools/move_branch_values.py` there; if it moves a value, commit the move on the bead's branch. NEVER edit a stored number by hand to clear a collision. An epic field call that still passes a number fails to compile: give it a name (`tools/convert_tags_to_names.py`).
 3. Run the gate there. If `tools/gate_compare.sh` fails ONLY on a changed death count, compare per-seed died/survived status against the epic's pre-merge commit. If the change goes both ways and no session shows an engine error, re-record with `tools/gate_record.sh tools/keys/dive.keys 40 1` IN THE SAME BEAD. Put the per-seed evidence in the baseline header and in the commit body. Any other gate failure gets fixed in that bead.
 4. Land it with `INCURSION_BASE_BRANCH=<epic> tools/finish_bead.sh <bead>`.
 `tools/check_epic_merge.sh` (called by `.beads/hooks/pre-commit`) refuses the direct merge. `INCURSION_EPIC_SYNC_OK=1` bypasses it, for an emergency only.

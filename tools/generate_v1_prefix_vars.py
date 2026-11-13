@@ -21,7 +21,8 @@ shutil.copyfile(ROOT/'tools/fixtures/options-2026-08-22.dat',work/'Options.Dat')
 run(['-keys',str(ROOT/'tools/keys/smoke.keys')],'session.log')
 import struct
 fields=next(fs for (typ,h),fs in records(next((work/'save').glob('*.sav'))).items() if typ==1)
-lengths=struct.unpack('<21I',fields['816.1.4'][1][8:])
+# the save is the current binary's: fields are named (inc-cjos0); 816.1.4 is the frozen tag path of the same field
+lengths=struct.unpack('<21I',fields.get('MDataSeg.Segment#0.PoolLengths',fields.get('816.1.4'))[1][8:])
 types={'int32':2,'hObj':3,'hText':4,'rID':5,'bool':7,'Rect':8,'int16':9,'int8':10,'uint8':11,'uint16':12}
 rows=[]
 for line in (work/'variables.tsv').read_text().splitlines():

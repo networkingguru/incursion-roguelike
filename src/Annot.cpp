@@ -35,6 +35,7 @@
 
 
 #include "Incursion.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 Annotation * Resource::cAnnot;
 Annotation * Resource::cAnnot2;
@@ -1143,6 +1144,7 @@ EvReturn Resource::Event(EventInfo &e, rID xID, int16 Event)
                  e.Event == EV_PREREQ || e.Event == EV_ISTARGET ||
                  e.Event == EV_STARTING_ITEM || e.Event == EV_GENITEM);
             CreationScope creationScope(creationEvent ? NAME(xID) : NULL, e.Event, creationEvent);
+            DamageClassHandler(xID, e); /* inc-kx693 */
             res = theGame->VM.Execute(&e, xID, a->u.ev[I(i,5)].MsgOrCode);
             /*if (res == ERROR) 
               Error("Event %s returned ERROR in VCode routine "

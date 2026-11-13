@@ -1,0 +1,21 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..904c03d 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1120,6 +1120,7 @@ class Character: public Creature
+           return max(0,ang); }
+       
+ 
++    #define AC8_SAME_FIELD(n,m) FIELD_U32(n,m)
+     ARCHIVE_CLASS(Character,Creature,r)
+       /* v1 tags 384-511, in the declaration order of the members above
+          (inc/Creature.h, `hObj Inv[NUM_SLOTS]` down to `uint32
+@@ -1178,6 +1179,8 @@ class Character: public Creature
+       FIELD_U8 ("RageCount", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
++      uint32 ac8SameB = 29;
++      AC8_SAME_FIELD("Ac8Same", ac8SameB);
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);
+       FIELD_I16("alignLC", alignLC);

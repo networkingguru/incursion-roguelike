@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3233,6 +3233,7 @@
+     #define STUCK_ATTACK  5
+     #define STUCK_BONDED  6
+     #define STUCK_WEB     7
++    #define STUCK_GRWB 8
+ // end family: val_stuck
+ // family: stati stored ordinal u8
+ #define BLEEDING      12

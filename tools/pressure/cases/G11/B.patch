@@ -1,0 +1,60 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 53b563d..e849f7e 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1844,6 +1844,7 @@ class Monster: public Creature
+ 		protected:
+ 			hObj Inv;
+       int8 BuffCount, FoilCount;
++      int16 GrwHpPrev = 23;
+       uint8 Recent[6];
+ 		  static ActionInfo Acts[64];
+       static int16 nAct, nEff, nStati;
+@@ -1932,6 +1933,7 @@ class Monster: public Creature
+       FIELD_H  ("Inv", Inv);
+       FIELD_I8 ("BuffCount", BuffCount);
+       FIELD_I8 ("FoilCount", FoilCount);
++      FIELD_I16("GrwHpPrev", GrwHpPrev);
+       FIELD_ARRAY("Recent", Recent, sizeof(uint8), 6);
+     END_ARCHIVE
+ 	};
+diff --git a/inc/Map.h b/inc/Map.h
+index 00bd13b..cfef382 100644
+--- a/inc/Map.h
++++ b/inc/Map.h
+@@ -201,6 +201,7 @@ class Map: public Object
+ 
+     LocationInfo *Grid; 
+     static Fraction slope1, slope2, slope3, test;
++    int32 GrwWalked = 9;
+     rID RegionList[256]; uint8 SpecialDepths[16];
+     rID TerrainList[256]; int16 CurrThing;
+     
+@@ -600,6 +601,7 @@ class Map: public Object
+          FIELD_BLOB and FIELD_OBJ take the legacy Block/Serialize branch on
+          the v0 path, and reordering them would break every existing save.
+          Every scalar macro is a no-op on the v0 path. */
++      FIELD_I32("GrwWalked", GrwWalked);
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
+       int i;
+       FIELD_I16("sizeX", sizeX);
+diff --git a/inc/Res.h b/inc/Res.h
+index 42e096a..168be74 100644
+--- a/inc/Res.h
++++ b/inc/Res.h
+@@ -1175,6 +1175,7 @@ class Game : public Object
+          slot. The count arrays travel ABOVE the blob loops because on a v1
+          load each blob line's size expression reads them when it runs
+          (load-direction ordering). */
++      FIELD_I32("GrwTurnPrev", GrwTurnPrev);
+       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
+       int16 i;
+       FIELD_I32("ccHasEffStati", ccHasEffStati);
+@@ -1331,6 +1332,7 @@ class Game : public Object
+       static uint16  cDestroyCount;
+       rID   DungeonID[MAX_DUNGEONS];
+       int16 DungeonSize[MAX_DUNGEONS];
++      int32 GrwTurnPrev = 8;
+       hObj  *DungeonLevels[MAX_DUNGEONS];
+       OArray<LimboEntry,20,10> Limbo;
+       OArray<ModuleRecord,5,5> ModFiles;

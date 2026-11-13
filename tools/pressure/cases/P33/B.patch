@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2102,6 +2102,7 @@
+ #define SP_GRANTED   0x2000 /* given by a script or class grant, uses no slot */
+ #define SP_INHERENT  0x4000 /* picked by the Inherent Spell feat; castable without being memorized; needs no focus */
+ #define SP_PEND_DIV  0x8000 /* divine selection, takes effect at the next rest */
++#define SP_GRWB 0x1
+ // end family: sp_flag
+ // family: sp_src internal
+ 

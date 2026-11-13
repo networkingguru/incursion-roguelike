@@ -1,0 +1,142 @@
+--- a/src/CharFile.cpp
++++ b/src/CharFile.cpp
+@@ -20,7 +20,9 @@
+ #include <stdarg.h>
+ #include <unistd.h>
+ 
++// no-family
+ #define EXIT_BUILD_FAILED 10
++// end no-family
+ 
+ void CreationBuildFail(const char *fmt, ...)
+ {
+--- a/src/CreationSource.cpp
++++ b/src/CreationSource.cpp
+@@ -57,7 +57,9 @@
+     return k >= 0 && k < CK_COUNT && keyDefault[k] != NULL;
+ }
+ 
++// no-family
+ enum { CKU_SEEN = 0, CKU_UNSEEN = 1 };
++// end no-family
+ static const bool keyUnseen[CK_COUNT] = {
+ #define X(n,k,d,r,u) CKU_##u == CKU_UNSEEN,
+     CREATION_KEY_LIST(X)
+@@ -327,7 +329,9 @@
+ 
+ /* ---- reading the names back ---------------------------------------------- */
+ 
++// no-family
+ enum { FIND_ITEM, FIND_EFFECT };
++// end no-family
+ 
+ /* The one resource of `which` kind named `name` across every loaded module.
+    Fails on none and on more than one. */
+@@ -651,7 +655,9 @@
+     { PERK_RESIST,  CK_PERK_RESIST,  PerkResistWrite,  PerkResistRead },
+     { PERK_IMMUNE,  CK_PERK_IMMUNE,  PerkImmuneWrite,  PerkImmuneRead },
+ };
++// no-family
+ const int CreationPerkFieldCount = (int)(sizeof(CreationPerkFields) / sizeof(CreationPerkFields[0]));
++// end no-family
+ 
+ /* The retained perk set, one named line per field (spec section 3). */
+ static void EmitPerks(const PerkSet &set)
+--- a/inc/CreationSource.h
++++ b/inc/CreationSource.h
+@@ -141,7 +141,9 @@
+     CK_COUNT
+ };
+ 
++// no-family
+ enum CreationKind { CKIND_ROLL, CKIND_PICK, CKIND_ITEM };
++// end no-family
+ 
+ const char    *CreationKeyName(CreationKey k);   /* lower case: "attr_str" */
+ CreationKind   CreationKeyKind(CreationKey k);
+diff --git a/docs/specs/2026-11-06-fixture-builder-sites.md b/docs/specs/2026-11-06-fixture-builder-sites.md
+index ee6e298b..03bca12b 100644
+--- a/docs/specs/2026-11-06-fixture-builder-sites.md
++++ b/docs/specs/2026-11-06-fixture-builder-sites.md
+@@ -57,7 +57,7 @@ Notes: D14 and D15 read `T1->GetMode()`, not `MyTerm`. Under `File` the global m
+ | inc/Term.h:205 (MO_CREATE), 207 (MO_RECREATE) | same lines | declarations |
+ | inc/Globals.h:310 `extern RInf` | 358 | declaration |
+ | Create.cpp:58 `ReincarnationInfo RInf;` | 63 | definition |
+-| Create.cpp:835 `Create(bool reincarnate)`; Main.cpp:129 `NewGame`; Creature.h:1512; Res.h:1346 | 895; 132; 1832; 1367 | declarations |
++| Create.cpp:835 `Create(bool reincarnate)`; Main.cpp:129 `NewGame`; inc/Creature.h:1512; Res.h:1346 | 895; 132; 1832; 1367 | declarations |
+ | Main.cpp:160 `if (reincarnate)` -> `pp->Reincarnate()` | 163 | dispatch to Reincarnate (not a decision) |
+ | Main.cpp:136 `T1->SetMode(MO_CREATE)` | 139 | mode set |
+ | Create.cpp:862 `SetMode(MO_PLAY)` is not a hit; 870, 884, 888 (`SetMode(MO_CREATE/RECREATE)`), 2645 (after RollAttributes) | 931, 945, 949, 2945; 2940 (epic bounce branch) | mode set |
+@@ -68,7 +68,7 @@ Notes: D14 and D15 read `T1->GetMode()`, not `MyTerm`. Under `File` the global m
+ | MultiSelectProbe.cpp:43-76 (`RInf` save/restore, `SetMode(MO_CREATE)` 48, `SetMode(MO_RECREATE)` 66, comments 47, 59) | same | test hook, off unless `INCURSION_MULTISELECT_PROBE` |
+ | Create.cpp:3772 (ChooseGod window), 4139 (GainFeat window) | 4822, 5276 | choose a screen window, not a decision |
+ | Term.cpp:71, 319, 380; Managers.cpp:721 | same | display gating on `Mode` |
+-| (none) | Create.cpp:3401 comment, 3410 `creating=(Mode==MO_CREATE)` in ChooseDomains; 6215 FeatPrereq refuses a `FF_CREATION_ONLY` feat unless `Mode==MO_CREATE`; Creature.h:149 comment; Create.cpp:4833 comment | epic: behavior that depends on the mode value |
++| (none) | Create.cpp:3401 comment, 3410 `creating=(Mode==MO_CREATE)` in ChooseDomains; 6215 FeatPrereq refuses a `FF_CREATION_ONLY` feat unless `Mode==MO_CREATE`; inc/Creature.h:149 comment; Create.cpp:4833 comment | epic: behavior that depends on the mode value |
+ | Create.cpp:1457-1464 etc. | (counted in D12) | |
+ | RInf in TextTerm.cpp (49 hits) and Term.cpp (10) | TextTerm 49, Term 10 | the recorder/replayer bodies of D3-D7 (ranges: TextTerm 1016-1018, 1286-1298, 1359-1361, 1421, 1429-1437, 1776-1789, 1872-1880, 2100-2114, 2258-2272; Term 2897-2898, 2946-2948, 3423-3424, 3449-3451; epic +69 to +140) |
+ | Annot.cpp:43 `extern RInf` and 586-642 (9 hits) | 43, 729-785 | D14, D15 plus the extern |
+diff --git a/tools/check_player_fields.sh b/tools/check_player_fields.sh
+index 289363e9..cb00e8c9 100755
+--- a/tools/check_player_fields.sh
++++ b/tools/check_player_fields.sh
+@@ -81,9 +81,12 @@ Character|fracFatigue|excluded|fatigue remainder of play
+ Character|fallen|excluded|fallen-paladin flag of play; false when the character is made
+ Character|skip:isFallenPaladin|excluded|a bool staged through the fallen field, never stored itself
+ Character|Level|stated|the class pick and the level lines
++Character|hpRollsRow|derived|the row count of hpRolls, worked out from the class levels
+ Character|hpRolls|stated|the hp_roll lines, one per class level
++Character|manaRollsRow|derived|the row count of manaRolls, worked out from the class levels
+ Character|manaRolls|stated|the mana_roll lines, one per class level
+ Character|SaveBonus|derived|worked out from race, class and feats
++Character|GainAttrRow|derived|the row count of GainAttr, worked out from the level_attr picks
+ Character|GainAttr|stated|the level_attr picks (the attribute gained at levels 4, 8 and so on)
+ Character|NotifiedLevel|excluded|interface record of the last level announced
+ Character|ClassID[i]|stated|the class pick and the addclass lines
+@@ -104,6 +107,7 @@ Character|resChance|excluded|resurrection chance of play; set when the character
+ Character|FavourLev|derived|favor level, set when the god pick joins the god
+ Character|TempFavour|excluded|favor of play; zero when the character is made
+ Character|Anger|stated|the Transgress roll an Elf of another god makes when made (script_roll); zero for every other character
++Character|SacValsRow|excluded|row count of the sacrifice tally of play; zero when the character is made
+ Character|SacVals|excluded|sacrifice tally of play; zero when the character is made
+ Character|FavPenalty|excluded|favor penalty of play; zero when the character is made
+ Character|PrayerTimeout|excluded|prayer clock of play
+@@ -209,7 +213,7 @@ def block(cls):
+ 
+ def fields(body):
+     found = []
+-    for m in re.finditer(r"\b(FIELD_[A-Z0-9]+|V1Str)\s*\(", body):
++    for m in re.finditer(r"\b(FIELD_[A-Z0-9_]+|V1Str_AT|V1Str)\s*\(", body):
+         a = args_of(body, m.end() - 1)
+         if a is None:
+             print("INCONCLUSIVE: unbalanced %s call" % m.group(1)); sys.exit(2)
+@@ -218,7 +222,8 @@ def fields(body):
+         else:
+             if len(a) < 2:
+                 print("INCONCLUSIVE: %s call with one argument" % m.group(1)); sys.exit(2)
+-            key = a[1].lstrip("&")
++            # an element call (FIELD_RID_AT, V1Str_AT) names its member in the third argument: ClassID[i]
++            key = (a[2] if m.group(1).endswith("_AT") and len(a) > 2 else a[1]).lstrip("&")
+         found.append(re.sub(r"\s+", "", key))
+     return found
+ 
+@@ -273,16 +278,16 @@ if [ "${1:-}" = "--selftest" ]; then
+     python3 - "$T/Creature.h" <<'PY'
+ import sys
+ p = sys.argv[1]; s = open(p).read()
+-a = "      FIELD_I16(543, statMethod);\n"
++a = "      FIELD_I16(\"statMethod\", statMethod);\n"
+ assert s.count(a) == 1
+-open(p, "w").write(s.replace(a, a + "      FIELD_I16(544, mutationNew);\n"))
++open(p, "w").write(s.replace(a, a + "      FIELD_I16(\"mutationNew\", mutationNew);\n"))
+ PY
+     expect_red "a FIELD_ line is added to the Player block" "C7 Player field mutationNew is saved"
+     fresh
+     python3 - "$T/Creature.h" <<'PY'
+ import sys
+ p = sys.argv[1]; s = open(p).read()
+-a = "      FIELD_U32(409, Personality);\n"
++a = "      FIELD_U32(\"Personality\", Personality);\n"
+ assert s.count(a) == 1
+ open(p, "w").write(s.replace(a, ""))
+ PY
