@@ -1565,10 +1565,14 @@ EvReturn Item::Damage(EventInfo &e) {
             //  s += " / 2"; 
 
             s += Format(" = %d",e.vDmg);
+            // inc-o94cu: omit the material note when the item's name already carries it.
+            const char *matDesc = (const char*)Lookup(MaterialDescs,Material());
+            String nameStr = Name(0);
+            const bool nameHasMat = matDesc && *matDesc && strstr((const char*)nameStr, matDesc) != NULL;
             if (hard == -1) 
-                s += Format(" vs. Immune (%s)",(const char*)Lookup(MaterialDescs,Material()));
+                s += nameHasMat ? Format(" vs. Immune") : Format(" vs. Immune (%s)",matDesc);
             else 
-                s += Format(" vs. %d (%s)",hard,(const char*)Lookup(MaterialDescs,Material()));
+                s += nameHasMat ? Format(" vs. %d",hard) : Format(" vs. %d (%s)",hard,matDesc);
 
             e.aDmg = posthard; 
 

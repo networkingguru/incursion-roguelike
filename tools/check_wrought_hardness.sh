@@ -30,6 +30,8 @@
 #   role=glass-control acid=-1 want=-1
 #   role=damage vDmg=14 hp_before=15 hp_after=11 gone=0 lost=4 want_lost=4
 #   line=[? long sword: Residual Acid = 14 vs. 10 (wrought iron) [4 damage]
+# After inc-o94cu the name carries the material, so the note is dropped:
+#   line=[? wrought iron long sword: Residual Acid = 14 vs. 10 [4 damage]
 #   WROUGHT_HARD_PROBE: ALL PASS
 # Exit 0 pass, 1 fail, 2 could not measure.
 # Usage: tools/check_wrought_hardness.sh
