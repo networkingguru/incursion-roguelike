@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3603,6 +3603,7 @@
+ #define TA_POTENTIAL 6 /* As yet unseen */
+ #define TA_WANDER    7 /* Point to wander to */
+ #define TA_LEADER    8 /* Follow him around */
++#define TA_GRWB 9
+ // end family: ta
+ // family: ti internal
+ 

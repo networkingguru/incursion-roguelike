@@ -4325,6 +4325,9 @@ Wizard Spell "Lorecall" : EA_INFLICT
           for(i=0;i!=SK_LASTSKILL;i++)
             if (EActor->HasSkill(i) && EActor->GetSkillRanks(i))
               { found = true; ETerm->LOption(SkillName(i),i); }
+          for(i=SK_HIGH_FIRST;i!=SK_HIGH_END;i++)
+            if (EActor->HasSkill(i) && EActor->GetSkillRanks(i))
+              { found = true; ETerm->LOption(SkillName(i),i); }
           if (!found)
             { EActor->IPrint("You have no skills with ranks in them.");
               return ABORT; }

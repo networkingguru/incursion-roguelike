@@ -1,0 +1,19 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1791,6 +1791,7 @@
+ #define MA_PLANETOUCHED 71
+ #define MA_DEMON        72
+ #define MA_DEVIL        73
++#define MA_GRWA 131
+ 
+ #define MA_LAST_REAL    74
+ 
+@@ -1850,7 +1851,7 @@
+ #define MA_CHOICE4      128
+ #define MA_CHOICE5      129
+ #define MA_LAST         130
+-#define MA_HIGH_END     131
++#define MA_HIGH_END     132
+ // end family: ma
+ /* Each name has a family of its own, as for the skills: MA_COUNT equals
+    MA_LAST_REAL and MA_HIGH_END equals MA_HIGH_FIRST until the first high type

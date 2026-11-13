@@ -1,0 +1,31 @@
+diff --git a/lib/landed-inc-g08b.irh b/lib/landed-inc-g08b.irh
+new file mode 100644
+index 0000000..cf50b52
+--- /dev/null
++++ b/lib/landed-inc-g08b.irh
+@@ -0,0 +1,19 @@
++Effect "Grw B Bolt" : EA_BLAST
++  {
++    Flags: EF_ACTIVATE; qval: Q_DIR;
++    int16 grw_state;
++    Desc: "A growth-test spell.";
++  }
++
++Artifact "Grw B Blade" { Item: $"long sword"; }
++
++Behaviour "Grw B Behaviour" : 0 { Spell: $"Grw B Bolt"; Flags: 0; }
++
++Item "grw-b carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_b_ref; rID grw_b_ref2;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..e38f28c 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g08b.irh"

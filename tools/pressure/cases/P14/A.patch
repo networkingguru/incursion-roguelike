@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3321,6 +3321,7 @@
+ // end family: stati
+ // family: val_singing stored ordinal i16 val-of SINGING
+   #define BARD_COURAGE    1
++  #define BARD_GRWA 9
+   #define BARD_FASCINATE  2
+   #define BARD_COUNTER    3
+   #define BARD_COMP       4

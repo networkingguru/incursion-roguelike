@@ -18,6 +18,7 @@
 /* ww: this would be a class, but disjoint unions are too annoying to do 
  * correctly in C++, and it would be a pain to unserialize later ...
  * actually, everything here used to be a class, but I gave up ... */
+// family: hostility_why_type stored enum i32 word-of Creature.ts.t.why.t_why_data@8
 typedef enum {
     HostilityDefault,
     HostilityFeud,      // MA_ELF, MA_DROW
@@ -43,6 +44,7 @@ typedef enum {
     HostilityCharmed,
     HostilityCommanded,
 } HostilityWhyType;
+// end family: hostility_why_type
 
 typedef struct HostilityWhy {
   HostilityWhyType type;
@@ -60,12 +62,15 @@ typedef struct HostilityWhy {
   String        & Dump();
 } HostilityWhy;
 
+// family: hostility_qual stored enum i32 word-of Creature.ts.t.why.t_why_data@0
 typedef enum {
     Neutral,      // I will ignore you unless you hurt me
     Enemy,        // I will attack you now
     Ally          // I will cast healing spells on you, etc. 
 } HostilityQual; 
+// end family: hostility_qual
 
+// family: hostility_quant stored enum i32 word-of Creature.ts.t.why.t_why_data@4
 typedef enum {
     Apathy        = 0,    // "I don't care": only for Neutral above
     Minimal       = 1,
@@ -74,6 +79,7 @@ typedef enum {
     Medium        = 20,   // "hatred" elves and drow, undead and living
     Strong        = 30,   // "loathing" aligned dragons, aligned outsiders
 } HostilityQuant;
+// end family: hostility_quant
 
 typedef struct Hostility {
   // ww: Hostility should only be between creatures. 
@@ -83,6 +89,7 @@ typedef struct Hostility {
   String                & Dump(const char * toWhat);
 } Hostility;
 
+// family: target_why_type stored enum i32
 typedef enum {
     TargetDefault,
     TargetGreedy,
@@ -99,6 +106,7 @@ typedef enum {
        raw int, so every existing value keeps its number. Phase 2 uses this. */
     TargetLostTrack
 } TargetWhyType;
+// end family: target_why_type
 
 typedef struct TargetWhy {
   TargetWhyType         type;
@@ -120,6 +128,7 @@ typedef struct TargetWhy {
   void                  Set(TargetWhyType _type);
 } TargetWhy; 
 
+// family: target_type stored enum i32 field-of Creature.ts.t.t_type
 typedef enum {
     TargetInvalid,  // should never been seen!
 
@@ -160,6 +169,7 @@ typedef enum {
     
     TargetAny = -1
 } TargetType;
+// end family: target_type
 
 typedef struct Target {
   TargetType    type;

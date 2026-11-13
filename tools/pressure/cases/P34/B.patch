@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2960,6 +2960,7 @@
+ #define MM_VILE          0x02000000  /* Does vile damage */
+ #define MM_VOCALIZE      0x04000000  /* No verbal component */
+ #define MM_WARP          0x08000000  /* Pass through Walls */
++#define MM_GRWB 0x10000000
+ // end family: mm
+ // family: study stored ordinal u8 grows STUDY_LAST index-of Character.IntStudy
+ 

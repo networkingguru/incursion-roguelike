@@ -7,7 +7,7 @@
 
 	 void Player::UseMenu()
 	 void Player::CancelMenu()
-	 void Character::UseSkill(uint8 sk)
+	 void Character::UseSkill(int16 sk)
 	 bool Creature::SkillCheck(int16 sk, int16 DC, bool show)
 	 void Character::UseFeat(uint8 ft)
 	 void Character::UseAbility(uint8 ab,int16 pa)
@@ -49,10 +49,10 @@ String & DescribeSkill(int16 sk)
 	String res, rn; int16 i, j; rID xID;
 
 	res = "";
-	if (!SkillInfo[sk].imp)
+	if (!SkillInfo[SkillIndex(sk)].imp)
 		res += Format("%c(NOT IMPLEMENTED!) ", -PINK);
 
-	if (SkillInfo[sk].active)
+	if (SkillInfo[SkillIndex(sk)].active)
 		res += Format("%c(Active) ", -EMERALD);
 	else
 		res += Format("%c(Passive) ", -YELLOW);
@@ -60,25 +60,25 @@ String & DescribeSkill(int16 sk)
 	if (isFamiliar(sk))
 		res += Format("%c[Familiar] ", -BLUE);
 
-	if (SkillInfo[sk].attr1 == SkillInfo[sk].attr2) {
-		res += Format("%c%s", -SKYBLUE, AttrTitle[SkillInfo[sk].attr1]);
+	if (SkillInfo[SkillIndex(sk)].attr1 == SkillInfo[SkillIndex(sk)].attr2) {
+		res += Format("%c%s", -SKYBLUE, AttrTitle[SkillInfo[SkillIndex(sk)].attr1]);
 	}
 	else {
-		if (SkillInfo[sk].take_min)
+		if (SkillInfo[SkillIndex(sk)].take_min)
 			res += Format("%cworst%c of", -PINK, -GREY);
 		else
 			res += Format("%cbest%c of", -EMERALD, -GREY);
 		res += Format(" %c%s%c and %c%s",
 			-SKYBLUE,
-			AttrTitle[SkillInfo[sk].attr1],
+			AttrTitle[SkillInfo[SkillIndex(sk)].attr1],
 			-GREY,
 			-SKYBLUE,
-			AttrTitle[SkillInfo[sk].attr2]);
+			AttrTitle[SkillInfo[SkillIndex(sk)].attr2]);
 	}
 
-	if (SkillInfo[sk].armour_penalty == 2)
+	if (SkillInfo[SkillIndex(sk)].armour_penalty == 2)
 		res += Format(" %c[DOUBLE armour penalty]", -RED);
-	else if (SkillInfo[sk].armour_penalty)
+	else if (SkillInfo[SkillIndex(sk)].armour_penalty)
 		res += Format(" %c[armour penalty]", -RED);
 
 	res += Format("\n%c__Possessed By:%c Some Humans", -MAGENTA, -GREY);
@@ -124,10 +124,10 @@ String & DescribeSkill(int16 sk)
 	}
 	if (sk >= SK_KNOW_FIRST && sk <= SK_KNOW_LAST)
 		res += ", Knowledge priests";
-	if (xID = FIND(Format("help::%s", SkillInfo[sk].name)))
+	if (xID = FIND(Format("help::%s", SkillInfo[SkillIndex(sk)].name)))
 		res += Format(".\n%c__Effects:%c%s", -YELLOW, -CYAN, DESC(xID));
 	else
-		res += Format(".\n%c__Effects:%c%s", -YELLOW, -CYAN, SkillInfo[sk].desc);
+		res += Format(".\n%c__Effects:%c%s", -YELLOW, -CYAN, SkillInfo[SkillIndex(sk)].desc);
 
 	return *tmpstr(res);
 }
@@ -226,7 +226,7 @@ void Player::UseMenu(int32 SuppliedIndex) {
 			if (HasSkill(sk, sk == SK_HEALING || sk == SK_HANDLE_DEV))
 				if (ActiveTraits[i] % 1000 != SK_BALANCE ||
 					SkillLevel(SK_BALANCE) >= 10) {
-					MyTerm->LOption(SkillInfo[ActiveTraits[i] % 1000].name, i);
+					MyTerm->LOption(SkillInfo[SkillIndex(ActiveTraits[i] % 1000)].name, i);
 					found = true;
 				}
 			break;
@@ -866,7 +866,7 @@ bool Creature::HasSkillKit(int16 sk) {
 	return false;
 }
 
-void Character::UseSkill(uint8 sk) {
+void Character::UseSkill(int16 sk) {
 	EventInfo e; Trap *tr; int16 i, PartyID; Thing *t; String s;
 	int8 Check = (int8)Dice::Roll(1, 20, (int8)SkillLevel(sk)), DC;
 	/* Skill Check: 7 + 1d20 (15) = 22 vs. DC 25 (failure) */
@@ -1794,7 +1794,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 
 	if (show && msa != this)
 		IPrint("<Obj> aids you with <9><Str><7>.", msa,
-			SkillInfo[sk].name);
+			SkillInfo[SkillIndex(sk)].name);
 
 	bool succ = (sr + roll + mod1 + mod2 + armPen) >= DC;
 
@@ -1834,7 +1834,7 @@ bool Creature::SkillCheck(int16 sk, int16 DC, bool show, int16 mod1, const char*
 
 		sStr = Format((DC == 0) ? "%c%s Check%s%s%s:%c %s %+d%s%s = %d."
 			: "%c%s Check%s%s%s:%c %s %+d%s%s = %d vs DC %d %c[%s]%c.",
-			-MAGENTA, SkillInfo[sk].name,
+			-MAGENTA, SkillInfo[SkillIndex(sk)].name,
 			msa == this ? "" : " [",
 			msa == this ? "" : (const char*)Lower(msa->Name(0)),
 			msa == this ? "" : "]",
@@ -2510,7 +2510,7 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 			IPrint("You're already in an ancestral trance.");
 			return;
 		}
-		for (i = 1; i != SK_LAST; i++)
+		for (i = 1; i != SK_COUNT; i++)
 			if (SkillInfo[i].imp)
 				thisp->MyTerm->LOption(SkillInfo[i].name,
 					SkillInfo[i].sk,
@@ -4131,7 +4131,7 @@ void Character::RecalcCraftFormulas() {
 		prereq = CraftSkills[i];
 		sklev = SkillLevel(sk);
 
-		if (prereq < SK_LAST)
+		if (IsSkill(prereq))
 		{
 			if (!HasSkill(prereq))
 				continue;

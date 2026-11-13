@@ -1,0 +1,2 @@
+# G32-num: C: the god-only deity
+god Grw C Deity favour 2

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4406,6 +4406,7 @@
+ #define GS_PENANCE       0x0010
+ #define GS_ANATHEMA      0x0020
+ #define GS_KNOWN_ANGER   0x0040
++#define GS_GRWB 0x80
+ // end family: gs
+ // family: trouble internal
+ 

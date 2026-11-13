@@ -1,0 +1,3 @@
+# G23: a monster that holds a target of the player with the case's why type
+monster kobold
+target TargetGrwB @ kobold

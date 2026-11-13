@@ -1,0 +1,329 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index bfb9807..2fe1825 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1178,6 +1178,8 @@ class Character: public Creature
+       FIELD_U8 ("RageCount", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
++      uint32 ac8G25B = 29;
++      FIELD_U32("Ac8G25B", ac8G25B);
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);
+       FIELD_I16("alignLC", alignLC);
+@@ -1249,8 +1251,6 @@ class Character: public Creature
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
+-      uint32 ac8Retire = 17;
+-      FIELD_U32("Ac8Retire", ac8Retire);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this
+@@ -1576,6 +1576,7 @@ class Player: public Character
+       void MigrateSpellFlagsRev5();
+       void MigrateSpellFlagsRev6();
+       /* grw migration decl slot A */
++      void MigrateGrwB() { if (Attr[A_CDEF] == 1040) alignLC = 202; }
+       /* grw migration decl slot B */
+       /* Diagnostic behind INCURSION_SPELLFLAG_PROBE: one errors.log line per
+          known spell plus a summary. Called at the end of the migration and
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..bc24edb 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -337,6 +337,7 @@ typedef signed int        hObj;
+ // family: kn stored bits u16
+ 
+ #define KN_NATURE    0x01
++#define KN_GRWB 0x100
+ #define KN_CURSE     0x02
+ #define KN_BLESS     0x02  /* alias of KN_CURSE */
+ #define KN_MAGIC     0x04
+@@ -362,6 +363,7 @@ typedef signed int        hObj;
+ #define IF_DECIPHERED  0x0100
+ #define IF_GHOST_TOUCH 0x0200
+ #define IF_REAPPLYING  0x0400
++#define IF_GRWB 0x1000
+ #define IF_LEGEND_ROLLED 0x0800
+ // end family: if_flag
+ // family: t_type stored ordinal u8 sentinel T_LAST, t_all internal
+@@ -2907,10 +2909,11 @@ typedef signed int        hObj;
+ /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+    so existing feat numbers stored in saves are unchanged. */
+ #define FT_CANNIBALISM         362
++#define FT_GRWB 364
+ /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+    numbers stored in saves are unchanged. */
+ #define FT_LUCUBRATION         363
+-#define FT_LAST                364
++#define FT_LAST                365
+ // end family: ft
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
+ 
+@@ -3555,6 +3558,7 @@ typedef signed int        hObj;
+    eID is the spell, Val the tail units to apply if concentration is stopped
+    early, and Duration the cap. */
+ #define CONCENTRATING     247
++#define GRW_B_AURA 251
+ /* inc-z1ba: the watcher identified this illusion's cast with Spellcraft. Obj is
+    the illusion (creature, item or terrain creator) and eID the cast's spell, so
+    the +4 disbelief bonus applies only to the illusion that cast made. */
+@@ -3564,7 +3568,7 @@ typedef signed int        hObj;
+    -1 once the buff ended and the mana was released (Mag then = released mana
+    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+ #define HELD_MANA         250
+-#define LAST_STATI        251
++#define LAST_STATI        252
+ // end family: stati
+ // no-family
+   
+@@ -4010,6 +4014,7 @@ typedef signed int        hObj;
+ #define SS_DOMA  10 /* From a Domain */
+ #define SS_SONG  11 /* Bardic Music */
+ #define SS_CURS  12 /* Non-Dispellable; needs Remove Curse */
++#define SS_GRWB 16
+ #define SS_BLES  13 /* Divine Blessings, was 
+                        SS_SHLD -- ww: tower shield in CalcValues() */
+ #define SS_BODY  14 /* from your current body (polymorph/race) */
+@@ -4580,6 +4585,7 @@ typedef signed int        hObj;
+ #define OPT_POWER_STATS         118
+ #define OPT_ELUDE_DEATH         119
+ #define OPT_NO_ALLY_TRANS       120       
++#define OPT_GRWB 122
+ #define OPT_NATURAL_SPEED       121
+ // end family: opt
+ // no-family
+@@ -5076,7 +5082,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+ #define MAX_GODS           25
+ // end family: lim_gods
+ // family: lim_char_level stored ordinal u16 grows MAX_CHAR_LEVEL
+-#define MAX_CHAR_LEVEL     11
++#define MAX_CHAR_LEVEL     12
+ // end family: lim_char_level
+ // no-family
+ #define MAX_CORRIDOR_LENGTH 8192
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index b67de67..3231050 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -11,7 +11,7 @@ struct RenamedFieldName  { const char *scope, *oldName, *newName; };
+ 
+ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+   { "Character", "SpellsU16" },
+-  /* grw slot B */
++  { "Character", "Ac8Retire" },
+   { NULL, NULL }
+ };
+ 
+diff --git a/inc/Target.h b/inc/Target.h
+index 673feb0..c24347c 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -106,6 +106,7 @@ typedef enum {
+        raw int, so every existing value keeps its number. Phase 2 uses this. */
+     TargetLostTrack,
+     /* grw slot A */
++    TargetGrwB = 12,
+     /* grw slot B */
+ } TargetWhyType;
+ // end family: target_why_type
+diff --git a/lib/alchemy.irh b/lib/alchemy.irh
+index d22759c..67a761b 100644
+--- a/lib/alchemy.irh
++++ b/lib/alchemy.irh
+@@ -60,7 +60,7 @@
+ */
+ 
+ 
+-Item "flask" : T_TOOL
++Item "flask;retired" : T_TOOL
+   {
+     Image: grey GLYPH_POTION; 
+     Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
+diff --git a/lib/landed-inc-g31b.irh b/lib/landed-inc-g31b.irh
+new file mode 100644
+index 0000000..61ecacf
+--- /dev/null
++++ b/lib/landed-inc-g31b.irh
+@@ -0,0 +1,117 @@
++Monster "grw-b leucrotta" : MA_MYTHIC, MA_QUADRUPED, MA_ABERRATION
++  { Image: yellow 'M'; Size: SZ_MEDIUM;
++    CR: 8; HD: 7; Hit: +6; Def: 12; Mov: 225%; Spd: 150%;
++    Str 20, Dex 17, Con 21, Int 10, Wis 12, Cha 6;
++    Attk: A_BITE for 3d6 AD_BLUNT,
++          A_KICK for 1d8 AD_BLUNT;
++    Feats: FT_POWER_ATTACK, SK_LISTEN;
++    Flags: M_CHAOTIC, M_EVIL, M_IALIGN, M_NOHANDS, M_CARNI, M_NOGEN;
++    Desc: "A growth-test copy of the leucrotta.";
++  }
++
++Item "grw-b flask" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN, IT_THROWABLE, IT_GROUP;
++  }
++
++Feature "grw-b door" : T_DOOR {
++  Image: brown '-';
++  Mat:MAT_WOOD;
++  HP: 10;
++}
++
++Effect "Grw B Bolt" : EA_BLAST
++  {
++    Flags: EF_ACTIVATE; qval: Q_DIR;
++    int16 grw_state;
++    Desc: "A growth-test spell.";
++  }
++
++God "Grw B Deity"
++  {
++    Domains: $"Fate", $"Knowledge", $"Night", $"Planning",
++             $"Retribution", $"Trickery";
++    Desc: "A growth-test god.";
++  }
++
++Dungeon "Grw B Cellar"
++  {
++    Constants:
++      * TURN_CHANCE 20,
++      * STUBBORN_CORRIDOR 4,
++      * STAIRS_UP $"up stairs",
++      * STAIRS_DOWN $"down stairs",
++      * DIGGING_REGION $"Rough-Hewn Tunnel",
++      * DUN_DEPTH 3;
++    Specials:
++      * $"arena chamber" at level 1;
++    Desc: "A growth-test dungeon.";
++  }
++
++Class "Grw B Class"
++  {
++    Desc: "A growth-test class.";
++  }
++
++Race "Grw B Race"
++  {
++    Desc: "A growth-test race.";
++  }
++
++Domain "Grw B Domain" : 0 {
++  Desc: "__<15>Granted Power:<7> A growth-test domain.";
++  Grants:
++        Ability[CA_SLOW_FALL] at 1st level;
++  Spells:
++        $"Wall of Fog",
++        $"Wind Wall",
++        $"Gaseous Form",
++        $"Air Walk",
++        $"Cloudkill";
++}
++
++Terrain "grw-b ooze" {
++  Image: green GLYPH_WATER on brown; Mat:MAT_VEGGY;
++  Flags: TF_WARN, TF_SPECIAL, TF_NOGEN, TF_SHOWNAME;
++  Desc: "A growth-test terrain.";
++}
++
++Region "Grw B Run" : RF_RIVER
++  { Floor: $"shallow water"; }
++
++Text "help::grw-b"
++  { "A growth-test help text." }
++
++Template "grw-b hatchling" : TM_AGECAT  for MA_DRAGON
++  {
++    Desc: "A growth-test template.";
++    Attk: A_BITE for 1d4 AD_PIERCE;
++    CR: +0; Size: -4; Power: +1;
++    Mov: 40%; Arm: 20%; HitDice: 15%; Caster Level = 0; Hit: 20%;
++    Flags: TMF_OBVIOUS, TMF_NOGEN;
++  }
++
++Encounter "Grw B Pack"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_AQUATIC [EP_SKILLED];
++    Flags: NF_SINGLE, NF_AQUATIC, NF_NOGEN, NF_FREAKY;
++  }
++
++Flavour "grw-b puce"           : AI_POTION  { Colour: green; }
++
++Artifact "Grw B Blade" { Item: $"long sword"; }
++
++Behaviour "Grw B Behaviour" : 0 { Spell: $"Grw B Bolt"; Flags: 0; }
++
++Item "grw-b carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_b_ref; rID grw_b_ref2; rID grw_b_ref3; rID grw_b_ref4; rID grw_b_ref5; rID grw_b_ref6;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..4d0704c 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g31b.irh"
+diff --git a/lib/mon4.irh b/lib/mon4.irh
+index 3b90b14..3e6f709 100644
+--- a/lib/mon4.irh
++++ b/lib/mon4.irh
+@@ -1652,6 +1652,7 @@ Monster "barbazu" : MA_DEVIL
+            /*FT_IMPROVED_INITIATIVE, */ FT_CLEAVE, FT_GUARDED_INVOCATION; 
+     Flags: M_LAWFUL, M_EVIL, M_IALIGN, M_NO_CORPSE, M_HUMANOID, M_CLOSEID;
+     int16 claw_hits;
++    int16 grw_b_time;
+     On Event POST(EV_DAMAGE) {
+       int16 i;
+       /* Simulate WQ_WOUNDING */
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index 75a1ff4..09dd435 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1683,6 +1683,9 @@ struct FeatInfoStruct FeatInfo[] = {
+ 
+   /* growth feat slot A */
+   /* growth feat slot B */
++  { FT_GRWB, FF_WIZARD|FF_MULTIPLE, "Grw B",
++    "A growth-test feat.",
++    {{{FP_ALWAYS}}} },
+   { 0, } , // ending element
+ 
+ } ; // ww: endof: "FeatInfoStruct FeatInfo[]" 
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index e26325f..9cf8396 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -71,7 +71,7 @@ extern size_t typeSize(int8 Type);
+    a name-table record (V1_REC_NAMES) and every field carries the id of its
+    row in that table (bead inc-cjos0). Revisions 3 to 6 carry the old tag
+    numbers; the reader maps them to names through inc/SaveLegacyTags.h. */
+-#define SCHEMA_REV 7
++#define SCHEMA_REV 8
+ static uint32 v1FileRevision = 0;
+ 
+ /* The OLDEST revision this binary can still read. A file older than this is
+@@ -118,6 +118,7 @@ static const V1Migration v1Migrations[] = {
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
+     /* grw migration slot A */
++    { "GrwRepairB", 8, &Player::MigrateGrwB },
+     /* grw migration slot B */
+ };
+ #define V1_NMIGRATIONS (sizeof(v1Migrations)/sizeof(v1Migrations[0]))
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index a33610d..6c3b400 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -5,4 +5,4 @@
+ # A retired name is never reused.
+ # grw slot A
+ Character SpellsU16
+-# grw slot B
++Character Ac8Retire

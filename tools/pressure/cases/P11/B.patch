@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3221,6 +3221,7 @@
+   #define FEAR_HP       3
+   #define FEAR_SKIRMISH 4
+   #define FEAR_COWED    5
++  #define FEAR_GRWB 6
+ // end family: val_fear
+ // family: stati stored ordinal u8
+ #define STUCK         11

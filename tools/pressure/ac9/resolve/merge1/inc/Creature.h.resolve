@@ -1,0 +1,74 @@
+# stale-quote-ok: verbatim hunk text from another branch (AC9 rehearsal)
+      FIELD_SKIP(LightAverseWasBright);   /* derived; never saved */
+@@@ next hunk
+      static_assert(sizeof(Character) == 12656,
+                    "Character's coverage pin row pads assume this");
+@@@ next hunk
+      FIELD_H  ("defReach", defReach);
+      FIELD_H  ("defReachOff", defReachOff);
+      FIELD_H  ("defShort", defShort);
+      FIELD_H  ("defShortOff", defShortOff);
+      FIELD_ARRAY("BAttr", BAttr, sizeof(int16), 7);
+      FIELD_ARRAY("KAttr", KAttr, sizeof(int16), ATTR_LAST);
+      FIELD_ARRAY("SkillRanks", SkillRanks, sizeof(int8), SK_COUNT);
+      FIELD_ARRAY("Feats", Feats, sizeof(uint16), (FEATBITS_LAST/8)+1);
+@@@ next hunk
+      /* The row length travels beside each array of rows (spec section 6.1,
+         inc-cjos0). A file written before the field existed has rows of the
+         length then in force: 11, 11, 15 here. */
+      uint16 hpRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 manaRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 GainAttrRow = 15;
+      FIELD_U16("hpRollsRow", hpRollsRow);
+      FIELD_U16("manaRollsRow", manaRollsRow);
+      FIELD_U16("GainAttrRow", GainAttrRow);
+      FIELD_ARRAY_ROWS("hpRolls", hpRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, hpRollsRow, 0);
+      FIELD_ARRAY_ROWS("manaRolls", manaRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, manaRollsRow, 0);
+      FIELD_ARRAY("SaveBonus", SaveBonus, sizeof(int8), 16);
+      FIELD_ARRAY_ROWS("GainAttr", GainAttr, sizeof(int16), 7, 15, GainAttrRow, 0);
+@@@ next hunk
+      FIELD_ARRAY("Spells", Spells, sizeof(uint32), MAX_SPELLS+1);
+@@@ next hunk
+      FIELD_ARRAY("GiftsGiven", GiftsGiven, sizeof(int16), MAX_GODS);
+      /* The last two columns of a SacVals row are the total and the maximum
+         (src/Prayer.cpp), so the reader keeps them last (tail 2). */
+      uint16 SacValsRow = isSave ? MAX_SAC_CATS + 2 : 12;
+      FIELD_U16("SacValsRow", SacValsRow);
+      FIELD_ARRAY_ROWS("SacVals", SacVals, sizeof(int32), MAX_GODS, MAX_SAC_CATS + 2, SacValsRow, 2);
+      /* inc-pu6v.129: retired fields -- FavPenalty and PrayerTimeout are
+         gone (see the field declaration above, ruled 2026-10-02); tags
+         441/442 stay reserved, never reused, and MUST still be read so an
+         unknown-tag refusal does not fire on an older v1 save that carries
+         them (docs/SAVE-SCHEMA-SPEC.md). They land in these LOCAL scratch
+         arrays and go nowhere -- never into AidWaitEnd. Always zero on
+         save: nothing in this binary ever has real data for them again. */
+      int16 exFavPenalty[MAX_GODS] = { 0 };
+      int16 exPrayerTimeout[MAX_GODS] = { 0 };
+      FIELD_ARRAY("exFavPenalty", exFavPenalty, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("exPrayerTimeout", exPrayerTimeout, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("HateLev", HateLev, sizeof(int16), MAX_GODS);
+@@@ next hunk
+      /* AidWaitEnd uses tag 451. Tag 448 belongs to master's Spells[] array
+         (inc-vqla), so the epic's earlier uses of 448 and 449 never reached
+         a released save and are retired; tag 449 is discarded the same way
+         as 441/442 above. */
+      FIELD_ARRAY("AidWaitEnd", AidWaitEnd, sizeof(uint32), MAX_GODS);
+      uint32 exAidWaitStart[MAX_GODS] = { 0 };
+      FIELD_ARRAY("exAidWaitStart", exAidWaitStart, sizeof(uint32), MAX_GODS);
+      /* inc-pu6v.37: tag 450 is the next unused number in this class's
+         range. An old save lacking it leaves GodlessXP at the zero the
+         constructor gave it (docs/SAVE-SCHEMA-SPEC.md: a known tag the
+         reader does not meet keeps its constructed value). */
+      FIELD_U32("GodlessXP", GodlessXP);
+@@@ next hunk
+      static_assert(sizeof(Player) == 23720,
+                    "Player's coverage pin row pads assume this");
+      static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
+      static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");
+      static_assert(sizeof(QuickKey) == 16, "one embed per quick key");
+      static_assert(sizeof(String) == 24, "V1Str covers a whole String");
+@@@ next hunk
+      FIELD_ARRAY("JournalInfo_numMonOfType", JournalInfo.numMonOfType, sizeof(int), MA_COUNT);
+@@@ next hunk
+      static_assert(sizeof(Monster) == 1696,
+                    "Monster's coverage pin row pads assume this");

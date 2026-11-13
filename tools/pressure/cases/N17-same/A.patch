@@ -1,0 +1,26 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..9898e83 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1249,6 +1249,8 @@ class Character: public Creature
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
++      uint32 ac8N17A = 17;
++      FIELD_U32("Ac8N17A", ac8N17A);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..5ec5588 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -5083,7 +5083,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
+ #define ANNOT_INITIAL_SIZE 50
+ // end no-family
+ // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
+-#define MAX_SAC_CATS       10
++#define MAX_SAC_CATS       12
+ // end family: lim_sac_cats
+ // family: namelist internal
+ 

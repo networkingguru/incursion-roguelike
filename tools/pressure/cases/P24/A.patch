@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1417,6 +1417,7 @@
+ // family: ts stored bits u8 field-of Trap.TrapFlags
+ 
+ #define TS_FOUND    0x0001
++#define TS_GRWA 0x20
+ #define TS_DISARMED 0x0002
+ #define TS_NODISARM 0x0004
+ #define TS_SEARCHED 0x0008

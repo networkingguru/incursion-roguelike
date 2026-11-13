@@ -1,0 +1,3 @@
+# P25: side A's new ms member MS_GRWA (= 0x80), planted by name
+monster kobold
+set monster StateFlags MS_GRWA

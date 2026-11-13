@@ -1,0 +1,2 @@
+# P32: side A's new study member STUDY_GRWA (= 10), planted by name
+set player IntStudy[STUDY_GRWA] 2

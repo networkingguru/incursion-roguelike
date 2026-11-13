@@ -1,0 +1,1 @@
+S10 adds script variables to two owners: the variable list and size of the data segment differ for every save. The variables are compared one by one (Game.ScriptVariable lines).

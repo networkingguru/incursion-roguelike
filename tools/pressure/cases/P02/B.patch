@@ -1,0 +1,20 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1192,6 +1192,7 @@
+ #define AD_SHAT    92  /* shatter equipment */
+ #define AD_SWAL    93
+ #define AD_FALL    94
++#define AD_GRWB 95
+ 
+ // end family: ad
+ // no-family
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1164,6 +1164,7 @@
+   { AD_SHAT, false },
+   { AD_SWAL, false },
+   { AD_FALL, false },
++  { AD_GRWB, true },
+   { -1, false } };
+ 
+ /* Which item types can carry a quality? One row per quality name in the

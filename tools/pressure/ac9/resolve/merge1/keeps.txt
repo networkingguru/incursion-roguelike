@@ -1,0 +1,2 @@
+tools/fixtures/chars/MANIFEST
+tools/make_char_fixture.sh

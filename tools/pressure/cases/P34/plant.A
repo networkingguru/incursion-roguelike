@@ -1,0 +1,2 @@
+# P34: side A's new mm member MM_GRWA (= 0x10000000), planted by name
+set player MMArray[5] MM_GRWA

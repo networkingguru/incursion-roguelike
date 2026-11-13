@@ -5,6 +5,7 @@
 #ifndef INCURSION_DAMAGECLASSPROBE_H
 #define INCURSION_DAMAGECLASSPROBE_H
 
+// no-family
 #define DC_SITE_MIEN_BEFORE 0
 #define DC_SITE_MIEN_AFTER  1
 #define DC_SITE_TAH_BEFORE  2
@@ -12,6 +13,7 @@
 #define DC_SITE_GOD_AFTER   4
 #define DC_SITE_ILL_PASSED  5
 #define DC_SITE_COUNT       6
+// end no-family
 
 void DamageClassCheckpoint(int site, EventInfo &e);
 void DamageClassDamageEntry(EventInfo &e);

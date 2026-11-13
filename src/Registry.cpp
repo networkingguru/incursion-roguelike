@@ -1432,28 +1432,16 @@ bool Game::LoadNamedGame(const char *savefile) {
         Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
         return false;
     }
-    /* inc-j5yo/inc-4999: revisions 5 and 6 each changed the meaning of
-       Player spell flags. Revision 5 added SP_PENDING and SP_GRANTED;
-       revision 6 made a kind bit mean the source a spell is held from, with
-       pending tracked per source. A v1 file older than a revision is migrated
-       once here -- after the player object and modules are fully loaded and
-       SaveV1_ResolveNames() has converted every queued reference, and before
-       any CalcValues/report code reads a spell flag. This is the one restore
-       path both a load from the title menu (Game::LoadGame) and
-       INCURSION_LOAD (Game::LoadNamedGame, which the -load option calls
-       directly) take. The probe runs once per load, after both migrations,
-       with migrated=1 when either ran. */
+    /* inc-j5yo/inc-4999/inc-cjos0: a v1 load runs every named migration the
+       file lacks (SaveV1_RunMigrations), once, after SaveV1_ResolveNames()
+       and before any CalcValues/report code reads a spell flag. Every v1
+       load path takes this one site. */
     if (!strncmp(recoveryHeader.Version, "IS", 2)) {
-        bool migrated = false;
-        if (SaveV1_FileRevision() < 5) {
-            oPlayer(p[0])->MigrateSpellFlagsRev5();
-            migrated = true;
-        }
-        if (SaveV1_FileRevision() < 6) {
-            oPlayer(p[0])->MigrateSpellFlagsRev6();
-            migrated = true;
-        }
+        bool migrated = SaveV1_RunMigrations(oPlayer(p[0]));
         oPlayer(p[0])->SpellFlagProbe(migrated);
+        if (getenv("INCURSION_SPELLFLAG_PROBE"))
+            Error("MIGRATION_PROBE ran=%s rev=%d", SaveV1_RanMigrations(),
+                (int)SaveV1_FileRevision());
     }
     memset(oPlayer(p[0])->MessageQueue, 0, sizeof(String) * 8);
     InitGodArrays();

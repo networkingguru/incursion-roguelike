@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index ac6e029..16cbea5 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -353,6 +353,7 @@ typedef signed int        hObj;
+ #define KN_AC8_P12  0x1000
+ #define KN_AC8_P13  0x2000
+ #define KN_AC8_P14  0x4000
++#define KN_AC8_B    0x8000
+ // end family: kn
+ // family: if_flag stored bits u16
+ 

@@ -1,0 +1,5 @@
+# N17-same: god row 1 in P's own build
+sacval 1 0 11
+sacval 1 9 19
+sacval 1 10 1001
+sacval 1 11 2001

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2570,6 +2570,7 @@
+ #define WS_MASTERY       4
+ #define WS_HIGH_MASTERY  5
+ #define WS_GRAND_MASTERY 6
++#define WS_GRWB 7
+ // end family: ws
+ // family: df_door stored bits u8 field-of Door.DoorFlags
+ 

@@ -1,0 +1,21 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..9fcef12 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3555,6 +3555,7 @@ typedef signed int        hObj;
+    eID is the spell, Val the tail units to apply if concentration is stopped
+    early, and Duration the cap. */
+ #define CONCENTRATING     247
++#define GRW_B_AURA 251
+ /* inc-z1ba: the watcher identified this illusion's cast with Spellcraft. Obj is
+    the illusion (creature, item or terrain creator) and eID the cast's spell, so
+    the +4 disbelief bonus applies only to the illusion that cast made. */
+@@ -3564,7 +3565,7 @@ typedef signed int        hObj;
+    -1 once the buff ended and the mana was released (Mag then = released mana
+    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+ #define HELD_MANA         250
+-#define LAST_STATI        251
++#define LAST_STATI        252
+ // end family: stati
+ // no-family
+   

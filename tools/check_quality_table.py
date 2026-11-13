@@ -29,7 +29,7 @@ def names(defines_text):
     fam, found, out = None, set(), {}
     for line in defines_text.splitlines():
         s = line.strip()
-        m = re.match(r"//\s*family:\s*(.*?)\s*$", s)
+        m = re.match(r"//\s*family:\s*(\w+)(?=[\s,]|$)", s)
         if m:
             fam = m.group(1)
             if fam in FAMILIES:
@@ -91,6 +91,11 @@ def selftest():
     assert any("AQ_Z" in p for p in problems(d, stranger))
     assert any("blocks" in p for p in problems("nothing\n", t))
     assert any("QualityTable" in p for p in problems(d, "nothing\n"))
+    dc = (d.replace("// family: wq\n", "// family: wq stored ordinal i8 elem-of Q shares aq\n")
+           .replace("// family: aq\n", "// family: aq stored ordinal i8 elem-of Q shares wq\n"))
+    assert problems(dc, t) == [], problems(dc, t)
+    dx = d.replace("// family: aq\n", "// family: aqx\n")
+    assert any("blocks" in p for p in problems(dx, t))
     print("selftest ok")
 
 

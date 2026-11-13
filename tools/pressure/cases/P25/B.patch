@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1439,6 +1439,7 @@
+ #define MS_REACH_ONLY  0x2000
+ #define MS_THREAT2     0x4000
+ #define MS_STILL_CAST  0x8000 
++#define MS_GRWB 0x80
+ // end family: ms
+ // family: m_flag internal
+ 

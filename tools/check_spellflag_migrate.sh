@@ -4,8 +4,8 @@
 # spell flags exactly once, and the save that session writes comes back at
 # the current revision without migrating again.
 #
-# inc-4999 raised the schema to revision 6, so a save written by this build is
-# IS1.6; Run B therefore expects migrated=0 rev=6.
+# A save written by this build carries the current schema revision, read from
+# SCHEMA_REV in src/SaveV1.cpp; Run B therefore expects migrated=0 rev=<that>.
 #
 # WHAT IS BEING GUARDED. Revision 5 gave SP_PENDING and SP_GRANTED meaning
 # (the arcane selection for the next rest; a spell handed out by a class or
@@ -17,7 +17,7 @@
 #   Run A  loads tools/fixtures/chars/orc-mage-seed1-opt0822.sav and must
 #          report migrated=1 with the file's own revision. That fixture is
 #          IS1.3, so the expected line is migrated=1 rev=3.
-#   Run B  loads the save Run A wrote and must report migrated=0 rev=6, with
+#   Run B  loads the save Run A wrote and must report migrated=0 rev=<current>, with
 #          every spell flag exactly as Run A ended.
 #
 # THE ORACLE is INCURSION_SPELLFLAG_PROBE (src/Create.cpp, Player::
@@ -43,6 +43,11 @@
 # Usage: tools/check_spellflag_migrate.sh [--prove-red]  (0 pass, 1 fail, 2 inconclusive)
 . "$(dirname "$0")/check_lib.sh"
 
+# fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: the character -- fixture tools/fixtures/chars/orc-mage-seed1-opt0822.sav (INCURSION_LOAD), an IS1.3 save
+# fact: the revision this build writes -- read from the SCHEMA_REV define in src/SaveV1.cpp, not typed here
+# fact: the fixture's own revision -- read from the fixture's IS1.<n> stamp
+# fact: which spell flags the migration sets -- the fixture's spells; no dice, the seed only names the run
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
@@ -68,6 +73,11 @@ check_mutation src/Create.cpp \
 REV="$(dd if="$FIXTURE" bs=1 skip=4 count=5 2>/dev/null | sed 's/^IS1\.//')"
 [ -n "$REV" ] || _check_die 2 \
     "$FIXTURE does not carry an IS1.<n> stamp, so its revision is unknown."
+
+# The revision this build writes, read from source for the same reason.
+CUR="$(sed -n 's/^#define SCHEMA_REV[[:space:]]\{1,\}\([0-9]\{1,\}\).*/\1/p' src/SaveV1.cpp | head -1)"
+[ -n "$CUR" ] || _check_die 2 \
+    "cannot parse '#define SCHEMA_REV <n>' from src/SaveV1.cpp."
 
 export INCURSION_SPELLFLAG_PROBE=1
 
@@ -145,8 +155,8 @@ A_SAVE="$(ls -t "$RUN_A"/save/*.sav 2>/dev/null | head -1)"
     "Run A wrote no save under $RUN_A/save, so there is nothing to reload." \
     "The keys script must reach the System Menu's [b] Save and Continue."
 STAMP_A="$(dd if="$A_SAVE" bs=1 skip=4 count=5 2>/dev/null)"
-[ "$STAMP_A" = "IS1.6" ] || {
-    echo "FAIL: Run A's save stamp is \"$STAMP_A\", wanted IS1.6."
+[ "$STAMP_A" = "IS1.$CUR" ] || {
+    echo "FAIL: Run A's save stamp is \"$STAMP_A\", wanted IS1.$CUR."
     FAIL=1
 }
 cp "$A_SAVE" "$RUN_A/runA.sav"
@@ -162,8 +172,8 @@ B_SUM="$(summary "$CLEAN_B")"
 if [ -z "$B_SUM" ]; then
     echo "FAIL: Run B logged no SPELLFLAG_PROBE summary line."
     FAIL=1
-elif ! printf '%s\n' "$B_SUM" | grep -q 'migrated=0 rev=6$'; then
-    echo "FAIL: Run B reloaded a revision-6 save and must not migrate; it reads:"
+elif ! printf '%s\n' "$B_SUM" | grep -q "migrated=0 rev=$CUR\$"; then
+    echo "FAIL: Run B reloaded a revision-$CUR save and must not migrate; it reads:"
     echo "      $B_SUM"
     FAIL=1
 fi
@@ -179,7 +189,7 @@ fi
 echo
 echo "--- Run A (IS1.$REV fixture) ---"
 printf '%s\n' "$A_SPELLS"; printf '%s\n' "$A_SUM"
-echo "--- Run B (Run A's IS1.6 save) ---"
+echo "--- Run B (Run A's IS1.$CUR save) ---"
 printf '%s\n' "$B_SPELLS"; printf '%s\n' "$B_SUM"
 echo "specimen A: $LOG_A"
 echo "specimen B: $LOG_B"
@@ -191,5 +201,5 @@ fi
 echo
 echo "PASS: the IS1.$REV fixture migrated once (migrated=1 rev=$REV), every"
 echo "      known arcane spell ended granted or pending, and reloading the"
-echo "      IS1.6 save it wrote did not migrate again (migrated=0 rev=6)."
+echo "      IS1.$CUR save it wrote did not migrate again (migrated=0 rev=$CUR)."
 exit 0

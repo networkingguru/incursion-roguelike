@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..db5a6c9 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4580,6 +4580,7 @@ typedef signed int        hObj;
+ #define OPT_POWER_STATS         118
+ #define OPT_ELUDE_DEATH         119
+ #define OPT_NO_ALLY_TRANS       120       
++#define OPT_GRWB 122
+ #define OPT_NATURAL_SPEED       121
+ // end family: opt
+ // no-family

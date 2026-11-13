@@ -1,0 +1,9 @@
+# Retired stored values (tools/check_stored_values.py, bead inc-cjos0).
+# One row per line: <family> <NAME> <value>
+# A name that left a stored family but whose value may still sit in an old
+# file is listed here. The check then accepts its absence, and refuses any
+# tree-only name of the family that takes the same value (shape bits: any
+# overlapping bit). A retired value is never reused.
+
+# PHASED val 6 never had a name: before inc-ef99 the engine summed CA_PHASE grants, and fixture levitate-bottom-seed1 holds it (bead inc-cjos0).
+val_phased PHASE_SUMMED_6 6

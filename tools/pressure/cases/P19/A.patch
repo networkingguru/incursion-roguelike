@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3430,6 +3430,7 @@
+ // end family: stati
+ // family: val_charmed stored ordinal i16 val-of CHARMED
+ #define   CH_CHARM    1   /*   No longer attacks you (charm person) */
++#define CH_GRWA 7
+ #define   CH_CALMED   2   /*   Won't attack if you have not yet. */
+ #define   CH_ALLY     3   /*   Will fight on your behalf */
+ #define   CH_DOMINATE 4   /*   Will do as you say, joins party, etc. */

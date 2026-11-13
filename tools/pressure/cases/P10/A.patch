@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3208,6 +3208,7 @@
+ // end family: stati
+ // family: val_para stored ordinal i16 val-of PARALYSIS
+   #define PARA_HELD   0
++  #define PARA_GRWA 3
+   #define PARA_HYPNOTIZED 1
+   #define PARA_DAZED 2
+ // end family: val_para

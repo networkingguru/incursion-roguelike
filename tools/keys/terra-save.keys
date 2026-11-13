@@ -1,0 +1,31 @@
+# inc-cjos0 gap 1: save real timed terrain for the v1 tag reader.
+# fact: character and dungeon -- INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav
+# fact: monsters cannot interfere -- fixture Freeze Monsters; wizard Genocide Everything
+# fact: Wall of Fire known -- wizard Learn Any Spell (innate)
+# fact: spell success -- wizard Ignore Spell Failure set to YES
+# fact: mana -- fixture Infinite Mana
+# fact: target terrain -- fixture pins the map; aim east from its saved position
+# fact: terrain survives until save -- save immediately after casting, no waits
+# Run with INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat,
+# the INCURSION_LOAD above, and a unique INCURSION_RUN_DIR under logs/.
+SPACE
+w
+@choose "Genocide Everything"
+@until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*5
+@dump:spell-failure-option
+SPACE
+ESC
+w
+@choose "Learn Any Spell"
+"Wall of Fire" ENTER
+@until "Select Spell" m
+@choose "Wall of Fire"
+RIGHT ENTER
+@dump:terrain-cast
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved

@@ -157,34 +157,43 @@ save loads under a newer binary. **A tag it does not know MUST refuse the load**
 naming the tag: a field it cannot interpret means the file was written by
 something newer than itself.
 
-### Field numbers and class layout: the two rules
+### Field names and class layout: the two rules
 
-Each class owns a range of tag numbers. Within that range:
+From revision 7, a field is named by a string, not a number
+(`FIELD_U16("weight", Weight)`). Each name is unique in its scope: the nearest
+`ARCHIVE_CLASS` or `FieldsV1` owner, plus the name of each embed opened inside
+it. The writer gives each name a number for that one file and writes the
+name table into the file, so two branches that add fields to one class choose
+two names and never collide. A revision 3-6 save carries numbers only; the
+reader maps them to names through the frozen table `inc/SaveLegacyTags.h`.
 
-- A new field MUST take the next unused number.
-- A retired field's number MUST NOT be reused, ever.
-- A field's number MUST NOT change, ever.
+- A new field MUST take a name unique in its scope. A numeric tag fails to compile.
+- A retired field's name goes on `tools/retired_field_names.txt` and in its engine copy `inc/SaveRetiredNames.h` (`tools/check_field_names.sh` keeps the two equal). It MUST NOT be reused, ever.
+- A field's name SHOULD NOT change. A renamed field MUST get a `rename <scope> <old> <new>` line in `tools/retired_field_names.txt`; the reader then matches either name.
+- `inc/SaveLegacyTags.h` MUST NOT change: it describes files already written.
 
-That is the first rule. The second rule concerns the byte layout of the class.
+That is the first rule. Design: `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md`. The second rule concerns the byte layout of the class.
 
-`src/SaveV1.cpp` holds one pad row per saved class (`CreaturePads`,
-`MonsterPads` and the others in `SchemaPins[]`). A pad row lists every byte of
-the object that no `FIELD_` line covers: the vtable pointer, the compiler's
-padding, and each member that is deliberately not saved. A DEBUG build compares
-those rows with the bytes the field lists actually cover, and it refuses to
-write the save on any difference.
+Every build generates one pad row per saved class from the compiler's record
+layout: `tools/gen_record_layout.py` writes the size and the pad rows of each
+class in `SchemaPins[]` to `build/gen/<objdir>/RecordLayout.h`. A pad row lists
+the vtable pointer and the compiler's padding, and nothing else. A DEBUG build
+compares those rows with the bytes the field lists actually cover, and it
+refuses to write the save on any difference. `build_macos.sh` runs that
+comparison after it compiles, so a member with no `FIELD_` line stops the
+build.
 
-- When you add, remove or resize a member of a saved class, you MUST re-measure
-  the pad rows of that class and of every class derived from it.
-- Run `tools/save_pad_rows.sh`. It reads the layout from the compiler and prints
-  every row in the form `src/SaveV1.cpp` uses. Paste the rows it prints.
-- `tools/check_save_pad_rows.sh` fails when a declared row differs from the
-  measured one.
-
-The member you add is often not the member that breaks. On 2026-09-21 a new
-`int16` in `Creature` (inc-30ps) landed in free space, but it pushed two
-existing saved fields into bytes the rows still called padding. Every save then
-failed with `SCHEMA COVERAGE` errors (inc-xlwa).
+- No person writes a class size or a pad row. Two branches that each add a
+  member to one class merge with no number to reconcile (inc-cjos0).
+- A member that is deliberately not saved MUST carry a `FIELD_SKIP(<member>)`
+  line. It is not a pad.
+- A compiler that cannot print its record layout (gcc, mingw, MSVC) builds with
+  `LAYOUT_MEASURED 0`. The coverage check then reports "not measured", never a
+  pass.
+- An embedded struct whose whole range travels as one embed (`JournalInfoType`,
+  `GameTimeInfoType`, `QuickKey`, `String`) still carries a hand-written
+  `static_assert` on its size. A member added to one of them needs that number
+  changed by hand.
 
 ### How a class declares its fields
 

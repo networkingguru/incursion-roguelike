@@ -1,0 +1,55 @@
+# <path> TAB <kind> TAB <note> TAB <exact line>; read by attribute_check in tools/pressure/ac9.sh
+inc/Creature.h	compiler	the compiler's value, printed as 'expression evaluates to' by the failing assert	static_assert(sizeof(Character) == 12832,
+inc/Creature.h	compiler	the compiler's value, printed as 'expression evaluates to' by the failing assert	static_assert(sizeof(Player) == 23896,
+src/Inv.cpp	rewrite	edit that keeps every existing constant	return (TITEM(it->iID)->HasFlag(WT_EXOTIC_1H) && !HasEffStati(WEP_SKILL,it->iID) && !WeaponSizeBonus()) ||
+src/Inv.cpp	rewrite	edit that keeps every existing constant	(it->Size(this) + TITEM(it->iID)->HasFlag(WT_TWO_HANDED) > (Attr[A_SIZ] + (it->isType(T_SHIELD) ? 0 : WeaponSizeBonus())));
+inc/Defines.h	type	a storage width, which is a type; evidence in the README	// family: sp_flag stored bits u32 elem-of Character.Spells
+inc/Defines.h	type	a storage width, which is a type; evidence in the README	// family: stati stored ordinal u16
+inc/Defines.h	type	a storage width, which is a type; evidence in the README	// family: stati stored ordinal u16 sentinel LAST_STATI
+inc/Defines.h	type	a storage width, which is a type; evidence in the README	// family: tg stored ordinal i16 val-of TERRAIN_FREE
+inc/Defines.h	type	a storage width, which is a type; evidence in the README	// family: gpr stored ordinal i16 mag-of HUNG_PULSE
+src/Debug.cpp	hand	owner ruling 2026-11-12 (bead inc-cjos0 notes): the one number chosen by hand, a debug menu entry that is never saved	case 46: {
+src/Dump.cpp	rewrite	edit that keeps every existing constant	if (f == "favour") p->FavourLev[g] = (int32)v; else if (f == "anger") p->HateLev[g] = (int16)v; else p->godFlags[g] = (uint16)v; }
+src/DamageClassProbe.cpp	rewrite	edit that keeps every existing constant	dcPenAtSite = 0;   /* the epic has no FavPenalty (spec Section 6.7) */
+src/DamageClassProbe.cpp	rewrite	edit that keeps every existing constant	int16 oAnger = pl->HateLev[gn];   /* the epic's HateLev stands where Anger stood */
+src/DamageClassProbe.cpp	rewrite	edit that keeps every existing constant	pl->HateLev[gn] = 0;
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	off = player_array_element(v1, base, v1.tag(*CHAR_FAVOURLEV),
+tools/check_weapon_types.sh	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	# fact: acid damage roll (2000 trials per item) -- not a roll the verdict reads: energy items take no damage in any trial and plain controls take some, so every trial is judged, not a count
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	open(_DEFINES).read(), re.M).group(1))
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	if not 1 <= LAST_STATI <= 0xFFFF:
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	# Nature is 16 bits (inc-pu6v.210): "nature" is the low byte and
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	# "natureHi" the high byte, so 0xFFFF is out of range for any LAST_STATI.
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	K_U8, 255)
+tools/craft_bad_v1_saves.py	ac7	AC7 edit ordered by the coordinator (item 7); the line is AC7's, kept constants	status += struct.pack("<HBB", v1.tag("StatiCollection.Status", "natureHi"),
+src/Debug.cpp	hand	owner ruling 2026-11-12 (bead inc-cjos0 notes): the one number chosen by hand, a debug menu entry that is never saved	MyTerm->LOption("Burn Worn Armour", 46);
+src/Debug.cpp	hand	owner ruling 2026-11-12 (bead inc-cjos0 notes): a debug menu entry that is never saved; master's second entry of the same kind (inc-10v7f) takes the next free number, 47	MyTerm->LOption("Damage Worn Armour", 47);
+src/Debug.cpp	hand	owner ruling 2026-11-12 (bead inc-cjos0 notes): the case of the entry above	case 47: {
+src/Create.cpp	rewrite	edit that keeps every existing constant	WIN_CREATION,"help::adventuring,AC",0,unavailable); });
+src/Create.cpp	rewrite	edit that keeps every existing constant	WIN_SCREEN, "help::domains",0,unavailable); });
+src/Create.cpp	rewrite	edit that keeps every existing constant	godPicks.Add(godlessLabel, 0);
+src/Create.cpp	rewrite	edit that keeps every existing constant	for (k = 0; k != 5; k++)
+src/Create.cpp	rewrite	edit that keeps every existing constant	n = (int16)SourcedPick(CK_DOMAIN, domains, [&]() { return (int32)MyTerm->LMenu(MENU_3COLS|MENU_DESC,title,Win,"help::domains"); });
+src/Dump.cpp	port	the canonical dump ported to the epic's four weapon sets and its religion fields, a patch made for this merge (docs/evidence/inc-10v7f/epic-d71c1823/dump-port-d71c1823.patch); every constant is the epic's	static const char *const label[4] = { "M main", "M off-hand",
+src/Dump.cpp	port	the canonical dump ported to the epic's four weapon sets and its religion fields, a patch made for this merge (docs/evidence/inc-10v7f/epic-d71c1823/dump-port-d71c1823.patch); every constant is the epic's	const hObj hs[4] = { p->defMelee, p->defOffhand, p->defRanged,
+src/Dump.cpp	port	the canonical dump ported to the epic's four weapon sets and its religion fields, a patch made for this merge (docs/evidence/inc-10v7f/epic-d71c1823/dump-port-d71c1823.patch); every constant is the epic's	for (int k = 0; k != 4; k++) {
+src/Dump.cpp	port	the canonical dump ported to the epic's four weapon sets and its religion fields, a patch made for this merge (docs/evidence/inc-10v7f/epic-d71c1823/dump-port-d71c1823.patch); every constant is the epic's	"GiftsGiven=0x%x AidWaitEnd=%u HateLev=%d "
+src/Create.cpp	rewrite	edit that keeps every existing constant	sel = (int16)(key - 'a');
+src/VMachine.cpp	rewrite	edit that keeps every existing constant	return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return ScriptDiceRoll(n, s); },
+src/VMachine.cpp	rewrite	edit that keeps every existing constant	return (int16)SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return ForceScriptRandom((int16)census_random(mx, f, l, fn), mx); },
+src/VMachine.cpp	rewrite	edit that keeps every existing constant	static int16 ForceScriptRandom(int16 r, int16 mx)
+tools/char_convert.sh	fit	E2 fit fix (see the README table)	#                                            here). The inc-cjos0 AC9 epic fixtures are epic saves this build cannot read;
+tools/char_convert.sh	fit	E2 fit fix (see the README table)	cp "$CHAR_CONVERT_OLD_CANON_DIR/$NAME.canon" "$OD/old.canon" 2> /dev/null \
+tools/char_convert.sh	fit	E2 fit fix (see the README table)	|| { echo "char_convert: no oracle dump $CHAR_CONVERT_OLD_CANON_DIR/$NAME.canon" >&2; exit 2; }
+tools/char_convert_map.py	fit	E2 fit fix (see the README table)	{"name": "ranger-gains-fasting", "cause": "commit 802083dc",
+tools/char_convert_map.py	fit	E2 fit fix (see the README table)	"kinds": ["(nothing) -> ability CA_FASTING 1 (the Ranger gets the Fasting ability its help promises, inc-4us6)"],
+tools/char_convert_map.py	fit	E2 fit fix (see the README table)	"adds": "ability CA_FASTING 1",
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	ABUSE = "Abuse(A_WIS,Dice::Roll((int8)mag,10));"
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	if at_draws.count(ABUSE) > 1:
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	"the transgression path (Character::Transgress, applyTransgression in src/Prayer.cpp) holds an unsourced draw: " + "; ".join(tdraws)[:200]),
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	mutate_script m draw-transgress prayer 's/^    applyTransgression\(gID,mag,doWrath,reason,false\);/    random(60); applyTransgression(gID,mag,doWrath,reason,false);/'
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	mutate_script m2 draw-transgress prayer 's/^    else if \(mag <= 0\) return;/    else if (mag <= 0) return; Dice::Roll(1,6);/'
+tools/check_creation_source_sites.sh	fit	E2 fit fix (see the README table)	[ $fail -eq 0 ] && echo "selftest: all 17 mutations caught"
+tools/check_damage_class.sh	fit	E2 fit fix (see the README table)	# fact: loaded character, race, class, attributes, inventory and map -- catalog fixture control: INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
+tools/check_damage_class.sh	fit	E2 fit fix (see the README table)	FIX=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
+tools/keys/bard-song-save.keys	fit	E2 fit fix (see the README table)	@expect "Learn Spells: Level"    # the bard's first spell: Sleep is row 27 of level 1 by name (master's checklist, inc-g045)
+tools/keys/bard-song-save.keys	fit	E2 fit fix (see the README table)	DOWN*26

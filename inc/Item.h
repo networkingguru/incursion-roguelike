@@ -13,28 +13,29 @@ bool MaterialIsCorporeal(int8 mat);
 class Item: public Thing, public Magic
 	{
 		friend class Container;
+    friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets Known on a planted item */
     friend Item* Monster::GetInv(bool first);
     friend Item* Character::GetInv(bool first);
     friend class TextTerm;
     friend void Player::JournalNoteItem(Item *i);
     ARCHIVE_CLASS(Item,Thing,r)
-      FIELD_U16(32, Known);
-      FIELD_I8 (33, Plus);
-      FIELD_I8 (34, Charges);
-      FIELD_I8 (35, DmgType);
-      FIELD_I16(36, GenNum);
-      FIELD_H  (37, Parent);
-      FIELD_RID(38, homeID);
-      FIELD_I16(39, Flavor);
-      FIELD_I16(40, cHP);
-      FIELD_I16(41, Age);
-      FIELD_U8 (42, swingCount);
-      FIELD_U32(43, Quantity);
-      FIELD_STR(44, Inscrip);
-      FIELD_STR(45, GenStats);
-      FIELD_RID(46, iID);
-      FIELD_RID(47, eID);
-      FIELD_U16(48, IFlags);
+      FIELD_U16("Known", Known);
+      FIELD_I8 ("Plus", Plus);
+      FIELD_I8 ("Charges", Charges);
+      FIELD_I8 ("DmgType", DmgType);
+      FIELD_I16("GenNum", GenNum);
+      FIELD_H  ("Parent", Parent);
+      FIELD_RID("homeID", homeID);
+      FIELD_I16("Flavor", Flavor);
+      FIELD_I16("cHP", cHP);
+      FIELD_I16("Age", Age);
+      FIELD_U8 ("swingCount", swingCount);
+      FIELD_U32("Quantity", Quantity);
+      FIELD_STR("Inscrip", Inscrip);
+      FIELD_STR("GenStats", GenStats);
+      FIELD_RID("iID", iID);
+      FIELD_RID("eID", eID);
+      FIELD_U16("IFlags", IFlags);
     END_ARCHIVE
     protected:
 			uint16 Known;
@@ -287,8 +288,8 @@ class QItem: public Item
       int8  Qualities[8];
       uint8 KnownQualities;  
     ARCHIVE_CLASS(QItem,Item,r)
-      FIELD_ARRAY(64, Qualities, sizeof(int8), 8);
-      FIELD_U8   (65, KnownQualities);
+      FIELD_ARRAY("Qualities", Qualities, sizeof(int8), 8);
+      FIELD_U8   ("KnownQualities", KnownQualities);
     END_ARCHIVE
   };
 
@@ -312,7 +313,7 @@ public:
     EvReturn Eat(EventInfo &e);
 
     ARCHIVE_CLASS(Food, QItem, r)
-      FIELD_I16(80, Eaten);
+      FIELD_I16("Eaten", Eaten);
     END_ARCHIVE
 };
 
@@ -345,9 +346,9 @@ class Corpse: public Food
           return sz; }
       EvReturn Eat(EventInfo &e);
       ARCHIVE_CLASS(Corpse,Food,r)
-        FIELD_RID(96, mID);
-        FIELD_U32(97, TurnCreated);
-        FIELD_I16(98, LastDiseaseDCCheck);
+        FIELD_RID("mID", mID);
+        FIELD_U32("TurnCreated", TurnCreated);
+        FIELD_I16("LastDiseaseDCCheck", LastDiseaseDCCheck);
       END_ARCHIVE
 	};
 
@@ -382,7 +383,7 @@ class Container: public QItem
       Item * getItem(int16 n) { return (*this)[n]; }
       EvReturn Event(EventInfo &e);
       ARCHIVE_CLASS(Container,QItem,r)
-        FIELD_H(112, Contents);
+        FIELD_H("Contents", Contents);
       END_ARCHIVE
 
   };
@@ -428,7 +429,7 @@ class Weapon: public QItem
       private:
       int16 Bane;
       ARCHIVE_CLASS(Weapon,QItem,r)
-        FIELD_I16(128, Bane);
+        FIELD_I16("Bane", Bane);
       END_ARCHIVE
 
 	};

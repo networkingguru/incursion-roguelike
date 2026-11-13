@@ -29,7 +29,7 @@ def family(defines_text):
     inside, found, out = False, False, {}
     for line in defines_text.splitlines():
         s = line.strip()
-        if re.match(r"//\s*family:\s*ad\s*$", s):
+        if re.match(r"//\s*family:\s*ad(?=\s|$)", s):
             inside, found = True, True
         elif re.match(r"//\s*end family:\s*ad\s*$", s):
             inside = False
@@ -95,6 +95,10 @@ def selftest():
     assert any("AD_Z" in p for p in problems(d, stranger))
     assert any("family" in p for p in problems("nothing\n", t))
     assert any("table" in p for p in problems(d, "nothing\n"))
+    dc = d.replace("// family: ad\n", "// family: ad stored ordinal i8 val-of X\n")
+    assert problems(dc, t) == [], problems(dc, t)
+    dx = d.replace("// family: ad\n", "// family: adx\n")
+    assert any("family" in p for p in problems(dx, t))
     print("selftest ok")
 
 

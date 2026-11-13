@@ -746,6 +746,7 @@ struct groupHeader
 
 /* v1 wire kinds (docs/SAVE-SCHEMA-SPEC.md; the wire format is normative in
    docs/superpowers/plans/2026-08-24-save-schema-v1.md). */
+// family: v1_kind stored enum u8
 enum {
   K_U8 = 1, K_I8 = 2, K_U16 = 3, K_I16 = 4, K_U32 = 5, K_I32 = 6,
   K_STR   = 7,   /* uint32 len, len bytes, no NUL */
@@ -756,48 +757,65 @@ enum {
   K_EMBED = 12   /* uint32 len; a nested field stream with its own tag scope
                     and its own tag-0 terminator */
 };
+// end family: v1_kind
 
 /* Wire pool ids, in the canonical declaration order of inc/Res.h:875-897.
    Append-only forever. */
+// family: v1_pool stored enum u8
 enum {
   SP_MON = 0, SP_ITM = 1, SP_FEA = 2, SP_EFF = 3, SP_ART = 4, SP_QUE = 5,
   SP_DGN = 6, SP_ROU = 7, SP_NPC = 8, SP_CLA = 9, SP_RAC = 10, SP_DOM = 11,
   SP_GOD = 12, SP_REG = 13, SP_TER = 14, SP_TXT = 15, SP_VAR = 16,
   SP_TEM = 17, SP_FLA = 18, SP_BEV = 19, SP_ENC = 20
 };
+// end family: v1_pool
 
-/* v1 tag ranges. Within a range: a new field takes the next unused number, a
-   retired number is never reused, a number never changes. Tags are unique
-   within a class CHAIN, so a chain crossing two ranges never collides.
-     Thing      1-31        Item      32-63
-     QItem     64-79        Food      80-95      Corpse    96-111
-     Container 112-127      Weapon   128-143     Coin     144-159
-     Armour   160-175       Feature  176-191     Door     192-207
-     Trap     208-223       Portal   224-239     Creature 256-383
-     Character 384-511      Player   512-639     Monster  640-671
-     Map      672-767       Module   768-799     Game     800-899 */
+/* v1 field names. Every saved field is named by a string, unique within its
+   scope (the nearest ARCHIVE_CLASS or FieldsV1 owner, plus the name of each
+   embed opened inside it). A new field takes a new name; a retired name is
+   never reused (tools/retired_field_names.txt). A numeric tag fails to
+   compile. Specification: docs/superpowers/specs/2026-11-07-names-in-the-file-design.md */
 
 /* One declaration serves four duties: the v0 save/load path (where the raw
    dump already carries scalars, so scalar macros are no-ops there and the
    STR/BLOB/OBJ macros perform exactly the legacy Serialize/Block calls they
    replace), the v1 write, the v1 read, and the DEBUG coverage map. */
-#define FIELD_U8(tag,m)   r.V1Field((tag), K_U8,  &(m), sizeof(m))
-#define FIELD_I8(tag,m)   r.V1Field((tag), K_I8,  &(m), sizeof(m))
-#define FIELD_U16(tag,m)  r.V1Field((tag), K_U16, &(m), sizeof(m))
-#define FIELD_I16(tag,m)  r.V1Field((tag), K_I16, &(m), sizeof(m))
-#define FIELD_U32(tag,m)  r.V1Field((tag), K_U32, &(m), sizeof(m))
-#define FIELD_I32(tag,m)  r.V1Field((tag), K_I32, &(m), sizeof(m))
-#define FIELD_H(tag,m)    r.V1Field((tag), K_H,   &(m), sizeof(m))
-#define FIELD_RID(tag,m)  r.V1Rid((tag), (m))
-#define FIELD_STR(tag,m)  do { if (r.V1Active()) r.V1Str((tag),(m)); \
+/* The saved name MUST be a string literal: tools/check_save_names.py reads literal names only (inc-cjos0). A pointer fails here; an array variable is refused by that tool. */
+template<size_t N> constexpr const char *V1LiteralName(const char (&s)[N]) { return s; }
+template<class T> struct V1IsPtr { static const bool v = false; };
+template<class T> struct V1IsPtr<T *> { static const bool v = true; };
+template<class T> struct V1IsPtr<T *const> { static const bool v = true; };
+template<class T> struct V1IsPtr<T &> : V1IsPtr<T> { };
+template<bool B> struct V1PtrOnly { };
+template<> struct V1PtrOnly<true> { typedef const char *type; };
+template<class T> typename V1PtrOnly<V1IsPtr<T>::v>::type V1LiteralName(T &&) = delete;
+#define FIELD_U8(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U8, &(m), sizeof(m)))
+#define FIELD_I8(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I8, &(m), sizeof(m)))
+#define FIELD_U16(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U16, &(m), sizeof(m)))
+#define FIELD_I16(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I16, &(m), sizeof(m)))
+#define FIELD_U32(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_U32, &(m), sizeof(m)))
+#define FIELD_I32(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_I32, &(m), sizeof(m)))
+#define FIELD_H(name,m) (r.V1Mem(#m), r.V1Field(V1LiteralName(name), K_H, &(m), sizeof(m)))
+#define FIELD_RID(name,m)  (r.V1Mem(#m), r.V1Rid(V1LiteralName(name), (m)))
+#define FIELD_RID_AT(name,i,m)  (r.V1Mem(#m), r.V1Rid_AT(V1LiteralName(name), (i), (m)))
+#define FIELD_STR(name,m)  do { r.V1Mem(#m); if (r.V1Active()) r.V1Str(V1LiteralName(name),(m)); \
                                else (m).Serialize(r); } while (0)
-#define FIELD_BLOB(tag,p,sz) do { if (r.V1Active()) r.V1Blob((tag),(void**)&(p),(sz)); \
+#define FIELD_BLOB(name,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob(V1LiteralName(name),(void**)&(p),(sz)); \
                                   else r.Block((void**)&(p),(sz)); } while (0)
-#define FIELD_ARRAY(tag,p,elem,count) r.V1Array((tag),(p),(elem),(count))
-#define FIELD_OBJ(tag,m)  do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+#define FIELD_BLOB_AT(name,i,p,sz) do { r.V1Mem(#p); if (r.V1Active()) r.V1Blob_AT(V1LiteralName(name),(i),(void**)&(p),(sz)); \
+                                  else r.Block((void**)&(p),(sz)); } while (0)
+#define FIELD_ARRAY(name,p,elem,count) (r.V1Mem(#p), r.V1Array(V1LiteralName(name),(p),(elem),(count)))
+/* An array of rows. savedRowLen is the row length the file records (a named
+   field beside the array); tail is the count of trailing columns that keep
+   their meaning when a row grows. See Registry::V1ArrayRows. */
+#define FIELD_ARRAY_ROWS(name,p,elem,rows,rowLen,savedRowLen,tail) \
+  (r.V1Mem(#p), r.V1ArrayRows(V1LiteralName(name),(p),(elem),(rows),(rowLen),(savedRowLen),(tail)))
+#define FIELD_OBJ(name,m)  do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin(V1LiteralName(name),&(m),sizeof(m)); \
                                (m).FieldsV1(r); r.V1EmbedEnd(); } \
                                else (m).Serialize(r); } while (0)
-#define FIELD_EMBED(tag,m) do { if (r.V1Active()) { r.V1EmbedBegin((tag),&(m),sizeof(m)); \
+#define FIELD_EMBED(name,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin(V1LiteralName(name),&(m),sizeof(m)); \
+                                (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
+#define FIELD_EMBED_AT(name,i,m) do { r.V1Mem(#m); if (r.V1Active()) { r.V1EmbedBegin_AT(V1LiteralName(name),(i),&(m),sizeof(m)); \
                                 (m).FieldsV1(r); r.V1EmbedEnd(); } } while (0)
 #define FIELD_SKIP(m)     r.V1Cover(&(m), sizeof(m))
 
@@ -806,7 +824,7 @@ enum {
   ClassName(Registry*r) : Base(r) {}                            \
   virtual size_t ObjectSize() { return sizeof(ClassName); }     \
   virtual void Serialize(Registry &r, bool isSave) {            \
-  Base::Serialize(r,isSave);
+  Base::Serialize(r,isSave); r.V1ProbeScope(#ClassName);
 
 #define END_ARCHIVE }
    
@@ -898,22 +916,39 @@ class Registry
        to SaveLayoutDigest() (src/AbiCheck.cpp), so a data member added here
        orphans every v0 save. All v1 state lives in file-scope context objects
        in src/SaveV1.cpp. */
+    /* inc-cjos0: the default arguments carry the caller's file and line to
+       the INCURSION_TAG_SCAN hook (src/SaveV1.cpp); they change no layout. */
     bool V1Active();
-    void V1Field(uint16 tag, uint8 kind, void *p, size_t size);
-    void V1Str(uint16 tag, String &s);
-    void V1Blob(uint16 tag, void **p, size_t sz);
-    void V1Rid(uint16 tag, rID &m);
+    void V1ProbeScope(const char *name);   /* inc-cjos0 tag probe */
+    static const char *v1MemText;   /* inc-cjos0: the member a FIELD_ line names, for INCURSION_FIELD_VALUES */
+    void V1Mem(const char *m) { v1MemText = m; }
+    void V1Field(const char *name, uint8 kind, void *p, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Str(const char *name, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Str_AT(const char *name, uint32 idx, String &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Blob(const char *name, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Blob_AT(const char *name, uint32 idx, void **p, size_t sz, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Rid(const char *name, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Rid_AT(const char *name, uint32 idx, rID &m, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     /* Status's members are bitfields, so FIELD_RID/FIELD_H cannot take their
        address; this stages Status::eID through the name table itself. */
-    void V1RidStatus(uint16 tag, Status &s);
-    void V1Array(uint16 tag, void *p, size_t elemSize, uint32 count);
-    /* The widening read for a fixed array whose element type grew. newTag is
-       what this build writes; oldTag is a retired tag holding the same array
+    void V1RidStatus(const char *name, Status &s, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1Array(const char *name, void *p, size_t elemSize, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    /* A two-dimensional array written flat, rows * rowLen elements. The writer
+       is V1Array. The reader takes the row length the FILE records
+       (savedRowLen, read by the caller from a field beside the array) and
+       copies row by row, so a row that grew shifts nothing. The last `tail`
+       columns of a saved row land in the last `tail` columns of the current
+       row (SacVals' total and maximum). A file with fewer rows, or a shorter
+       row, loads; more rows or a longer row refuses. inc-cjos0 phase 7f. */
+    void V1ArrayRows(const char *name, void *p, size_t elemSize, uint32 rows, uint32 rowLen, uint32 savedRowLen, uint32 tail, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    /* The widening read for a fixed array whose element type grew. newName is
+       what this build writes; oldName is a retired name holding the same array
        with a narrower element. V1_OFF and V1_SAVE write nothing; a load reads
-       oldTag, requires K_ARRAY / count / 2-byte elements, and widens each
-       element into p[]. If newTag is also present it wins. See inc-vqla. */
-    void V1ArrayWiden16(uint16 newTag, uint16 oldTag, uint32 *p, uint32 count);
-    void V1EmbedBegin(uint16 tag, void *member, size_t size);
+       oldName, requires K_ARRAY / count / 2-byte elements, and widens each
+       element into p[]. If newName is also present it wins. See inc-vqla. */
+    void V1ArrayWiden16(const char *newName, const char *oldName, uint32 *p, uint32 count, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());   /* inc-cjos0: caller site for INCURSION_TAG_SCAN */
+    void V1EmbedBegin(const char *name, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
+    void V1EmbedBegin_AT(const char *name, uint32 idx, void *member, size_t size, int v1Line = __builtin_LINE(), const char *v1File = __builtin_FILE());
     void V1EmbedEnd();
     void V1Cover(const void *p, size_t size);
     int16 SaveGroupV1(Term &t, hObj hGroup);

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2399,6 +2399,7 @@
+ 
+ 
+ #define WG_SIMPLE        0x00000001
++#define WG_GRWA 0x80000
+ #define WG_EXOTIC        0x00000002
+ #define WG_SBLADES       0x00000004
+ #define WG_LBLADES       0x00000008

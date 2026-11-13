@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3227,6 +3227,7 @@
+ // end family: stati
+ // family: val_stuck stored ordinal i16 val-of STUCK
+     #define STUCK_STICKY  1
++    #define STUCK_GRWA 8
+     #define STUCK_PINNED  2
+     #define STUCK_WEAPON  3
+     #define STUCK_VINES   4

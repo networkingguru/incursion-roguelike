@@ -1,0 +1,32 @@
+# <path> TAB <kind> TAB <note> TAB <exact line>; read by attribute_check in tools/pressure/ac9.sh (merge 2: Maeve into the merged epic)
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	/* Maeve's illusion dragon age templates (bead inc-pu6v.9 phase 7e, spec
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	docs/specs/2026-10-17-maeve-phase7-summons.md section 4, amendment
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	2026-10-21, dragons). Each is "exact monster" with the part naming the age
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	template explicitly, so the encounter's age step (src/Encounter.cpp:2275)
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"hatchling" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"very young" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"young" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"juvenile" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"young adult" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: 1+;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	* 1 of any MA_ALL $"adult" [EP_NOXCR];
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	/* inc-pu6v.9 phase 7 (spec docs/specs/2026-10-17-maeve-phase7-summons.md
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	section 5, R42/R113): the data-only "Fierce" template Maeve's summons
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	outcome adds. Any creature type (the `for 0` form "swarm" uses): CR +1,
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	to-hit +2, damage +2, no alignment flags. Appended at the END of main.irc
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	follows "well-traveled" above. Phase 7b declares it only; no call adds it
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	Template "Fierce" : TM_NATURE for 0
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	CR: +1;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	Hit: +2;
+lib/landed-inc-pu6v.9.irh	move	verbatim line of Maeve's lib/main.irc (Encounter and Template blocks) moved to her landed file; no digit is new	Dmg: +2;
+lib/landed.irc	name	the file name digits are the bead id, fixed by the landed-file rule lib/landed-<bead-id>.irh	#include "landed-inc-pu6v.9.irh"
+tools/check_favour_chart_rung9.sh	rewrite	edit that keeps every existing constant: the literal 12 of the rung-9 check becomes the list count minus the redesigned gods named in the check; held128 is a variable name	# prints file:line. If it parsed no lists, or fewer that hold 128000 than the
+tools/check_favour_chart_rung9.sh	rewrite	edit that keeps every existing constant: the literal 12 of the rung-9 check becomes the list count minus the redesigned gods named in the check; held128 is a variable name	if held128 < len(lists) - len(REDESIGNED):
+tools/check_favour_chart_rung9.sh	rewrite	edit that keeps every existing constant: the literal 12 of the rung-9 check becomes the list count minus the redesigned gods named in the check; held128 is a variable name	print(f"FAIL: only {held128} FAVOUR_CHART list(s) hold 128000 in {src}; expected at least {len(lists) - len(REDESIGNED)}")
+tools/check_favour_chart_rung9.sh	rewrite	edit that keeps every existing constant: the literal 12 of the rung-9 check becomes the list count minus the redesigned gods named in the check; held128 is a variable name	# All but six of the 17: six redesigned gods have their own FAVOUR_CHART (100 ... 104807, 250000), holding neither 102000 nor 128000: Semirath (inc-pu6v.3), Essiah (inc-pu6v.4), Xavias, Xel, Aiswin (inc-pu6v.13) and Maeve (inc-pu6v.9).
+tools/check_creation_menus.sh	rewrite	edit that keeps every existing constant: the epic's two added scenarios join the fixture scenarios that cap the footer at 11	fixture|roll-first|emptyalign|semirath) export INCURSION_FOOTER_MAX_LINES=11 ;;

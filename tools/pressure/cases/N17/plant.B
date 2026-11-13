@@ -1,0 +1,7 @@
+# N17: the row with B's two new categories; total and maximum at the new tail
+sacval 1 0 11
+sacval 1 9 19
+sacval 1 10 41
+sacval 1 11 51
+sacval 1 12 1001
+sacval 1 13 2001

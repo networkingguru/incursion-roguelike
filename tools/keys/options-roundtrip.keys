@@ -1,0 +1,8 @@
+# Take one turn, open the options menu and leave it: leaving rewrites Options.Dat (Player::UpdateOptions).
+# Used by tools/check_options_length.sh.
+s
+=
+@dump:menu
+ESC
+s
+@dump:after

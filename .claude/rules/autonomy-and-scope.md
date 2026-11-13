@@ -33,3 +33,8 @@ History: docs/rules-history/autonomy-and-scope.md#fix-your-own-merge-blockers.
 Before escalating a needs-Brian question, run `git log -S<term>` or `git log --format=%B` on the commit that introduced the thing in question — the answer is often already in its body. If found, act on it and note the earlier escalation was wrong.
 Why: a held question's age is not evidence it is still unanswerable.
 History: docs/rules-history/autonomy-and-scope.md#escalated-questions-check-the-commit-first.
+
+## reuse-the-existing-mechanism
+For a problem the project already solves somewhere, use the mechanism it already has. Do NOT propose a new mechanism unless the existing one is inadequate for the problem. When it is inadequate, the new mechanism MUST replace the old one everywhere it is used, and a recommendation for it MUST state that migration cost. A mechanism chosen for a class of problems MUST work for every member of the class, not only the case that triggered it; state which members it covers before you recommend it.
+Why: every extra mechanism costs Brian time to understand it, and what he does not understand causes problems later.
+History: docs/rules-history/autonomy-and-scope.md#reuse-the-existing-mechanism. Bead inc-cjos0.

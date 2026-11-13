@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..0109f9b 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4014,6 +4014,7 @@ typedef signed int        hObj;
+                        SS_SHLD -- ww: tower shield in CalcValues() */
+ #define SS_BODY  14 /* from your current body (polymorph/race) */
+ #define SS_TMPL  15 /* from your current template */
++#define SS_GRWA 16
+ // end family: ss
+ // family: na internal
+                          /* long sword        kobold         Asmodeus         */

@@ -1,0 +1,1 @@
+Every addition of G01-G29 on both sides in one merge, except G20 (its MA_LAST_REAL change is refused at the build by itself, see G20; the slot variants of G23, G27, G28 replace the textual-conflict forms). Expected to be refused by the stored-value check on G, and the pinned-layout cases reach the compiler on M and E.

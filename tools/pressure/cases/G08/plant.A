@@ -1,0 +1,3 @@
+# G08: A's content, an artifact and a behaviour through rID variables
+varrid grw-a carrier grw_a_ref @ Grw A Blade
+varrid grw-a carrier grw_a_ref2 @ Grw A Behaviour

@@ -74,9 +74,13 @@ FIELD_CALL_PATTERNS = [
     #  index names the member)
     (re.compile(r"FIELD_(?:U8|I8|U16|I16|U32|I32|H|RID|STR)\b\s*\("), 1),
     (re.compile(r"FIELD_ARRAY\b\s*\("), 1),
+    (re.compile(r"FIELD_ARRAY_ROWS\b\s*\("), 1),
     (re.compile(r"FIELD_BLOB\b\s*\("), 1),
     (re.compile(r"FIELD_OBJ\b\s*\("), 1),
     (re.compile(r"FIELD_EMBED\b\s*\("), 1),
+    # _AT forms carry an element index after the name: member is arg 2.
+    (re.compile(r"FIELD_(?:RID|BLOB|EMBED)_AT\b\s*\("), 2),
+    (re.compile(r"r\.V1(?:Str|Blob|Rid|EmbedBegin)_AT\b\s*\("), 2),
     (re.compile(r"FIELD_SKIP\b\s*\("), 0),
     (re.compile(r"r\.V1Cover\b\s*\("), 0),
     (re.compile(r"r\.V1EmbedBegin\b\s*\("), 1),
@@ -90,6 +94,14 @@ FIELD_CALL_PATTERNS = [
     (re.compile(r"r\.V1Field\b\s*\("), 2),
 ]
 
+# The compiler and flags the layout dump and the sizeof probe use. The defaults
+# are build_macos.sh's BACKEND=posix developer flags. tools/gen_record_layout.py
+# overwrites both with the flags of the build that asked (inc-cjos0 phase 8a).
+CXX_PATH = None
+COMPILE_FLAGS = ["-std=c++17", "-DDEBUG", "-DPOSIX_TERM",
+                 "-Iinc", "-Ilib", "-Icompat",
+                 "-w", "-fpermissive", "-Wno-narrowing"]
+
 IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*")
 
 
@@ -102,6 +114,8 @@ class ToolError(RuntimeError):
 # --------------------------------------------------------------------- #
 
 def find_clang():
+    if CXX_PATH:
+        return CXX_PATH
     for name in ("clang++",):
         p = shutil.which(name)
         if p:
@@ -112,23 +126,25 @@ def find_clang():
     )
 
 
-def run_record_layout_dump():
-    """Compile src/SaveV1.cpp with the same defines/includes build_macos.sh
-    uses for BACKEND=posix (DEBUG), plus -fdump-record-layouts, and return
-    the dump text. Raises ToolError on any compiler failure."""
+def run_record_layout_dump(classes=None):
+    """Compile a one-line-per-class probe translation unit (Incursion.h and a
+    sizeof() of each archived class) with COMPILE_FLAGS plus
+    -fdump-record-layouts, and return the dump text. clang only dumps a layout
+    it had to compute, hence the sizeof(). The probe is not src/SaveV1.cpp,
+    because that file includes the generated header this dump feeds. Raises
+    ToolError on any compiler failure."""
     clangxx = find_clang()
-    src = REPO_ROOT / "src" / "SaveV1.cpp"
-    if not src.is_file():
-        raise ToolError(f"expected source file missing: {src}")
-    cmd = [
-        clangxx, "-std=c++17", "-DDEBUG", "-DPOSIX_TERM",
-        "-Iinc", "-Ilib", "-Icompat",
-        "-w", "-fpermissive", "-Wno-narrowing",
-        "-fsyntax-only", "-Xclang", "-fdump-record-layouts",
-        str(src),
-    ]
+    if classes is None:
+        classes = [c for c, _a in SCHEMA_PINS]
+    probe = ['#include "Incursion.h"']
+    probe += [f"static const unsigned long layout_probe_{c} = sizeof({c});"
+              for c in dict.fromkeys(classes)]
     with tempfile.TemporaryDirectory(prefix="save_pad_rows-") as td:
+        src = Path(td) / "layout_probe.cpp"
+        src.write_text("\n".join(probe) + "\n")
         out_path = Path(td) / "layout.txt"
+        cmd = [clangxx] + COMPILE_FLAGS + [
+            "-fsyntax-only", "-Xclang", "-fdump-record-layouts", str(src)]
         with open(out_path, "w") as outf:
             proc = subprocess.run(
                 cmd, cwd=REPO_ROOT, stdout=outf, stderr=subprocess.STDOUT
@@ -137,7 +153,7 @@ def run_record_layout_dump():
     if proc.returncode != 0:
         tail = "\n".join(text.splitlines()[-40:])
         raise ToolError(
-            f"clang++ failed to compile src/SaveV1.cpp for a layout dump "
+            f"{clangxx} failed to compile the layout probe "
             f"(exit {proc.returncode}). Last 40 lines:\n{tail}"
         )
     return text
@@ -295,12 +311,7 @@ def measure_sizes_via_compiler(nodes):
         src_path = Path(td) / "sizeprobe.cpp"
         bin_path = Path(td) / "sizeprobe"
         src_path.write_text(src)
-        cmd = [
-            clangxx, "-std=c++17", "-DDEBUG", "-DPOSIX_TERM",
-            "-Iinc", "-Ilib", "-Icompat",
-            "-w", "-fpermissive", "-Wno-narrowing",
-            str(src_path), "-o", str(bin_path),
-        ]
+        cmd = [clangxx] + COMPILE_FLAGS + [str(src_path), "-o", str(bin_path)]
         proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
         if proc.returncode != 0:
             raise ToolError(

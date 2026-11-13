@@ -5096,6 +5096,11 @@ SkillInfoStruct SkillInfo[] = {
   { 0, NULL, false, false, NULL, 0, 0, false, 0 }
 } ;
 
+/* One row per skill index (0..SK_COUNT-1) plus the terminator row. A new high
+   skill appends its row just before the terminator. */
+static_assert(sizeof(SkillInfo)/sizeof(SkillInfo[0]) == SK_COUNT + 1,
+  "SkillInfo[] needs one row per skill index plus the terminator row");
+
 AlignmentInfoStruct AlignmentInfo[] = {
       { "Lawful Good",
         "<2>Lawful Good, 'Crusader':<7>\n__ A lawful good character acts as a good person "
