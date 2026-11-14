@@ -327,8 +327,11 @@ def check_frozen(base_root, root):
 
 def extract_base(ref, dest, root):
     """Read-only: git archive of inc/ and src/ of ref into dest."""
-    a = subprocess.Popen(["git", "-C", root, "archive", ref, "inc", "src"],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        a = subprocess.Popen(["git", "-C", root, "archive", ref, "inc", "src"],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except FileNotFoundError:
+        raise ValueError("git is not installed, so base %s cannot be read" % ref)
     t = subprocess.run(["tar", "-x", "-C", dest], stdin=a.stdout, capture_output=True)
     a.stdout.close()
     err = a.stderr.read().decode()
