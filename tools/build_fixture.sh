@@ -16,8 +16,9 @@
 # seed: lines itself (src/CharFile.cpp, CharFilePrepare); this script names
 # no decision key.
 #
-# THE ENVIRONMENT. Only INCURSION_BIN (which binary) and INCURSION_BUILD_RUN_DIR
-# (where the sandbox lives) are read. A run directory the caller names is the
+# THE ENVIRONMENT. Only INCURSION_BIN (which binary), INCURSION_BUILD_RUN_DIR
+# (where the sandbox lives) and INCURSION_BUILD_MEM_CAP_MB (the memory cap, below)
+# are read. A run directory the caller names is the
 # caller's: this script neither empties it first nor removes it after, so a test
 # can put a gallery.dat there beforehand and read the sandbox afterwards.
 # INCURSION_SEED, INCURSION_RECORD_CHAR and every other INCURSION_* variable is
@@ -25,12 +26,26 @@
 # cannot change the character. The seed comes from the file. The one variable
 # kept are INCURSION_TRIPWIRE_PROBE (a test hook, see below) and INCURSION_MAP_STREAM.
 #
-# Exit: 0 built; 2 bad usage; 10 the build failed (the BUILD FAILED line is on
+# MEMORY CAP (bead inc-r10je). A build that loops grows about 650 MB a second
+# (inc-xgs1x). Each half second this script sums the resident memory of the
+# binary and its child processes. At INCURSION_BUILD_MEM_CAP_MB (default 2048) it
+# kills them and exits 10 with a BUILD FAILED line that names the cap. When
+# memory cannot be read it kills the build too: it never runs uncapped.
+#
+# Exit: 0 built; 2 bad usage (a cap that is not a positive integer too); 10 the build failed (the BUILD FAILED line is on
 # stderr); any other code is the binary's.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
+
+# Read before the INCURSION_* scrub below: the binary must not see the cap.
+MEM_CAP_MB="${INCURSION_BUILD_MEM_CAP_MB:-2048}"
+case "$MEM_CAP_MB" in
+    ''|*[!0-9]*|0|0[0-9]*)
+        echo "INCURSION_BUILD_MEM_CAP_MB must be a positive integer, got \"$MEM_CAP_MB\"" >&2
+        exit 2 ;;
+esac
 
 CHAR="${1:-}"
 if [ -z "$CHAR" ] || [ ! -f "$CHAR" ]; then
@@ -69,8 +84,37 @@ while IFS= read -r v; do
 done < <(env | sed -n 's/^\(INCURSION[A-Z0-9_]*\)=.*/\1/p')
 
 env ${CLEAN[@]+"${CLEAN[@]}"} INCURSIONPATH="$RUN/" "$BIN" -headless -build "$CHAR" \
-    > "$RUN/logs/build.out" 2> "$RUN/logs/build.err" < /dev/null
+    > "$RUN/logs/build.out" 2> "$RUN/logs/build.err" < /dev/null &
+BPID=$!
+T0=$SECONDS
+CAP_MSG=""
+while kill -0 "$BPID" 2> /dev/null; do
+    PL="$(ps -A -o pid=,ppid=,rss= 2> /dev/null)"
+    if [ -z "$PL" ]; then
+        kill -9 "$BPID" 2> /dev/null
+        CAP_MSG="BUILD FAILED: the memory cap of $MEM_CAP_MB MB cannot run: process memory cannot be read (ps)"
+        break
+    fi
+    # Pids of the binary and its descendants, then their summed RSS in MB.
+    TREE="$(printf '%s\n' "$PL" | awk -v root="$BPID" '
+        { ppid[$1] = $2; rss[$1] = $3 }
+        END { for (p in ppid) { q = p; while (q != "" && q != 0) { if (q == root) { sum += rss[p]; list = list " " p; break } q = ppid[q] } }
+              print int(sum / 1024) list }')"
+    MB="${TREE%% *}"
+    if [ "${MB:-0}" -ge "$MEM_CAP_MB" ]; then
+        for k in ${TREE#* }; do kill -9 "$k" 2> /dev/null; done
+        CAP_MSG="BUILD FAILED: the build passed the memory cap of $MEM_CAP_MB MB (${MB} MB after $((SECONDS - T0)) s); a creation step is probably looping"
+        break
+    fi
+    sleep 0.5
+done
+wait "$BPID" 2> /dev/null
 STATUS=$?
+if [ -n "$CAP_MSG" ]; then
+    echo "$CAP_MSG" >&2
+    echo "build_fixture: $NAME did not build; run directory $RUN" >&2
+    exit 10
+fi
 cat "$RUN/logs/build.err" >&2
 if [ "$STATUS" -ne 0 ]; then
     echo "build_fixture: $NAME did not build (exit $STATUS); run directory $RUN" >&2
