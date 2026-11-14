@@ -30,7 +30,8 @@
 # (inc-xgs1x). Each half second this script sums the resident memory of the
 # binary and its child processes. At INCURSION_BUILD_MEM_CAP_MB (default 2048) it
 # kills them and exits 10 with a BUILD FAILED line that names the cap. When
-# memory cannot be read it kills the build too: it never runs uncapped.
+# memory cannot be read it kills the build too: it never runs uncapped. The sum
+# comes from tools/proc_tree_rss.py (libproc), not ps: a sandbox cannot exec ps.
 #
 # Exit: 0 built; 2 bad usage (a cap that is not a positive integer too); 10 the build failed (the BUILD FAILED line is on
 # stderr); any other code is the binary's.
@@ -89,17 +90,14 @@ BPID=$!
 T0=$SECONDS
 CAP_MSG=""
 while kill -0 "$BPID" 2> /dev/null; do
-    PL="$(ps -A -o pid=,ppid=,rss= 2> /dev/null)"
-    if [ -z "$PL" ]; then
+    TREE="$(python3 -I "$ROOT/tools/proc_tree_rss.py" "$BPID" 2> /dev/null)"
+    if [ -z "$TREE" ]; then
+        # The build may have exited since the loop test; only a live build is a failure.
+        kill -0 "$BPID" 2> /dev/null || break
         kill -9 "$BPID" 2> /dev/null
-        CAP_MSG="BUILD FAILED: the memory cap of $MEM_CAP_MB MB cannot run: process memory cannot be read (ps)"
+        CAP_MSG="BUILD FAILED: the memory cap of $MEM_CAP_MB MB cannot run: process memory cannot be read (tools/proc_tree_rss.py)"
         break
     fi
-    # Pids of the binary and its descendants, then their summed RSS in MB.
-    TREE="$(printf '%s\n' "$PL" | awk -v root="$BPID" '
-        { ppid[$1] = $2; rss[$1] = $3 }
-        END { for (p in ppid) { q = p; while (q != "" && q != 0) { if (q == root) { sum += rss[p]; list = list " " p; break } q = ppid[q] } }
-              print int(sum / 1024) list }')"
     MB="${TREE%% *}"
     if [ "${MB:-0}" -ge "$MEM_CAP_MB" ]; then
         for k in ${TREE#* }; do kill -9 "$k" 2> /dev/null; done
