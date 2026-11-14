@@ -21,6 +21,7 @@
 # fact: the character -- a .char recorded now by tools/headless.sh from tools/keys/chargen-default-save.keys at seed 1 under tools/fixtures/options-2026-08-22.dat; every case is a text edit of that file, so no seed decides it (inc-10v7f)
 # fact: the failure text -- the strings src/CharFile.cpp writes after `BUILD FAILED:`, matched here by fixed substrings
 # fact: the save-perk text -- the first perk slot of that same recorded .char, rewritten to `perk_resist [n]: save confusion` (its other lines and its item's charges removed); the text states the perk, so the seed decides nothing about it (inc-10v7f)
+# fact: the spell list -- the three spell_learn lines of tools/fixtures/chars/orc-mage-seed1-opt0822.char (a committed .char), the last one deleted; the text states the spells, so no seed decides them (inc-xgs1x)
 # fact: the label candidates -- the fixed list RunCharPickTest builds (two "Fire Bolt", "<5>Cold Bolt", "Ice Bolt"), not game data
 #
 # Usage: INCURSION_BIN=./incursion-headless tools/check_char_build_failures.sh
@@ -46,6 +47,45 @@ n=0
 build() {   # <char> -> stderr text in $ERR, exit status in $RC
     INCURSION_BIN="$BIN" tools/build_fixture.sh "$1" "$W/out$n" > "$W/stdout.txt" 2> "$W/stderr.txt"
     RC=$?
+    ERR="$(cat "$W/stderr.txt")"
+}
+
+# A build that loops grows about 650 MB a second (inc-xgs1x), so the one case
+# that can loop runs under a cap: killed at CAP_MB of resident memory or CAP_S
+# seconds, whichever comes first. The case then FAILS instead of hanging.
+# CAP_S allows a slow build on a loaded machine (a normal build takes about 15 s;
+# the landing gate runs many checks at once).
+CAP_MB=1024
+CAP_S=120
+capped_build() {   # <char> -> as build(); RC 99 and $HUNG set when the cap killed it
+    HUNG=""
+    INCURSION_BIN="$BIN" tools/build_fixture.sh "$1" "$W/out$n" > "$W/stdout.txt" 2> "$W/stderr.txt" &
+    local pid=$! t0=$SECONDS peak=0 mb
+    while kill -0 "$pid" 2> /dev/null; do
+        local pl
+        pl="$(ps -A -o pid=,ppid=,rss= 2> /dev/null)"
+        if [ -z "$pl" ]; then   # the cap would run blind
+            kill -9 "$pid" 2> /dev/null
+            HUNG="cannot read process memory"
+            break
+        fi
+        mb="$(printf '%s\n' "$pl" | awk -v root="$pid" '
+            { ppid[$1] = $2; rss[$1] = $3 }
+            END { for (p in rss) { q = p; while (q != "" && q != 0) { if (q == root) { sum += rss[p]; break } q = ppid[q] } } print int(sum / 1024) }')"
+        [ "${mb:-0}" -gt "$peak" ] && peak="$mb"
+        if [ "${mb:-0}" -ge "$CAP_MB" ] || [ $((SECONDS - t0)) -ge "$CAP_S" ]; then
+            HUNG="the build hung: killed at ${mb} MB / $((SECONDS - t0)) s"
+            printf '%s\n' "$pl" | awk -v root="$pid" '
+                { ppid[$1] = $2 }
+                END { for (p in ppid) { q = p; while (q != "" && q != 0) { if (q == root) { print p; break } q = ppid[q] } } }' \
+                | while read -r k; do kill -9 "$k" 2> /dev/null; done
+            break
+        fi
+        sleep 1
+    done
+    wait "$pid" 2> /dev/null
+    RC=$?
+    [ -n "$HUNG" ] && RC=99
     ERR="$(cat "$W/stderr.txt")"
 }
 
@@ -104,6 +144,33 @@ expect_fail "out-of-range skill rank (range printed)" 'is outside 0 to' "$W/rank
 
 edit attr 's/^attr_str: .*/attr_str: 40/'
 expect_fail "out-of-range attribute" 'attr_str: 40 is outside 3 to 18' "$W/attr.char"
+
+# A caster whose file states one spell too few. The build used to ask for the
+# missing spell forever: nothing was learned, the slot stayed free, and nothing
+# was read or drawn, so no tripwire fired (inc-xgs1x). It must fail at once.
+MAGE=tools/fixtures/chars/orc-mage-seed1-opt0822.char
+LAST="$(grep -n '^spell_learn:' "$MAGE" | tail -1 | cut -d: -f1)"
+[ -n "$LAST" ] || { echo "INCONCLUSIVE: $MAGE has no spell_learn line"; exit 2; }
+sed "${LAST}d" "$MAGE" > "$W/nospell.char"
+if ! ps -A -o pid=,rss= > /dev/null 2>&1 || [ -z "$(ps -o rss= -p $$ 2> /dev/null)" ]; then
+    echo "UNMEASURED: cannot read process memory (ps), so the build cannot be capped; not running the spell_learn case"
+    exit 2
+fi
+n=$((n + 1))
+capped_build "$W/nospell.char"
+if [ -n "$HUNG" ]; then
+    echo "FAIL a free spell slot with no spell_learn line left: $HUNG"; fail=1
+elif [ "$RC" -ne 10 ]; then
+    echo "FAIL a free spell slot with no spell_learn line left: exit $RC, want 10"; fail=1
+else
+    line="$(grep -m1 '^BUILD FAILED:' "$W/stderr.txt")"
+    if grep -qF 'spell_learn' <<< "$line"; then
+        echo "ok   a free spell slot with no spell_learn line left"
+        echo "       $line" | cut -c1-230
+    else
+        echo "FAIL a free spell slot with no spell_learn line left: wanted spell_learn in: $line"; fail=1
+    fi
+fi
 
 # Label rules, on a list the game does not offer. The sandbox is an empty
 # run directory: -charpicktest touches no game file.

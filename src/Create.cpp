@@ -6725,6 +6725,12 @@ bool Player::LearnSpell(bool left) {
                             out.push_back(rows[r].Val);
                 return true;
             });
+        /* A build's file states every spell. With no spell_learn line left
+           and a free slot, the creation loop asks again forever (inc-xgs1x). */
+        if (!tableRan && left && chosen.empty() && markable
+                && CreationSourceNow() == &CreationFileSource())
+            CreationBuildFail("spell_learn: a spell slot is free and the file states no more "
+                "spells; add a spell_learn line");
         if (!tableRan) {
             for (i = 0; i < nEmitted; i++)
                 if (!rows[i].Locked)
