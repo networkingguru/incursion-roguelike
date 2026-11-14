@@ -53,8 +53,10 @@ build() {   # <char> -> stderr text in $ERR, exit status in $RC
 # A build that loops grows about 650 MB a second (inc-xgs1x), so the one case
 # that can loop runs under a cap: killed at CAP_MB of resident memory or CAP_S
 # seconds, whichever comes first. The case then FAILS instead of hanging.
+# CAP_S allows a slow build on a loaded machine (a normal build takes about 15 s;
+# the landing gate runs many checks at once).
 CAP_MB=1024
-CAP_S=30
+CAP_S=120
 capped_build() {   # <char> -> as build(); RC 99 and $HUNG set when the cap killed it
     HUNG=""
     INCURSION_BIN="$BIN" tools/build_fixture.sh "$1" "$W/out$n" > "$W/stdout.txt" 2> "$W/stderr.txt" &
