@@ -1061,12 +1061,14 @@ static void v1CovOpenEmbed(const char *name, const void *p, size_t size)
       {
         const SchemaPad *pads = NULL;
         bool strict = false;
+#if LAYOUT_MEASURED
         for (size_t i = 0; i != sizeof(SchemaStrictWrappers)/sizeof(SchemaStrictWrappers[0]); i++)
           if (!strcmp(SchemaStrictWrappers[i], name))
             strict = true;
         for (size_t i = 0; i != sizeof(SchemaEmbeds)/sizeof(SchemaEmbeds[0]); i++)
           if (!strcmp(SchemaEmbeds[i].name, name))
             { pads = SchemaEmbeds[i].pads; strict = true; }
+#endif
         if (inside && !strict)
           v1CovMark(p, size);   /* whole-range embed: interior padding too */
         v1Cov.open[v1Cov.openDepth].strict = strict;
