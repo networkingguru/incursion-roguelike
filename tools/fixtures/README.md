@@ -148,6 +148,8 @@ The recorder writes one line for each decision the walk made. Copy the file to
     tools/build_fixture.sh tools/fixtures/chars/<name>.char
     tools/fixture_sheet.sh <name>
 
+A build stops at 2048 MB of memory and fails with a `BUILD FAILED:` line that names the cap. `INCURSION_BUILD_MEM_CAP_MB` changes the cap.
+
 To write the file by hand, start from a recorded file and change the lines.
 `tools/check_handwritten_fixture.sh` shows the method: it builds a hand-written
 `.char` and compares its dump with the dump of an old save. A wrong file does

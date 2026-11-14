@@ -50,41 +50,32 @@ build() {   # <char> -> stderr text in $ERR, exit status in $RC
     ERR="$(cat "$W/stderr.txt")"
 }
 
-# A build that loops grows about 650 MB a second (inc-xgs1x), so the one case
-# that can loop runs under a cap: killed at CAP_MB of resident memory or CAP_S
-# seconds, whichever comes first. The case then FAILS instead of hanging.
-# CAP_S allows a slow build on a loaded machine (a normal build takes about 15 s;
-# the landing gate runs many checks at once).
+# A build that loops grows about 650 MB a second (inc-xgs1x). tools/build_fixture.sh
+# caps every build's memory (inc-r10je); the one case that can loop runs it with a
+# cap of CAP_MB, and a memory-cap line from it means the loop is back: the case
+# FAILS instead of hanging. CAP_S is a time cap, which build_fixture.sh does not
+# have; it allows a slow build on a loaded machine (a normal build takes about
+# 15 s; the landing gate runs many checks at once).
 CAP_MB=1024
 CAP_S=120
-capped_build() {   # <char> -> as build(); RC 99 and $HUNG set when the cap killed it
+capped_build() {   # <char> -> as build(); RC 99 and $HUNG set when a cap killed it
     HUNG=""
-    INCURSION_BIN="$BIN" tools/build_fixture.sh "$1" "$W/out$n" > "$W/stdout.txt" 2> "$W/stderr.txt" &
-    local pid=$! t0=$SECONDS peak=0 mb
+    INCURSION_BUILD_MEM_CAP_MB="$CAP_MB" INCURSION_BIN="$BIN" tools/build_fixture.sh "$1" "$W/out$n" > "$W/stdout.txt" 2> "$W/stderr.txt" &
+    local pid=$! t0=$SECONDS
     while kill -0 "$pid" 2> /dev/null; do
-        local pl
-        pl="$(ps -A -o pid=,ppid=,rss= 2> /dev/null)"
-        if [ -z "$pl" ]; then   # the cap would run blind
+        if [ $((SECONDS - t0)) -ge "$CAP_S" ]; then
+            HUNG="the build hung: killed after $((SECONDS - t0)) s"
+            pkill -9 -P "$pid" 2> /dev/null
             kill -9 "$pid" 2> /dev/null
-            HUNG="cannot read process memory"
-            break
-        fi
-        mb="$(printf '%s\n' "$pl" | awk -v root="$pid" '
-            { ppid[$1] = $2; rss[$1] = $3 }
-            END { for (p in rss) { q = p; while (q != "" && q != 0) { if (q == root) { sum += rss[p]; break } q = ppid[q] } } print int(sum / 1024) }')"
-        [ "${mb:-0}" -gt "$peak" ] && peak="$mb"
-        if [ "${mb:-0}" -ge "$CAP_MB" ] || [ $((SECONDS - t0)) -ge "$CAP_S" ]; then
-            HUNG="the build hung: killed at ${mb} MB / $((SECONDS - t0)) s"
-            printf '%s\n' "$pl" | awk -v root="$pid" '
-                { ppid[$1] = $2 }
-                END { for (p in ppid) { q = p; while (q != "" && q != 0) { if (q == root) { print p; break } q = ppid[q] } } }' \
-                | while read -r k; do kill -9 "$k" 2> /dev/null; done
             break
         fi
         sleep 1
     done
     wait "$pid" 2> /dev/null
     RC=$?
+    if [ -z "$HUNG" ] && grep -q '^BUILD FAILED:.*memory cap' "$W/stderr.txt"; then
+        HUNG="the build hung: $(grep -m1 '^BUILD FAILED:' "$W/stderr.txt" | cut -c1-200)"
+    fi
     [ -n "$HUNG" ] && RC=99
     ERR="$(cat "$W/stderr.txt")"
 }
