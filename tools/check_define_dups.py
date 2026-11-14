@@ -1013,8 +1013,8 @@ def master_baseline_keys(root=ROOT, ref=BASE_REF, relpath=BASELINE_REL):
     """The baseline keys of `ref`, or None when the tree is not a git checkout or
     `ref` does not hold the file yet (the first landing). A checkout with no `ref`,
     or a git failure, exits 2."""
-    if not os.path.exists(os.path.join(root, ".git")):
-        return None
+    if not os.path.exists(os.path.join(root, ".git")) or shutil.which("git") is None:
+        return None  # no history to read, or no git program: the same as no history
     def git(*a):
         return subprocess.run(["git", "-C", root] + list(a), capture_output=True, text=True)
     r = git("rev-parse", "--verify", "--quiet", ref + "^{commit}")
