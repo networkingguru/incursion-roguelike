@@ -169,8 +169,11 @@ LEGACY_TABLE = "inc/SaveLegacyTags.h"
 def legacy_table_problem(ref, root):
     """Rule 8. Return a FAIL line, or None when the tree's table is the base's
     (or the base has none). Raises Unmeasured when git cannot answer."""
-    r = subprocess.run(["git", "-C", root, "cat-file", "-e", "%s:%s" % (ref, LEGACY_TABLE)],
-                       capture_output=True, text=True)
+    try:
+        r = subprocess.run(["git", "-C", root, "cat-file", "-e", "%s:%s" % (ref, LEGACY_TABLE)],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        raise Unmeasured("git is not installed, so %s cannot be read from %s" % (LEGACY_TABLE, ref))
     if r.returncode != 0:
         return None  # no such file on the base: nothing frozen yet
     r = subprocess.run(["git", "-C", root, "show", "%s:%s" % (ref, LEGACY_TABLE)],
@@ -556,8 +559,11 @@ def attach_grows_base(base, tree, base_root):
 def extract_base(ref, dest, root=None):
     """Read-only: git archive of the source directories of ref into dest."""
     root = root or ROOT
-    r = subprocess.run(["git", "-C", root, "ls-tree", "--name-only", ref],
-                       capture_output=True, text=True)
+    try:
+        r = subprocess.run(["git", "-C", root, "ls-tree", "--name-only", ref],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        raise Unmeasured("git is not installed, so base %s cannot be read" % ref)
     if r.returncode != 0:
         raise Unmeasured("cannot read base %s: %s" % (ref, r.stderr.strip()))
     top = [x for x in r.stdout.split() if x in ("inc", "src", "lib", "compat")]
