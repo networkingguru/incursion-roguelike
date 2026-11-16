@@ -143,6 +143,9 @@ static int      MCCacheN  = 0;
 static rID      MCCacheID[MC_CACHE_MAX];
 static EvReturn MCCacheVal[MC_CACHE_MAX];
 
+#if defined(ASTAR_SELFCHECK) || defined(LABEL_SELFCHECK)
+#include "SelfCheckTerm.h"
+#endif
 #ifdef ASTAR_SELFCHECK
 #include "AStarSelfCheck.h"
 #endif
@@ -185,6 +188,16 @@ static void LS_Report()
             LS_Refusals, LS_Mismatch);
     fflush(stderr);
   }
+static void (*LS_Prev)(int);
+static void LS_Term(int sig)
+  {
+    SC_Buf s;
+    s.Str("LABEL_SELFCHECK refusals="); s.Num(LS_Refusals);
+    s.Str(" mismatches="); s.Num(LS_Mismatch); s.Str("\n"); s.Flush();
+    SC_Done(LS_Prev, sig);
+  }
+/* at startup, so a run cut before its first refusal still writes a tally */
+static struct LS_Init { LS_Init() { atexit(LS_Report); SC_Install(LS_Term, &LS_Prev); } } LS_InitOnce;
 #endif
 
 static bool LabelSolid(Map *m, int x, int y, int set)
@@ -326,8 +339,6 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                 PP_LabelCutSet[ppCall.door]++;
 #endif
 #ifdef LABEL_SELFCHECK
-                static bool lreg = false;
-                if (!lreg) { lreg = true; atexit(LS_Report); }
                 labelCut = true;
                 labelSet = set;
 #else
@@ -470,8 +481,6 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
 #endif
 #ifdef ASTAR_SELFCHECK
     { /* rerun as plain Dijkstra (weight = Dist) and compare to the A* result */
-      static bool reg = false;
-      if (!reg) { reg = true; atexit(AS_Report); }
       int16 lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
       for (int16 ax = 0; ax != lx; ax++)
         for (int16 ay = 0; ay != ly; ay++) AS_D[ax][ay] = 30000;

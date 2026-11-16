@@ -29,6 +29,9 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#ifdef REUSE_SELFCHECK
+#include "SelfCheckTerm.h"
+#endif
 
 #ifdef INCURSION_OOB_PROBE
 /* Diagnostic only, for bead inc-5xn and upstream issue #40. Defined in
@@ -2007,6 +2010,17 @@ static void RR_Report()
             RR_Reuses, RR_Bad, RR_Unreach);
     fflush(stderr);
   }
+static void (*RR_Prev)(int);
+static void RR_Term(int sig)
+  {
+    SC_Buf s;
+    s.Str("REUSE_SELFCHECK reuses="); s.Num(RR_Reuses);
+    s.Str(" bad="); s.Num(RR_Bad);
+    s.Str(" unreachable="); s.Num(RR_Unreach); s.Str("\n"); s.Flush();
+    SC_Done(RR_Prev, sig);
+  }
+/* at startup, so a run cut before its first reuse still writes a tally */
+static struct RR_Init { RR_Init() { atexit(RR_Report); SC_Install(RR_Term, &RR_Prev); } } RR_InitOnce;
 #endif
 
 static unsigned RouteReuseHash(hObj mon, hObj map, int16 tx, int16 ty)
@@ -2118,7 +2132,7 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
           int16 rx = re->sq[j+1] % 256, ry = re->sq[j+1] / 256;
           Dir rd = DirTo(rx,ry);
 #ifdef REUSE_SELFCHECK
-          { static bool reg = false; if (!reg) { reg = true; atexit(RR_Report); }
+          {
             bool onroute = false; uint16 here2 = (uint16)(x + y*256);
             for (int k = 0; k + 1 < re->len; k++)
               if (re->sq[k] == here2 && re->sq[k+1] == (uint16)(rx + ry*256)) onroute = true;
