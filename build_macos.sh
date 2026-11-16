@@ -15,6 +15,12 @@
 #   c++14 for two    src/Tokens.cpp and src/Art.cpp use the `register` keyword,
 #   files            which C++17 removed. They are flex/ACCENT output.
 #   gnu89 for *.c    src/cpp1-6.c are a K&R-era C preprocessor (DECUS cpp).
+# INCURSION_FAST_PROBE names a file: log this entry point and stop (inc-rst61).
+if [ -n "${INCURSION_FAST_PROBE:-}" ]; then
+    echo "build" >> "$INCURSION_FAST_PROBE" || echo "INCURSION_FAST_PROBE: cannot append to $INCURSION_FAST_PROBE" >&2
+    exit 3
+fi
+
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Stand-in for clang, clang++, cc, c++ (inc-rst61); the others are symlinks to
+# this file. Records "compiler <name> <args>", the name being the one called by.
+# Then runs the real compiler.
+self=$(cd -P "$(dirname "$0")" && pwd -P)
+name=$(basename "$0")
+real=
+IFS=:
+for d in $PATH; do
+  [ -n "$d" ] || d=.
+  r=$(cd -P "$d" 2>/dev/null && pwd -P) || continue
+  [ "$r" = "$self" ] && continue
+  if [ -f "$r/$name" ] && [ -x "$r/$name" ]; then real="$r/$name"; break; fi
+done
+unset IFS
+if [ -z "$real" ]; then echo "fast_probe: no real $name on PATH" >&2; exit 127; fi
+record() {
+  [ -n "${INCURSION_FAST_PROBE:-}" ] || return 0
+  printf "%s\n" "$1" >> "$INCURSION_FAST_PROBE" 2>/dev/null ||
+    echo "fast_probe: cannot record to $INCURSION_FAST_PROBE" >&2
+  return 0
+}
+record "compiler $name $*"
+exec "$real" "$@"

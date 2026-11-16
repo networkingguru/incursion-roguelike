@@ -31,6 +31,9 @@ GATE_PATH = os.environ.get("INCURSION_COMMIT_GATE_PATH",
 COMMIT_RE = re.compile(r"\bgit\b((?:\s+-C\s+\S+|\s+-c\s+\S+)*)\s+commit\b")
 DASH_C_RE = re.compile(r"\s-C\s+(\S+)")
 ASK_RE = re.compile(r"Is (tools/check_[A-Za-z0-9_.-]+) exempt\?")
+# Second form (inc-rst61): the owner vets a fast check for one expensive kind.
+VET_RE = re.compile(r"Is tools/(check_[A-Za-z0-9_.-]+) vetted for "
+                    r"(game|build|git-history|sleep|bd|compiler)\?")
 
 
 def load_gate():
@@ -52,8 +55,9 @@ def git(repo, *args):
 
 
 def find_answer(gate, transcript):
-    """-> (user message id, [paths]) when the latest user message is a yes to
-    an exemption question about a hole; else None."""
+    """-> (user message id, [paths], [(check, kind)]) when the latest user
+    message is a yes to an exemption question about a hole (paths) or to a
+    vetting question (vets); else None."""
     user = None
     for line in gate._iter_tail_lines(transcript):
         try:
@@ -78,10 +82,11 @@ def find_answer(gate, transcript):
             text = gate._entry_text(entry)
             if not text.strip():
                 continue
-            if "hole" not in text.lower():
-                return None
-            paths = list(dict.fromkeys(ASK_RE.findall(text)))
-            return (user, paths) if paths else None
+            paths = []
+            if "hole" in text.lower():
+                paths = list(dict.fromkeys(ASK_RE.findall(text)))
+            vets = list(dict.fromkeys(VET_RE.findall(text)))
+            return (user, paths, vets) if (paths or vets) else None
     return None
 
 
@@ -104,12 +109,13 @@ def mint(payload):
     found = find_answer(gate, transcript)
     if not found:
         return
-    ident, paths = found
+    ident, paths, vets = found
     common = git(repo, "rev-parse", "--git-common-dir")
     if not common:
         return
-    passdir = os.path.join(os.path.abspath(os.path.join(repo, common)),
-                           "fact-exempt")
+    gitdir = os.path.abspath(os.path.join(repo, common))
+    passdir = os.path.join(gitdir, "fact-exempt")
+    vetdir = os.path.join(gitdir, "fast-vetted")
     os.makedirs(passdir, exist_ok=True)
     ledger = os.path.join(passdir, "minted")
     try:
@@ -124,6 +130,13 @@ def mint(payload):
             continue
         with open(os.path.join(passdir, sha), "w") as f:
             f.write("%s\n%s\n" % (p, ident))
+    if vets:
+        # Vetting passes live apart from fact passes, so one cannot satisfy
+        # the other. check_fast_vetted.py consumes <check>.<kind>.
+        os.makedirs(vetdir, exist_ok=True)
+        for check, kind in vets:
+            with open(os.path.join(vetdir, "%s.%s" % (check, kind)), "w") as f:
+                f.write("%s %s\n%s\n" % (check, kind, ident))
     with open(ledger, "a") as f:
         f.write(ident + "\n")
 
@@ -260,6 +273,44 @@ def selftest():
                                   capture_output=True, text=True).returncode
         case("chain: first check run passes the non-conforming file", 0, chk())
         case("chain: next run refuses it", 1, chk())
+
+        # Vetting form (inc-rst61).
+        vetdir = os.path.join(repo, ".git", "fast-vetted")
+        vp = os.path.join(vetdir, "check_x.sh.bd")
+        vask = "Is tools/check_x.sh vetted for bd? It reads labels."
+
+        def vreset():
+            reset()
+            shutil.rmtree(vetdir, ignore_errors=True)
+
+        for ans, want in (("y", True), ("yy", True), ("n", False),
+                          ("no", False), ("ny", False)):
+            vreset()
+            hook(transcript(entries(("a", vask), ("u", ans))))
+            case("vet answer %r -> pass %s" % (ans, "minted" if want else "not minted"),
+                 want, os.path.exists(vp))
+        vreset()
+        hook(transcript(entries(("a", vask), ("u", "y"))))
+        case("vet pass is not a fact pass", False, os.path.exists(passpath))
+        vreset()
+        hook(transcript(entries(("a", ask), ("u", "y"))))
+        case("fact pass is not a vet pass", (True, False),
+             (os.path.exists(passpath), os.path.isdir(vetdir)
+              and bool(os.listdir(vetdir))))
+        vreset()
+        hook(transcript(entries(("a", "Is tools/check_x.sh vetted for gpu?"), ("u", "y"))))
+        case("vet question with an unknown kind", False,
+             os.path.isdir(vetdir) and bool(os.listdir(vetdir)))
+        vreset()
+        hook(transcript(entries(("a", vask), ("u", "y"))), command="git status")
+        case("vet: non-commit command", False, os.path.exists(vp))
+        vreset()
+        t = transcript(entries(("a", vask), ("u", "y")))
+        hook(t)
+        if os.path.exists(vp):
+            os.remove(vp)
+        hook(t)
+        case("vet: same transcript twice mints once", False, os.path.exists(vp))
     finally:
         shutil.rmtree(work, ignore_errors=True)
     print()

@@ -65,6 +65,16 @@ tools/opencode_ds.sh calls `dispatch_gate.py --check-launch deepseek` before it
 does anything (exit 0 or 2, the wrapper turns 2 into its exit 6), so the one
 decision function serves both the hook and the wrapper.
 
+FOREGROUND COMMIT (bead inc-rst61). A Bash call that runs `git commit` or
+tools/finish_bead.sh (as a command word, not inside quotes) is refused when it
+is not BOTH a background call (run_in_background true) AND marked
+INCURSION_FAST_WATCHED=1 (a VAR=value prefix on that command word, or an earlier
+`export INCURSION_FAST_WATCHED=1` in the same command line), in the main session
+(no agent_id), and NIGHTLY_BRANCH is unset or empty. The reason tells the model
+to run it in the background with the marker in front and arm a Monitor on
+<worktree>/logs/fast-alert.log. Each
+refusal is logged with label `foreground-commit`. A parse error allows.
+
 SCOPE. The hook is registered in ~/.claude/settings.json, so it runs in every
 session. After reading its input it exits 0 at once (no log line, no budget
 read) unless the session folder is an Incursion folder: the payload `cwd`
@@ -435,6 +445,158 @@ def classify_launch(command):
     return None
 
 
+GIT_ARG_OPTS = ("-C", "-c", "--git-dir", "--work-tree", "--namespace",
+                "--exec-path", "--super-prefix", "--config-env")
+FG_REASON = (
+    "dispatch gate: a foreground `git commit` or `tools/finish_bead.sh` call is "
+    "refused (bead inc-rst61). The fast checks report a stalled check in "
+    "<worktree>/logs/fast-alert.log while the commit runs, and a foreground "
+    "call shows you nothing until it ends. Run the same command with "
+    "run_in_background: true and INCURSION_FAST_WATCHED=1 in front of it "
+    "(a run without that marker is unwatched and the check is stopped), then "
+    "arm a Monitor on the worktree's alert log, "
+    "for example: tail -n 0 -F <worktree>/logs/fast-alert.log | grep "
+    "--line-buffered -E 'ALERT|HANG'"
+)
+
+
+def split_commands(command):
+    """Split a shell command into simple-command strings on ; & | ( ) and
+    newlines that sit outside quotes. A quoted mention is not a split point."""
+    segs, cur = [], []
+    quote = None
+    i = 0
+    while i < len(command):
+        ch = command[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+            cur.append(ch)
+        elif quote == '"':
+            if ch == "\\" and i + 1 < len(command):
+                cur.append(ch)
+                i += 1
+                cur.append(command[i])
+            else:
+                if ch == '"':
+                    quote = None
+                cur.append(ch)
+        elif ch == "\\" and i + 1 < len(command):
+            cur.append(ch)
+            i += 1
+            cur.append(command[i])
+        elif ch in "'\"":
+            quote = ch
+            cur.append(ch)
+        elif ch in ";&|()\n":
+            segs.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    segs.append("".join(cur))
+    return segs
+
+
+def runs_commit_or_landing(command):
+    """Which of `git commit` / `tools/finish_bead.sh` the command runs as a
+    command word, else None. Fails open: any error returns None."""
+    try:
+        if "commit" not in command and "finish_bead" not in command:
+            return None
+        for seg in split_commands(command):
+            try:
+                words = shlex.split(seg)
+            except ValueError:
+                words = seg.split()
+            i = 0
+            while i < len(words):
+                w = words[i]
+                if ASSIGN_RE.match(w) or os.path.basename(w) in WRAPPERS or (
+                        w.startswith("-") and i > 0
+                        and os.path.basename(words[i - 1]) == "env"):
+                    i += 1
+                else:
+                    break
+            rest = words[i:]
+            if rest and os.path.basename(rest[0]) in INTERPRETERS:
+                rest = [w for w in rest[1:] if not w.startswith("-")]
+            if not rest:
+                continue
+            prog = os.path.basename(rest[0])
+            if prog == "finish_bead.sh":
+                return "finish_bead.sh"
+            if prog == "git":
+                j = 1
+                while j < len(rest):
+                    a = rest[j]
+                    if a in GIT_ARG_OPTS:
+                        j += 2
+                    elif a.startswith("-"):
+                        j += 1
+                    else:
+                        break
+                if j < len(rest) and rest[j] == "commit":
+                    return "git commit"
+    except Exception:
+        return None
+    return None
+
+
+def watched_marker(command):
+    """True when the commit/landing command carries INCURSION_FAST_WATCHED=1:
+    as a prefix on its own command word, or via an earlier `export` segment.
+    Fails closed (False) on any error."""
+    marker = "INCURSION_FAST_WATCHED=1"
+    try:
+        exported = False
+        for seg in split_commands(command):
+            try:
+                words = shlex.split(seg)
+            except ValueError:
+                words = seg.split()
+            if words and words[0] == "export" and marker in words[1:]:
+                exported = True
+                continue
+            if runs_commit_or_landing(seg) is None:
+                continue
+            if exported:
+                return True
+            for w in words:
+                if w == marker:
+                    return True
+                if not (ASSIGN_RE.match(w) or os.path.basename(w) in WRAPPERS
+                        or w.startswith("-")):
+                    break
+    except Exception:
+        return False
+    return False
+
+
+def foreground_refusal(payload, tool_input, command, log_path):
+    """Refuse a foreground git commit / finish_bead.sh in the main session
+    (bead inc-rst61). Returns normally when the call is allowed."""
+    if payload.get("agent_id") or os.environ.get("NIGHTLY_BRANCH"):
+        return
+    what = runs_commit_or_landing(command)
+    if what is None:
+        return
+    bg = tool_input.get("run_in_background")
+    if (bg is True or (isinstance(bg, str) and bg.lower() == "true")) \
+            and watched_marker(command):
+        return
+    decision = "bypass" if os.environ.get("INCURSION_DISPATCH_GATE_OFF") == "1" \
+        else "block"
+    entry = make_entry(payload, None, None, command, "foreground-commit",
+                       None, decision, what)
+    entry["tool"] = "Bash"
+    append_log(log_path, entry)
+    if decision == "bypass":
+        return
+    print(FG_REASON, file=sys.stderr)
+    sys.exit(2)
+
+
 def recent_sonnet_attempt(log_path, hours=24):
     """True when the dispatch log holds an allow row, model sonnet, label
     budget, from the last `hours` hours."""
@@ -584,6 +746,8 @@ def main():
 
     if tool_name == "Bash":
         command = tool_input.get("command")
+        if isinstance(command, str):
+            foreground_refusal(payload, tool_input, command, log_path)
         launch = classify_launch(command) if isinstance(command, str) else None
         if launch is None:
             sys.exit(0)
