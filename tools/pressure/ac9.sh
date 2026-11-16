@@ -154,7 +154,6 @@ export GIT_AUTHOR_EMAIL=pressure@example.invalid GIT_COMMITTER_EMAIL=pressure@ex
 
 BEAD_M=inc-ac9m
 GOD=inc-pu6v.9
-SLOW_MSG='TOO SLOW for the fast set (over 15 s)'
 
 wt() { printf '%s/Incursion-%s' "$RUN" "$1"; }
 now() { date +%s; }
@@ -176,7 +175,7 @@ steplog() { # <step> <rc> <logfile>
 }
 
 note_refusals() { # <label> <logfile>: every refusal line of a log, to refusals.txt
-    grep -E 'REFUSED|FAIL:|a fast check|STOPPED|TOO SLOW' "$2" | sed 's/^[[:space:]]*//' | cut -c1-300 \
+    grep -E 'REFUSED|FAIL:|a fast check|STOPPED' "$2" | sed 's/^[[:space:]]*//' | cut -c1-300 \
         | sed "s/^/$1\t/" >> "$REFUSALS"
 }
 
@@ -331,9 +330,6 @@ run_mover() { # <name> <worktree>
 commit_merge() { # <name> <worktree> -> 0 committed
     local name="$1" w="$2" cl="$LOG/$name-commit.log" rc
     git -C "$w" commit --no-edit > "$cl" 2>&1; rc=$?
-    if [ $rc -ne 0 ] && grep -qF "$SLOW_MSG" "$cl"; then
-        note_refusals "$name (load)" "$cl"; wait_load_guard; git -C "$w" commit --no-edit > "$cl" 2>&1; rc=$?
-    fi
     [ $rc -eq 0 ] && return 0
     note_refusals "$name commit" "$cl"
     # the refusal is the stored-number collision (two sides chose one value): the unchanged mover is the recovery
@@ -344,9 +340,6 @@ commit_merge() { # <name> <worktree> -> 0 committed
     fi
     git -C "$w" add -A > "$rl" 2>&1
     git -C "$w" commit --no-edit >> "$rl" 2>&1; rc=$?
-    if [ $rc -ne 0 ] && grep -qF "$SLOW_MSG" "$rl"; then
-        wait_load_guard; git -C "$w" add -A > "$rl" 2>&1; git -C "$w" commit --no-edit >> "$rl" 2>&1; rc=$?
-    fi
     cat "$rl" >> "$cl"
     [ $rc -eq 0 ] || note_refusals "$name commit after the mover" "$rl"
     return $rc

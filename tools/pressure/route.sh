@@ -124,18 +124,6 @@ mkbead() { # <id> : a fake bead with one acceptance criterion
 
 wt() { printf '%s/Incursion-%s' "$RUN" "$1"; }
 
-# Under heavy load the real fast-check set stops a step with this exact message. The check is not changed: the
-# step waits for tools/load_guard.sh of the scratch repository (the real guard) and runs ONCE more, and steps.tsv
-# records both attempts.
-SLOW_MSG='TOO SLOW for the fast set (over 15 s)'
-slow_failed() { # <logfile> <rc>
-    [ "$2" -ne 0 ] && grep -qF "$SLOW_MSG" "$1"
-}
-wait_load_guard() {
-    echo "route: a step hit \"$SLOW_MSG\"; waiting for tools/load_guard.sh, then one retry"
-    ( cd "$DIR" && until tools/load_guard.sh > /dev/null 2>&1; do sleep 30; done )
-}
-
 decide() { # <logfile> -> the deciding line, plus the first named refusal under it
     local l d
     l="$(grep -m1 -E '^(STOPPED|REFUSED|INCONCLUSIVE)' "$1")"
@@ -196,14 +184,6 @@ patch_bead() {
                -m "AC1: the case oracle loads every fixture in the landed tree and compares its field values"
     } > "$lf" 2>&1; rc=$?
     record "commit $id" "$lf" "$rc" "$id" "$id" "$(sha "$id")" $(( $(now) - t0 ))
-    if slow_failed "$lf" "$rc"; then
-        wait_load_guard; local first="$lf"; lf="$LOG/commit-$id-retry.log"; t0=$(now)
-        [ "$FIRST_FAIL_LOG" = "$first" ] && FIRST_FAIL_LABEL=""   # the retry decides
-        { git -C "$w" add -A && git -C "$w" commit -q -m "tools: $id case patch for $CASE_NAME" \
-               -m "AC1: the case oracle loads every fixture in the landed tree and compares its field values"
-        } > "$lf" 2>&1; rc=$?
-        record "commit $id (retry after TOO SLOW)" "$lf" "$rc" "$id" "$id" "$(sha "$id")" $(( $(now) - t0 ))
-    fi
     return $rc
 }
 
@@ -223,7 +203,6 @@ merge_in() {
     fi
     python3 "$HERE/resolve_conflict.py" "$w" "$CASE/resolve" >> "$lf" 2>&1 || { echo "route: CONFLICT is unresolved" >> "$lf"; return 1; }
     git -C "$w" commit --no-edit > "$cl" 2>&1; crc=$?
-    if slow_failed "$cl" "$crc"; then wait_load_guard; git -C "$w" commit --no-edit > "$cl" 2>&1; crc=$?; fi
     cat "$cl" >> "$lf"
     if [ $crc -ne 0 ]; then MERGE_REFUSED_LOG="$cl"; return 3; fi
     echo "route: the conflict was resolved from $CASE/resolve" >> "$lf"
@@ -258,10 +237,6 @@ premerge_refused() {
     RECOVERED_LINE="${line:-$(decide "$cl")}"
     cc="$LOG/premerge-$id-$LAND_N-recommit.log"
     { git -C "$w" add -A && git -C "$w" commit --no-edit -q; } > "$cc" 2>&1; rc=$?
-    if slow_failed "$cc" "$rc"; then
-        wait_load_guard
-        { git -C "$w" add -A && git -C "$w" commit --no-edit -q; } > "$cc" 2>&1; rc=$?
-    fi
     if [ $rc -ne 0 ]; then
         RECOVERED_LINE=""
         record "merge $base into $id (commit after the mover)" "$cc" 1 "$base" "$id" "$(sha "$id")" 0
@@ -285,7 +260,7 @@ keep_baseline() { # <dest> <fallback>: the values the landing recorded, or (a so
     if [ -d "$LAND_VALUES/values" ]; then cp -R "$LAND_VALUES/values" "$1"; else cp -R "$2" "$1"; fi
 }
 land() {
-    local id="$1" base="$2" bl="$3" bsha="$4" lf rc t0 before srcsha first
+    local id="$1" base="$2" bl="$3" bsha="$4" lf rc t0 before srcsha
     LAND_N=$((LAND_N + 1))
     lf="$LOG/land-$id-$LAND_N.log"; before="$(sha "$base")"; t0=$(now); srcsha="$(sha "$id")"
     if [ -d "$CASE/resolve" ] && [ -d "$(wt "$id")" ]; then
@@ -301,14 +276,6 @@ land() {
     fi
     land_attempt "$id" "$base" "$bl" "$bsha" "$lf"; rc=$?
     record "land $id on $base" "$lf" "$rc" "$id" "$base" "$before" $(( $(now) - t0 )) "$srcsha"
-    if slow_failed "$lf" "$rc"; then
-        wait_load_guard
-        first="$lf"; LAND_N=$((LAND_N + 1))
-        lf="$LOG/land-$id-$LAND_N.log"; before="$(sha "$base")"; t0=$(now)
-        [ "$FIRST_FAIL_LOG" = "$first" ] && FIRST_FAIL_LABEL=""   # the retry decides
-        land_attempt "$id" "$base" "$bl" "$bsha" "$lf"; rc=$?
-        record "land $id on $base (retry after TOO SLOW)" "$lf" "$rc" "$id" "$base" "$before" $(( $(now) - t0 )) "$srcsha"
-    fi
     LAND_RC=$rc
     return $rc
 }
@@ -522,12 +489,6 @@ E)
     }
     mbead_commit "$LOG/commit-$BEAD_M.log"; mrc=$?
     record "commit $BEAD_M" "$LOG/commit-$BEAD_M.log" "$mrc" "$BEAD_M" "$BEAD_M" "$(sha "$BEAD_M")" 0
-    if slow_failed "$LOG/commit-$BEAD_M.log" "$mrc"; then
-        wait_load_guard
-        [ "$FIRST_FAIL_LOG" = "$LOG/commit-$BEAD_M.log" ] && FIRST_FAIL_LABEL=""   # the retry decides
-        mbead_commit "$LOG/commit-$BEAD_M-retry.log"; mrc=$?
-        record "commit $BEAD_M (retry after TOO SLOW)" "$LOG/commit-$BEAD_M-retry.log" "$mrc" "$BEAD_M" "$BEAD_M" "$(sha "$BEAD_M")" 0
-    fi
     [ $mrc -eq 0 ] || finish_from_failure
     # A is master: the frozen master of this landing is master after A.
     EXPECT_SAVE="$EXPECT"
