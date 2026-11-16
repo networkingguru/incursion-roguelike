@@ -252,6 +252,10 @@ void RouteUnseenPerTurn(Player *p) {
    Off unless INCURSION_ROUTE_UNSEEN staged the watched creature. */
 void RouteUnseenSmartDirTo(Monster *mn, int16 tx, int16 ty, bool is_pet,
                            const char *branch, Dir ret) {
+#ifdef DOOR_STUCK_PROBE
+    { extern void DoorStuckNext(Monster*, int, int, const char*, Dir);
+      DoorStuckNext(mn,tx,ty,branch,ret); }
+#endif
     if (!RouteMon || !RouteStaged || !mn || mn->myHandle != RouteMon)
         return;
     RouteUnseenLog("smartdir turn=%d at=%d,%d tgt=%d,%d opt=%d pet=%d "

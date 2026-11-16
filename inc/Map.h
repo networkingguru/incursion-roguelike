@@ -514,7 +514,7 @@ class Map: public Object
     void MakeNoiseXY(int16 x, int16 y, int16 radius); 
 
     /* Djikstra's Shortest Path Algorithm */
-    void   PQInsert(uint16 Node, int16 Weight);
+    void   PQInsert(uint16 Node, int16 Weight, int16 Breaks = 0);
     int32  PQPeekMin();
     bool   PQPopMin();
     /* outCost, when given, receives the total cost of the route found. It is
@@ -529,14 +529,23 @@ class Map: public Object
                         Creature *c, int32 dangerFactor,
                         uint16 *ThePath = NULL, int32 *outCost = NULL,
                         bool memonly = true);
+// family: path_flags internal
 #define DF_ALL_SAFE             0
 #define DF_IGNORE_TRAPS         1
 #define DF_IGNORE_TERRAIN       2
+/* A closed door that is neither locked nor secret counts as passable (the
+   walker opens it). */
+#define DF_OPEN_DOORS           4
+/* inc-zm6li: the walker may route through a door it can only break down: a
+   locked door when it also has DF_OPEN_DOORS, any closed door when it does not.
+   ShortestPath minimises the number of such doors first, then the distance. */
+#define DF_BASH_DOORS           8
+// end family: path_flags
 
     uint16 PathPoint(int16 n);
     uint16 RunOver(uint8 x, uint8 y, bool memonly, Creature *c,
                    int32 dangerFactor, bool Incor, bool Meld,
-                   bool isTarget = false);
+                   bool isTarget = false, bool *breaks = NULL);
 
 /* Why RunTo (src/Creature.cpp) refused a destination, so the overview-map 'R'
    command can name the cause instead of one catch-all line. See
