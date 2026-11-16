@@ -32,7 +32,7 @@
 # read "Physical Damage" and sum to the full amount; after the fix the second
 # half is "Acid Damage" and the acid-immune victim is unaffected by it.
 # The character is LOADED, not generated (INCURSION_LOAD, set by
-# tools/check_caustic_vitae_acid.sh): tools/fixtures/chars/orc-mage-seed1-opt0822.sav,
+# tools/check_caustic_vitae_acid.sh): tools/fixtures/chars/orc-mage-seed1-opt0822.char,
 # the male orc mage chargen-mage.keys builds, WIS 16 (mod +3). Nothing here
 # reads a rolled attribute.
 @until "Things in View" ESC

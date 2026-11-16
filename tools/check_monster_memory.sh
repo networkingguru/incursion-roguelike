@@ -2,7 +2,7 @@
 # gate: live
 # Does the game record what the player has met, and show him only that?
 # (bd inc-q98a; seed independence inc-gdhp)
-# fact: character, kit, options and initial empty memory -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+# fact: character, kit, options and initial empty memory -- INCURSION_LOAD=tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: map and adjacent summon squares -- the loaded fixture
 # fact: no incidental creatures -- wizard Genocide Everything before summoning
 # fact: kobold north, ogre south, humans east -- wizard Monster Summoning
@@ -77,7 +77,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav
 export INCURSION_FORCE_DAMAGE_ROLL=1
 
 # --------------------------------------------------------------------------

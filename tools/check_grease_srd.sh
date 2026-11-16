@@ -16,10 +16,10 @@
 # with INCURSION_FORCE_SAVE_ROLL, so each outcome is forced, not hoped for.
 # A frozen kobold in sight makes the character "threatened"; an unthreatened
 # creature takes 20 on Balance and the die never matters.
-# Balance modifier of the fixture paladin (human-paladin-seed4-grease-opt0822) is -1,
+# Balance modifier of the fixture paladin (human-paladin-seed4-opt0822) is -1,
 # so roll R gives total R-1.
 #
-# fact: character, Balance -1 -- fixture human-paladin-seed4-grease-opt0822 (INCURSION_LOAD)
+# fact: character, Balance -1 -- fixture human-paladin-seed4-opt0822 (INCURSION_LOAD, built from its .char, served from the fixture cache)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: kobold, grease and ice squares, wizard mode -- wizard Monster Summoning / Change terrain type / Freeze Monsters
 # fact: d20 of every Balance check -- INCURSION_RUNTO_SKILL_ROLL
@@ -56,7 +56,7 @@ cd "$ROOT"
 }
 
 OPTS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/human-paladin-seed4-grease-opt0822.sav
+FIXTURE=human-paladin-seed4-opt0822
 CASE_ENV=""
 rc=0
 STAMP="$$-$RANDOM"

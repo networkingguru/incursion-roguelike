@@ -1,7 +1,7 @@
 # Die for real, then look at the gravestone (bd inc-r6z, bd inc-nx0z).
 #
 #   INCURSION_GRAVESTONE_PROBE=1 INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-gate.char \
 #       tools/headless.sh tools/keys/gravestone.keys 1
 #
 # src/GravestoneProbe.cpp deals lethal damage after the first completed turn, which the 's' below spends.

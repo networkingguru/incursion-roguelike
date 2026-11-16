@@ -3,7 +3,7 @@
 # wrap onto a second line.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char \
 #       tools/headless.sh tools/keys/defnote-wrap.keys 4
 #
 # Read by tools/check_defnote.sh. Each step is the same as in the single-source

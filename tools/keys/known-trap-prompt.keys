@@ -2,7 +2,7 @@
 # Read by tools/check_known_trap_prompt.sh, bd inc-o6xj.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/known-trap-prompt.keys 3
 #
 # Move.cpp asks "Confirm move over the <trap>?" before a player steps onto a
@@ -17,11 +17,17 @@
 #   @until "A trap!" s   search until it is found.
 #   RIGHT           step onto it; the prompt opens. Photographed, then "n".
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 e                       # eat once: the fixture loads Hungry (-1 DEX), which
 a                       # would drop the Reflex bonus the prompt's odds use
 @while "Stop eating" y
 @while "-- more --" SPACE
 @dump:ate
+d
+@expect "Defense Class"
+@dump:sheet     # the check reads the Reflex bonus here (the built character's, not a number typed in the check)
+ESC
 
 w
 @while "Enter wizard mode" y

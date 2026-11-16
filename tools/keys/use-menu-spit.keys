@@ -16,6 +16,8 @@
 #   u -> Spit Weapon -> LEFT
 #       @expect fails the run (exit 6) if the polymorph did not happen or the
 #       entry is absent from the menu.
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 w
 y
 @choose "Polymorph the PC"

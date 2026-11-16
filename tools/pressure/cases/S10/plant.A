@@ -1,0 +1,5 @@
+# S10: script variables of two owners, planted by name; A adds ac8_middle between vrock_count and vrock_caster
+var Dance of Ruin vrock_count 7
+var Dance of Ruin ac8_middle 17
+var Dance of Ruin the_turn 12345
+var barbazu claw_hits 11

@@ -1,5 +1,5 @@
 # tools/keys/spook-ally.keys with its chargen removed, for a session that
-# LOADS tools/fixtures/chars/spook-ally-seed5-opt0822.sav instead of rolling
+# LOADS tools/fixtures/chars/spook-ally-seed5-opt0822.char instead of rolling
 # the warrior again. Everything below is lines 48-end of that file, unchanged.
 # Written to answer one question: does a check driven off the fixture reach the
 # same numbers as the same check driven off live chargen? bd inc-vrt8.

@@ -4,7 +4,7 @@
 #
 #   INCURSION_DMGPOST_PROBE=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char \
 #       tools/headless.sh tools/keys/dmgpost-chaos.keys <seed>
 #
 # THE STAGING. The loaded character is a Lawful Good lizardfolk monk, so a

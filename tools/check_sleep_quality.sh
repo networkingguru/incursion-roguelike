@@ -34,7 +34,7 @@ for case_id in 1 2 3 4 5 6 7 8; do
     INCURSION_FORCE_SAVE_ROLL="$save" \
     INCURSION_LOF_FORCE_ROLL="$lof" INCURSION_FORCE_DAMAGE_ROLL="$dmg" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char \
         tools/headless.sh tools/keys/template-alignment.keys 1 \
         > "$RUN_DIR/case-$case_id.harness.txt" 2>&1 || status=$?
     # Cases 3-8 can leave a wounded target; the harness then calls the run NO

@@ -4,7 +4,7 @@
 # in acquisition. The selected [a] names and the silvery/crimson messages
 # prove both actions used that sword; the stati dump identifies its source.
 # inc-frim: no chargen. The check loads the frozen orc barbarian
-# tools/fixtures/chars/orc-barbarian-reapply-seed4.sav (INCURSION_LOAD), so
+# tools/fixtures/chars/orc-barbarian-reapply-seed4.char (INCURSION_LOAD), so
 # the character no longer follows the seed.
 
 d

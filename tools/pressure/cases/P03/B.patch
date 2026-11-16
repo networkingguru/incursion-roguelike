@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1388,6 +1388,7 @@
+ #define A_SPEL    112  /* Ranged Attack Roll for spells */
+ #define A_SPE1    113
+ #define A_SPE2    114
++#define A_GRWB 115
+ // end family: attack
+ // family: attk_iter internal
+ 

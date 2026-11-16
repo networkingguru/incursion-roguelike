@@ -79,7 +79,7 @@ cd "$ROOT"
 
 SEED=7
 KEYS=tools/keys/xp-penalty-crash.keys
-FIXTURE=tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.sav
+FIXTURE=tools/fixtures/chars/wood-elf-rogue-seed7-opt0818.char
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

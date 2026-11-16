@@ -4,7 +4,7 @@
 #   INCURSION_DISBELIEF_PROBE=1 INCURSION_RUNTO_SKILL_ROLL=1 \
 #   INCURSION_FORCE_SAVE_ROLL=20 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-spotted-seed1.char \
 #       tools/headless.sh tools/keys/yam9-disbelief-removal.keys 1
 #
 # FORCE_SAVE_ROLL=20 forces every disbelief save to pass, so the goblin vizier

@@ -1,0 +1,29 @@
+# Prepares the built fixture elf-mage-illusions-seed1 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on; Infinite Mana and Freeze Monsters switched on so the
+# character can cast all four illusion spells in one session and no monster writes over the message a check reads;
+# Ignore Spell Failure; and the illusion spells learned through wizard mode (a first-level mage is never offered them).
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN*5          # Ignore Spell Failure is the 6th switch: the built mage knows Phantasmal Force at 94%
+SPACE           # (the old character's copy was 100%), and the checks cast without a failure roll.
+DOWN*2          # Infinite Mana is the 8th switch (OPT_NODEATH..., inc/Defines.h:4137-4147)
+SPACE
+DOWN*3          # Freeze Monsters is the 11th.
+SPACE
+ESC
+
+# Phantasmal Force is not learned here: the built mage already knows it as a mage spell, and Learn Any Spell
+# would add a second copy (Src pri), so the checks' @choose "Phantasmal Force" would match two entries.
+w
+@choose "Learn Any Spell"
+"Improved Phantasmal Force" ENTER
+w
+@choose "Learn Any Spell"
+"Spectral Force" ENTER
+w
+@choose "Learn Any Spell"
+"Improved Spectral Force" ENTER

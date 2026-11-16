@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..4fb83ba 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -362,6 +362,7 @@ typedef signed int        hObj;
+ #define IF_DECIPHERED  0x0100
+ #define IF_GHOST_TOUCH 0x0200
+ #define IF_REAPPLYING  0x0400
++#define IF_GRWB 0x1000
+ #define IF_LEGEND_ROLLED 0x0800
+ // end family: if_flag
+ // family: t_type stored ordinal u8 sentinel T_LAST, t_all internal

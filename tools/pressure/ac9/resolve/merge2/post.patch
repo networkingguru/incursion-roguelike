@@ -1,0 +1,166 @@
+diff --git a/lib/landed-inc-pu6v.9.irh b/lib/landed-inc-pu6v.9.irh
+new file mode 100644
+index 00000000..4405f754
+--- /dev/null
++++ b/lib/landed-inc-pu6v.9.irh
+@@ -0,0 +1,73 @@
++/* Resources the god Maeve declared in lib/main.irc, moved here
++ under the no-shared-tail layout (lib/landed.irc). Text unchanged. */
++
++/* Maeve's illusion dragon age templates (bead inc-pu6v.9 phase 7e, spec
++   docs/specs/2026-10-17-maeve-phase7-summons.md section 4, amendment
++   2026-10-21, dragons). Each is "exact monster" with the part naming the age
++   template explicitly, so the encounter's age step (src/Encounter.cpp:2275)
++   finds an age already chosen and adds none -- the illusion dragon never
++   exceeds the drawn CR. Data only; appended after the last Encounter in
++   lib/program.i order (Kysul's Illusion Stock, above) so no existing rID
++   shifts. */
++Encounter "exact hatchling dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"hatchling" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++Encounter "exact very young dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"very young" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++Encounter "exact young dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"young" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++Encounter "exact juvenile dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"juvenile" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++Encounter "exact young adult dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"young adult" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++Encounter "exact adult dragon"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_ALL $"adult" [EP_NOXCR];
++    Flags: NF_NOGEN, NF_SINGLE, NF_CONTEXT_AQUATIC;
++  }
++
++/* inc-pu6v.9 phase 7 (spec docs/specs/2026-10-17-maeve-phase7-summons.md
++   section 5, R42/R113): the data-only "Fierce" template Maeve's summons
++   outcome adds. Any creature type (the `for 0` form "swarm" uses): CR +1,
++   to-hit +2, damage +2, no alignment flags. Appended at the END of main.irc
++   by design -- an rID is a position, and main.irc compiles after every
++   #include, so this Template, and nothing else, sits last in its array; it
++   follows "well-traveled" above. Phase 7b declares it only; no call adds it
++   yet. */
++Template "Fierce" : TM_NATURE for 0
++  {
++    CR: +1;
++    Hit: +2;
++    Dmg: +2;
++  }
+diff --git a/lib/landed.irc b/lib/landed.irc
+index d622a9b7..22be4442 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -1 +1,2 @@
+ #include "landed-inc-pu6v.irh"
++#include "landed-inc-pu6v.9.irh"
+diff --git a/lib/main.irc b/lib/main.irc
+index 8c7214b5..840abbe1 100644
+--- a/lib/main.irc
++++ b/lib/main.irc
+@@ -586,21 +586,6 @@ Effect "Aura of Menace" : EA_GENERIC
+       defense and saving throws for the next 24 hours.";
+   }
+ 
+-/* inc-pu6v.9 phase 7 (spec docs/specs/2026-10-17-maeve-phase7-summons.md
+-   section 5, R42/R113): the data-only "Fierce" template Maeve's summons
+-   outcome adds. Any creature type (the `for 0` form "swarm" uses): CR +1,
+-   to-hit +2, damage +2, no alignment flags. Appended at the END of main.irc
+-   by design -- an rID is a position, and main.irc compiles after every
+-   #include, so this Template, and nothing else, sits last in its array; it
+-   follows "well-traveled" above. Phase 7b declares it only; no call adds it
+-   yet. */
+-Template "Fierce" : TM_NATURE for 0
+-  {
+-    CR: +1;
+-    Hit: +2;
+-    Dmg: +2;
+-  }
+-
+ /* APPEND-ONLY: last Effect in parse order. inc-1qyv. The status lasts
+    7200 stati units: one day, MENACE_DURATION in inc/Defines.h (the script compiler gives a syntax error on the name). */
+ AI_POTION Effect "True Blows" : EA_GENERIC
+diff --git a/src/MaevePulseProbe.cpp b/src/MaevePulseProbe.cpp
+index 1ee0ab5a..e1fd1c06 100644
+--- a/src/MaevePulseProbe.cpp
++++ b/src/MaevePulseProbe.cpp
+@@ -138,7 +138,9 @@ static void MaevePulsePlainLine(const char *id, int ev, int n) {
+    the price drift d (-3..3); slots 0-2 set the prayer's tilt like the pulse's.
+    Slot 30 (phase 11b) pins the follower's hit points to that percent at the
+    enemies gate; slots 7 and 8 force the prayer summons' strength and count. */
++// no-family
+ #define MAEVE_DRAW_FORCE_SLOTS 31
++// end no-family
+ static int32 maeveDrawForce[MAEVE_DRAW_FORCE_SLOTS] =
+     { -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999,
+       -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999, -9999,
+diff --git a/tools/check_crown_pantheon.sh b/tools/check_crown_pantheon.sh
+index 15adf721..123e993a 100755
+--- a/tools/check_crown_pantheon.sh
++++ b/tools/check_crown_pantheon.sh
+@@ -28,7 +28,7 @@
+ #
+ # THE STRANGERS ARE THE POINT, and this is the assertion a careless check
+ # leaves out: proving that some gods moved cannot tell a correct propagation
+-# from one that moves everybody. Seven of the sixteen must not move, and all
++# from one that moves everybody. Six of the sixteen must not move, and all
+ # six are read, two of them on BOTH screens.
+ #
+ # NOT EVERY STRANGER IS A SOUND CONTROL, and THE MULTITUDE IS NOT ONE. DO NOT
+diff --git a/tools/check_favour_chart_rung9.sh b/tools/check_favour_chart_rung9.sh
+index aaebbbce..b65b7d11 100755
+--- a/tools/check_favour_chart_rung9.sh
++++ b/tools/check_favour_chart_rung9.sh
+@@ -12,8 +12,9 @@
+ # changed lines sit directly under one, and the marker text itself names 102000
+ # -- then walks every FAVOUR_CHART list from its header to the list's
+ # terminating ',' or ';'. If any such list still holds 102000 it FAILS and
+-# prints file:line. If it parsed no lists, or fewer than twelve that hold
+-# 128000, it FAILS too, so the check cannot pass by reading nothing.
++# prints file:line. If it parsed no lists, or fewer that hold 128000 than the
++# lists of the gods not redesigned, it FAILS too, so the check cannot pass by
++# reading nothing.
+ #
+ # Usage:
+ #   tools/check_favour_chart_rung9.sh    exit 0 pass, 1 fail
+@@ -89,8 +90,8 @@ if len(lists) == 0:
+ # All but six of the 17: six redesigned gods have their own FAVOUR_CHART (100 ... 104807, 250000), holding neither 102000 nor 128000: Semirath (inc-pu6v.3), Essiah (inc-pu6v.4), Xavias, Xel, Aiswin (inc-pu6v.13) and Maeve (inc-pu6v.9).
+ # Maeve's old FAVOUR_CHART (with 128000) was replaced by her redesign (inc-pu6v.9, phase 1); she uses FAVOUR_EXPONENT 3 now.
+ REDESIGNED = ("Semirath", "Essiah", "Xavias", "Xel", "Aiswin", "Maeve")
+-if held128 < 12:
+-    print(f"FAIL: only {held128} FAVOUR_CHART list(s) hold 128000 in {src}; expected at least 12")
++if held128 < len(lists) - len(REDESIGNED):
++    print(f"FAIL: only {held128} FAVOUR_CHART list(s) hold 128000 in {src}; expected at least {len(lists) - len(REDESIGNED)}")
+     sys.exit(1)
+ 
+ print(f"PASS: {len(lists)} FAVOUR_CHART list(s) parsed, {held128} hold 128000, none hold 102000")

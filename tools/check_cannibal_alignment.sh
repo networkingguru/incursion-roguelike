@@ -1,5 +1,10 @@
 #!/bin/bash
 # gate: live
+# fact: human paladin (cases 1 and 2): race, class, alignment, stats, kit -- fixture human-paladin-seed4-opt0822, built from its .char alone (INCURSION_LOAD)
+# fact: options -- tools/fixtures/options-2026-08-22.dat (the OPTIONS default; INCURSION_OPTIONS overrides it)
+# fact: the corpse beside the eater -- wizard menu "Monster Summoning" then "Genocide Everything"
+# fact: the alignment charge -- the AlignedAct arithmetic and the class start score; the check reads the sheet phrase band, not a roll
+# fact: orc paladin (cases 3 and 4): race, class, alignment, stats, kit -- fixture orc-paladin-cannibal, built from its .char alone (INCURSION_LOAD)
 # Does eating a sapient corpse charge the right alignment axis? (bd inc-08js)
 #
 # THE RULE UNDER TEST. Eating a sapient corpse charges alignment at two
@@ -63,7 +68,8 @@ cd "$ROOT"
 
 SEED=4
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
-HUMAN=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+HUMAN=tools/fixtures/chars/human-paladin-seed4-opt0822.char
+ORC=tools/fixtures/chars/orc-paladin-cannibal.char
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
@@ -71,6 +77,10 @@ HUMAN=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
 }
 [ -f "$HUMAN" ] || {
     echo "INCONCLUSIVE: no fixture $HUMAN"
+    exit 2
+}
+[ -f "$ORC" ] || {
+    echo "INCONCLUSIVE: no fixture $ORC"
     exit 2
 }
 
@@ -177,8 +187,8 @@ run_one() {
 
 run_one 1 human-own   human     "$HUMAN" moves moves
 run_one 2 human-other dwarf     "$HUMAN" moves still
-run_one 3 orc-own     "cave orc" ""      still moves
-run_one 4 orc-other   human     ""       still still
+run_one 3 orc-own     "cave orc" "$ORC"  still moves
+run_one 4 orc-other   human     "$ORC"   still still
 
 if [ "$fail" -eq 0 ]; then
     echo "PASS: each eater was charged on exactly the axes the rule names."

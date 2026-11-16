@@ -60,7 +60,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-# fact: character (orc warrior) -- fixture quality-item-magic-seed5-opt0822, INCURSION_LOAD
+# fact: character (orc warrior, Monsters Maximum Hit Points DOUBLE) -- fixture quality-item-magic-seed5-opt0822 (built from its .char and the .options.dat beside it, served by tools/fixture_cache.sh), INCURSION_LOAD
 # fact: the blobs and the swords -- wizard Monster Summoning and Item Acquisition
 # fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
 # fact: every blow hits the blob -- INCURSION_LOF_FORCE_ROLL=18
@@ -78,7 +78,7 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # the plain sword at 9 of 15 ("Partly Melted"), never destroyed, and the blob
 # keeps its hit points. The A_DEQU bypass of hardness does not depend on the
 # amount, only that it is above 0.
-export INCURSION_LOAD=tools/fixtures/chars/quality-item-magic-seed5-opt0822.sav
+export INCURSION_LOAD=quality-item-magic-seed5-opt0822
 export INCURSION_FORCE_DAMAGE_ROLL=1
 export INCURSION_LOF_FORCE_ROLL=18
 # inc-2ok4: a bare A_DEQU attack allows a Reflex save; force every d20 to 1.

@@ -2,6 +2,10 @@
 # gate: live
 # Does a pure Druid pass the Staff of Healing's caster-level prerequisite? Bead inc-7y8u.
 #
+# fact: character -- fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
+# fact: settings -- tools/fixtures/options-2026-08-22.dat
+# fact: the staff and its stati -- wizard Item Acquisition of a Staff of Healing, no dice
 # THE DEFECT (Traced). Creature::ItemPrereq's CLEV_VAL branch loops over
 # {SP_ARCANE, SP_DIVINE, SP_BARDIC, SP_SORCERY, SP_PRIMAL, 0} and stops at the
 # first 0. SP_SORCERY is 0x0000, so the loop ends before SP_PRIMAL and a
@@ -29,10 +33,12 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-FIX=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+FIX=druid-shoulder-metal-seed7-opt0822
+KEYS=tools/keys/druid-staff-clev-druid.keys
 SEED=7
 if [ "${1:-}" = "--priest" ]; then
-    FIX=tools/fixtures/chars/orc-priest-seed4-gate.sav
+    FIX=tools/fixtures/chars/orc-priest-seed4-gate.char
+    KEYS=tools/keys/druid-staff-clev.keys
     SEED=4
 fi
 
@@ -40,10 +46,10 @@ fi
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
-[ -f "$FIX" ] || { echo "INCONCLUSIVE: no fixture $FIX"; exit 2; }
+[ -f "$FIX" ] || [ -f "tools/fixtures/chars/$FIX.char" ] || { echo "INCONCLUSIVE: no fixture $FIX"; exit 2; }
 
 out="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat INCURSION_LOAD="$FIX" \
-    tools/headless.sh tools/keys/druid-staff-clev.keys "$SEED" 2>&1)"
+    tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 [ -n "$run" ] || { echo "INCONCLUSIVE: no run directory."; exit 2; }
 if grep -q "the key script looked for something" <<< "$out"; then

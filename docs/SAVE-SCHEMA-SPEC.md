@@ -157,34 +157,43 @@ save loads under a newer binary. **A tag it does not know MUST refuse the load**
 naming the tag: a field it cannot interpret means the file was written by
 something newer than itself.
 
-### Field numbers and class layout: the two rules
+### Field names and class layout: the two rules
 
-Each class owns a range of tag numbers. Within that range:
+From revision 7, a field is named by a string, not a number
+(`FIELD_U16("weight", Weight)`). Each name is unique in its scope: the nearest
+`ARCHIVE_CLASS` or `FieldsV1` owner, plus the name of each embed opened inside
+it. The writer gives each name a number for that one file and writes the
+name table into the file, so two branches that add fields to one class choose
+two names and never collide. A revision 3-6 save carries numbers only; the
+reader maps them to names through the frozen table `inc/SaveLegacyTags.h`.
 
-- A new field MUST take the next unused number.
-- A retired field's number MUST NOT be reused, ever.
-- A field's number MUST NOT change, ever.
+- A new field MUST take a name unique in its scope. A numeric tag fails to compile.
+- A retired field's name goes on `tools/retired_field_names.txt` and in its engine copy `inc/SaveRetiredNames.h` (`tools/check_field_names.sh` keeps the two equal). It MUST NOT be reused, ever.
+- A field's name SHOULD NOT change. A renamed field MUST get a `rename <scope> <old> <new>` line in `tools/retired_field_names.txt`; the reader then matches either name.
+- `inc/SaveLegacyTags.h` MUST NOT change: it describes files already written.
 
-That is the first rule. The second rule concerns the byte layout of the class.
+That is the first rule. Design: `docs/superpowers/specs/2026-11-07-names-in-the-file-design.md`. The second rule concerns the byte layout of the class.
 
-`src/SaveV1.cpp` holds one pad row per saved class (`CreaturePads`,
-`MonsterPads` and the others in `SchemaPins[]`). A pad row lists every byte of
-the object that no `FIELD_` line covers: the vtable pointer, the compiler's
-padding, and each member that is deliberately not saved. A DEBUG build compares
-those rows with the bytes the field lists actually cover, and it refuses to
-write the save on any difference.
+Every build generates one pad row per saved class from the compiler's record
+layout: `tools/gen_record_layout.py` writes the size and the pad rows of each
+class in `SchemaPins[]` to `build/gen/<objdir>/RecordLayout.h`. A pad row lists
+the vtable pointer and the compiler's padding, and nothing else. A DEBUG build
+compares those rows with the bytes the field lists actually cover, and it
+refuses to write the save on any difference. `build_macos.sh` runs that
+comparison after it compiles, so a member with no `FIELD_` line stops the
+build.
 
-- When you add, remove or resize a member of a saved class, you MUST re-measure
-  the pad rows of that class and of every class derived from it.
-- Run `tools/save_pad_rows.sh`. It reads the layout from the compiler and prints
-  every row in the form `src/SaveV1.cpp` uses. Paste the rows it prints.
-- `tools/check_save_pad_rows.sh` fails when a declared row differs from the
-  measured one.
-
-The member you add is often not the member that breaks. On 2026-09-21 a new
-`int16` in `Creature` (inc-30ps) landed in free space, but it pushed two
-existing saved fields into bytes the rows still called padding. Every save then
-failed with `SCHEMA COVERAGE` errors (inc-xlwa).
+- No person writes a class size or a pad row. Two branches that each add a
+  member to one class merge with no number to reconcile (inc-cjos0).
+- A member that is deliberately not saved MUST carry a `FIELD_SKIP(<member>)`
+  line. It is not a pad.
+- A compiler that cannot print its record layout (gcc, mingw, MSVC) builds with
+  `LAYOUT_MEASURED 0`. The coverage check then reports "not measured", never a
+  pass.
+- An embedded struct whose whole range travels as one embed (`JournalInfoType`,
+  `GameTimeInfoType`, `QuickKey`, `String`) still carries a hand-written
+  `static_assert` on its size. A member added to one of them needs that number
+  changed by hand.
 
 ### How a class declares its fields
 
@@ -257,7 +266,7 @@ save was written. It is a record of the modules **as they were at save time**,
 written once per file, not once per reference.
 
 **How the reader finds a slot's entry.** By tag number. The manifest lives
-inside the existing per-module scope, tag 816 (`inc/Res.h:1257`), where module
+inside the existing per-module scope, tag 816 (`inc/Res.h:1258`), where module
 slot `i` is already written as inner tag `1+i`. The slot number is the
 addressing and it comes from the top 8 bits of the `rID` itself: to convert a
 reference in slot 3, the reader reads inner tag 4. There is no name lookup and
@@ -274,7 +283,7 @@ alongside the segment record already there:
 
 **The module's identity is not in the manifest and MUST NOT be copied into it.**
 It is already recorded in `ModFiles`, tag 868, whose `ModuleRecord`
-(`inc/Res.h:1112`) holds `Slot`, `hMod` and `FName[1024]`. Duplicating it would
+(`inc/Res.h:1113`) holds `Slot`, `hMod` and `FName[1024]`. Duplicating it would
 create a second copy to disagree with the first. The manifest's names are a
 stronger identity check than a filename anyway: a file renamed on disk changes
 nothing the format cares about, and a file with the same name but different
@@ -365,11 +374,11 @@ diff.
 ### The resource memory segment
 
 `Game::Serialize` writes each module's `MDataSeg` as one raw block
-(`inc/Res.h:1266-1267`). The block is the module's script data segment followed
+(`inc/Res.h:1267-1268`). The block is the module's script data segment followed
 by the per-player resource memory: `MonMem[szMon]`, `ItemMem[szItm]`,
 `EffMem[szEff]`, `RegMem[szReg]`, addressed arithmetically from the resource's
 position (`Module::GetMemoryPtr`, `src/Res.cpp:754`). `EffMem`
-(`inc/Res.h:1449`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
+(`inc/Res.h:1450`) carries `FlavorID` and `PFlavorID` — whole flavour `rID`s,
 assigned by the per-game shuffle in `Game::SetFlavors` (`src/Item.cpp:343`).
 This is the identification state: which potion looks like what, and what the
 player has tried and knows.
@@ -585,15 +594,10 @@ variable inside an existing owner breaks the append rule against the ledger.
 The bead that merges master into the epic (`.claude/rules/epic-branches.md`)
 MUST restore each retired declaration at its old ordinal, place each new
 variable after the owner's existing ones, and re-record the ledger in that bead.
-Saves written by the epic before that merge are IS1.3 files from a different
-variable list, and they MUST convert, not refuse. That bead MUST build the
-epic's module at each commit where the epic's variable list changed, and add
-one frozen table per distinct list, each with its build's array lengths and
-owner names. The recovery tries every table with IS1.3 step 1. Exactly one
-table MUST match, or all matching tables MUST hold the same variable list;
-otherwise the load refuses, naming the matching tables. Masok
-(`~/Scripts/Incursion-inc-pu6v/save/Masok.sav`) MUST convert, and the bead
-MUST show it loading.
+Saves written by an epic build are playtest saves and are disposable
+(`.claude/rules/engine-data-knowledge.md`, `epic-saves-are-disposable`). The
+merge bead MUST NOT add a conversion for them, and a merge MAY make them
+refuse to load.
 
 `docs/SCRIPT-DATA-SEGMENT.md` is superseded. Its verdict rested on "0 bytes in
 every real module, and no compile path can change it", which was false.
@@ -675,7 +679,7 @@ be converted.
    one. Tags and kinds cost about 3 bytes per field on top.
 7. **No runtime check that `mod/Incursion.Mod` was built by the running
    binary.** There is a file signature and range sanity checks
-   (`inc/Res.h:872`), but no ABI digest. A stale module with a new binary is
+   (`inc/Res.h:873`), but no ABI digest. A stale module with a new binary is
    undefined behaviour rather than a refusal. Out of scope here; tracked
    separately.
 
@@ -745,7 +749,7 @@ every existing value unchanged:
 18. **A resource append moves every slot.** Append an Effect that declares a
     variable. Every older variable keeps its value although its slot moved.
 19. **Rename a variable in place.** Loads silently, value at its position.
-20. **Old saves.** Every `tools/fixtures/chars/*.sav` loads, and so do
+20. **Old saves.** Every `tools/fixtures/specimens/*.sav` and every old `tools/fixtures/chars/*.sav` loads, and so do
     `save/Keos.sav` and `save/Zakfienal.sav` (copies, in a sandbox). The test
     MUST name one IS1.3 fixture whose recovered slots are non-zero in a whole
     unit and in each partial unit (17, 18 and 21 bits), and MUST check each

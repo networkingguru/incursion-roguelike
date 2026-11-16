@@ -58,7 +58,7 @@ cd "$ROOT"
 SEED=1
 KEYS=tools/keys/inh-wasteful.keys
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-18.dat}"
-FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav
+FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-opt0818.char
 [ -f "$OPTIONS" ] || {
     echo "INCONCLUSIVE: settings file $OPTIONS is not there."
     exit 2

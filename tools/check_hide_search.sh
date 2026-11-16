@@ -11,7 +11,7 @@
 # Monster::ChooseAction logs "HIDE_SEARCH ACT watcher=<handle> watchable=<n>" per
 # ACT_SEARCH, n = hiders HideSearch can roll against (HideCanWatch).
 #
-# fact: character and map -- fixture orc-rogue-seed1-opt0822.sav (INCURSION_LOAD)
+# fact: character and map -- fixture orc-rogue-seed1-opt0822.char (INCURSION_LOAD)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: whether the lost-sight monster searches -- INCURSION_LOSTSIGHT_SEARCH_ROLL=0
 # fact: which hiders a search can roll against (monster movement) -- the probe logs watchable per search and the check compares the rolls to it
@@ -37,7 +37,7 @@ cd "$(dirname "$0")/.."
 RUN="$(mktemp -d "$PWD/logs/hide-search-XXXXXX")"
 INCURSION_HIDE_SEARCH_PROBE=1 INCURSION_LOSTSIGHT_SEARCH_ROLL=0 INCURSION_RUN_DIR="$RUN" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.char \
     tools/headless.sh tools/keys/hide-search-test.keys "${1:-1}" > "$RUN.out" 2>&1
 status=$?
 python3 - "$RUN" "$status" <<'PY'

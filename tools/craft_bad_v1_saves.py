@@ -65,15 +65,20 @@ T_GAME = 1                        # inc/Defines.h
 T_MAP = 4                         # inc/Defines.h
 T_MONSTER = 6                     # inc/Defines.h
 T_PLAYER = 7                      # inc/Defines.h
-MAP_SIZEX_TAG = 673               # Map::sizeX, inc/Map.h
-MAP_SIZEY_TAG = 674               # Map::sizeY, inc/Map.h
-MAP_GRID_TAG = 672                # Map's grid record, inc/Map.h
-THING_STATI_TAG = 10              # Thing::__Stati, inc/Map.h
-GAME_MDATASEG_TAG = 816           # Game's segment-record scope, inc/Res.h
+# Fields are located by (scope, name) through the file's own name table
+# (revision 7; docs/superpowers/specs/2026-11-07-names-in-the-file-design.md
+# 5.2), never by a number: an id is a row of THAT file's table. The names
+# below are the writer's contract (inc/*.h, src/SaveV1.cpp).
+SEG_SCOPE = "Game.MDataSeg.Segment"
+THING_STATI = ("Thing", "__Stati")                  # inc/Map.h
+MAP_GRID = ("Map", "Grid")                          # inc/Map.h
+GRID_GX = ("MapGrid", "gx")                         # src/SaveV1.cpp
+GAME_MDATASEG = ("Game", "MDataSeg")                # inc/Res.h
+CREATURE_TS = ("Creature", "ts")                    # inc/Creature.h
+TS_TCOUNT = ("TargetSystem", "tCount")              # src/Target.cpp
+CHAR_NOTIFIEDLEVEL = ("Character", "NotifiedLevel")   # inc/Creature.h
+PLAYER_CAUTOBUFF = ("Player", "cAutoBuff")          # inc/Creature.h
 LAST_STATI = 237                  # inc/Defines.h
-CREATURE_TS_TAG = 256             # Creature::ts, inc/Creature.h
-CHAR_NOTIFIEDLEVEL_TAG = 421      # Character::NotifiedLevel, inc/Creature.h
-PLAYER_CAUTOBUFF_TAG = 521        # Player::cAutoBuff, inc/Creature.h
 NUM_TARGETS = 32                  # inc/Target.h
 MAX_NOTIFIED_LEVEL = 25           # ExperienceChart[27], src/Tables.cpp
 MAX_AUTOBUFF_CURSOR = 63          # AutoBuffs[64], inc/Creature.h
@@ -90,8 +95,71 @@ def patch_i32(data, offset, value):
     return data[:offset] + struct.pack("<i", value) + data[offset + 4:]
 
 
+REC_NAMES = 200                   # the name-table record's type byte (src/SaveV1.cpp V1_REC_NAMES)
+LEGACY_HEADER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             os.pardir, "inc", "SaveLegacyTags.h")
+
+
+def read_legacy_tags():
+    """The frozen revision 3-6 tag table, parsed from inc/SaveLegacyTags.h:
+    (rows, ranges) with rows = [(scope, tag, name, revLo, revHi)] and
+    ranges = [(scope, baseTag, count, name)]. Only a tool that deliberately
+    builds an OLD-revision file reads this."""
+    text = open(LEGACY_HEADER).read()
+    rows = [(m.group(1), int(m.group(2)), m.group(3), int(m.group(4)),
+             int(m.group(5))) for m in re.finditer(
+        r'\{\s*"([^"]*)",\s*(\d+),\s*"([^"]*)",\s*(\d+),\s*(\d+)\s*\}', text)]
+    ranges = [(m.group(1), int(m.group(2)), int(m.group(3)), m.group(4))
+              for m in re.finditer(
+        r'\{\s*"([^"]*)",\s*(\d+),\s*(\d+),\s*"([^"]*)"\s*\}', text)]
+    if not rows:
+        die("no rows parsed from %s" % LEGACY_HEADER)
+    return rows, ranges
+
+
+def legacy_lookup(rev):
+    """{(scope, name): tag} for one revision, ranges expanded to name#i."""
+    rows, ranges = read_legacy_tags()
+    out = {}
+    for scope, tag, name, lo, hi in rows:
+        if lo <= rev <= hi:
+            out[(scope, name)] = tag
+    for scope, base, count, name in ranges:
+        for i in range(count):
+            out[(scope, "%s#%d" % (name, i))] = base + i
+    return out
+
+
+def read_name_table(body):
+    """[(id, scope, name)] from a name-table record's body:
+    u16 id, u16 scopeLen, scope, u16 nameLen, name."""
+    rows, q = [], 0
+    while q != len(body):
+        nid, sl = struct.unpack_from("<HH", body, q)
+        q += 4
+        scope = body[q:q + sl].decode()
+        q += sl
+        nl, = struct.unpack_from("<H", body, q)
+        q += 2
+        name = body[q:q + nl].decode()
+        q += nl
+        rows.append((nid, scope, name))
+    return rows
+
+
+def name_row(nid, scope, name):
+    s, n = scope.encode(), name.encode()
+    return struct.pack("<HH", nid, len(s)) + s + struct.pack("<H", len(n)) + n
+
+
 class V1File:
-    """The parsed shape of one raw-mode v1 file. Offsets are absolute."""
+    """The parsed shape of one raw-mode v1 file. Offsets are absolute.
+
+    A revision 7 file carries its own name table (record type 200); tag()
+    answers with that file's id for a (scope, name). A revision 3-6 file has
+    no table; tag() answers with the frozen tag number from
+    inc/SaveLegacyTags.h (any revision's row: a tool that builds a revision
+    3 shape asks for rev 4 tags too)."""
 
     def __init__(self, data):
         self.data = data
@@ -102,6 +170,7 @@ class V1File:
         if not version.startswith("IS1."):
             die("not a v1 file: Version=%r" % version)
         self.version = version
+        self.rev = int(version[4:]) if version[4:].isdigit() else -1
         compression, = struct.unpack_from("<h", data, 90)
         if compression != 0:
             die("not a RAW-mode file (Compression=%d); regenerate under "
@@ -120,18 +189,28 @@ class V1File:
 
         # records: list of dicts {off, type, handle, length, fields}
         # fields: list of {off, tag, kind, size} -- off/size of the WHOLE
-        # field (tag..payload end), absolute.
+        # field (tag..payload end), absolute. "tag" is the wire id.
         self.records = []
+        self.table = None               # the name-table record, revision 7
+        self.ids = {}                   # (scope, name) -> id
         pos = PAYLOAD_OFF
         for _ in range(self.obj_count):
             rec_off = pos
             rtype = self.data[pos]
             handle, rec_len = struct.unpack_from("<II", data, pos + 1)
             pos += 9
-            fields = self.parse_fields(pos, rec_len)
-            self.records.append({"off": rec_off, "type": rtype,
-                                 "handle": handle, "length": rec_len,
-                                 "fields": fields})
+            if rtype == REC_NAMES:
+                for nid, scope, name in read_name_table(
+                        data[pos:pos + rec_len]):
+                    self.ids[(scope, name)] = nid
+                fields = []
+            else:
+                fields = self.parse_fields(pos, rec_len)
+            rec = {"off": rec_off, "type": rtype, "handle": handle,
+                   "length": rec_len, "fields": fields}
+            if rtype == REC_NAMES:
+                self.table = rec
+            self.records.append(rec)
             pos += rec_len
         sep, = struct.unpack_from("<I", data, pos)
         if sep != SIGNATURE_TWO:
@@ -139,6 +218,50 @@ class V1File:
         pos += 4
         if pos != len(data):
             die("trailing bytes after SIGNATURE_TWO")
+        if self.rev >= 7:
+            if self.table is None:
+                die("revision %d file carries no name table" % self.rev)
+        else:
+            self.ids = {k: v for k, v in
+                        legacy_lookup(self.rev).items()}
+            # Any revision's row: the shape mutants name a rev-3 field in a
+            # rev-4+ file and the other way round.
+            for rev in (4, 3, 6):
+                for k, v in legacy_lookup(rev).items():
+                    self.ids.setdefault(k, v)
+        bind_segment_tags(self)
+
+    def tag(self, key, name=None):
+        """Wire id of (scope, name) in this file; die() when the file has no
+        such field. Accepts tag((scope, name)) too."""
+        if name is None:
+            key, name = key
+        try:
+            return self.ids[(key, name)]
+        except KeyError:
+            die("the file carries no field \"%s\" in scope \"%s\"; the "
+                "case needs it" % (name, key))
+
+    def with_names(self, wanted):
+        """Revision 7 only: (new file bytes, V1File) where every (scope,
+        name) in `wanted` has a row in the name table, appended after the
+        existing rows when missing. Record length and group sizes follow."""
+        base, v1 = self.data, self
+        add = b""
+        nxt = max(self.ids.values(), default=0) + 1
+        for scope, name in wanted:
+            if (scope, name) in v1.ids:
+                continue
+            add += name_row(nxt, scope, name)
+            nxt += 1
+        if not add:
+            return base, v1
+        t = self.table
+        end = t["off"] + 9 + t["length"]
+        f = base[:end] + add + base[end:]
+        f = fix_record_length(f, t["off"], len(add))
+        f = fix_sizes(f, len(add))
+        return f, V1File(f)
 
     def parse_fields(self, start, length):
         data = self.data
@@ -169,6 +292,59 @@ class V1File:
         if pos != end:
             die("record length disagrees with its fields")
         return fields
+
+
+def to_legacy(data, rev=6):
+    """Rewrite a revision 7 RAW file as a revision `rev` (3-6) file: every
+    field id becomes the frozen tag number of its (scope, name), the name
+    table record is removed, and the stamp reads IS1.<rev>. Used ONLY by the
+    cases that are old-revision files by definition (IS1.3). A field the
+    frozen table has no row for is dropped (a legacy file never held it);
+    an embed with no row dies."""
+    v1 = V1File(data)
+    if v1.rev < 7:
+        return data
+    by_id = {nid: k for k, nid in v1.ids.items()}
+    legacy = legacy_lookup(rev)
+    dropped = []
+
+    def walk(start, length):
+        """The new bytes of one field region (terminator included). A field
+        with no frozen row is cut out (a legacy file never held it); an
+        embed with no row dies, since cutting it cuts its contents."""
+        body = b""
+        for f in v1.parse_fields(start, length):
+            key = by_id[f["tag"]]
+            raw = data[f["off"]:f["off"] + f["size"]]
+            if key not in legacy:
+                if f["kind"] == K_EMBED:
+                    die("to_legacy: no revision %d tag for embed \"%s\" "
+                        "in scope \"%s\"" % (rev, key[1], key[0]))
+                if key not in dropped:
+                    dropped.append(key)
+                continue
+            if f["kind"] == K_EMBED:
+                l, = struct.unpack_from("<I", data, f["off"] + 3)
+                inner = walk(f["off"] + 7, l)
+                raw = raw[:3] + struct.pack("<I", len(inner)) + inner
+            body += struct.pack("<H", legacy[key]) + raw[2:]
+        return body + struct.pack("<H", 0)
+
+    out = data[:PAYLOAD_OFF]
+    for r in v1.records:
+        if r["type"] == REC_NAMES:
+            continue
+        body = walk(r["off"] + 9, r["length"])
+        out += data[r["off"]:r["off"] + 5] + struct.pack("<I", len(body)) \
+            + body
+    out += data[-4:]
+    for scope, name in dropped:
+        sys.stderr.write("to_legacy: dropped \"%s\" in scope \"%s\" "
+                         "(no revision %d row)\n" % (name, scope, rev))
+    out = patch_i32(out, OBJCOUNT_OFF, v1.obj_count - 1)
+    out = fix_sizes(out, len(out) - len(data))
+    stamp = ("IS1.%d" % rev).encode()
+    return out[:4] + stamp + b"\0" * (12 - len(stamp)) + out[16:]
 
 
 def splice(base, off, remove, insert):
@@ -209,16 +385,16 @@ def craft_creature_tcount(src_path, cases):
     if len(recs) != 1:
         die("expected exactly one T_MONSTER record in %s, found %d"
             % (src_path, len(recs)))
-    ts = [fl for fl in recs[0]["fields"] if fl["tag"] == CREATURE_TS_TAG]
+    ts = [fl for fl in recs[0]["fields"] if fl["tag"] == v1.tag(CREATURE_TS)]
     if len(ts) != 1 or ts[0]["kind"] != K_EMBED:
-        die("expected exactly one tag-%d K_EMBED field (Creature::ts)"
-            % CREATURE_TS_TAG)
+        die("expected exactly one \"%s\" K_EMBED field (Creature::ts)"
+            % CREATURE_TS[1])
     # tag (2) + kind (1) + embed length (4), then the nested field stream.
     inner = ts[0]["off"] + 7
     tag, kind = struct.unpack_from("<HB", base, inner)
-    if tag != 1 or kind != K_U8:
-        die("expected TargetSystem's first embedded field to be tag 1 K_U8 "
-            "(tCount); got tag %d kind %d" % (tag, kind))
+    if tag != v1.tag(TS_TCOUNT) or kind != K_U8:
+        die("expected TargetSystem's first embedded field to be K_U8 "
+            "tCount; got id %d kind %d" % (tag, kind))
     off = inner + 3
     if base[off] > NUM_TARGETS:
         die("the genuine file already carries tCount=%d" % base[off])
@@ -226,16 +402,16 @@ def craft_creature_tcount(src_path, cases):
     cases.append(("creature_tcount_overflow", f, "fail", CORRUPT))
 
 
-def player_field_payload(v1, base, tag, kind, what):
+def player_field_payload(v1, base, key, kind, what):
     """Absolute offset of the payload of one top-level field of the single
     Player record, checked to be the kind the field list declares."""
     recs = [r for r in v1.records if r["type"] == T_PLAYER]
     if len(recs) != 1:
         die("expected exactly one T_PLAYER record, found %d" % len(recs))
-    fl = [f for f in recs[0]["fields"] if f["tag"] == tag]
+    fl = [f for f in recs[0]["fields"] if f["tag"] == v1.tag(key)]
     if len(fl) != 1 or fl[0]["kind"] != kind:
-        die("expected exactly one tag-%d kind-%d field (%s)"
-            % (tag, kind, what))
+        die("expected exactly one \"%s\" kind-%d field (%s)"
+            % (key[1], kind, what))
     return fl[0]["off"] + 3         # tag (2) + kind (1)
 
 
@@ -269,9 +445,9 @@ def craft_player_index_mutants(src_path, cases):
     """
     base = open(src_path, "rb").read()
     v1 = V1File(base)
-    n_off = player_field_payload(v1, base, CHAR_NOTIFIEDLEVEL_TAG, K_I8,
+    n_off = player_field_payload(v1, base, CHAR_NOTIFIEDLEVEL, K_I8,
                                  "Character::NotifiedLevel")
-    c_off = player_field_payload(v1, base, PLAYER_CAUTOBUFF_TAG, K_I16,
+    c_off = player_field_payload(v1, base, PLAYER_CAUTOBUFF, K_I16,
                                  "Player::cAutoBuff")
     if base[n_off] > MAX_NOTIFIED_LEVEL:
         die("the genuine file already carries NotifiedLevel=%d" % base[n_off])
@@ -304,19 +480,23 @@ def craft_stati_nature_oob(base, v1, cases):
     status is valid on the wire and ONLY its Nature is out of range.
     """
     rec0 = v1.records[0]
-    st = [fl for fl in rec0["fields"] if fl["tag"] == THING_STATI_TAG]
+    st = [fl for fl in rec0["fields"] if fl["tag"] == v1.tag(THING_STATI)]
     if len(st) != 1 or st[0]["kind"] != K_EMBED:
-        die("expected exactly one tag-%d K_EMBED field (Thing::__Stati) "
-            "in the first record" % THING_STATI_TAG)
+        die("expected exactly one \"__Stati\" K_EMBED field (Thing::__Stati) "
+            "in the first record")
     if not 237 <= LAST_STATI <= 255:
         die("stati_nature_oob: LAST_STATI moved out of uint8 overflow "
             "range; re-derive the mutant's nature byte")
-    status = struct.pack("<HBB", 1, K_U8, 255) + struct.pack("<H", 0)
-    inner = struct.pack("<HBh", 1, K_I16, 1)          # Last
-    inner += struct.pack("<HBh", 2, K_I16, 1)         # Allocated
-    inner += struct.pack("<HBI", 3, K_EMBED, len(status)) + status
+    status = struct.pack("<HBB", v1.tag("StatiCollection.Status", "nature"),
+                         K_U8, 255) + struct.pack("<H", 0)
+    inner = struct.pack("<HBh", v1.tag("StatiCollection", "Last"), K_I16, 1)
+    inner += struct.pack("<HBh", v1.tag("StatiCollection", "Allocated"),
+                         K_I16, 1)
+    inner += struct.pack("<HBI", v1.tag("StatiCollection", "Status#0"),
+                         K_EMBED, len(status)) + status
     inner += struct.pack("<H", 0)                     # embed terminator
-    field = struct.pack("<HBI", THING_STATI_TAG, K_EMBED, len(inner)) + inner
+    field = struct.pack("<HBI", v1.tag(THING_STATI), K_EMBED, len(inner)) \
+        + inner
     f, delta = splice(base, st[0]["off"], st[0]["size"], field)
     f = fix_record_length(f, rec0["off"], delta)
     f = fix_sizes(f, delta)
@@ -352,18 +532,18 @@ def craft_seg_row_mutants(src_path, cases):
     if len(recs) != 1:
         die("expected exactly one T_GAME record in %s, found %d"
             % (src_path, len(recs)))
-    seg = [fl for fl in recs[0]["fields"] if fl["tag"] == GAME_MDATASEG_TAG]
+    seg = [fl for fl in recs[0]["fields"]
+           if fl["tag"] == v1.tag(GAME_MDATASEG)]
     if len(seg) != 1 or seg[0]["kind"] != K_EMBED:
-        die("expected exactly one tag-%d K_EMBED (the segment-record scope) "
-            "in the Game record" % GAME_MDATASEG_TAG)
+        die("expected exactly one \"MDataSeg\" K_EMBED (the segment-record "
+            "scope) in the Game record")
     rows_off = None
     for sl in v1.parse_fields(seg[0]["off"] + 7, seg[0]["size"] - 7):
         if sl["kind"] != K_EMBED:
-            die("expected only K_EMBED slot records inside tag %d"
-                % GAME_MDATASEG_TAG)
+            die("expected only K_EMBED slot records inside \"MDataSeg\"")
         inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
-        count_f = [f for f in inner if f["tag"] == 2]
-        rows_f = [f for f in inner if f["tag"] == 3]
+        count_f = [f for f in inner if f["tag"] == segtag("RowCount")]
+        rows_f = [f for f in inner if f["tag"] == segtag("Rows")]
         if not count_f or not rows_f:
             continue                    # an empty embed: slot not in use
         count, = struct.unpack_from("<I", base, count_f[0]["off"] + 3)
@@ -427,17 +607,32 @@ def craft_seg_row_mutants(src_path, cases):
 # the group sizes -- which is what the first version of these mutants got
 # wrong, leaving the reader's nested field scan short.
 
-SEG_SCRIPT_TAG = 1                # rev-3 only: empty K_BLOB
-SEG_COUNT_TAG = 2                 # K_U32 rowCount
-SEG_ROWS_TAG = 3                  # K_BLOB memory rows
-SEG_LENGTHS_TAG = 4               # K_ARRAY manifest lengths
-SEG_NAMES_TAG = 5                 # K_BLOB manifest names
-SEG_VARCOUNT_TAG = 6              # K_U32 variable count
-SEG_VARBLOB_TAG = 7               # K_BLOB variable records
+# The segment record's inner fields, by name (src/SaveV1.cpp). segtag() asks
+# the file most recently parsed for its id, so the same case code serves a
+# revision 7 file (the file's table) and a revision 3-6 file (frozen tags).
+SEG_FIELDS = ("ScriptSegment", "RowCount", "Rows", "PoolLengths", "PoolNames",
+              "VariableCount", "Variables")
+_SEG_IDS = {}
+
+
+def bind_segment_tags(v1):
+    """Remember v1's id for each segment field it can name; a name the file
+    does not carry yet (ScriptSegment in a rev-7 file) is added by
+    V1File.with_names before a case uses it."""
+    _SEG_IDS.clear()
+    for name in SEG_FIELDS:
+        if (SEG_SCOPE, name) in v1.ids:
+            _SEG_IDS[name] = v1.ids[(SEG_SCOPE, name)]
+
+
+def segtag(name):
+    if name not in _SEG_IDS:
+        die("the file carries no segment field \"%s\"" % name)
+    return _SEG_IDS[name]
+
+
 VAR_REC_HEADER = 6                # owner u32 + type u8 + nameLen u8
 
-REV4_TAG_SHAPE_MSG = ("revision 4 requires tags 2/3/6/7 and forbids tag 1")
-REV3_TAG_SHAPE_MSG = ("revision 3 requires empty tag 1 and forbids tags 6/7")
 
 
 def patch_field_len(data, field_off, delta):
@@ -458,17 +653,16 @@ def slot_with_variables(v1, src_path):
         die("expected exactly one T_GAME record in %s, found %d"
             % (src_path, len(recs)))
     rec = recs[0]
-    seg = [fl for fl in rec["fields"] if fl["tag"] == GAME_MDATASEG_TAG]
+    seg = [fl for fl in rec["fields"] if fl["tag"] == v1.tag(GAME_MDATASEG)]
     if len(seg) != 1 or seg[0]["kind"] != K_EMBED:
-        die("expected exactly one tag-%d K_EMBED in %s"
-            % (GAME_MDATASEG_TAG, src_path))
+        die("expected exactly one \"MDataSeg\" K_EMBED in %s" % src_path)
     seg = seg[0]
     for sl in v1.parse_fields(seg["off"] + 7, seg["size"] - 7):
         if sl["kind"] != K_EMBED:
             continue
         inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
-        if any(f["tag"] == SEG_VARCOUNT_TAG for f in inner) and \
-                any(f["tag"] == SEG_VARBLOB_TAG for f in inner):
+        if any(f["tag"] == segtag("VariableCount") for f in inner) and \
+                any(f["tag"] == segtag("Variables") for f in inner):
             return rec, seg, sl, inner
     die("no module slot in %s carries revision-4 variable records (tags "
         "6/7); the variable mutants need one" % src_path)
@@ -505,7 +699,7 @@ def inner_bytes(base, inner, mutate=None):
 
 def var_first_record(base, inner):
     """(absolute offset, nameLen) of the first record in the tag-7 blob."""
-    vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG][0]
+    vb = [f for f in inner if f["tag"] == segtag("Variables")][0]
     return vb["off"] + 7, base[vb["off"] + 7 + 5]
 
 
@@ -516,8 +710,8 @@ def craft_var_record_mutants(src_path, cases):
     base = open(src_path, "rb").read()
     v1 = V1File(base)
     rec, seg, slot, inner = slot_with_variables(v1, src_path)
-    vc = [f for f in inner if f["tag"] == SEG_VARCOUNT_TAG][0]
-    vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG][0]
+    vc = [f for f in inner if f["tag"] == segtag("VariableCount")][0]
+    vb = [f for f in inner if f["tag"] == segtag("Variables")][0]
     vc_pay = vc["off"] + 3                 # tag (2) + kind (1)
     blob_pay = vb["off"] + 7               # tag + kind + length
     blob_len = struct.unpack_from("<I", base, vb["off"] + 3)[0]
@@ -560,41 +754,54 @@ def craft_var_record_mutants(src_path, cases):
 
 
 def craft_rev_tag_shape_mutants(src_path, cases):
-    """Five tag-shape mutants built by rebuilding the slot's inner stream.
-    All are refused by SaveV1_SegmentFields' revision-shape branch."""
-    base = open(src_path, "rb").read()
-    v1 = V1File(base)
+    """Five segment-shape mutants, all refused by SaveV1_SegmentFields'
+    revision-shape branch.
+
+    The three revision-4-and-later shapes are built on the revision 7 file
+    itself, by name. The two IS1.3 shapes are old-revision files by
+    definition, so they are built on the same save rewritten to frozen tag
+    numbers (to_legacy) and then stamped IS1.3."""
+    raw = open(src_path, "rb").read()
+    # ScriptSegment is a name the writer no longer emits, so the file's table
+    # has no row for it; add one for the mutants that carry the field.
+    base, v1 = V1File(raw).with_names([(SEG_SCOPE, "ScriptSegment")])
     rec, seg, slot, inner = slot_with_variables(v1, src_path)
 
     def drop(tag):
         return lambda f: b"" if f["tag"] == tag else None
 
-    # rev4_tag1: revision 4 carrying the retired inner tag 1 (empty K_BLOB).
-    t1 = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 0)
+    # rev4_tag1: revision 7 carrying the retired inner ScriptSegment field
+    # (empty K_BLOB). Revisions 4 and later share one shape.
+    t1 = struct.pack("<HBI", segtag("ScriptSegment"), K_BLOB, 0)
 
     def add_tag1(f):
-        if f["tag"] == SEG_VARCOUNT_TAG:
+        if f["tag"] == segtag("VariableCount"):
             return t1 + base[f["off"]:f["off"] + f["size"]]
         return None
     f = rebuild_slot(base, rec, seg, slot, inner_bytes(base, inner, add_tag1))
     cases.append(("rev4_carries_tag1", f, "fail", CORRUPT))
 
-    # rev4_missing_tag6 / rev4_missing_tag7
+    # rev4_missing_tag6 / rev4_missing_tag7: VariableCount / Variables gone.
     f = rebuild_slot(base, rec, seg, slot,
-                     inner_bytes(base, inner, drop(SEG_VARCOUNT_TAG)))
+                     inner_bytes(base, inner, drop(segtag("VariableCount"))))
     cases.append(("rev4_missing_tag6", f, "fail", CORRUPT))
     f = rebuild_slot(base, rec, seg, slot,
-                     inner_bytes(base, inner, drop(SEG_VARBLOB_TAG)))
+                     inner_bytes(base, inner, drop(segtag("Variables"))))
     cases.append(("rev4_missing_tag7", f, "fail", CORRUPT))
+
+    # The IS1.3 shapes: frozen tag numbers.
+    base = to_legacy(raw, 6)
+    v1 = V1File(base)
+    rec, seg, slot, inner = slot_with_variables(v1, src_path)
 
     # rev3_tag1_not_empty: a file stamped IS1.3 with tags 6/7 removed and a
     # NON-empty tag 1. Tag 1 must have length 0.
-    t1_ne = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 3) + b"abc"
+    t1_ne = struct.pack("<HBI", segtag("ScriptSegment"), K_BLOB, 3) + b"abc"
 
     def to_rev3_nonempty(f):
-        if f["tag"] in (SEG_VARCOUNT_TAG, SEG_VARBLOB_TAG):
+        if f["tag"] in (segtag("VariableCount"), segtag("Variables")):
             return b""
-        if f["tag"] == SEG_COUNT_TAG:
+        if f["tag"] == segtag("RowCount"):
             return t1_ne + base[f["off"]:f["off"] + f["size"]]
         return None
     f = rebuild_slot(base, rec, seg, slot,
@@ -613,25 +820,25 @@ def is13_slot_inner(base, rec, seg, slot, inner, row=None):
     insert an empty tag-1 K_BLOB (rev 3 requires it), and optionally replace
     the tag-3 row blob with `row` (kind,pool,position,payLen,payload...) and
     the tag-2 rowCount with the number of rows it leaves."""
-    t1 = struct.pack("<HBI", SEG_SCRIPT_TAG, K_BLOB, 0)
+    t1 = struct.pack("<HBI", segtag("ScriptSegment"), K_BLOB, 0)
     out = b""
     inserted = False
     for f in inner:
-        if f["tag"] in (SEG_VARCOUNT_TAG, SEG_VARBLOB_TAG):
+        if f["tag"] in (segtag("VariableCount"), segtag("Variables")):
             continue
-        if f["tag"] == SEG_COUNT_TAG:
+        if f["tag"] == segtag("RowCount"):
             if not inserted:
                 out += t1
                 inserted = True
             if row is None:
                 out += base[f["off"]:f["off"] + f["size"]]
             else:
-                out += struct.pack("<HBI", SEG_COUNT_TAG, K_U32,
+                out += struct.pack("<HBI", segtag("RowCount"), K_U32,
                                    struct.unpack_from("<I", base, f["off"] + 3)[0] + 1)
             continue
-        if f["tag"] == SEG_ROWS_TAG and row is not None:
+        if f["tag"] == segtag("Rows") and row is not None:
             pay = row + base[f["off"] + 7:f["off"] + f["size"]]
-            out += struct.pack("<HBI", SEG_ROWS_TAG, K_BLOB, len(pay)) + pay
+            out += struct.pack("<HBI", segtag("Rows"), K_BLOB, len(pay)) + pay
             continue
         out += base[f["off"]:f["off"] + f["size"]]
     return out + struct.pack("<H", 0)
@@ -709,9 +916,9 @@ def trim_is13_manifest(new_inner, frozen):
     of (array, position, name) for every entry the trim drops and
     new_lengths is the trimmed 21-array geometry."""
     fields = parse_inner_stream(new_inner)
-    if SEG_LENGTHS_TAG not in fields or SEG_NAMES_TAG not in fields:
+    if segtag("PoolLengths") not in fields or segtag("PoolNames") not in fields:
         raise RuntimeError("IS1.3 inner stream carries no manifest tags 4/5")
-    kind4, pay4 = fields[SEG_LENGTHS_TAG]
+    kind4, pay4 = fields[segtag("PoolLengths")]
     if kind4 != K_ARRAY:
         raise RuntimeError("manifest tag 4 is kind %d, expected K_ARRAY"
                            % kind4)
@@ -720,7 +927,7 @@ def trim_is13_manifest(new_inner, frozen):
         raise RuntimeError("manifest tag 4 has count %d elem %d, expected "
                            "%d/4" % (count, elem, V1_PREFIX_ARRAY_COUNT))
     lengths = list(struct.unpack_from("<%dI" % count, pay4, 8))
-    kind5, pay5 = fields[SEG_NAMES_TAG]
+    kind5, pay5 = fields[segtag("PoolNames")]
     if kind5 != K_BLOB:
         raise RuntimeError("manifest tag 5 is kind %d, expected K_BLOB"
                            % kind5)
@@ -755,10 +962,10 @@ def trim_is13_manifest(new_inner, frozen):
             kept.extend(names[base:base + n])
         base += n
 
-    new4 = struct.pack("<HBII%dI" % count, SEG_LENGTHS_TAG, K_ARRAY,
+    new4 = struct.pack("<HBII%dI" % count, segtag("PoolLengths"), K_ARRAY,
                        count, 4, *new_lengths)
     blob = b"".join(struct.pack("<H", len(nm)) + nm for nm in kept)
-    new5 = struct.pack("<HBI", SEG_NAMES_TAG, K_BLOB, len(blob)) + blob
+    new5 = struct.pack("<HBI", segtag("PoolNames"), K_BLOB, len(blob)) + blob
 
     out = b""
     pos = 0
@@ -780,9 +987,9 @@ def trim_is13_manifest(new_inner, frozen):
             pos += 8 + c * e
         else:
             raise RuntimeError("unknown field kind %d in inner stream" % kind)
-        if tag == SEG_LENGTHS_TAG:
+        if tag == segtag("PoolLengths"):
             out += new4
-        elif tag == SEG_NAMES_TAG:
+        elif tag == segtag("PoolNames"):
             out += new5
         else:
             out += new_inner[start:pos]
@@ -824,7 +1031,7 @@ def _manifests_from_game(v1, base):
         if rec["type"] != T_GAME:
             continue
         for sl in v1.parse_fields(rec["off"] + 9, rec["length"]):
-            if sl["tag"] != GAME_MDATASEG_TAG or sl["kind"] != K_EMBED:
+            if sl["tag"] != v1.tag(GAME_MDATASEG) or sl["kind"] != K_EMBED:
                 continue
             for slot_i, slot_f in enumerate(
                     v1.parse_fields(sl["off"] + 7, sl["size"] - 7)):
@@ -832,7 +1039,7 @@ def _manifests_from_game(v1, base):
                     continue
                 inner = v1.parse_fields(slot_f["off"] + 7,
                                         slot_f["size"] - 7)
-                lens = [f for f in inner if f["tag"] == SEG_LENGTHS_TAG]
+                lens = [f for f in inner if f["tag"] == segtag("PoolLengths")]
                 if len(lens) != 1 or lens[0]["kind"] != K_ARRAY:
                     continue
                 pay = lens[0]["off"] + 3
@@ -917,10 +1124,10 @@ def rewrite_is13_manifest_rids(base, v1, removed, trimmed):
         if rec["type"] != T_GAME:
             continue
         for sl in v1.parse_fields(rec["off"] + 9, rec["length"]):
-            if sl["tag"] != GAME_MDATASEG_TAG or sl["kind"] != K_EMBED:
+            if sl["tag"] != v1.tag(GAME_MDATASEG) or sl["kind"] != K_EMBED:
                 continue
             inner = v1.parse_fields(sl["off"] + 7, sl["size"] - 7)
-            vb = [f for f in inner if f["tag"] == SEG_VARBLOB_TAG]
+            vb = [f for f in inner if f["tag"] == segtag("Variables")]
             if vb and vb[0]["kind"] == K_BLOB:
                 pay = base[vb[0]["off"] + 7:vb[0]["off"] + vb[0]["size"]]
                 pos = 0
@@ -943,7 +1150,7 @@ def rewrite_is13_manifest_rids(base, v1, removed, trimmed):
                             if array is not None and \
                                     (array, position) in removed_at:
                                 refuse(array, position)
-            rows = [f for f in inner if f["tag"] == SEG_ROWS_TAG]
+            rows = [f for f in inner if f["tag"] == segtag("Rows")]
             if rows and rows[0]["kind"] == K_BLOB:
                 pay = base[rows[0]["off"] + 7:rows[0]["off"] + rows[0]["size"]]
                 pos = 0
@@ -982,7 +1189,7 @@ def craft_is13_recovered_badrid(src_path, cases):
     target is found by name, not by the frozen table's own slot number --
     see check_v1_adversarial.sh's is13_recovered_badrid case, which also
     counts the stderr lines)."""
-    base = open(src_path, "rb").read()
+    base = to_legacy(open(src_path, "rb").read(), 6)   # an IS1.3 file: frozen tags
     v1 = V1File(base)
     frozen = read_frozen_prefix_lengths()
     rec, seg, slot, inner = slot_with_variables(v1, src_path)
@@ -992,7 +1199,7 @@ def craft_is13_recovered_badrid(src_path, cases):
     # manifest-only stream to learn the removed entries and the new geometry.
     # The synthesized bad row is added after, so 0x01FFFFFF stays untouched.
     manifest = b"".join(base[f["off"]:f["off"] + f["size"]] for f in inner
-                        if f["tag"] in (SEG_LENGTHS_TAG, SEG_NAMES_TAG))
+                        if f["tag"] in (segtag("PoolLengths"), segtag("PoolNames")))
     _, removed, new_lengths = trim_is13_manifest(manifest
                                                  + struct.pack("<H", 0),
                                                  frozen)
@@ -1011,8 +1218,8 @@ def craft_is13_recovered_badrid(src_path, cases):
 def craft_grid_mismatch(src_path, cases):
     """One mutant from the raw-mode FULL save (the only input with a Map
     record; the schematest groups carry none): the grid record's own sizeX
-    -- inner tag 1 of the tag-672 K_EMBED -- bumped by one, so it disagrees
-    with the map's already-loaded sizeX (outer tag 673). The reader's
+    -- gx, the first field of the Map "Grid" K_EMBED -- bumped by one, so it disagrees
+    with the map's already-loaded sizeX (Map sizeX). The reader's
     cross-check must refuse the file with an stderr line naming the grid.
     No length fixups: the mutated field is a fixed-size K_I16.
     """
@@ -1021,23 +1228,27 @@ def craft_grid_mismatch(src_path, cases):
     recs = [r for r in v1.records if r["type"] == T_MAP]
     if not recs:
         die("no T_MAP record in %s" % src_path)
-    grid = [fl for fl in recs[0]["fields"] if fl["tag"] == MAP_GRID_TAG]
+    grid = [fl for fl in recs[0]["fields"] if fl["tag"] == v1.tag(MAP_GRID)]
     if len(grid) != 1 or grid[0]["kind"] != K_EMBED:
-        die("expected exactly one tag-%d K_EMBED grid record in the Map "
-            "record; found %s" % (MAP_GRID_TAG,
-                                  [(g["tag"], g["kind"]) for g in grid]))
+        die("expected exactly one \"Grid\" K_EMBED grid record in the Map "
+            "record; found %s" % [(g["tag"], g["kind"]) for g in grid])
     inner = grid[0]["off"] + 7          # tag (2) + kind (1) + embed len (4)
     tag, kind = struct.unpack_from("<HB", base, inner)
-    if tag != 1 or kind != K_I16:
-        die("expected the grid record's first field to be tag 1 K_I16 "
-            "(sizeX); got tag %d kind %d" % (tag, kind))
+    if tag != v1.tag(GRID_GX) or kind != K_I16:
+        die("expected the grid record's first field to be K_I16 gx (the "
+            "grid's sizeX); got id %d kind %d" % (tag, kind))
     off = inner + 3
     sx, = struct.unpack_from("<h", base, off)
     f = base[:off] + struct.pack("<h", sx + 1) + base[off + 2:]
     cases.append(("grid_mismatch", f, "fail", "grid"))
 
 
-def craft_map_grid_overflow(cases, version):
+MAP_OVERFLOW_NAMES = (("Map", "sizeX"), ("Map", "sizeY"), ("Map", "Grid"),
+                      ("MapGrid", "gx"), ("MapGrid", "gy"),
+                      ("MapGrid", "elem"), ("MapGrid", "packed"))
+
+
+def craft_map_grid_overflow(cases, version, full_path):
     """version comes from a genuine file this run produced, never a
     literal: this header is synthesized from scratch, so a hardcoded
     stamp silently rots into a File Version Mismatch the moment
@@ -1070,17 +1281,31 @@ def craft_map_grid_overflow(cases, version):
         die("map_grid_size_overflow: the crafted dimensions no longer "
             "overflow the way the case needs")
 
-    inner = struct.pack("<HBh", 1, K_I16, SX)         # grid sizeX
-    inner += struct.pack("<HBh", 2, K_I16, SY)        # grid sizeY
-    inner += struct.pack("<HBB", 3, K_U8, ELEM)       # elemSize
-    inner += struct.pack("<HBI", 4, K_BLOB, lo32) + bytes(lo32)
+    # The file needs its own name table. The names are read from the real
+    # full save's table, so a rename in the writer stops this case instead of
+    # leaving it refused for an unknown name (which is also ECORRUPT).
+    real = V1File(open(full_path, "rb").read())
+    ids = {}
+    table = b""
+    for n, key in enumerate(MAP_OVERFLOW_NAMES, 1):
+        real.tag(key)                    # dies when the writer lost the name
+        ids[key] = n
+        table += name_row(n, key[0], key[1])
+    names_rec = struct.pack("<BII", REC_NAMES, 0, len(table)) + table
+
+    inner = struct.pack("<HBh", ids[("MapGrid", "gx")], K_I16, SX)
+    inner += struct.pack("<HBh", ids[("MapGrid", "gy")], K_I16, SY)
+    inner += struct.pack("<HBB", ids[("MapGrid", "elem")], K_U8, ELEM)
+    inner += struct.pack("<HBI", ids[("MapGrid", "packed")], K_BLOB, lo32) \
+        + bytes(lo32)
     inner += struct.pack("<H", 0)                     # embed terminator
-    fields = struct.pack("<HBh", MAP_SIZEX_TAG, K_I16, SX)
-    fields += struct.pack("<HBh", MAP_SIZEY_TAG, K_I16, SY)
-    fields += struct.pack("<HBI", MAP_GRID_TAG, K_EMBED, len(inner)) + inner
+    fields = struct.pack("<HBh", ids[("Map", "sizeX")], K_I16, SX)
+    fields += struct.pack("<HBh", ids[("Map", "sizeY")], K_I16, SY)
+    fields += struct.pack("<HBI", ids[("Map", "Grid")], K_EMBED, len(inner)) \
+        + inner
     fields += struct.pack("<H", 0)                    # record terminator
     rec = struct.pack("<BII", T_MAP, 150, len(fields)) + fields
-    payload = rec + struct.pack("<I", SIGNATURE_TWO)
+    payload = rec + names_rec + struct.pack("<I", SIGNATURE_TWO)
 
     stamp = version.encode() if isinstance(version, str) else version
     if len(stamp) > 11:
@@ -1089,7 +1314,7 @@ def craft_map_grid_overflow(cases, version):
         + bytes(72) + struct.pack("<hhh", 1, 0, 0)    # numGroups/Comp/nDeps
     fh += bytes(FH_SIZE - len(fh))                    # tail padding
     gh = struct.pack("<IiiiiiI", SIGNATURE, 0, len(payload), len(payload),
-                     1, 0, 999)
+                     2, 0, 999)
     cases.append(("map_grid_size_overflow", fh + gh + payload,
                   "fail", CORRUPT))
 
@@ -1127,38 +1352,45 @@ def main():
         cases.append(("truncated_fixed_sizes_at_record_%d" % n, f,
                       "fail", CORRUPT))
 
-    # --- 2. unknown_tag: insert tag=999, kind=K_U32, payload 0xDEADBEEF
-    # into the first Item record, lengths fixed up.
+    # --- 2. unknown_tag: insert a field whose NAME no field list asks for
+    # (a fresh row in the name table, id one past the last, plus the field
+    # itself: K_U32 0xDEADBEEF) into the first Item record, lengths fixed up.
     #
     # THIS CASE FLIPPED IN PHASE 6. It used to expect SUCCESS, on the rule
     # that a reader skips what it does not understand. That rule was the
-    # wrong half of the contract. A MISSING tag is safe -- the constructed
-    # default stands, and deleted_tag below still proves it. An EXTRA tag
+    # wrong half of the contract. A MISSING field is safe -- the constructed
+    # default stands, and deleted_tag below still proves it. An EXTRA field
     # means the file carries state this binary cannot honour, and skipping it
     # loads an object that is silently incomplete. The refusal must name the
-    # tag, so this asserts the number 999 reaches stderr.
-    rec0 = v1.records[0]
-    ins = struct.pack("<HBI", 999, K_U32, 0xDEADBEEF)
+    # field, so this asserts the name reaches stderr (inc-cjos0: it was the
+    # number 999 until names replaced tag numbers).
+    ghost = ("Thing", "NoSuchField")
+    gbase, gv1 = v1.with_names([ghost])
+    rec0 = gv1.records[0]
+    ins = struct.pack("<HBI", gv1.tag(ghost), K_U32, 0xDEADBEEF)
     first_field_off = rec0["fields"][0]["off"]
-    f, delta = splice(base, first_field_off, 0, ins)
+    f, delta = splice(gbase, first_field_off, 0, ins)
     f = fix_record_length(f, rec0["off"], delta)
     f = fix_sizes(f, delta)
     cases.append(("unknown_tag", f, "fail",
-                  "field tag 999, which is not one this binary reads"))
+                  'field "NoSuchField" in scope "Thing", which is not one '
+                  'this binary reads'))
+    v1 = V1File(open(src_path, "rb").read())      # the genuine file again
+    base = v1.data
+    rec0 = v1.records[0]
 
-    # --- 3. deleted_tag: remove the tag=6 (Thing::Timeout) field from the
-    # first Item record. The reader must leave the constructed default:
-    # Timeout is zero. (Tag 6 sits in Thing's range; -schemaload labels the
-    # field by the class that declares it.)
-    tag6 = [fl for fl in rec0["fields"] if fl["tag"] == 6]
+    # --- 3. deleted_tag: remove the Thing::Timeout field from the first
+    # Item record. The reader must leave the constructed default: Timeout is
+    # zero. (-schemaload labels the field by the class that declares it.)
+    tag6 = [fl for fl in rec0["fields"] if fl["tag"] == v1.tag("Thing", "Timeout")]
     if len(tag6) != 1 or tag6[0]["kind"] != K_I16:
-        die("expected exactly one tag-6 K_I16 field in the first record")
+        die("expected exactly one Thing.Timeout K_I16 field in the first record")
     f, delta = splice(base, tag6[0]["off"], tag6[0]["size"], b"")
     f = fix_record_length(f, rec0["off"], delta)
     f = fix_sizes(f, delta)
     cases.append(("deleted_tag", f, "ok", "field Thing.Timeout=0"))
 
-    # --- 6. wrong_kind: change tag 6's kind byte (K_I16) to K_U32 without
+    # --- 6. wrong_kind: change Timeout's kind byte (K_I16) to K_U32 without
     # touching anything else. Known tag, unexpected kind: corruption, never
     # a skip and never a coercion.
     off = tag6[0]["off"] + 2
@@ -1255,12 +1487,13 @@ def main():
     if len(sys.argv) >= 5:
         craft_player_index_mutants(sys.argv[4], cases)
 
-    # --- 11. the synthesized 32-bit-truncation grid mutant.
-    craft_map_grid_overflow(cases, v1.version)
 
     # --- 12. the grid-dimension mismatch and the two memory-row mutants,
     # all from the full raw save.
     if len(sys.argv) == 6:
+        # --- 11. the synthesized 32-bit-truncation grid mutant; its name
+        # table is checked against this real save's.
+        craft_map_grid_overflow(cases, v1.version, sys.argv[5])
         craft_grid_mismatch(sys.argv[5], cases)
         craft_seg_row_mutants(sys.argv[5], cases)
         # Cases 25 and 28(a): the revision-4 script-variable records. Six

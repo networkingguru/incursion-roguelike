@@ -36,7 +36,7 @@ run_case() {
     env INCURSION_BIN="$ROOT/incursion-headless" \
         INCURSION_CLEAVE_ILLUSION_PROBE=$mode INCURSION_LOF_FORCE_ROLL=20 \
         INCURSION_FORCE_SAVE_ROLL=1 \
-        INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav \
+        INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
         INCURSION_RUN_DIR="$rd" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
         tools/headless.sh tools/keys/cleave-illusion.keys 1 > "$rd.harness.txt" 2>&1

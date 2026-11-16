@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1626,6 +1626,7 @@
+ // family: per stored bits u16 val-of NONDETECTION
+ 
+ #define PER_VISUAL  0x0001
++#define PER_GRWA 0x800
+ #define PER_INFRA   0x0002
+ #define PER_SCENT   0x0004
+ #define PER_BLIND   0x0008

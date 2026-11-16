@@ -1,0 +1,46 @@
+# Prepares the built fixture orc-bard-reapply-seed1 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on with Auto-Identify Items and Free Advancement; the
+# Orc Bard raised from level 1 to Bard 6 (five G presses; each takes the first attribute bonus, the first feat
+# and the spell list as offered); every monster gone, so nothing walks up and changes hit points.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN SPACE              # Auto-Identify Items
+DOWN SPACE              # Free Advancement
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn Spells: Level" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn Spells: Level" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn Spells: Level" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn Spells: Level" ESC
+G
+@while "Bonus To Which Attribute" a
+@while "You feel stronger" SPACE
+@while "Choose a feat" a
+@while "Learn Spells: Level" ESC
+@expect "Class  Bard 6 "
+ESC
+
+w
+@choose "Genocide Everything"   # nothing may walk up and change HP
+@until "HP:" ESC

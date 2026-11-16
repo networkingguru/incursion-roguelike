@@ -1,0 +1,14 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..8714cf6 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -178,6 +178,9 @@ typedef signed int        hObj;
+ #define DOWN      10
+ #define LAST_DIR 7  /* alias of SOUTHWEST */
+ // end family: dir
++// family: ac8_unclassified
++#define AC8_UNCLASS_B 2
++// end family: ac8_unclassified
+ // family: coin internal
+ 
+ /* Coin Types */

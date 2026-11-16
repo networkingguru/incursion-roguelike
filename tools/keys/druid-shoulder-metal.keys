@@ -1,8 +1,10 @@
-# inc-d9gk: load druid-shoulder-metal-seed7-opt0822.sav.
+# inc-d9gk: load druid-shoulder-metal-seed7-opt0822.char.
 # Five measurements use the same character and the same sword, in one run.
 # The last two put a thrown-only weapon (bolas) in the weapon hand, in place of
 # the bow. A javelin does not qualify: its group holds WG_SPEARS, so
 # Item::thrownOnly() is false for it.
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 i
 @dump:left-gear
 ESC

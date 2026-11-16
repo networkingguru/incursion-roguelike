@@ -49,7 +49,7 @@
 #   | FAIL: a blow struck at reach still costs the striker his weapon
 #   PROVED RED: with src/Fight.cpp mutated, this check exits 1.
 #
-# fact: character (race, class, stats, kit) -- fixture orc-warrior-dequ-seed5-maxhp (INCURSION_LOAD)
+# fact: character (race, class, stats, kit) -- tools/fixtures/specimens/orc-warrior-dequ-seed5-maxhp.sav (INCURSION_LOAD), frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat
 # fact: blob hit points -- OPT_MON_MAX_HP DOUBLE in that options file, with INCURSION_FORCE_DAMAGE_ROLL=1 so the blob outlives three blows
 # fact: level has no other monster -- wizard Genocide Everything
@@ -75,7 +75,7 @@ check_mutation src/Fight.cpp \
 
 # A frozen character, not a generated one: an rID is a POSITION, so a lib/
 # change silently rebuilds a seed-pinned character (tools/fixtures/README.md).
-export INCURSION_LOAD=tools/fixtures/chars/orc-warrior-dequ-seed5-maxhp.sav
+export INCURSION_LOAD=tools/fixtures/specimens/orc-warrior-dequ-seed5-maxhp.sav
 export INCURSION_FORCE_SAVE_ROLL=1
 export INCURSION_LOF_FORCE_ROLL=15
 export INCURSION_FORCE_DAMAGE_ROLL=1

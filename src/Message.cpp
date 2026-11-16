@@ -1262,7 +1262,7 @@ String & Item::Name(int16 Flags) {
         ofWords[i].Empty();
 
     if (!(eID && TEFF(eID)->HasFlag(EF_HIDEQUAL)))
-        for (i = 1; i < max(WQ_TRUELAST, AQ_TRUELAST); i++)
+        for (i = 1; i <= QualityMaxNumber(); i++)
             if (KnownQuality(i) || (HasQuality(i) && Flags & NA_IDENT)) {
                 if (LookupOnly(GenericPreQualNames, i)) {
                     xe.nPrequal += Lookup(GenericPreQualNames, i); xe.nPrequal += " ";

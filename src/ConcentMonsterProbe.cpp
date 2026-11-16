@@ -38,9 +38,15 @@ void ConcentMonsterProbe(Player *pl)
         rat[placed] = CMPlace(mp, tx, ty, placed ? 40 : 100, 100);
         placed++;
     }
+    /* inc-10v7f: Creature::Perceives returns 0 until the game is in play (src/Vision.cpp: !InPlay()), and a
+       built character's game is not yet in play when this probe runs, so no rat saw anything. As
+       TrueIllusionProbe and CompanionTrapProbe do, mark the game in play while the rats decide. */
+    const bool wasPlay = theGame->PlayMode;
+    theGame->PlayMode = true;
     for (int16 i = 0; i < placed; i++) {
         rat[i]->Timeout = 0;
         rat[i]->ChooseAction();   /* direct: OPT_FREEZE_MON may idle it */
     }
+    theGame->PlayMode = wasPlay;
     Error("CONCENT_PROBE placed=%d", (int)placed);
 }

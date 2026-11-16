@@ -3,7 +3,8 @@
 # inc-wqql: Soften Stone cast at a stone golem softens its body (lowers its
 # armor) instead of slowing it, and does not slow the golem.
 #
-# fact: character -- fixture druid-shoulder-metal-seed7-opt0822.sav
+# fact: character -- fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: options -- fixed options-2026-08-22.dat fixture
 # fact: a stone golem beside the caster -- wizard menu "Monster Summoning",
 #       "Golems", "stone golem"
@@ -37,7 +38,7 @@ mkdir -p "$RUN_DIR"
 
 INCURSION_RUN_DIR="$RUN_DIR" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+    INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
     tools/headless.sh tools/keys/soften-stone-golem.keys 1 > "$RUN_DIR/session.log" 2>&1
 status=$?
 

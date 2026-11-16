@@ -16,11 +16,15 @@ over WALL terrains that are in the majority opaque.
   inject  <in> <out>   clear .Opaque on 3 opaque solid-wall cells, to give the
                        --selftest a known-bad save and prove this analyser bites.
 
+A field is found by NAME (inc-cjos0): its u16 id is a row of the group's
+name table, the type-200 record (u16 id, u16 scopeLen, scope, u16 nameLen,
+name). Ids differ from file to file.
+
 Save wire format: docs/SAVE-SCHEMA-SPEC.md, src/SaveV1.cpp. Record envelope is
 u8 type, u32 handle, u32 length (fields+terminator), then u16 tag / u8 kind /
 payload fields to a tag-0 terminator. Map record is type 4; its grid is the
-tag-672 K_EMBED whose inner tag-4 blob is 8 bytes per tile, tile byte 2 bit 0 =
-Opaque, byte 2 bit 4 = Solid, byte 3 bit 4 (flag bit 12) = isWall.
+Map "Grid" K_EMBED whose inner MapGrid "packed" blob is 8 bytes per tile, tile
+byte 2 bit 0 = Opaque, byte 2 bit 4 = Solid, byte 3 bit 4 (flag bit 12) = isWall.
 """
 import sys, zlib, struct
 
@@ -57,8 +61,31 @@ def walk(b, p, end):
         p = nxt
 
 
+def name_ids(body):
+    """{(scope, name): id} from the group's name-table record (type 200)."""
+    ids, p = {}, 0
+    while p + 9 <= len(body):
+        typ = body[p]; length = struct.unpack_from("<I", body, p + 5)[0]
+        if typ == 200:
+            q, end = p + 9, p + 9 + length
+            while q != end:
+                nid, sl = struct.unpack_from("<HH", body, q); q += 4
+                scope = body[q:q + sl].decode(); q += sl
+                nl, = struct.unpack_from("<H", body, q); q += 2
+                ids[(scope, body[q:q + nl].decode())] = nid; q += nl
+        p += 9 + length
+    for key in (("Map", "sizeX"), ("Map", "sizeY"), ("Map", "Grid"),
+                ("MapGrid", "packed")):
+        if key not in ids:
+            sys.exit("no field %r in the save's name table" % (key,))
+    return ids
+
+
 def grids(body):
     """Yield (sizeX, sizeY, packed_offset) for every Map record."""
+    ids = name_ids(body)
+    t_sx, t_sy = ids[("Map", "sizeX")], ids[("Map", "sizeY")]
+    t_grid, t_packed = ids[("Map", "Grid")], ids[("MapGrid", "packed")]
     p = 0
     while p + 9 <= len(body):
         typ = body[p]; length = struct.unpack_from("<I", body, p + 5)[0]
@@ -66,13 +93,13 @@ def grids(body):
         if typ == 4:
             sx = sy = packed = None
             for tag, kind, poff, plen in walk(body, fs, fe):
-                if tag == 673:
+                if tag == t_sx:
                     sx = struct.unpack_from("<h", body, poff)[0]
-                elif tag == 674:
+                elif tag == t_sy:
                     sy = struct.unpack_from("<h", body, poff)[0]
-                elif tag == 672:
+                elif tag == t_grid:
                     for it, ik, ipoff, iplen in walk(body, poff, poff + plen):
-                        if it == 4:
+                        if it == t_packed:
                             packed = ipoff
             if sx and packed is not None:
                 yield sx, sy, packed

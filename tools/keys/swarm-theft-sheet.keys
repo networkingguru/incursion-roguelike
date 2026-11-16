@@ -1,0 +1,7 @@
+# Derives the warrior (tools/keys/setup-alignment-drain-warrior.keys) and saves, so INCURSION_CHAR_PROBE writes
+# logs/charprobe.txt: the sheet tools/swarm_theft_results.py reads for the victim (bd inc-10v7f).
+@include setup-alignment-drain-warrior.keys
+ESC
+@until "System Menu" ESC
+@expect "System Menu"
+b

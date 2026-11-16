@@ -4,7 +4,7 @@
 #
 #   INCURSION_CONCENT_PROBE=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.char \
 #       tools/headless.sh tools/keys/concentration-core.keys 1
 #
 # The prompt after the spell menu is Magic::Illusion's "citf" choice; 'c' is
@@ -12,6 +12,8 @@
 # a command with no SHIFT, so an uppercase X is a different key and opens
 # nothing (docs/HEADLESS-SPEC.md, "Input comes from a script").
 # SPACE, never ESC, clears "-- more --"; ESC in play mode opens the System Menu.
+# The fixture holds only the created character; setup-elf-mage-illusions-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-elf-mage-illusions-seed1.keys
 @until "Select Spell" m
 @choose "Phantasmal Force"
 c

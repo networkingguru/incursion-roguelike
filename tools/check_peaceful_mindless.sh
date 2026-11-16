@@ -12,7 +12,8 @@
 # Needs: BACKEND=posix ./build_macos.sh. Frozen druid; any seed (inc-b4l3g.13).
 # fact: the Animal Empathy pacify d20 -- INCURSION_RUNTO_SKILL_ROLL=20 (exported below)
 # fact: where the summoned monster lands -- the summon square is the cursor square the script picks (src/Debug.cpp:679, Q_LOC); the pacify and look steps select the monster by name
-# fact: the character (stats, skills, position) -- INCURSION_LOAD fixture
+# fact: the character (stats, skills, position) -- INCURSION_LOAD fixture druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: the settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: the monster's hostility text -- read from the look line, asserted, not controlled
 # 0 all pass; 1 any FAIL (including: could not observe).
@@ -20,7 +21,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 SEED="${1:-7}"
 OPTS=tools/fixtures/options-2026-08-22.dat
-FIX=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+FIX=druid-shoulder-metal-seed7-opt0822
 export INCURSION_RUNTO_SKILL_ROLL=20   # the pacify roll always succeeds: cave lion DC 21, druid +6
 [ -x ./incursion-headless ] || { echo "FAIL: ./incursion-headless missing; run BACKEND=posix ./build_macos.sh"; exit 1; }
 mkdir -p logs

@@ -1,0 +1,162 @@
+# orc-rogue-seed4-opt0822: converted from tools/fixtures/chars/orc-rogue-seed4-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/chargen-rogue-save.keys, seed 4, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 355 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/chargen-rogue-save.keys 4 64 66 22:24:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (4), skeleton value -> old value:
+#   scalar: name: Gell -> Henk
+#   scalar: surname: the Wise -> the Blooded
+#   scalar: character_name: Gell the Wise -> Henk the Blooded
+#   quantity: ammo_quantity: 32 -> 34
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 2) | built: 1 perk item (ring) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 4 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 68 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a3]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a4]: 9 kept as the walk recorded it; the old character holds this annotation's item (stiletto, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Rogue;a7]: 81 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a8]: 100 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a9]: 49 kept as the walk recorded it; the old character holds this annotation's item (bracers, effect Legerdemain, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 90 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 45 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 93 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 3 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 83 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 92 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 69 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a22]: 1 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a24]: 32 kept as the walk recorded it; the old character holds this annotation's item (studded leather, quantity 1), so its roll is within the annotation's chance
+#   differs: ability CA_DEVOURING 1 -> Feats: Cannibalism -- commit 4e1fc266
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 4
+alter_options: no
+explore_continue: yes
+formula_seed: 5
+race: Orc
+subrace: Orc
+name: Henk
+surname: the Blooded
+class: Rogue
+perk_type [0]: PERK_TALENT
+perk_spell [0]: Cell Adjustment
+perk_type [1]: PERK_ITEM
+perk_item [1]: ring, effect Channeling, plus 2
+attr_str: 10
+attr_dex: 17
+attr_con: 12
+attr_int: 15
+attr_wis: 12
+attr_cha: 13
+attr_luc: 16
+alignment: Neutral
+feat: Acrobatic
+feat: Alertness
+hp_roll [Rogue]: 6
+mana_roll [Rogue]: 6
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 2
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: twilight salve
+craft_formula [Alchemy]: Silversheen;alchemy
+gear_stream [Orc]: 20
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 12
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 68
+kit_item [Orc;a4]: ranseur, quantity 1
+gear_stream [Rogue]: 21
+kit_item [Rogue;a1]: short bow, quantity 1
+kit_item [Rogue;a2]: short sword, quantity 1
+gear_chance [Rogue;a3]: 37
+gear_chance [Rogue;a4]: 9
+kit_item [Rogue;a4]: stiletto, quantity 1
+kit_item [Rogue;a6]: cloak, effect Nondetection;item, quantity 1
+gear_chance [Rogue;a7]: 81
+gear_chance [Rogue;a8]: 100
+gear_chance [Rogue;a9]: 49
+kit_item [Rogue;a9]: bracers, effect Legerdemain, quantity 1
+kit_item [Rogue;a11]: potion, effect Healing, quantity 6
+kit_item [Rogue;a12]: bag, effect tanglefoot bag, quantity 7
+kit_item [Rogue;a13]: potion, effect Dimension Door, quantity 9
+kit_item [Rogue;a14]: gold piece, quantity 271
+kit_item [Rogue;a18]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 22
+gear_chance [Universal Gear;a3]: 90
+gear_chance [Universal Gear;a4]: 37
+gear_chance [Universal Gear;a6]: 97
+gear_chance [Universal Gear;a7]: 45
+gear_chance [Universal Gear;a10]: 93
+gear_chance [Universal Gear;a14]: 3
+gear_chance [Universal Gear;a18]: 83
+gear_chance [Universal Gear;a19]: 92
+gear_chance [Universal Gear;a20]: 69
+gear_chance [Universal Gear;a22]: 1
+gear_chance [Universal Gear;a24]: 32
+kit_item [Universal Gear;a24]: studded leather, quantity 1
+thrown_quantity: 5
+ammo_quantity: 34
+script_yn [Orc;EV_150]: yes
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: Scentblind
+store_seed: 25
+character_name: Henk the Blooded
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

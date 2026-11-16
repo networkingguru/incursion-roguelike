@@ -84,6 +84,12 @@ void SleepQualityProbe(Player *p)
     mt->CalcValues();
     mp->At(15,15).Lit = 1; mp->At(16,15).Lit = 1;
     const bool wasInPlay = theGame->PlayMode;
+    // inc-10v7f: the map window of a loaded character is still centered on his saved
+    // square, and CalcVision only marks squares inside that window, so the lit target
+    // at (16,15) stays unseen and the swing misses "something". Center the window on
+    // (15,15), then recompute vision.
+    p->MyTerm->AdjustMap(15, 15, true);
+    p->CalcVision();
     Weapon *w = (Weapon*)Item::Create(trident);
     w->SetInherentPlus(1);
     if (n == 5) {

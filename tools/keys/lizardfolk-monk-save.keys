@@ -12,7 +12,7 @@
 # quarterstaff, with byte-identical attribute dice. A character LOADED from a
 # save does not move, because the save-schema v1 manifest converts a saved rID
 # through a per-module manifest (v1ConvertManifestRid, src/SaveV1.cpp). So this
-# script exists to produce the .sav that tools/make_char_fixture.sh freezes.
+# script exists to produce the .sav that the retired fixture maker freezes.
 # See bd inc-1fjk.
 #
 # THE CHARGEN BELOW IS A COPY of tools/keys/monk-brawl-speed.keys, deliberately

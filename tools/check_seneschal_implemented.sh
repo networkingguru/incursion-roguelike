@@ -19,7 +19,7 @@ cd "$(dirname "$0")/.."
 
 BIN="${SENESCHAL_BIN:-./incursion-headless}"
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/lizardfolk-monk-seed1.sav
+FIXTURE=tools/fixtures/chars/lizardfolk-monk-seed1.char
 SEED="${1:-1}"
 fail=0
 unmeasured=0

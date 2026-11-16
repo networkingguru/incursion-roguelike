@@ -1,0 +1,20 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2491,6 +2491,7 @@
+ // family: aq stored ordinal i8 elem-of QItem.Qualities shares wq
+ 
+ #define AQ_LIGHT_FOR     1
++#define AQ_GRWA 82
+ #define AQ_MEDIUM_FOR    2
+ #define AQ_HEAVY_FOR     3
+ #define AQ_FIRE_RES      4
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1174,6 +1174,7 @@
+    inc-rddai. */
+ QualityRow QualityTable[] = {
+   { WQ_HOLY, true, false },
++  { AQ_GRWA, false, true },
+   { WQ_UNHOLY, true, false },
+   { WQ_CHAOTIC, true, false },
+   { WQ_LAWFUL, true, false },

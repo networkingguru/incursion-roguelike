@@ -1,6 +1,7 @@
 # Case 3 of tools/check_cannibal_alignment.sh (bd inc-08js): a lawful good orc
 # eats a cave orc.
-@include cannibal-orc-chargen.keys
+# The eater is the lawful good orc paladin fixture tools/fixtures/chars/orc-paladin-cannibal.char,
+# loaded by tools/check_cannibal_alignment.sh.
 # Summon the corpse-to-be at the cursor (ENTER takes the default square, the one
 # to the player's right), then kill it with the wizard menu's Genocide
 # Everything. A melee kill is not used: a paladin who attacks a summoned

@@ -1,0 +1,100 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): an Elf monk,
+# race and class chosen by name with @choose, every other screen answered with
+# the first entry by the shared creation tail (tools/creation_walks_lib.sh),
+# SAVED at the end of creation with nothing played. The Elf monk's kit ring
+# "Brass and Glass" is put on while the gear is granted; that runs
+# Magic::CalcEffect, whose 2d8 damage roll is the decision key effect_roll
+# (R2, bead inc-10v7f). No other gate walk reaches it.
+a
+n
+y
+@choose "Elf"
+@while "Subraces provide" a
+@while "Choose a skill:" a
+@choose "Monk"
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@while "favoured enemy" a
+@while "Combat style" t
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@while "favoured enemy" a
+@while "Combat style" t
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@while "favoured enemy" a
+@while "Combat style" t
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@while "favoured enemy" a
+@while "Combat style" t
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@while "favoured enemy" a
+@while "Combat style" t
+@while "attribute sets" a
+@while "Choose a God:" a
+@while "Alignment determines" a
+@while "Choose a" a
+@while "Choose any" a
+@while "entitled to choose" a
+@while "Focus on which" a
+@while "Allocate Ranks" RIGHT RIGHT RIGHT DOWN
+@while "Allocate Ranks" ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@while "Gain A Bonus" a
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved

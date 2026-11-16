@@ -67,7 +67,7 @@ check_mutation src/Social.cpp \
 # A frozen character, not a generated one: an rID is a POSITION, so a lib/
 # change silently rebuilds a seed-pinned character (tools/fixtures/README.md).
 export INCURSION_FORCE_SAVE_ROLL=1
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char
 check_run tools/keys/follower-cap.keys 1
 
 # The giant really was dominated before the refusal, so an unchanged pool

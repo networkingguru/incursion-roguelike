@@ -113,6 +113,11 @@ cd "$ROOT" || exit 2
 
 STATE="${NIGHTLY_VERIFY_STATE:-$ROOT/logs/nightly-verify-base.txt}"
 PASS_RECORD="$(dirname "$STATE")/nightly-verify-pass.txt"
+# The fixture pin record (bead inc-10v7f, spec A10 and B8): `<name><TAB><key>`,
+# the cache key each fixture got when --record built the base. --compare sets
+# INCURSION_FIXTURE_PIN to it, so a before and after load the same characters
+# (tools/fixture_cache.sh). A record of a run, not source: never commit it.
+FIXTURE_PIN_RECORD="$(dirname "$STATE")/nightly-verify-fixture-pins.txt"
 # One directory of check output, beside the base and the pass record for the
 # same reason they sit together: all three are records of a run and none is
 # source. Left alone that is $ROOT/logs/nightly-verify, and .gitignore already
@@ -2031,6 +2036,32 @@ if [ "$MODE" = "record" ]; then
     fi
     mkdir -p "$(dirname "$STATE")" || exit 2
     : > "$STATE"
+    # The fixture pin record: build every fixture with the base binary just
+    # built, and write the key each one got. An old record is removed first, so
+    # a record run that cannot pin leaves none, and --compare then pins nothing.
+    rm -f "$FIXTURE_PIN_RECORD"
+    if [ "$record_live" = 1 ] && [ -x "$ROOT/tools/fixture_cache.sh" ]; then
+        pins="$FIXTURE_PIN_RECORD.tmp.$$"
+        : > "$pins"
+        pin_ok=1
+        for charfile in "$ROOT"/tools/fixtures/chars/*.char; do
+            [ -f "$charfile" ] || continue
+            pin_name="$(basename "$charfile" .char)"
+            if pin_sav="$("$ROOT/tools/fixture_cache.sh" "$pin_name")"; then
+                printf '%s\t%s\n' "$pin_name" "$(basename "$(dirname "$pin_sav")")" >> "$pins"
+            else
+                echo "fixture pins: $pin_name did not build; no pin record written"
+                pin_ok=0
+                break
+            fi
+        done
+        if [ "$pin_ok" = 1 ]; then
+            mv -f "$pins" "$FIXTURE_PIN_RECORD"
+            echo "recorded $(wc -l < "$FIXTURE_PIN_RECORD" | tr -d ' ') fixture pin(s) in $FIXTURE_PIN_RECORD"
+        else
+            rm -f "$pins"
+        fi
+    fi
     # The same runner and the same serial rule as --compare: the non-serial
     # checks in parallel, then the serial ones alone, cheap before live. The
     # serial cheap phase runs before the serial live one for the same reason
@@ -2090,6 +2121,14 @@ fi
 # not wait for the end. Every verdict line and every exit code is unchanged;
 # only when each one is printed has moved.
 FAILED=0
+
+# Hold the characters fixed: a fixture the base pinned loads from the entry the
+# base binary built, whatever this tree's binary and module now are. A caller
+# that already set INCURSION_FIXTURE_PIN keeps its own.
+if [ -z "${INCURSION_FIXTURE_PIN:-}" ] && [ -r "$FIXTURE_PIN_RECORD" ]; then
+    export INCURSION_FIXTURE_PIN="$FIXTURE_PIN_RECORD"
+    echo "fixture pins: the checks load the characters the base built ($FIXTURE_PIN_RECORD)"
+fi
 
 gate_plan_compare
 gate_announce "$([ "$SKIP_BUILDS" = 0 ] && echo 1 || echo 0)" \

@@ -18,7 +18,7 @@ RUN_DIR="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-terraform-edge"
 mkdir -p "$RUN_DIR"
 INCURSION_TERRAFORM_EDGE_PROBE=1 INCURSION_RUN_DIR="$RUN_DIR" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
     tools/headless.sh tools/keys/area-radius.keys 1 > "$RUN_DIR/check-session.log" 2>&1
 status=$?
 log="$RUN_DIR/logs/errors.log"

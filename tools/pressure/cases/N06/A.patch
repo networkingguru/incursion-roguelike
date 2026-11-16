@@ -1,0 +1,13 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..f0207c2 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2001,7 +2001,7 @@ typedef signed int        hObj;
+ #define A_FAT         38   /* Maximum Fatigue Points */
+ #define A_COV         39   /* Armour Coverage Level */
+ #define A_CDEF        40
+-#define ATTR_LAST     41
++#define ATTR_LAST     40
+ 
+ #define A_HIT 50 /* Universal +toHit */
+ #define A_AID 51 /* Add to A_HIT, A_DEF, A_SAV & A_MAG */

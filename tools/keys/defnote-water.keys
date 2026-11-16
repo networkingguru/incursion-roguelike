@@ -1,7 +1,7 @@
 # inc-7v2i: stand in water and read the sidebar and the character sheet.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.char \
 #       tools/headless.sh tools/keys/defnote-water.keys 4
 #
 # Read by tools/check_defnote.sh. One square east of the player becomes shallow

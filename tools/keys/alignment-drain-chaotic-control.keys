@@ -8,6 +8,9 @@
 # which is a wield (Character::Wield).
 #
 # Dumps: sheet-0-baseline, stamped, wielded (the message line shows "uneasy" or not), sheet-1-wielded.
+# The built Lawful Neutral fixture holds only the created character; this makes the state the old save held
+# (wizard on, level cleared). It changes nothing on the old Chaotic Good level-5 .sav, which already has it.
+@include setup-alignment-drain-lawful-neutral.keys
 s
 d
 @expect "Align  "

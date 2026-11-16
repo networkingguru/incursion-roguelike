@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1425,6 +1425,7 @@
+ // family: ms stored bits u16 field-of Creature.StateFlags
+ 
+ #define MS_PEACEFUL    0x0001 /* No hostility toward anyone who didn't attack first */
++#define MS_GRWA 0x80
+ #define MS_GUARDING    0x0002
+ #define MS_FEMALE      0x0004
+ #define MS_KNOWN       0x0008

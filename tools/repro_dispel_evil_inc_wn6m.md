@@ -194,7 +194,7 @@ normal headless binary; whole-check logs use the check's probe binary.
 
 Change the scenario at `tools/keys/dispel-evil-deflection.keys:27` and `:41`,
 not the duration rule. Load a verified priest fixture (candidate:
-`tools/fixtures/chars/orc-priest-seed4-gate.sav`), explicitly raise caster level
+`tools/fixtures/chars/orc-priest-seed4-gate.char`), explicitly raise caster level
 as needed and establish a clear map, named target and gear. Use a deterministic
 strike driver immediately after the cast, before a global status update, so
 the oracle observes the deflection while it exists. Such an attack/timing

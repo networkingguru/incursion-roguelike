@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3293,6 +3293,7 @@
+   #define HI_CEILING   2 /* lurker above, darkmantle, etc. */
+   #define HI_UNDER     3 /* hide under objects */
+   #define HI_WATER     4 /* hiding beneath the water */
++  #define HI_GRWB 5
+ // end family: val_hiding
+ // family: stati stored ordinal u8
+ #define RAGING        66

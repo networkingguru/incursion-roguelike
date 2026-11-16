@@ -1,0 +1,3 @@
+# rest-per-source-restonly.keys after the setup the old priest-mage .sav held (bd inc-10v7f), for tools/check_rest_per_source.sh case a.
+@include setup-human-priest-mage-seed4-gate.keys
+@include rest-per-source-restonly.keys

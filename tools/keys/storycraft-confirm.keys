@@ -1,11 +1,13 @@
 # inc-1brg: Storycraft gives a first plus to a +0 weapon/armor, after a yes/no
 # prompt. Read by tools/check_storycraft.sh (seed 1). Starts from the frozen
-# orc bard tools/fixtures/chars/orc-bard-reapply-seed1.sav, loaded already in
+# orc bard tools/fixtures/chars/orc-bard-reapply-seed1.char, loaded already in
 # play: 5 unspent Storycraft charges, carrying a plain (+0) suit of orcish
 # studded leather, worn +0 noble attire (clothing, not armor), and Lenses +3 of the Scholar (control:
 # a non-weapon that already has a plus).
 # The character sheet is long; Storycraft's line sits below the first screen,
 # so each sheet read scrolls with PGDN until "unallocated" shows.
+# The fixture holds only the created character; setup-orc-bard-reapply-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-bard-reapply-seed1.keys
 d
 @until "unallocated" PGDN
 @dump:sheet-before

@@ -1,0 +1,30 @@
+diff --git a/lib/landed-inc-g07b.irh b/lib/landed-inc-g07b.irh
+new file mode 100644
+index 0000000..d8a536d
+--- /dev/null
++++ b/lib/landed-inc-g07b.irh
+@@ -0,0 +1,18 @@
++Encounter "Grw B Pack"
++  {
++    CR: 1+;
++    Parts:
++      * 1 of any MA_AQUATIC [EP_SKILLED];
++    Flags: NF_SINGLE, NF_AQUATIC, NF_NOGEN, NF_FREAKY;
++  }
++
++Flavour "grw-b puce"           : AI_POTION  { Colour: green; }
++
++Item "grw-b carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_b_ref;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..e21b670 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g07b.irh"

@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/human-paladin-seed4-opt0822.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the sacred mount stands immediately west of the player in the old save
 # Do tanglefoot strands catch the MOUNT and leave the rider free? (bd inc-lxvv)
 # fact: character, adjacent western mount and name -- human-paladin-seed4-opt0822 fixture
 # fact: terrain -- wizard Change terrain type lays five strands squares
@@ -46,7 +47,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/specimens/human-paladin-seed4-opt0822.sav
 export INCURSION_FORCE_SAVE_ROLL=1
 
 # Undo exactly what dc6496a did: send the AD_STUK back to the rider while the

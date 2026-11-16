@@ -1,5 +1,7 @@
-# Property 2, baseline: the fixture is already wounded (tools/keys/priest-mage-wounded-save.keys), nothing cast, then save so the check reads
+# Property 2, baseline: the fixture is already wounded (tools/keys/setup-human-priest-mage-wounded-seed4-gate.keys), nothing cast, then save so the check reads
 # spent and held mana. Run: tools/check_held_mana.sh.
+# The fixture holds only the created character; setup-human-priest-mage-wounded-seed4-gate.keys makes the state the old save held (bd inc-10v7f).
+@include setup-human-priest-mage-wounded-seed4-gate.keys
 @dump:hurt
 ESC
 @expect "System Menu"

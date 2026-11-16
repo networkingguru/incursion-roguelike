@@ -26,7 +26,7 @@
 #
 # Exit 0 pass, 1 fail ("measured nothing" counts as fail).
 #
-# fact: character (elf mage, WIS 16, CHA 18) -- fixture elf-mage-illusions-seed1, INCURSION_LOAD
+# fact: character (elf mage, WIS 16, CHA 18) -- tools/fixtures/specimens/elf-mage-illusions-seed1.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the cloud squares need the old save's floor east of him, INCURSION_LOAD
 # fact: wizard mode, Infinite Mana, Freeze Monsters on -- saved in the fixture; Cheat Death set by tools/keys/stinking-cloud-cast.keys
 # fact: the map and its monsters -- the fixture's save pins the dungeon; the cast script clears the level with Genocide Everything
 # fact: Stinking Cloud known -- wizard Learn Any Spell
@@ -38,7 +38,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 [ -x ./incursion-headless ] || { echo 'FAIL: measured nothing; build with BACKEND=posix ./build_macos.sh'; exit 1; }
 OPTS=tools/fixtures/options-2026-08-22.dat
-FIX=tools/fixtures/chars/elf-mage-illusions-seed1
+FIX=tools/fixtures/specimens/elf-mage-illusions-seed1
 SEED=1
 status=0
 

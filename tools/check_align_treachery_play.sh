@@ -21,7 +21,7 @@
 # never reach the +20 threshold and the character could never become Chaotic
 # no matter how many Chaotic acts it committed.
 #
-# fact: character (race, class, skills, stats) -- fixture elf-rogue-bluff-seed1-opt0822 (INCURSION_LOAD): elf rogue, Bluff +7, Diplomacy +5, Intimidate +5
+# fact: character (race, class, skills, stats) -- fixture elf-rogue-bluff-seed1-opt0822 (INCURSION_LOAD): elf rogue, Bluff +7, Diplomacy +5, Intimidate +5 -- elf-rogue-bluff-seed1-opt0822 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/elf-rogue-bluff-seed1-opt0822.sav)
 # fact: arrival map and victim square -- the same fixture (a save pins the dungeon)
 # fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
 # fact: victim placement -- wizard Monster Summoning, one square east
@@ -30,8 +30,8 @@
 # fact: matched text -- fixed game strings
 #
 # THE ROUTE, tools/keys/align-treachery-play.keys. The fixture is an elf rogue
-# whose skill ranks went to skills other than Bluff's rivals (built by
-# tools/keys/elf-rogue-bluff-save.keys), so Bluff +7 outranks both
+# whose skill ranks went to skills other than Bluff's rivals (recorded in
+# tools/fixtures/chars/elf-rogue-bluff-seed1-opt0822.char), so Bluff +7 outranks both
 # Intimidate +5 and Diplomacy +5 (an orc cannot be used here: the orc race
 # grants Intimidate racially, so an orc's Intimidate always outscores its
 # Diplomacy and Creature::Request never offers Bluff). With Intimidate not
@@ -84,7 +84,7 @@ INCURSION_RUN_DIR="$PWD/logs/align-treachery-play/seed-1-$$"
 rm -rf "$INCURSION_RUN_DIR"
 export INCURSION_RUN_DIR
 
-FIXTURE=tools/fixtures/chars/elf-rogue-bluff-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/elf-rogue-bluff-seed1-opt0822.sav
 [ -f "$FIXTURE" ] || _check_die 2 "the fixture is missing: $FIXTURE"
 export INCURSION_LOAD="$FIXTURE"
 check_run tools/keys/align-treachery-play.keys 1

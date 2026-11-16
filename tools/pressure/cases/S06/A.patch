@@ -1,0 +1,21 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..46a52b5 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1987,6 +1987,7 @@ typedef signed int        hObj;
+ #define A_DMG_OFFHAND 24   /* Offhand +toDmg */
+ #define A_SIZ         25   /* Size Catagory */
+ #define A_MOV         26   /* Movement Rate */
++#define A_AC8_A       41
+ #define A_DEF         27   /* Defense Class */
+ #define A_SAV_FORT    28   /* Fortitude Save Bonus */
+ #define A_SAV_REF     29   /* Reflex Save Bonus */
+@@ -2001,7 +2002,7 @@ typedef signed int        hObj;
+ #define A_FAT         38   /* Maximum Fatigue Points */
+ #define A_COV         39   /* Armour Coverage Level */
+ #define A_CDEF        40
+-#define ATTR_LAST     41
++#define ATTR_LAST     42
+ 
+ #define A_HIT 50 /* Universal +toHit */
+ #define A_AID 51 /* Add to A_HIT, A_DEF, A_SAV & A_MAG */

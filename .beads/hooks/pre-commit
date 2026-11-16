@@ -171,27 +171,6 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   fi
 fi
 
-# --- INCURSION: refuse a staged number outside its band (inc-24cc) ---
-# The allocator tools/next_number.sh hands out a number inside the branch's
-# band and records it in issued.log; this block refuses a staged inc/Defines.h
-# that adds a covered constant by hand instead. Exit 1 refuses the commit; exit
-# 2 is "could not measure" and only warns. The rules and the self-test are in
-# tools/check_number_bands.py.
-if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
-  _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -x "$_inc_root/tools/check_number_bands.sh" ]; then
-    _inc_nb_out=$("$_inc_root/tools/check_number_bands.sh" --staged 2>&1)
-    _inc_nb=$?
-    if [ $_inc_nb -eq 1 ]; then
-      echo "$_inc_nb_out"
-      echo >&2 "pre-commit: REFUSED. A new stati or event number is outside its band, duplicates another, or was not issued by tools/next_number.sh (above)."
-      exit 1
-    elif [ $_inc_nb -ne 0 ]; then
-      echo >&2 "pre-commit: tools/check_number_bands.sh could not measure (exit $_inc_nb); the commit CONTINUES."
-    fi
-  fi
-fi
-
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   # Process script: runs from the shared checkout (inc-x604).
   _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
@@ -214,10 +193,12 @@ fi
 # --- INCURSION: run the FAST set in a bead worktree before the commit lands ---
 # (inc-3s7w). tools/fast_checks.sh is the seconds-long subset of the cheap tier;
 # the landing gate in tools/finish_bead.sh runs the same checks and more. This
-# block covers ONLY bead worktrees (the shared checkout has its own gate) and
-# only when no merge is in progress, because finish_bead.sh makes the merge
-# commit and runs the fast set itself. Exit 1 refuses the commit; exit 2 is
-# "could not measure" and only warns; INCURSION_NO_FAST_CHECKS=1 skips it.
+# block covers ONLY bead worktrees (the shared checkout has its own gate), a
+# merge commit included: the merge-bead path in .claude/rules/epic-branches.md
+# commits `git merge master` by hand in a worktree (inc-cjos0 gap 13a).
+# finish_bead.sh makes its merge commit in the shared checkout, which this block
+# skips. Exit 1 refuses the commit; exit 2 is "could not measure" and only
+# warns; INCURSION_NO_FAST_CHECKS=1 skips it.
 if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   _inc_root=$(git rev-parse --show-toplevel 2>/dev/null)
   _inc_gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null)
@@ -225,7 +206,6 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   if [ "${INCURSION_NO_FAST_CHECKS:-}" = "1" ]; then
     echo >&2 "pre-commit: fast checks skipped by INCURSION_NO_FAST_CHECKS."
   elif [ -n "$_inc_gitdir" ] && [ "$_inc_gitdir" != "$_inc_common" ] \
-       && [ ! -e "$_inc_gitdir/MERGE_HEAD" ] \
        && [ -x "$_inc_root/tools/fast_checks.sh" ]; then
     _inc_fast_out=$("$_inc_root/tools/fast_checks.sh" 2>&1)
     _inc_fast=$?

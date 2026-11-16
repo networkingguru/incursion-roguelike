@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/human-paladin-seed4-gate.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the built map leaves the ally horse unseen (You bump into something you cannot see)
 # A creature that cannot fly, pushed onto a chasm square by a swap with a
 # levitating ally, must leave the level without crashing the game. (bd inc-06ndv)
 #
@@ -33,7 +34,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/gates/Options.Dat
-FIXTURE=tools/fixtures/chars/human-paladin-seed4-gate.sav
+FIXTURE=tools/fixtures/specimens/human-paladin-seed4-gate.sav
 SEED=4
 
 check_mutation src/Move.cpp \

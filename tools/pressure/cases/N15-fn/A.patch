@@ -1,0 +1,20 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1143,6 +1143,7 @@
+           return max(0,ang); }
+       
+ 
++    void Ac8Helper(Registry &r, const char *name, uint32 &m) { FIELD_U32(name, m); }
+     ARCHIVE_CLASS(Character,Creature,r)
+       /* v1 tags 384-511, in the declaration order of the members above
+          (inc/Creature.h, `hObj Inv[NUM_SLOTS]` down to `uint32
+@@ -1272,6 +1273,8 @@
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
++      uint32 ac8A = 17;
++      if (XP == 0) Ac8Helper(r, "Ac8HiddenFn", ac8A);
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this

@@ -1,9 +1,23 @@
 # inc-1brg A and D: what Storycraft's "Augment which item?" menu offers. Read by
 # tools/check_storycraft.sh (seed 1), from the frozen orc bard
-# tools/fixtures/chars/orc-bard-reapply-seed1.sav. Kept apart from
+# tools/fixtures/chars/orc-bard-reapply-seed1.char. Kept apart from
 # storycraft-confirm.keys because that script's @choose aborts the whole run
 # when the item is missing, which would hide the menu this one photographs.
+# The fixture holds only the created character; setup-orc-bard-reapply-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-bard-reapply-seed1.keys
+# The A control is a non-weapon that already has a plus. The old save carried Lenses +3 of the Scholar as a
+# perk item (a perk is not a choice), so the scene acquires them here (bd inc-10v7f). Any such item would do.
+w
+@choose "Item Acquisition"
+@until "enses" RIGHT
+DOWN                    # the list opens on Lenses of Mystic Insight; the next entry is the Scholar's
+ENTER
+3                       # Item Level 3 gives a +3 item
+ENTER
+s                       # the item arrives in the air: stow it in the pack
+ESC
 i
+@expect "Lenses +3 of the Scholar"
 @dump:inventory-before
 ESC
 u

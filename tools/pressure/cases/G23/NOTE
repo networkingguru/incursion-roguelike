@@ -1,0 +1,1 @@
+G23 as designed: both sides add a line at the same place, so Git conflicts textually; the driver records UNMEASURED and resolves nothing. G23-slot gives each side its own slot.

@@ -1,0 +1,4 @@
+# G01: A's content, an item in the pack, a monster and a door beside the player
+item grw-a flask
+monster grw-a leucrotta
+feature grw-a door

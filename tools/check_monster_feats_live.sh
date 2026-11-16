@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the probe's square search runs on the old save's map
 # inc-4trf: the monster feat changes from phase A must hold in a live game.
 # Runs src/MonsterFeatProbe.cpp (INCURSION_MONSTER_FEAT_PROBE) and asserts:
 #   - each Dash monster (cheetah, juvenile arrowhawk, plague of rats, scarab
@@ -19,7 +20,7 @@
 # between creatures cannot make the check fail.
 #
 # Facts and their controls (this check reads only what the header names):
-#   # fact: character and the map under him -- fixture xsummon-priest-seed5-opt0822.sav
+#   # fact: character and the map under him -- fixture xsummon-priest-seed5-opt0822.char
 #   # fact: monster placement on open floor -- the loaded map (the probe finds the first open square)
 #   # fact: the probe runs in a live map -- INCURSION_MONSTER_FEAT_PROBE hook in Game::Play
 #   # fact: monster feats, tracking, finesse -- lib/ template data, no roll read
@@ -40,7 +41,7 @@ cd "$(dirname "$0")/.." || exit 2
 mkdir -p logs/monster-feats
 run="logs/monster-feats/run-$(date +%Y%m%d-%H%M%S)-$$"
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav \
 INCURSION_MONSTER_FEAT_PROBE=1 \
 INCURSION_GREAT_BLOW_FORCE=1 \
 INCURSION_RUN_DIR="$run" tools/headless.sh tools/keys/monster-feats-live.keys 1 > "$run.out" 2>&1

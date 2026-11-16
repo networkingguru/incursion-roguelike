@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3596,6 +3596,7 @@
+ // family: ta stored ordinal i16 val-of ANIMAL_COMPANION+HAS_ANIMAL
+ 
+ #define TA_ENEMY     1
++#define TA_GRWA 9
+ #define TA_ALLY      2 /* Touch-healing spells */
+ #define TA_ITEM      3    
+ #define TA_GUARD     4 /* Location of Guard */

@@ -1501,6 +1501,7 @@ void TargetSystem::Serialize(Registry &r)
    FIELD_RID for the resource members. */
 void TargetSystem::FieldsV1(Registry &r)
 {
+  r.V1ProbeScope("TargetSystem");
   static_assert(sizeof(bool) == 1, "shouldRetarget travels as K_U8");
   static_assert(sizeof(TargetType) == 4, "Target::type travels as K_I32");
   static_assert(sizeof(TargetWhyType) == 4, "TargetWhy::type travels as K_I32");
@@ -1513,11 +1514,11 @@ void TargetSystem::FieldsV1(Registry &r)
   uint8 retarget = 0;
   if (r.Saving())
     retarget = shouldRetarget ? 1 : 0;
-  FIELD_U8(1, tCount);
+  FIELD_U8("tCount", tCount);
   /* Staged through a uint8, not written straight into the bool: a byte off a
      crafted file is any of 256 values, and a bool holding one of the other
      254 is undefined behaviour the moment anything reads it. */
-  FIELD_U8(2, retarget);
+  FIELD_U8("retarget", retarget);
   if (r.Loading()) {
     /* Bounds first, before anything walks the array. tCount is a uint8, so
        the wire can offer 0-255, and t[] holds NUM_TARGETS == 32. Everything
@@ -1549,20 +1550,20 @@ void TargetSystem::FieldsV1(Registry &r)
       memcpy(&w0, &t[i].data, 4);
       memcpy(&w1, ((char*)&t[i].data) + 4, 4);
     }
-    r.V1EmbedBegin((uint16)(3 + i), &t[i], sizeof(t[i]));
-    FIELD_I32(1, t[i].type);
-    FIELD_U16(2, t[i].priority);
-    FIELD_U16(3, t[i].vis);
+    r.V1EmbedBegin_AT("t", i, &t[i], sizeof(t[i]));
+    FIELD_I32("t_type", t[i].type);
+    FIELD_U16("t_priority", t[i].priority);
+    FIELD_U16("t_vis", t[i].vis);
     /* why: a 28-byte struct of two scalars and a 20-byte union. The union
        has three arms of unlike shape and no word in a fixed role, so it
        travels as opaque bytes -- see the ponytail note above. */
-    r.V1EmbedBegin(4, &t[i].why, sizeof(t[i].why));
-    FIELD_I32(1, t[i].why.type);
-    FIELD_U32(2, t[i].why.turnOfBirth);
-    FIELD_ARRAY(3, &t[i].why.data, 1, (uint32)sizeof(t[i].why.data));
+    r.V1EmbedBegin("why", &t[i].why, sizeof(t[i].why));
+    FIELD_I32("t_why_type", t[i].why.type);
+    FIELD_U32("t_why_turnOfBirth", t[i].why.turnOfBirth);
+    FIELD_ARRAY("t_why_data", &t[i].why.data, 1, (uint32)sizeof(t[i].why.data));
     r.V1EmbedEnd();
-    FIELD_U32(5, w0);
-    FIELD_U32(6, w1);
+    FIELD_U32("w0", w0);
+    FIELD_U32("w1", w1);
     FIELD_SKIP(t[i].data);       /* the union travels as w0/w1 above */
     r.V1EmbedEnd();
     /* Load-direction fixup, below the fields it reads: w0 and w1 land

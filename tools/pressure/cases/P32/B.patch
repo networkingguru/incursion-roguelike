@@ -1,0 +1,13 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2971,8 +2971,9 @@
+ #define STUDY_SMITE       6
+ #define STUDY_UNARMED     7
+ #define STUDY_SNEAK       8
++#define STUDY_GRWB 10
+ #define STUDY_MOUNT       9
+-#define STUDY_LAST        10
++#define STUDY_LAST        11
+ // end family: study
+ // family: purpose internal
+ 

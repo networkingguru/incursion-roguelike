@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3376,6 +3376,7 @@
+ // end family: stati
+ // family: val_phased stored ordinal i16 val-of PHASED
+   #define PHASE_MATERIAL     0
++  #define PHASE_GRWA 7
+   #define PHASE_VORTEX       1
+   #define PHASE_ASTRAL       2
+   #define PHASE_ETHEREAL     3

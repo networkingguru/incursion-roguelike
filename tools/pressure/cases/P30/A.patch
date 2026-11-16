@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3939,6 +3939,7 @@
+    will be drawn as per the glyph for 9. */
+ 
+ #define FI_ITERRAIN   0x00000001
++#define FI_GRWA 0x20000
+ #define FI_MOBILE     0x00000002 /* moves with Creator */
+ #define FI_MODIFIER   0x00000004 /* applies an effect */
+ #define FI_CONTINUAL  0x00000008 /* Repeat effect eID every turn */

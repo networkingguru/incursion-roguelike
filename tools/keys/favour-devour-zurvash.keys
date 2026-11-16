@@ -1,7 +1,7 @@
 # Devour a corpse as Zurvash's champion. bd inc-rgzr.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char \
 #       tools/headless.sh tools/keys/favour-devour-zurvash.keys 5
 #
 # Zurvash grants this character no favour level, so his champion step raises no

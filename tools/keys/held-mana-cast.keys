@@ -1,6 +1,8 @@
 # Property 1, step 1: cast Shield once on the caster, then save so the check
 # reads spent and held mana. Fixture human-priest-mage-seed4-gate. Run:
 # tools/check_held_mana.sh
+# The fixture holds only the created character; setup-human-priest-mage-seed4-gate.keys makes the state the old save held (bd inc-10v7f).
+@include setup-human-priest-mage-seed4-gate.keys
 @until "Select Spell" m
 @choose "Shield"
 @while "more --" SPACE

@@ -45,14 +45,16 @@
    time(NULL) and nothing has changed. Set, it counts up from the given
    number: each call still sees a different value, as it did from the clock,
    but the series repeats exactly on the next run. */
+static unsigned long seedTick = 0;
 unsigned long NextSeed(void) {
-    static unsigned long tick = 0;
     const char *s = getenv("INCURSION_SEED");
 
     if (s && *s)
-        return strtoul(s, NULL, 10) + tick++;
+        return strtoul(s, NULL, 10) + seedTick++;
     return (unsigned long)time(NULL);
 }
+unsigned long NextSeedTick(void) { return seedTick; }
+void SetNextSeedTick(unsigned long t) { seedTick = t; }
 
 /* Seed the cosmetic stream, ONCE, WITHOUT TOUCHING NextSeed()'S TICK.
 
@@ -127,9 +129,8 @@ Game::Game() : Object(T_GAME) {
 extern hObj excessItems[30];
 
 void Game::NewGame(rID mID, bool reincarnate) {
-    int16 x, y, i;
-    Map *mp; Player *pp;
-    rID dID;
+    int16 i;
+    Player *pp;
 
     T1->SetWin(WIN_SCREEN);
     T1->Clear();
@@ -162,6 +163,50 @@ void Game::NewGame(rID mID, bool reincarnate) {
             return;
     } else if (!pp->Create(false))
         return;
+
+    NewGameTail(mID, pp);
+}
+
+/* Everything NewGame does once Player::Create has returned (spec A1). It is
+   a function of its own so the fixture builder can run it after the File
+   source made the character; the old path calls it and nothing else changed. */
+void Game::NewGameTail(rID mID, Player *pp) {
+    int16 x, y, i;
+    Map *mp;
+    rID dID;
+
+    /* The map below is made from wherever the random streams stand. A walk that
+       records a character (INCURSION_RECORD_CHAR) writes that position beside
+       its walk save: the tick of NextSeed, then the seed and draw count of the
+       gameplay stream (tools/char_convert.sh). A build that is given the same
+       three numbers in INCURSION_MAP_STREAM ("tick:seed:draws", kept by
+       tools/build_fixture.sh) stands there before it makes the map, so it makes
+       the walk's map. Unset, nothing changes. */
+    {
+        std::string walkSave = CreationWalkSavePath();
+        if (walkSave.size() > 3) {
+            unsigned long seed;
+            unsigned long long draws;
+            RngPosition(&seed, &draws);
+            std::string sp = walkSave.substr(0, walkSave.size() - 3) + "stream";
+            FILE *sf = fopen(sp.c_str(), "w");
+            if (sf) {
+                fprintf(sf, "%lu:%lu:%llu\n", NextSeedTick(), seed, draws);
+                fclose(sf);
+            }
+        }
+        /* fixture builder hook (inc-10v7f). */
+        const char *ms = getenv("INCURSION_MAP_STREAM");
+        if (ms && *ms) {
+            unsigned long tick, seed;
+            unsigned long long draws;
+            char tail;
+            if (sscanf(ms, "%lu:%lu:%llu%c", &tick, &seed, &draws, &tail) != 3)
+                Error("INCURSION_MAP_STREAM=%s: not <tick>:<seed>:<draws>", ms);
+            SetNextSeedTick(tick);
+            RngRestore(seed, draws);
+        }
+    }
 
     if (mID) {
         mp = new Map;
@@ -208,6 +253,28 @@ void Game::NewGame(rID mID, bool reincarnate) {
             oItem(excessItems[i])->PlaceAt(pp->m, pp->x, pp->y);
             excessItems[i] = 0;
         }
+
+    {
+        std::string walkSave = CreationWalkSavePath();
+        if (!walkSave.empty() && !SaveRecordedWalk(*pp, walkSave.c_str()))
+            Error("INCURSION_RECORD_CHAR: cannot write %s", walkSave.c_str());
+        /* Beside the walk save: how far into the key script creation ran.
+           tools/char_convert.sh replays the rest on the built character. */
+        if (!walkSave.empty()) {
+            std::string kp = walkSave.substr(0, walkSave.size() - 3) + "keypos";
+            long pos = T1->KeyScriptPosition();
+            FILE *kf = fopen(kp.c_str(), "w");
+            if (kf) {
+                if (pos >= 0)
+                    fprintf(kf, "%ld\n", pos);
+                else
+                    fprintf(kf, "unsplittable: %s\n", pos == -2 ?
+                        "creation ended inside a pass of a @while/@until/@cursorto" :
+                        "the walk played no key script");
+                fclose(kf);
+            }
+        }
+    }
 }
 
 /* Say, once per session, that the game reached actual play.
@@ -388,6 +455,16 @@ void Game::Play() {
     /* Off unless INCURSION_TRUE_ILLUSION_PROBE is set. inc-yam9. */
     extern void TrueIllusionProbe(Player *pl);
     TrueIllusionProbe(pp);
+
+    /* Off unless INCURSION_DAMAGE_CLASS_PROBE is set. inc-kx693. See
+       src/DamageClassProbe.cpp and tools/check_damage_class.sh. */
+    extern void DamageClassProbe(Player *pl);
+    DamageClassProbe(pp);
+
+    /* Off unless INCURSION_QUALITY_CLASS_PROBE is set. inc-rddai. See
+       src/QualityClassProbe.cpp and tools/check_quality_class.sh. */
+    extern void QualityClassProbe(Player *pl);
+    QualityClassProbe(pp);
 
     /* Off unless INCURSION_CONCENT_MONSTER_PROBE is set. inc-59lq. */
     extern void ConcentMonsterProbe(Player *pl);
@@ -725,6 +802,7 @@ void Game::Play() {
     doLoad = true;
     doAutoSave = false;
 
+    bool seedTickDone = false;   /* the seed-tick code below runs once per game, not on each resurrection */
 Resurrected:
     PlayMode = true;
     //T1->RecreateViewList();
@@ -749,6 +827,26 @@ Resurrected:
         }
     }
 
+    /* The gameplay stream is seeded from the tick of NextSeed, and a loaded
+       game has made fewer ticks than a walked one. A walk that records a
+       character (INCURSION_RECORD_CHAR) writes the tick it is at, and a run
+       that loads the built character sets it back with INCURSION_SEED_TICK, so
+       both play their first turn on one stream (tools/char_convert.sh). */
+    if (!seedTickDone) {
+        seedTickDone = true;
+        std::string walkSave = CreationWalkSavePath();
+        const char *tickEnv = getenv("INCURSION_SEED_TICK");
+        if (tickEnv && *tickEnv)
+            SetNextSeedTick(strtoul(tickEnv, NULL, 10));
+        else if (walkSave.size() > 3) {
+            std::string tp = walkSave.substr(0, walkSave.size() - 3) + "tick";
+            FILE *tf = fopen(tp.c_str(), "w");
+            if (tf) {
+                fprintf(tf, "%lu\n", NextSeedTick());
+                fclose(tf);
+            }
+        }
+    }
     srand(NextSeed());
 
     /* NOTE(rmtew): This is the main game loop.  Once we're in here, we have to

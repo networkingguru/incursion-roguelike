@@ -1527,6 +1527,7 @@ void Map::Generate(rID _dID, int16 _Depth, Map *Above, int8 Luck) {
     Annotation *a;
     Thing *t, *t2;
 
+    CREATION_TRIPWIRE_PROBE_RANDOM("random-mapgen");
     PROBE("gen-in");
     Item *it;
     Portal *st;

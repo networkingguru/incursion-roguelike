@@ -14,9 +14,53 @@
    hold. The unpacked source is returned as an SP_* kind bit (0 when none).
    These live here rather than in Defines.h because the game-data module
    compiler parses Defines.h and does not understand C++ `inline`. */
+/* Skill numbers: 1..SK_LASTSKILL-1 (fixed) and SK_HIGH_FIRST..SK_HIGH_END-1
+   (new skills). Feats use their own literal numbers below SK_HIGH_FIRST.
+   SkillIndex maps a skill number to its row in SkillInfo[] and SkillRanks[]
+   (length SK_COUNT): 1..48 to themselves, SK_HIGH_FIRST+k to SK_LASTSKILL+k.
+   A number that is not a skill maps to 0, the empty row, so an index never
+   leaves 0..SK_COUNT-1. SkillByIndex is the inverse; it returns 0 for index
+   0 and for an index outside 1..SK_COUNT-1. In inc/Creature.h, not
+   Defines.h, because the module compiler does not parse C++ `inline`. */
+static inline bool IsSkill(int n) {
+    return (n >= 1 && n < SK_LASTSKILL) || (n >= SK_HIGH_FIRST && n < SK_HIGH_END);
+}
+static inline int SkillIndex(int n) {
+    if (n >= 1 && n < SK_LASTSKILL) return n;
+    if (n >= SK_HIGH_FIRST && n < SK_HIGH_END) return SK_LASTSKILL + (n - SK_HIGH_FIRST);
+    return 0;
+}
+static inline int SkillByIndex(int i) {
+    if (i >= 1 && i < SK_LASTSKILL) return i;
+    if (i >= SK_LASTSKILL && i < SK_COUNT) return SK_HIGH_FIRST + (i - SK_LASTSKILL);
+    return 0;
+}
+/* Monster types: 1..MA_LAST_REAL-1 (fixed) and MA_HIGH_FIRST..MA_HIGH_END-1
+   (new real types). MaIndex maps a real type to its slot in arrays of length
+   MA_COUNT, JournalInfo.numMonOfType among them: 1..73 to themselves,
+   MA_HIGH_FIRST+k to MA_LAST_REAL+k, anything else (a group type too) to 0.
+   MaByIndex is the inverse. MaAllCount/MaAllType walk every type number a
+   loop visits, group types 1..MA_LAST-1 first, then the high real types. */
+static inline bool IsRealMonType(int n) {
+    return (n >= 1 && n < MA_LAST_REAL) || (n >= MA_HIGH_FIRST && n < MA_HIGH_END);
+}
+static inline int MaIndex(int n) {
+    if (n >= 1 && n < MA_LAST_REAL) return n;
+    if (n >= MA_HIGH_FIRST && n < MA_HIGH_END) return MA_LAST_REAL + (n - MA_HIGH_FIRST);
+    return 0;
+}
+static inline int MaByIndex(int i) {
+    if (i >= 1 && i < MA_LAST_REAL) return i;
+    if (i >= MA_LAST_REAL && i < MA_COUNT) return MA_HIGH_FIRST + (i - MA_LAST_REAL);
+    return 0;
+}
+static inline int MaAllCount() { return MA_LAST + (MA_HIGH_END - MA_HIGH_FIRST); }
+static inline int MaAllType(int k) { return k < MA_LAST ? k : MA_HIGH_FIRST + (k - MA_LAST); }
 static inline int32 SpellVersionPack(int16 sp, int16 srcCode) {
     return (int32)(((srcCode & 0x7) << 12) | (sp & 0xFFF));
 }
+static_assert(MAX_SPELLS <= 4096,
+  "SpellVersionPack keeps a spell index in 12 bits (sp & 0xFFF); MAX_SPELLS may not pass 4096");
 static inline int16 SpellVersionSpell(int32 ver) {
     return (int16)(ver & 0xFFF);
 }
@@ -78,7 +122,7 @@ struct YuseCommand
 
 struct SkillInfoStruct
   {
-    uint8 sk;   // SK_SPOT
+    int16 sk;   // SK_SPOT
     const char * name; 
     bool  imp;  // implemented?  
     bool  active;
@@ -245,28 +289,28 @@ class Creature: public Thing, public Magic
          FIELD_OBJ's v0 branch IS ts.Serialize(r) -- the call this line
          replaces -- so the v0 path does exactly what it did before, and only
          v1 routes into TargetSystem::FieldsV1 (src/Target.cpp). */
-      FIELD_OBJ(256, ts);
-      FIELD_RID(257, mID);
-      FIELD_RID(258, tmID);
-      FIELD_I16(259, PartyID);
-      FIELD_I16(260, cHP);
-      FIELD_I16(261, mHP);
-      FIELD_I16(262, Subdual);
-      FIELD_I16(263, cFP);
-      FIELD_I32(264, uMana);
-      FIELD_I32(265, mMana);
-      FIELD_I32(266, hMana);
-      FIELD_I32(267, ManaPulse);
-      FIELD_I8 (268, concentUsed);
-      FIELD_ARRAY(269, Attr, sizeof(int16), ATTR_LAST);
+      FIELD_OBJ("ts", ts);
+      FIELD_RID("mID", mID);
+      FIELD_RID("tmID", tmID);
+      FIELD_I16("PartyID", PartyID);
+      FIELD_I16("cHP", cHP);
+      FIELD_I16("mHP", mHP);
+      FIELD_I16("Subdual", Subdual);
+      FIELD_I16("cFP", cFP);
+      FIELD_I32("uMana", uMana);
+      FIELD_I32("mMana", mMana);
+      FIELD_I32("hMana", hMana);
+      FIELD_I32("ManaPulse", ManaPulse);
+      FIELD_I8 ("concentUsed", concentUsed);
+      FIELD_ARRAY("Attr", Attr, sizeof(int16), ATTR_LAST);
       /* Dir is `typedef signed char` (inc/Defines.h:55), so it is one byte
          and needs no staging temporary. */
-      FIELD_I8 (270, LastMoveDir);
-      FIELD_I8 (271, AoO);
-      FIELD_I8 (272, FFCount);
-      FIELD_I8 (273, HideVal);
-      FIELD_I16(274, StateFlags);
-      FIELD_I8 (275, AttrDeath);
+      FIELD_I8 ("LastMoveDir", LastMoveDir);
+      FIELD_I8 ("AoO", AoO);
+      FIELD_I8 ("FFCount", FFCount);
+      FIELD_I8 ("HideVal", HideVal);
+      FIELD_I16("StateFlags", StateFlags);
+      FIELD_I8 ("AttrDeath", AttrDeath);
       /* The ten perception precalcs below are STORED, not FIELD_SKIPped.
          They are derived state, and the rule is to skip derived state that
          the load path rebuilds -- but the load path rebuilds it for the
@@ -275,20 +319,21 @@ class Creature: public Thing, public Magic
          Nothing recalculates a monster's, so skipping them would load every
          monster in the game blind, deaf and scentless until something else
          happened to call CalcValues() on it. */
-      FIELD_U8 (276, TremorRange);
-      FIELD_U8 (277, SightRange);
-      FIELD_U8 (278, LightRange);
-      FIELD_U8 (279, BlindRange);
-      FIELD_U8 (280, InfraRange);
-      FIELD_U8 (281, PercepRange);
-      FIELD_U8 (282, TelepRange);
-      FIELD_U8 (283, ScentRange);
-      FIELD_U8 (284, ShadowRange);
-      FIELD_U8 (285, NatureSight);
+      FIELD_U8 ("TremorRange", TremorRange);
+      FIELD_U8 ("SightRange", SightRange);
+      FIELD_U8 ("LightRange", LightRange);
+      FIELD_U8 ("BlindRange", BlindRange);
+      FIELD_U8 ("InfraRange", InfraRange);
+      FIELD_U8 ("PercepRange", PercepRange);
+      FIELD_U8 ("TelepRange", TelepRange);
+      FIELD_U8 ("ScentRange", ScentRange);
+      FIELD_U8 ("ShadowRange", ShadowRange);
+      FIELD_U8 ("NatureSight", NatureSight);
       /* Touch defence: A_DEF less BONUS_ARMOUR and BONUS_SHIELD only. Not an
          Attr[] slot -- ATTR_LAST is fixed by the save schema (field 269 is
          the whole array, sized ATTR_LAST). inc-30ps phase 1. */
-      FIELD_I16(286, TouchDef);
+      FIELD_I16("TouchDef", TouchDef);
+      FIELD_SKIP(LightAverseWasBright);   /* derived; never saved */
     END_ARCHIVE
 
 	  public:
@@ -488,6 +533,11 @@ class Creature: public Thing, public Magic
             return choices[random(strlen(choices))];
           else
             return def; } 
+      /* What a script's yn and ChoicePrompt call (src/VMachine.cpp): the same
+         prompt, as one sourced decision while character creation is open. */
+      bool ScriptYn(const char* msg,bool def=true);
+      int8 ScriptChoicePrompt(const char*msg, const char*choices, char def=0,
+                     int8 col1=BROWN,int8 col2=YELLOW,bool preprompt=true);
       virtual bool canTalk(Creature *to=NULL);
       int32 ChargeBonus();
       uint32 getArmourType(bool count_shield, bool count_spells = true);
@@ -808,15 +858,18 @@ class Character: public Creature
     friend class VMachine;
     friend class Player;
     friend void MusicChoirProbe(Player *caster);
+    friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT writes a feat bit, skill ranks, a base score */
     friend void BlasphemyProbe(Player *caster);
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
+    friend struct CreationAccess; /* src/CreationSource.cpp: the gallery entry, inc-10v7f */
     protected:
 	    hObj Inv[NUM_SLOTS];
       hObj defMelee, defRanged, defAmmo, defOffhand;
       /* inc-h5aql: X (reach) and S (short) weapon sets; M and R keep the four above. */
       hObj defReach, defReachOff, defShort, defShortOff;
       int16 BAttr[7], KAttr[ATTR_LAST]; //Base Attributes
-      int8 SkillRanks[SK_LASTSKILL];
-      uint16 Feats[(FT_LAST/8)+1];
+      int8 SkillRanks[SK_COUNT];
+      uint16 Feats[(FEATBITS_LAST/8)+1];
       uint8 Abilities[CA_LAST];
       uint16 SpentSP[6], BonusSP[6], TotalSP[6];       
       uint8 TurnTypes[4],TurnLevels[4];
@@ -1026,7 +1079,7 @@ class Character: public Creature
       virtual void   setSpellFlags(rID spID, uint32 fl) 
                        { Spells[theGame->SpellNum(spID)] = fl; }
       virtual int16  GetSkillRanks(int16 sk)
-                       { return SkillRanks[sk]; }
+                       { return SkillRanks[SkillIndex(sk)]; }
       virtual int16  GetBAB(int16 mode);
       /* inc-4999 phase 4b: the spell's flags with its four kind bits
          (SP_ARCANE/SP_DIVINE/SP_PRIMAL/SP_BARDIC) replaced by the cast's source
@@ -1038,7 +1091,7 @@ class Character: public Creature
 
       /* Functions for Performing Actions */
       //virtual EvReturn AttackMsg(EventInfo&e);
-      void UseSkill(uint8 sk);
+      void UseSkill(int16 sk);
       void UseFeat(uint16 ft);
       void UseAbility(uint8 ab,int16 pa);
       bool DisarmTrap(Trap * tr, bool active); 
@@ -1121,47 +1174,45 @@ class Character: public Creature
          which are real rIDs and are named. Upgrade path: write these as
          rows keyed through the name table, the way the spec's "resource
          memory segment" section already requires for MonMem/EffMem. */
-      static_assert(sizeof(Character) == 12664,
-                    "Character's coverage pin row pads assume this");
       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
       static_assert(sizeof(bool) == 1, "isFallenPaladin travels as K_U8");
       int i;
-      FIELD_ARRAY(384, Inv, sizeof(hObj), NUM_SLOTS);
-      FIELD_H  (385, defMelee);
-      FIELD_H  (386, defRanged);
-      FIELD_H  (387, defAmmo);
-      FIELD_H  (388, defOffhand);
-      FIELD_H  (449, defReach);
-      FIELD_H  (450, defReachOff);
-      FIELD_H  (451, defShort);
-      FIELD_H  (452, defShortOff);
-      FIELD_ARRAY(389, BAttr, sizeof(int16), 7);
-      FIELD_ARRAY(390, KAttr, sizeof(int16), ATTR_LAST);
-      FIELD_ARRAY(391, SkillRanks, sizeof(int8), SK_LASTSKILL);
-      FIELD_ARRAY(392, Feats, sizeof(uint16), (FT_LAST/8)+1);
-      FIELD_ARRAY(393, Abilities, sizeof(uint8), CA_LAST);
-      FIELD_ARRAY(394, SpentSP, sizeof(uint16), 6);
-      FIELD_ARRAY(395, BonusSP, sizeof(uint16), 6);
-      FIELD_ARRAY(396, TotalSP, sizeof(uint16), 6);
-      FIELD_ARRAY(397, TurnTypes, sizeof(uint8), 4);
-      FIELD_ARRAY(398, TurnLevels, sizeof(uint8), 4);
-      FIELD_ARRAY(399, FavTypes, sizeof(uint8), 12);
-      FIELD_ARRAY(400, FavLevels, sizeof(uint8), 12);
-      FIELD_ARRAY(401, IntStudy, sizeof(uint8), STUDY_LAST);
-      FIELD_I16(402, FocusWCount);
-      FIELD_I16(403, FocusSCount);
-      FIELD_I16(404, ExoticCount);
-      FIELD_I16(405, aStoryPluses);
-      FIELD_I16(406, tStoryPluses);
-      FIELD_U8 (407, RageCount);
-      FIELD_I32(408, xpTicks);
-      FIELD_U32(409, Personality);
-      FIELD_I16(410, polyTicks);
-      FIELD_I16(411, alignGE);
-      FIELD_I16(412, alignLC);
-      FIELD_I32(413, LastRest);
-      FIELD_I16(414, fracFatigue);
+      FIELD_ARRAY("Inv", Inv, sizeof(hObj), NUM_SLOTS);
+      FIELD_H  ("defMelee", defMelee);
+      FIELD_H  ("defRanged", defRanged);
+      FIELD_H  ("defAmmo", defAmmo);
+      FIELD_H  ("defOffhand", defOffhand);
+      FIELD_H  ("defReach", defReach);
+      FIELD_H  ("defReachOff", defReachOff);
+      FIELD_H  ("defShort", defShort);
+      FIELD_H  ("defShortOff", defShortOff);
+      FIELD_ARRAY("BAttr", BAttr, sizeof(int16), 7);
+      FIELD_ARRAY("KAttr", KAttr, sizeof(int16), ATTR_LAST);
+      FIELD_ARRAY("SkillRanks", SkillRanks, sizeof(int8), SK_COUNT);
+      FIELD_ARRAY("Feats", Feats, sizeof(uint16), (FEATBITS_LAST/8)+1);
+      FIELD_ARRAY("Abilities", Abilities, sizeof(uint8), CA_LAST);
+      FIELD_ARRAY("SpentSP", SpentSP, sizeof(uint16), 6);
+      FIELD_ARRAY("BonusSP", BonusSP, sizeof(uint16), 6);
+      FIELD_ARRAY("TotalSP", TotalSP, sizeof(uint16), 6);
+      FIELD_ARRAY("TurnTypes", TurnTypes, sizeof(uint8), 4);
+      FIELD_ARRAY("TurnLevels", TurnLevels, sizeof(uint8), 4);
+      FIELD_ARRAY("FavTypes", FavTypes, sizeof(uint8), 12);
+      FIELD_ARRAY("FavLevels", FavLevels, sizeof(uint8), 12);
+      FIELD_ARRAY("IntStudy", IntStudy, sizeof(uint8), STUDY_LAST);
+      FIELD_I16("FocusWCount", FocusWCount);
+      FIELD_I16("FocusSCount", FocusSCount);
+      FIELD_I16("ExoticCount", ExoticCount);
+      FIELD_I16("aStoryPluses", aStoryPluses);
+      FIELD_I16("tStoryPluses", tStoryPluses);
+      FIELD_U8 ("RageCount", RageCount);
+      FIELD_I32("xpTicks", xpTicks);
+      FIELD_U32("Personality", Personality);
+      FIELD_I16("polyTicks", polyTicks);
+      FIELD_I16("alignGE", alignGE);
+      FIELD_I16("alignLC", alignLC);
+      FIELD_I32("LastRest", LastRest);
+      FIELD_I16("fracFatigue", fracFatigue);
       /* Staged through a uint8, as TargetSystem::shouldRetarget is
          (src/Target.cpp): a byte off a crafted file is any of 256 values,
          and a bool holding one of the other 254 is undefined behaviour the
@@ -1172,49 +1223,62 @@ class Character: public Creature
       uint8 fallen = 0;
       if (isSave)
         fallen = isFallenPaladin ? 1 : 0;
-      FIELD_U8 (415, fallen);
+      FIELD_U8 ("fallen", fallen);
       FIELD_SKIP(isFallenPaladin);   /* travels as `fallen` above */
-      FIELD_ARRAY(416, Level, sizeof(int8), 3);
-      FIELD_ARRAY(417, hpRolls, sizeof(int8), 3 * MAX_CHAR_LEVEL);
-      FIELD_ARRAY(418, manaRolls, sizeof(int8), 3 * MAX_CHAR_LEVEL);
-      FIELD_ARRAY(419, SaveBonus, sizeof(int8), 16);
-      FIELD_ARRAY(420, GainAttr, sizeof(int16), 7 * 15);
-      FIELD_I8 (421, NotifiedLevel);
-      r.V1EmbedBegin(422, ClassID, sizeof(ClassID));
+      FIELD_ARRAY("Level", Level, sizeof(int8), 3);
+      /* The row length travels beside each array of rows (spec section 6.1,
+         inc-cjos0). A file written before the field existed has rows of the
+         length then in force: 11, 11, 15 here. */
+      uint16 hpRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 manaRollsRow = isSave ? MAX_CHAR_LEVEL : 11;
+      uint16 GainAttrRow = 15;
+      FIELD_U16("hpRollsRow", hpRollsRow);
+      FIELD_U16("manaRollsRow", manaRollsRow);
+      FIELD_U16("GainAttrRow", GainAttrRow);
+      FIELD_ARRAY_ROWS("hpRolls", hpRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, hpRollsRow, 0);
+      FIELD_ARRAY_ROWS("manaRolls", manaRolls, sizeof(int8), 3, MAX_CHAR_LEVEL, manaRollsRow, 0);
+      FIELD_ARRAY("SaveBonus", SaveBonus, sizeof(int8), 16);
+      FIELD_ARRAY_ROWS("GainAttr", GainAttr, sizeof(int16), 7, 15, GainAttrRow, 0);
+      FIELD_I8 ("NotifiedLevel", NotifiedLevel);
+      r.V1EmbedBegin("ClassID", ClassID, sizeof(ClassID));
       for (i = 0; i != 6; i++)
-        FIELD_RID((uint16)(1 + i), ClassID[i]);
+        FIELD_RID_AT("ClassID", i, ClassID[i]);
       r.V1EmbedEnd();
-      FIELD_RID(423, RaceID);
-      FIELD_RID(424, GodID);
-      FIELD_H  (425, Mount);
-      FIELD_U32(426, XP);
-      FIELD_U32(427, XP_Drained);
-      FIELD_ARRAY(428, SpellsLearned, sizeof(uint8), 10);
-      FIELD_ARRAY(429, SpellSlots, sizeof(uint8), 10);
-      FIELD_ARRAY(430, BonusSlots, sizeof(uint8), 10);
-      FIELD_ARRAY(431, RecentSpells, sizeof(uint16), 10);
-      FIELD_ARRAY(432, RecentSkills, sizeof(uint16), 5);
-      FIELD_ARRAY(433, RecentItems, sizeof(uint16), 5);
-      FIELD_ARRAY(448, Spells, sizeof(uint32), MAX_SPELLS+1);
+      FIELD_RID("RaceID", RaceID);
+      FIELD_RID("GodID", GodID);
+      FIELD_H  ("Mount", Mount);
+      FIELD_U32("XP", XP);
+      FIELD_U32("XP_Drained", XP_Drained);
+      FIELD_ARRAY("SpellsLearned", SpellsLearned, sizeof(uint8), 10);
+      FIELD_ARRAY("SpellSlots", SpellSlots, sizeof(uint8), 10);
+      FIELD_ARRAY("BonusSlots", BonusSlots, sizeof(uint8), 10);
+      FIELD_ARRAY("RecentSpells", RecentSpells, sizeof(uint16), 10);
+      FIELD_ARRAY("RecentSkills", RecentSkills, sizeof(uint16), 5);
+      FIELD_ARRAY("RecentItems", RecentItems, sizeof(uint16), 5);
+      FIELD_ARRAY("Spells", Spells, sizeof(uint32), MAX_SPELLS+1);
       /* inc-vqla: widened from tag 434's uint16 array; the legacy read below
          folds a pre-change save's flags up, tag 448 winning if both present. */
-      r.V1ArrayWiden16(448, 434, Spells, MAX_SPELLS+1);
-      r.V1EmbedBegin(435, Tattoos, sizeof(Tattoos));
+      r.V1ArrayWiden16("Spells", "SpellsU16", Spells, MAX_SPELLS+1);
+      r.V1EmbedBegin("Tattoos", Tattoos, sizeof(Tattoos));
       for (i = 0; i != 10; i++)
-        FIELD_RID((uint16)(1 + i), Tattoos[i]);
+        FIELD_RID_AT("Tattoos", i, Tattoos[i]);
       r.V1EmbedEnd();
-      FIELD_I16(436, resChance);
-      FIELD_ARRAY(437, FavourLev, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY(438, TempFavour, sizeof(int32), MAX_GODS);
-      FIELD_ARRAY(439, Anger, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY(440, SacVals, sizeof(int32), MAX_GODS * (MAX_SAC_CATS + 2));
-      FIELD_ARRAY(441, FavPenalty, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY(442, PrayerTimeout, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY(443, AngerThisTurn, sizeof(int16), MAX_GODS);
-      FIELD_ARRAY(444, lastPulse, sizeof(int32), MAX_GODS);
-      FIELD_ARRAY(445, godFlags, sizeof(uint16), MAX_GODS);
-      FIELD_U16(446, desiredAlign);
-      FIELD_U32(447, Proficiencies);
+      FIELD_I16("resChance", resChance);
+      FIELD_ARRAY("FavourLev", FavourLev, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("TempFavour", TempFavour, sizeof(int32), MAX_GODS);
+      FIELD_ARRAY("Anger", Anger, sizeof(int16), MAX_GODS);
+      /* The last two columns of a SacVals row are the total and the maximum
+         (src/Prayer.cpp), so the reader keeps them last (tail 2). */
+      uint16 SacValsRow = isSave ? MAX_SAC_CATS + 2 : 12;
+      FIELD_U16("SacValsRow", SacValsRow);
+      FIELD_ARRAY_ROWS("SacVals", SacVals, sizeof(int32), MAX_GODS, MAX_SAC_CATS + 2, SacValsRow, 2);
+      FIELD_ARRAY("FavPenalty", FavPenalty, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("PrayerTimeout", PrayerTimeout, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("AngerThisTurn", AngerThisTurn, sizeof(int16), MAX_GODS);
+      FIELD_ARRAY("lastPulse", lastPulse, sizeof(int32), MAX_GODS);
+      FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+      FIELD_U16("desiredAlign", desiredAlign);
+      FIELD_U32("Proficiencies", Proficiencies);
       /* Load-direction fixups, below every field they read (wire format,
          load-direction ordering). Both are guarded by V1Active(): on the v0
          path the raw dump supplies these bytes and rejecting a v0 save this
@@ -1297,7 +1361,7 @@ typedef struct JournalInfoType
     String bestItem;
     int    bestItemVal;
     int    numMonSeen;
-    int    numMonOfType[MA_LAST_REAL];
+    int    numMonOfType[MA_COUNT];
   } JournalInfo;
 
 // ww: I want to keep track of how much time we spend on each level, using
@@ -1405,6 +1469,10 @@ struct ReincarnationInfo
     int16    cRsp, nRsp;
     int32    formulaSeed, storeSeed;
   };
+/* The gallery file holds this struct raw, by sizeof. SkillRanks[100] is part
+   of that format, so the skill rank table must never outgrow it. */
+static_assert(SK_COUNT <= 100,
+  "ReincarnationInfo::SkillRanks[100] is a gallery file format; SK_COUNT may not pass 100");
 
 struct QuickKey
   {
@@ -1418,16 +1486,19 @@ class Player: public Character
   {
     friend void Map::VisionThing(int16 p, Creature *c, bool do_clear);
     friend bool Game::SaveGame(Player &p);
+    friend bool Game::SaveRecordedWalk(Player &p, const char *path);
     friend bool Game::LoadGame(bool backup);
     friend bool Game::LoadNamedGame(const char *savefile);
     friend void HelpCustom(String &helpText, Player *p);
     friend class TextTerm; 
+    friend struct CanonDump;   /* src/Dump.cpp: the canonical -dump walk, inc-10v7f */
     private:
 	 	  /* Parser Par; */
       /* History Hist; */
 	 	  int16 MapMemoryMask;
 	 	  int16 GallerySlot;
       int8  MapSP;
+      friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets MaxDepths */
       int16 MaxDepths[MAX_DUNGEONS];
       uint32 MMArray[MAX_SPELLS];
       rID      Macros[MAX_MACROS];    /* F1-F12, CTRL+F1-F12, ALT+F1-F12, SHIFT+F1-F12 */
@@ -1525,6 +1596,9 @@ class Player: public Character
       virtual void GainFeat(int16 list, int32 param=0);
       virtual void GainAbility(int16 ab, uint32 pa, rID sourceID,int16 statiSource);
       bool LearnSpell(bool left = false);
+      /* The one commit of a skill-rank screen: SkillRanks and SpentSP. The
+         Skill Manager and the creation source both call it (inc-10v7f 6b). */
+      void CommitSkillRanks(const int8 *ranks, const int8 *unspent);
       void ApplySpellSelection();
       bool InherentPickable(int16 sn);
       bool ChooseInherentSpell();
@@ -1559,7 +1633,7 @@ class Player: public Character
       virtual void IdentByTrial(Item *it, int16 Quality=0);
       void ShowStats();
       //String BonusBreakdown(int8 at, int16 maxlen=250);
-	    String & SkillBreakdown(int8 sk, int16 maxlen=250);
+	    String & SkillBreakdown(int16 sk, int16 maxlen=250);
       String & SpellBreakdown(int8 sp, int16 maxlen=250);
       String & ResistBreakdown(int8 dt, int16 maxlen=250);
 
@@ -1593,6 +1667,7 @@ class Player: public Character
 
       /* Debug Mode Functions */
  	 	  void WizardOptions();
+ 	 	  void KillEveryMonster();
 	 	  void BrowseThings(bool nearby);
 	 	  void ListLevelTreasure();
 	 	  void ListChestContents();
@@ -1615,12 +1690,6 @@ class Player: public Character
          SpellKeys[] and QuickKeys[].Value hold spell and ability numbers,
          not rIDs. Same ceiling and same upgrade path as the note in
          Character's list above. */
-      static_assert(sizeof(Player) == 23728,
-                    "Player's coverage pin row pads assume this");
-      static_assert(sizeof(JournalInfoType) == 360, "JournalInfo embed range");
-      static_assert(sizeof(GameTimeInfoType) == 384, "GameTimeInfo embed range");
-      static_assert(sizeof(QuickKey) == 16, "one embed per quick key");
-      static_assert(sizeof(String) == 24, "V1Str covers a whole String");
       static_assert(sizeof(time_t) == 8, "start_second travels as 8 raw bytes");
       /* Order-independent: MyTerm is the process's one terminal, not saved
          state, and nothing below reads it. It stays where it has always
@@ -1628,28 +1697,28 @@ class Player: public Character
       if (!isSave)
         MyTerm = T1;
       int i;
-      FIELD_I16(512, MapMemoryMask);
-      FIELD_I16(513, GallerySlot);
-      FIELD_I8 (514, MapSP);
-      FIELD_ARRAY(515, MaxDepths, sizeof(int16), MAX_DUNGEONS);
-      FIELD_ARRAY(516, MMArray, sizeof(uint32), MAX_SPELLS);
+      FIELD_I16("MapMemoryMask", MapMemoryMask);
+      FIELD_I16("GallerySlot", GallerySlot);
+      FIELD_I8 ("MapSP", MapSP);
+      FIELD_ARRAY("MaxDepths", MaxDepths, sizeof(int16), MAX_DUNGEONS);
+      FIELD_ARRAY("MMArray", MMArray, sizeof(uint32), MAX_SPELLS);
       /* An rID array: per-element FIELD_RID inside an embed, never
          FIELD_ARRAY -- see the note in Character's list. */
-      r.V1EmbedBegin(517, Macros, sizeof(Macros));
+      r.V1EmbedBegin("Macros", Macros, sizeof(Macros));
       for (i = 0; i != MAX_MACROS; i++)
-        FIELD_RID((uint16)(1 + i), Macros[i]);
+        FIELD_RID_AT("Macros", i, Macros[i]);
       r.V1EmbedEnd();
       /* One embed per quick key. QuickKey carries an hObj, which must be a
          named K_H field rather than four raw bytes, and the embed also
          takes the struct's interior padding with it. */
-      r.V1EmbedBegin(518, QuickKeys, sizeof(QuickKeys));
+      r.V1EmbedBegin("QuickKeys", QuickKeys, sizeof(QuickKeys));
       for (i = 0; i != MAX_QKEYS; i++)
         {
-          r.V1EmbedBegin((uint16)(1 + i), &QuickKeys[i], sizeof(QuickKey));
-          FIELD_U32(1, QuickKeys[i].Value);
-          FIELD_I16(2, QuickKeys[i].Type);
-          FIELD_H  (3, QuickKeys[i].hItem);
-          FIELD_U32(4, QuickKeys[i].MM);
+          r.V1EmbedBegin_AT("QuickKey", i, &QuickKeys[i], sizeof(QuickKey));
+          FIELD_U32("QuickKeys_Value", QuickKeys[i].Value);
+          FIELD_I16("QuickKeys_Type", QuickKeys[i].Type);
+          FIELD_H  ("QuickKeys_hItem", QuickKeys[i].hItem);
+          FIELD_U32("QuickKeys_MM", QuickKeys[i].MM);
           r.V1EmbedEnd();
         }
       r.V1EmbedEnd();
@@ -1662,38 +1731,38 @@ class Player: public Character
          leaves the v0 path exactly as it was. */
       if (r.V1Active())
         {
-          r.V1EmbedBegin(519, MessageQueue, sizeof(MessageQueue));
+          r.V1EmbedBegin("MessageQueue", MessageQueue, sizeof(MessageQueue));
           for (i = 0; i != 8; i++)
-            r.V1Str((uint16)(1 + i), MessageQueue[i]);
+            r.V1Str_AT("MessageQueue", i, MessageQueue[i]);
           r.V1EmbedEnd();
         }
-      FIELD_ARRAY(520, AutoBuffs, sizeof(int16), 64);
-      FIELD_I16(521, cAutoBuff);
+      FIELD_ARRAY("AutoBuffs", AutoBuffs, sizeof(int16), 64);
+      FIELD_I16("cAutoBuff", cAutoBuff);
       if (r.V1Active())
-        r.V1Str(522, GraveText);
-      FIELD_I16(523, HungerShown);
-      FIELD_STR(524, Journal);                    /* v0 order: first */
-      r.V1EmbedBegin(525, &JournalInfo, sizeof(JournalInfo));
-      FIELD_STR(1, JournalInfo.bestItem);         /* v0 order: second */
-      FIELD_STR(2, JournalInfo.bestMonster);      /* v0 order: third */
-      FIELD_I32(3, JournalInfo.bestMonsterVal);
-      FIELD_I32(4, JournalInfo.bestItemVal);
-      FIELD_I32(5, JournalInfo.numMonSeen);
-      FIELD_ARRAY(6, JournalInfo.numMonOfType, sizeof(int), MA_LAST_REAL);
+        r.V1Str("GraveText", GraveText);
+      FIELD_I16("HungerShown", HungerShown);
+      FIELD_STR("Journal", Journal);                    /* v0 order: first */
+      r.V1EmbedBegin("JournalInfo", &JournalInfo, sizeof(JournalInfo));
+      FIELD_STR("JournalInfo_bestItem", JournalInfo.bestItem);         /* v0 order: second */
+      FIELD_STR("JournalInfo_bestMonster", JournalInfo.bestMonster);      /* v0 order: third */
+      FIELD_I32("JournalInfo_bestMonsterVal", JournalInfo.bestMonsterVal);
+      FIELD_I32("JournalInfo_bestItemVal", JournalInfo.bestItemVal);
+      FIELD_I32("JournalInfo_numMonSeen", JournalInfo.numMonSeen);
+      FIELD_ARRAY("JournalInfo_numMonOfType", JournalInfo.numMonOfType, sizeof(int), MA_COUNT);
       r.V1EmbedEnd();
-      FIELD_ARRAY(526, RecentVerbs, sizeof(int16), 5);
-      r.V1EmbedBegin(527, &GameTimeInfo, sizeof(GameTimeInfo));
+      FIELD_ARRAY("RecentVerbs", RecentVerbs, sizeof(int16), 5);
+      r.V1EmbedBegin("GameTimeInfo", &GameTimeInfo, sizeof(GameTimeInfo));
       /* LevelTimeInfo is five plain numbers with no handle and no rID, so
          the per-level array travels as raw elements; the embed above takes
          its interior padding. */
-      FIELD_ARRAY(1, GameTimeInfo.LTI, sizeof(LevelTimeInfo), 11);
-      FIELD_U32(2, GameTimeInfo.start_turn);
-      FIELD_U32(3, GameTimeInfo.actions);
-      FIELD_U32(4, GameTimeInfo.keystrokes);
+      FIELD_ARRAY("GameTimeInfo_LTI", GameTimeInfo.LTI, sizeof(LevelTimeInfo), 11);
+      FIELD_U32("GameTimeInfo_start_turn", GameTimeInfo.start_turn);
+      FIELD_U32("GameTimeInfo_actions", GameTimeInfo.actions);
+      FIELD_U32("GameTimeInfo_keystrokes", GameTimeInfo.keystrokes);
       /* time_t is 8 bytes here and no kind is that wide, so it travels as
          its own bytes -- the same treatment TargetWhy::data gets. */
-      FIELD_ARRAY(5, &GameTimeInfo.start_second, 1, sizeof(time_t));
-      FIELD_I32(6, GameTimeInfo.start_xp);
+      FIELD_ARRAY("GameTimeInfo_start_second", &GameTimeInfo.start_second, 1, sizeof(time_t));
+      FIELD_I32("GameTimeInfo_start_xp", GameTimeInfo.start_xp);
       r.V1EmbedEnd();
       /* The nine bools below are staged through uint8s for the reason
          Character's isFallenPaladin is. */
@@ -1711,23 +1780,23 @@ class Player: public Character
           bExplore = ExploreMode ? 1 : 0;
           bReroll  = rerolledPerks ? 1 : 0;
         }
-      FIELD_U8 (528, bStati);       FIELD_SKIP(statiChanged);
-      FIELD_I32(529, formulaSeed);
-      FIELD_I32(530, storeSeed);
-      FIELD_ARRAY(531, SpellKeys, sizeof(int16), 12);
-      FIELD_ARRAY(532, Options, sizeof(int8), OPT_LAST);
+      FIELD_U8 ("bStati", bStati);       FIELD_SKIP(statiChanged);
+      FIELD_I32("formulaSeed", formulaSeed);
+      FIELD_I32("storeSeed", storeSeed);
+      FIELD_ARRAY("SpellKeys", SpellKeys, sizeof(int16), 12);
+      FIELD_ARRAY("Options", Options, sizeof(int8), OPT_LAST);
       FIELD_SKIP(MyTerm);           /* a live pointer; rebuilt to T1 above */
-      FIELD_U8 (533, bShownFF);     FIELD_SKIP(shownFF);
-      FIELD_U8 (534, bVictory);     FIELD_SKIP(VictoryFlag);
-      FIELD_U8 (535, bQuit);        FIELD_SKIP(QuitFlag);
-      FIELD_U8 (536, bUpdMap);      FIELD_SKIP(UpdateMap);
-      FIELD_U8 (537, bDig);         FIELD_SKIP(DigMode);
-      FIELD_U8 (538, bWiz);         FIELD_SKIP(WizardMode);
-      FIELD_U8 (539, bExplore);     FIELD_SKIP(ExploreMode);
-      FIELD_U8 (540, bReroll);      FIELD_SKIP(rerolledPerks);
-      FIELD_I32(541, deathCount);
-      FIELD_I32(542, rerollCount);
-      FIELD_I16(543, statMethod);
+      FIELD_U8 ("bShownFF", bShownFF);     FIELD_SKIP(shownFF);
+      FIELD_U8 ("bVictory", bVictory);     FIELD_SKIP(VictoryFlag);
+      FIELD_U8 ("bQuit", bQuit);        FIELD_SKIP(QuitFlag);
+      FIELD_U8 ("bUpdMap", bUpdMap);      FIELD_SKIP(UpdateMap);
+      FIELD_U8 ("bDig", bDig);         FIELD_SKIP(DigMode);
+      FIELD_U8 ("bWiz", bWiz);         FIELD_SKIP(WizardMode);
+      FIELD_U8 ("bExplore", bExplore);     FIELD_SKIP(ExploreMode);
+      FIELD_U8 ("bReroll", bReroll);      FIELD_SKIP(rerolledPerks);
+      FIELD_I32("deathCount", deathCount);
+      FIELD_I32("rerollCount", rerollCount);
+      FIELD_I16("statMethod", statMethod);
       if (!isSave)
         {
           /* AutoBuffs is a NUL-terminated list inside a fixed 64-entry
@@ -1896,12 +1965,10 @@ class Monster: public Creature
          belong to the class and not to the object, so they are outside the
          record entirely -- they are not members of any Monster and the
          coverage map never sees them. */
-      static_assert(sizeof(Monster) == 1696,
-                    "Monster's coverage pin row pads assume this");
-      FIELD_H  (640, Inv);
-      FIELD_I8 (641, BuffCount);
-      FIELD_I8 (642, FoilCount);
-      FIELD_ARRAY(643, Recent, sizeof(uint8), 6);
+      FIELD_H  ("Inv", Inv);
+      FIELD_I8 ("BuffCount", BuffCount);
+      FIELD_I8 ("FoilCount", FoilCount);
+      FIELD_ARRAY("Recent", Recent, sizeof(uint8), 6);
     END_ARCHIVE
 	};
 

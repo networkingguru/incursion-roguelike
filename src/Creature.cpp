@@ -3019,8 +3019,7 @@ void Creature::AddTemplate(rID tID)
       if (tt->NewFeats[i] && tt->NewFeats[i] >= FT_FIRST && 
                              tt->NewFeats[i] <= FT_LAST)
         GainPermStati(EXTRA_FEAT,NULL,SS_MISC,tt->NewFeats[i],1,tID);
-      if (tt->NewFeats[i] && tt->NewFeats[i] >= 1 && 
-                             tt->NewFeats[i] <= SK_LAST)
+      if (tt->NewFeats[i] && IsSkill(tt->NewFeats[i]))
         GainPermStati(EXTRA_SKILL,NULL,SS_MISC,tt->NewFeats[i],1,tID);
       }
       
@@ -3983,7 +3982,7 @@ String Creature::TerrainRiskNote(rID terrain, Map *map, int16 x, int16 y)
 
   if (sk)
     {
-      String note = Format(" (%s %d~", SkillInfo[sk].name,
+      String note = Format(" (%s %d~", SkillInfo[SkillIndex(sk)].name,
         SkillCheckChance(sk, dc));
       if (margin > 0)
         /* The handler drowns/tangles when the check total falls short by

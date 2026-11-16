@@ -56,7 +56,7 @@ known hole.
 
 | Fact | Control |
 |---|---|
-| Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=tools/fixtures/chars/<name>.sav` (53 exist; `tools/fixtures/README.md`). No wizard command sets stats. |
+| Character: race, class, stats, kit, name | Load a fixture: `INCURSION_LOAD=<name>`, where `tools/fixtures/chars/<name>.char` holds every choice that made the character (54 exist). `tools/fixture_cache.sh` builds the `.sav` into `logs/fixture-cache/` and `tools/headless.sh` copies it into the run. A state reached after creation belongs to the check: it includes a `tools/keys/setup-<name>.keys` script. `tools/fixtures/README.md` says how to add a fixture or a decision. No wizard command sets stats. |
 | Attribute scores, when the check MUST generate the character in the run (a fixture cannot go red on a chargen-time mutation) | Point Buy: on the attribute screen press `p` ("Abort to Point Buy", src/Create.cpp:2316) and buy fixed scores. Every attribute starts at 8 with 75 points under the frozen options (`options-2026-08-22.dat`); in the keys, RIGHT raises the highlighted score by one, DOWN moves to the next of STR DEX CON INT WIS CHA LUC, ENTER leaves the screen after every point is spent, and `y` answers "Are these your final stats?". The race then adds its modifier to the score shown. Example: tools/keys/necro-undead-pool-necro.keys. |
 | A non-proficient armor in a starting kit | `INCURSION_KIT_GRANT=<item name>` (`src/Create.cpp`). Character creation adds that item to the starting kit as a perk item, before the kit is arranged. An unknown name logs an Error and adds nothing. Used by tools/check_kit_arrangement.sh. |
 | A monster where you need it | Wizard menu, "Monster Summoning". Clear the level first with "Genocide Everything". |
@@ -74,7 +74,7 @@ known hole.
 | Skill check (d20) | `INCURSION_RUNTO_SKILL_ROLL`, 1 to 20. It also sets the Animal Empathy pacify roll. |
 | Move Silently vs Listen contest (victim hears an attacker) | `INCURSION_SNEAK_FORCE_LISTEN=heard` or `unheard` (`src/Fight.cpp`, `PreStrike`). It applies to every attack that reaches the contest; unset, the dice decide. |
 | Damage roll | `INCURSION_FORCE_DAMAGE_ROLL=<n>`. Each damage die at `Creature::Hit`, and in the A_DEQU retaliation (acid blob and kin damaging the striker or the struck item), shows `min(n, sides)`; 1 = minimum, 99 = maximum. Does not cover sneak-attack dice, weapon-quality extra dice such as flaming 1d6, area attacks or spells. |
-| Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file used to make the check's fixture (`tools/make_char_fixture.sh`). |
+| Monster hit points | The "Monsters Maximum Hit Points" option (`OPT_MON_MAX_HP`, `src/Values.cpp:2392`) set to any value but NO. It is a character-generation option, so a loaded game takes it from its save, not from the options file: set it in the options file that the fixture's `.char` names on its `options:` line. |
 | An item an item generator returns (`Item::GenItem`: gifts, monster gear, floor loot) | `INCURSION_GENITEM_FORCE="name[:plus];name[:plus]"` (`src/Encounter.cpp`). Each GenItem call returns the next entry; with the list used up, generation is unchanged. A probe re-arms it with `GenItemForceArm("...")` and counts uses with `GenItemForceConsumed()` (`inc/Item.h`). Used by tools/check_weapon_types.sh. |
 | Percent-chance roll | *none* |
 | Rest encounter roll and the monsters a rest adds (`Map::DaysPassed`) | Wizard menu, "Wizard Mode Switches", "Always Rest Safely" set to YES. Rest becomes safe and instant: no encounter roll, no time passes, no new monsters. It also lifts the Goblin Caves depth-1 low-level rest refusal (`lib/dungeon.irh`). Used by tools/check_inherent_lucubration.sh. |
@@ -237,6 +237,43 @@ obliged to update stops being true: on 2026-09-11 the hand-written list ran 18 o
 `check_layout_sweep.sh`, `check_gate_membership.sh`, `nightly_verify.sh` and
 `flickerscan_selftest.py`. Run it when you change the checker. A check that has
 quietly stopped checking anything looks exactly like a check that passes.
+
+## Numbers and names that two branches can both take
+
+Two branches can each take the same next number, and git merges both with no
+conflict. On 2026-11-05 master and the epic `inc-pu6v` both took Character save
+tags 449-451, and 17 of 88 fixtures then failed to load (bead inc-cjos0). The
+inventory of every such shared space is `docs/SHARED-SPACES.md`, and
+`tools/check_space_mutations.sh` plants one duplicate in each space and requires
+its detector to refuse it. The two main protections:
+
+- **A name, not a number.** A saved field (`docs/SAVE-SCHEMA-SPEC.md`, "Field
+  names and class layout"), a script variable (loaded by owner and name), and a
+  save migration (applied by name) carry a name in the file. Two branches choose
+  two names, so nothing collides.
+- **A value frozen on master.** A `#define` family or an enum whose value a
+  save, `Options.Dat` or another file stores carries a mark,
+  `// family: <name> stored <ordinal|bits|enum> <u8|i8|u16|i16|u32|i32>`, or
+  `// family: <name> internal` when no file stores it.
+  `tools/check_stored_values.py` (cheap tier) refuses a master value that
+  changed or vanished, a branch value that a master or retired value
+  (`tools/retired_values.txt`) already holds, and a value wider than its
+  storage. Off master, `tools/move_branch_values.py` moves the branch's own
+  colliding value to a free one; `tools/finish_bead.sh` runs it on a landing
+  into the epic, and the master-into-epic merge bead runs it after the merge.
+  Nobody edits a stored number by hand.
+
+A new shared space MUST get one of these two protections in the commit that
+creates it. A new `#define` family or enum with no `// family:` class fails
+`tools/check_define_dups.py`; a new field call that passes a number fails to
+compile. Any other new space (a new kind of file, a new numbered list a save
+holds) MUST be added to the inventory, to a check and to a row of
+`tools/check_space_mutations.sh` in that commit. A space that no check can read
+MAY take the third protection the inventory describes: the line that takes the
+number or name carries its owner bead id, so two branches conflict as text.
+`tools/check_number_values.sh` proves the direction backward: every field in
+every committed fixture and in fresh saves from its key scripts loads in this
+build.
 
 ## Which random stream a new draw belongs in
 

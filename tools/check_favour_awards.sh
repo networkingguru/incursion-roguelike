@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # Do the five hard-coded favour awards pay the god? (bd inc-rgzr, instance 1)
 #
 # THE DEFECT. Creature declared gainFavour with an int16 amount and Character
@@ -22,8 +24,8 @@
 # Every fact this check reads, and the control that fixes it
 # (docs/VERIFICATION.md, "A check must not depend on the seed"):
 #
-# fact: monk character (Xavias, Khasrach, Zurvash sessions) -- fixture lizardfolk-monk-seed1.sav
-# fact: kobold rogue character (Semirath session) -- fixture kobold-rogue-seed1.sav
+# fact: monk character (Xavias, Khasrach, Zurvash sessions) -- fixture lizardfolk-monk-seed1.char
+# fact: kobold rogue character (Semirath session) -- fixture kobold-rogue-seed1.char
 # fact: settings -- CHECK_OPTIONS tools/fixtures/options-2026-08-22.dat
 # fact: patron god of each session -- wizard Become Divine Champion
 # fact: the trap, its level and its square -- wizard Create Trap (deathblade scythe, one square east)
@@ -33,7 +35,8 @@
 # fact: the tabaxi in the devour sessions -- wizard Monster Summoning
 # fact: other monsters on the level (the devour sessions) -- wizard Genocide Everything
 # fact: the tabaxi does not fight back -- wizard Freeze Monsters
-# fact: how many blows kill the tabaxi -- the key script repeats blows until the corpse is listed, so the count does not matter (INCURSION_LOF_FORCE_ROLL=20 is NOT used here: it makes a one-blow kill that the script's step onto the corpse mishandles on seed 303)
+# fact: how many blows kill the tabaxi -- the key script repeats blows until the corpse is listed, so the count does not matter
+# (INCURSION_LOF_FORCE_ROLL=20 is NOT used here: it makes a one-blow kill that the script's step onto the corpse mishandles on seed 303)
 # fact: the tabaxi dies and leaves a corpse -- a kill always makes one (Creature::Die, src/Fight.cpp, "c = new Corpse(this)" under "if (m)"); no percent chance
 # fact: each manes in the trap session -- wizard Monster Summoning, placed beside the trap
 # fact: the manes does not walk -- wizard Freeze Monsters; Force Bolt knockback pushes it onto the trap
@@ -99,8 +102,8 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # natural 1 would have failed" (1 + 4 < 15), so skill_award() pays, and it
 # computes the amount from the screen.
 export INCURSION_RUNTO_SKILL_ROLL=20
-MONK=tools/fixtures/chars/lizardfolk-monk-seed1.sav
-KOBOLD=tools/fixtures/chars/kobold-rogue-seed1.sav
+MONK=tools/fixtures/chars/lizardfolk-monk-seed1.char
+KOBOLD=kobold-rogue-seed1
 
 # The two monsters' challenge ratings, as lib/ writes them. Each is checked
 # against the game's own CR-dependent payout before it is trusted.

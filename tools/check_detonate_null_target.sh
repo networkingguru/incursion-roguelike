@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # inc-3nvr4: Detonate must stop when a monster victim has no mundane inventory.
-# fact: loaded character/world -- INCURSION_LOAD=xsummon-priest-seed5-opt0822.sav
+# fact: loaded character/world -- INCURSION_LOAD=xsummon-priest-seed5-opt0822
 # fact: settings -- INCURSION_OPTIONS=options-2026-08-22.dat
 # fact: caster/victim/positions -- INCURSION_DETONATE_PROBE creates two kobolds,
 #       clears other map objects, lays floor, and keeps the player out of range
@@ -33,7 +33,7 @@ for scene in control null; do
     INCURSION_DETONATE_PROBE="$scene" INCURSION_FORCE_SAVE_ROLL=1 \
     INCURSION_RUN_DIR="$run" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
         tools/headless.sh tools/keys/template-alignment.keys 1 \
         > "$run/harness.txt" 2>&1 || status=$?
     python3 - "$run" "$scene" "$status" <<'PY' || failed=1

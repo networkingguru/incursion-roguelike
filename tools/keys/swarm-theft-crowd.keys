@@ -2,6 +2,8 @@
 # A caryatid column (Mov 0%, HD 8, regenerates) stays beside the swarm as a
 # second enemy. DoProxAttack runs only when Turn%60==0 and a wait is 16 ticks,
 # so 20 waits (320 ticks) give about 5 eligible turns.
+# The fixture holds only the created character; setup-alignment-drain-warrior.keys makes the state the old save held (bd inc-10v7f).
+@include setup-alignment-drain-warrior.keys
 @until "System Menu" ESC
 ESC
 w

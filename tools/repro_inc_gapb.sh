@@ -8,7 +8,7 @@ cd "$ROOT"
 RUN="$(mktemp -d "$ROOT/logs/inc-gapb-XXXXXXXX")"
 export INCURSION_RUN_DIR="$RUN"
 export INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
 export INCURSION_CHAR_PROBE=1
 # Freeze Monsters stops movement but does not suppress proximity attacks.
 # Evidence: messages-top (3d6 and zero weapon damage), player-stati (named

@@ -1,5 +1,5 @@
 # spook-mount.keys with its chargen removed: lines 72-end, unchanged.
-# The character comes from tools/fixtures/chars/spook-mount-seed5-opt0822.sav. bd inc-vrt8.
+# The character comes from tools/fixtures/chars/spook-mount-seed5-opt0822.char. bd inc-vrt8.
 
 @until "Things in View" ESC
 

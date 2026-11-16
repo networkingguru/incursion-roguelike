@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # inc-h5aql phase 1: four-set Exchange and sheathing AoO, red before implementation.
-# fact: character, stats, feats, names, defaults, gear and equipment slots -- INCURSION_LOAD=tools/fixtures/chars/weapon-sets-old-defaults.sav
+# fact: character, stats, feats, names, defaults, gear and equipment slots -- INCURSION_LOAD=tools/fixtures/specimens/weapon-sets-old-defaults.sav, frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: terrain and starting position -- saved map in the character fixture
 # fact: no other monsters -- wizard Genocide Everything in the fixture recipe
@@ -23,7 +23,7 @@
 # fact: AC6 grapple -- bare-handed Grapple command, hit forced by INCURSION_LOF_FORCE_ROLL=20, proved by the "you grab" message in grapple-target
 # fact: AC6 time -- the turn stamps of the held-step1 and held-message dumps
 # fact: stow slots -- a Medium character holds big weapons only on the two shoulders, so AC1-AC5 keep the sword in the pack and use belt-sized M and S; each scenario runs at most 4 presses
-# fact: BARE character -- INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav (Unarmed Strike), its quarterstaff dropped and potions packed by the script, bow acquired by wizard Item Acquisition
+# fact: BARE character -- INCURSION_LOAD=tools/fixtures/specimens/lizardfolk-monk-seed1.sav (Unarmed Strike), its quarterstaff dropped and potions packed by the script, bow acquired by wizard Item Acquisition -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: CROWDED slots -- the bow, the longspear and a wielded dire flail fit no belt, and two shoulders hold two of them, so a swap must refuse; proved by the setup-done dump
 # fact: LOADOUT -- the sword rides a belt under the inc-h5aql belt rule; proved by the setup-done dump
 # fact: items on the floor -- an item is on the floor when the inventory screen no longer lists it; the check lists all five weapons at every step
@@ -40,35 +40,15 @@
 #       the positive control withdraws a pack item in the same session
 # fact: AC8(e) Faster Than The Eye -- wizard Item Acquisition Gauntlets of Legerdemain worn (weapon-sets-aooftte.keys), proved by the worn-gauntlets inventory dump; the same goblin provokes once they are off
 # Usage: tools/check_weapon_sets.sh [seed]
-#        tools/check_weapon_sets.sh --make-fixture [--force]
 # Exit 1: measured failure; 2: unmeasured (including phase TODOs); 0: all pass.
+# fact: character and map -- tools/fixtures/specimens/weapon-sets-old-defaults.sav, a frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder; tools/keys/weapon-sets-fixture.keys records how it was made
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 mkdir -p logs/weapon-sets
 OUT="$(mktemp -d "$ROOT/logs/weapon-sets/run.XXXXXX")" || exit 2
 OPTS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/weapon-sets-old-defaults.sav
-if [ "${1:-}" = --make-fixture ]; then
-    # make_char_fixture makes TWO sessions. Set a distinct explicit run directory
-    # for each without changing the shared helper or reusing one sandbox.
-    cat > "$OUT/fixture-env.sh" <<'ENV'
-function tools/headless.sh() {
-    local run
-    run="$(mktemp -d "$WEAPON_SETS_FIXTURE_OUT/session.XXXXXX")" || return 2
-    INCURSION_RUN_DIR="$run" command tools/headless.sh "$@"
-}
-ENV
-    shift
-    WEAPON_SETS_FIXTURE_OUT="$OUT" BASH_ENV="$OUT/fixture-env.sh" \
-        INCURSION_LOAD=tools/fixtures/chars/dequ-save-message-seed5-opt0822.sav \
-        tools/make_char_fixture.sh weapon-sets-old-defaults \
-        tools/keys/weapon-sets-fixture.keys 1 "$OPTS" "$@" > "$OUT/make-fixture.out" 2>&1
-    rc=$?
-    cat "$OUT/make-fixture.out"
-    echo "Specimens: $OUT"
-    exit "$rc"
-fi
+FIXTURE=tools/fixtures/specimens/weapon-sets-old-defaults.sav
 SEED="${1:-1}"
 for scenario in old cycle aoo aooftte aoo2 menu menunone forced adjacent crowded crowdedfree loadout loadoutadj flail distant unseen grapple; do
     ROLL=1
@@ -83,7 +63,7 @@ for scenario in old cycle aoo aooftte aoo2 menu menunone forced adjacent crowded
     echo "$?" > "$OUT/$scenario.status"
 done
 # BARE: a Monk has no melee weapon set, so bare hands are M. Own character fixture.
-INCURSION_OPTIONS="$OPTS" INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+INCURSION_OPTIONS="$OPTS" INCURSION_LOAD=tools/fixtures/specimens/lizardfolk-monk-seed1.sav \
     INCURSION_RUN_DIR="$OUT/bare" INCURSION_SUMMON_NO_GEAR=1 INCURSION_LOF_FORCE_ROLL=1 \
     tools/headless.sh tools/keys/weapon-sets-bare.keys "$SEED" > "$OUT/bare.out" 2>&1
 echo "$?" > "$OUT/bare.status"

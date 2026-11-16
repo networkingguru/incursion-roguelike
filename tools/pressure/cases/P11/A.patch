@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3216,6 +3216,7 @@
+ // end family: stati
+ // family: val_fear stored ordinal i16 val-of AFRAID
+   #define FEAR_MAGIC    0
++  #define FEAR_GRWA 6
+   #define FEAR_PANIC    1
+   #define FEAR_MANA     2
+   #define FEAR_HP       3

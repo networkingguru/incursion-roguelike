@@ -1,0 +1,13 @@
+# The key script, seed and settings file that built each old save beside this file, one fixture per line:
+#
+#   <name>  <key script>  <seed>  <settings file>
+#
+# This file serves tools/char_convert.sh, tools/char_attribute.sh and
+# tools/check_char_convert.sh until the epic conversion (bead inc-pu6v.369)
+# lands. Then delete these rows and the files they name in this directory that
+# only they use. Fields are separated by whitespace; a '#' starts a comment.
+hunger-penalty-seed1-opt0822           tools/keys/hunger-penalty-save.keys        1           tools/fixtures/options-2026-08-22.dat
+orc-barbarian-seed1-opt0822            tools/keys/chargen-default-save.keys       1           tools/fixtures/options-2026-08-22.dat
+orc-rogue-seed1-opt0822                tools/keys/chargen-rogue-save.keys         1           tools/fixtures/options-2026-08-22.dat
+orc-rogue-seed4-opt0822                tools/keys/chargen-rogue-save.keys         4           tools/fixtures/options-2026-08-22.dat
+gnome-warrior-wis3-pickaxe-seed1-opt0822 tools/keys/gnome-warrior-pickaxe-save.keys 1           tools/fixtures/options-2026-08-22.dat

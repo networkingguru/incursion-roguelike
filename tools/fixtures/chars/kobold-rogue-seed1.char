@@ -1,0 +1,200 @@
+# kobold-rogue-seed1: converted from tools/fixtures/chars/kobold-rogue-seed1.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/kobold-rogue-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 607 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/kobold-rogue-save.keys 1 45 76 24:23:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (12), skeleton value -> old value:
+#   scalar: attr_str: 17 -> 12
+#   scalar: attr_dex: 13 -> 14
+#   scalar: attr_con: 14 -> 11
+#   scalar: attr_int: 14 -> 17
+#   scalar: attr_wis: 16 -> 13
+#   scalar: attr_cha: 13 -> 17
+#   scalar: attr_luc: 10 -> 11
+#   skill: skill_ranks [Spot]: 0 -> 2
+#   kit: kit_item [Kobold;a4]: whip, quantity 1 -> small glass vial, quantity 1, stati POISONED val 0 mag 3 duration 0 effect nitharit
+#   kit: kit_item [Kobold;a12]: small glass vial, quantity 1, stati POISONED val 0 mag 3 duration 0 effect nitharit -> short sword, quantity 1
+#   kit: kit_item [Rogue;a2]: short sword, quantity 1 -> none (the old character has no item for this ask)
+#   quantity: ammo_quantity: 31 -> 40
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (helm) and 2 skill tools (alchemy set, alchemy 2; mechanical tools, handle_dev 2) | built: 0 perk items (-) and 2 skill tools (alchemy set, alchemy 2; mechanical tools, handle_dev 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 11 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Kobold;a3]: 87 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Kobold;a6]: 91 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Kobold;a7]: 75 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Kobold;a8]: 15 kept as the walk recorded it; the old character holds this annotation's item (bracers, effect Defense, plus 2, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Kobold;a10]: 4 kept as the walk recorded it; the old character holds this annotation's item (horn, effect the Kobolds;horn, plus 1, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Rogue;a3]: 88 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a4]: 4 kept as the walk recorded it; the old character holds this annotation's item (stiletto, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Rogue;a7]: 74 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a8]: 17 kept as the walk recorded it; the old character holds this annotation's item (gauntlets, effect Nimble Fingers, plus 2, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 44 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 9 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 5 kept as the walk recorded it; the old character holds this annotation's item (leather armour, quantity 1), so its roll is within the annotation's chance
+#   pick: craft_formula [Potion]: Fury added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Valour;potion added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Neutralize Poison;potion added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Wakefulness added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Identify;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: *Identify*;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (featherlight) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (graceful) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (life-keeping) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (fortification) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (resistance) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: Antitoxin added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: Stimtab added: the dump does not show this decision; the build's default was taken
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Kobold
+name: Tizzit
+class: Rogue
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Dodge
+perk_type [1]: PERK_RESIST
+perk_resist [1]: save disintegration
+attr_str: 12
+attr_dex: 14
+attr_con: 11
+attr_int: 17
+attr_wis: 13
+attr_cha: 17
+attr_luc: 11
+craft_formula [Alchemy]: tanglefoot bag
+alignment: Neutral
+feat: Artificer
+feat: Alertness
+hp_roll [Rogue]: 6
+mana_roll [Rogue]: 6
+craft_formula [Potion]: See Invisibility;potion
+craft_formula [Potion]: Light;potion
+craft_formula [Potion]: Fury
+craft_formula [Potion]: Valour;potion
+craft_formula [Potion]: Neutralize Poison;potion
+craft_formula [Potion]: Wakefulness
+craft_formula [Scroll]: Animate Dead
+craft_formula [Scroll]: Resist Lightning
+craft_formula [Scroll]: Charm Monster
+craft_formula [Scroll]: Shout
+craft_formula [Scroll]: Identify;scroll
+craft_formula [Scroll]: *Identify*;scroll
+craft_formula [Scroll]: Enchant Armour
+craft_formula [Scroll]: Enchant Armour (featherlight)
+craft_formula [Scroll]: Enchant Armour (graceful)
+craft_formula [Scroll]: Enchant Armour (life-keeping)
+craft_formula [Scroll]: Enchant Armour (fortification)
+craft_formula [Scroll]: Enchant Armour (resistance)
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 0
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 2
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 2
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 2
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 2
+skill_ranks [Lockpicking]: 2
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 2
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 2
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 2
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: Scentblind
+craft_formula [Alchemy]: eggshell smoke-bomb
+gear_stream [Kobold]: 19
+kit_item [Kobold;a0]: small backpack, quantity 1
+kit_item [Kobold;a1]: strip of cured meat, quantity 11
+kit_item [Kobold;a2]: potion, effect Dimension Door, quantity 7
+gear_chance [Kobold;a3]: 87
+kit_item [Kobold;a4]: small glass vial, quantity 1, stati POISONED val 0 mag 3 duration 0 effect nitharit
+kit_item [Kobold;a5]: bolas, quantity 1
+gear_chance [Kobold;a6]: 91
+gear_chance [Kobold;a7]: 75
+gear_chance [Kobold;a8]: 15
+kit_item [Kobold;a8]: bracers, effect Defense, plus 2, quantity 1
+gear_chance [Kobold;a10]: 4
+kit_item [Kobold;a10]: horn, effect the Kobolds;horn, plus 1, quantity 1
+kit_item [Kobold;a11]: small glass vial, quantity 1, stati POISONED val 0 mag 2 duration 0 effect formian venom
+kit_item [Kobold;a12]: short sword, quantity 1
+gear_stream [Rogue]: 20
+kit_item [Rogue;a1]: short bow, quantity 1
+kit_item [Rogue;a2]: none
+gear_chance [Rogue;a3]: 88
+gear_chance [Rogue;a4]: 4
+kit_item [Rogue;a4]: stiletto, quantity 1
+kit_item [Rogue;a6]: cloak, effect Nondetection;item, quantity 1
+gear_chance [Rogue;a7]: 74
+gear_chance [Rogue;a8]: 17
+kit_item [Rogue;a8]: gauntlets, effect Nimble Fingers, plus 2, quantity 1
+kit_item [Rogue;a11]: potion, effect Healing, quantity 3
+kit_item [Rogue;a12]: bag, effect tanglefoot bag, quantity 7
+kit_item [Rogue;a13]: potion, effect Dimension Door, quantity 9
+kit_item [Rogue;a14]: gold piece, quantity 254
+kit_item [Rogue;a18]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 21
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 44
+gear_chance [Universal Gear;a6]: 37
+gear_chance [Universal Gear;a7]: 9
+gear_chance [Universal Gear;a10]: 97
+gear_chance [Universal Gear;a14]: 5
+kit_item [Universal Gear;a14]: leather armour, quantity 1
+ammo_quantity: 40
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: twilight salve
+craft_formula [Alchemy]: Antitoxin
+craft_formula [Alchemy]: Stimtab
+store_seed: 24
+character_name: Tizzit
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

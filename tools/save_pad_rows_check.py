@@ -4,14 +4,14 @@ compiler actually lays out? (bead inc-xlwa)
 
 Runs tools/save_pad_rows.py's own measurement (never the save code's
 runtime uncovered-byte list -- that is the thing under test) and compares
-it, array by array, against what src/SaveV1.cpp currently declares. A
-class whose members moved (an inc-30ps-shaped change: a member inserted
-that does not grow sizeof()) silently goes stale here without this check,
-because the pinned pads are hand-written and nothing recomputes them.
+it, class by class, with the pads tools/gen_record_layout.py generates
+(compiler padding and the vptr only). They differ when a member of a saved
+class has no FIELD_ line and no FIELD_SKIP: the member the build would
+otherwise only meet at run time.
 
 Usage: tools/check_save_pad_rows.sh [--root DIR]
        tools/check_save_pad_rows.sh --selftest
-Exit: 0 every array agrees, 1 a mismatch was found (printed), 2 could not
+Exit: 0 every class agrees, 1 a mismatch was found (printed), 2 could not
 measure (see tools/save_pad_rows.py's own error).
 """
 
@@ -24,23 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import save_pad_rows as spr  # noqa: E402
-
-
-def parse_declared_arrays(save_v1_path):
-    """{ArrayName: [(off,len), ...]} for every
-    'static const SchemaPad XxxPads[] = { {a,b}, ... };' in src/SaveV1.cpp."""
-    text = save_v1_path.read_text()
-    arrays = {}
-    decl_re = re.compile(
-        r"static const SchemaPad (\w+)\[\]\s*=\s*\{(.*?)\};",
-        re.DOTALL,
-    )
-    pair_re = re.compile(r"\{\s*(\d+)\s*,\s*(\d+)\s*\}")
-    for m in decl_re.finditer(text):
-        name = m.group(1)
-        pairs = [(int(a), int(b)) for a, b in pair_re.findall(m.group(2))]
-        arrays[name] = pairs
-    return arrays
+import gen_record_layout as gen  # noqa: E402
 
 
 def rows_as_pairs(rows):
@@ -48,14 +32,21 @@ def rows_as_pairs(rows):
 
 
 def run(root):
+    """Since inc-cjos0 phase 8a the pad rows are generated, not declared.
+    What is left to check is the one thing the generator cannot know: a
+    member the field list neither saves nor FIELD_SKIPs. spr (this tool's
+    FIELD_ line reader) counts such a member as a pad, the generator (the
+    compiler's own padding only) does not, so the two disagree on exactly
+    that member, and the check names its class."""
     save_v1_path = root / "src" / "SaveV1.cpp"
     if not save_v1_path.is_file():
         print(f"COULD NOT MEASURE: missing {save_v1_path}")
         return 2
 
     old_root = spr.REPO_ROOT
-    spr.REPO_ROOT = root
     try:
+        classes = gen.pin_classes(save_v1_path.read_text())
+        generated = gen.measure(root, classes, None, None)
         measured = spr.measure_all()
     except spr.ToolError as e:
         print(f"COULD NOT MEASURE: {e}")
@@ -63,57 +54,28 @@ def run(root):
     finally:
         spr.REPO_ROOT = old_root
 
-    declared = parse_declared_arrays(save_v1_path)
-
-    seen_arrays = {}
-    for cls, array in spr.SCHEMA_PINS:
-        seen_arrays.setdefault(array, cls)
-
     mismatches = []
-
-    for array, primary_cls in seen_arrays.items():
-        measured_sizeof, measured_rows = measured[primary_cls]
-        measured_pairs = rows_as_pairs(measured_rows)
-        declared_pairs = declared.get(array)
-        if declared_pairs is None:
-            mismatches.append((
-                array, primary_cls,
-                "src/SaveV1.cpp declares no such array",
-                measured_pairs,
-            ))
-            continue
-        if declared_pairs != measured_pairs:
-            mismatches.append((array, primary_cls, declared_pairs,
-                                measured_pairs))
-
-    # A class that reuses another's array (Coin -> ItemPads, Armour ->
-    # QItemPads) must also measure the same as that array itself.
-    for cls, array in spr.SCHEMA_PINS:
-        primary_cls = seen_arrays[array]
-        if cls == primary_cls:
-            continue
-        own_sizeof, own_rows = measured[cls]
-        primary_sizeof, primary_rows = measured[primary_cls]
-        if rows_as_pairs(own_rows) != rows_as_pairs(primary_rows):
-            mismatches.append((
-                array, cls,
-                f"{primary_cls}'s own measured rows "
-                f"{rows_as_pairs(primary_rows)}",
-                rows_as_pairs(own_rows),
-            ))
+    for cls in classes:
+        want = generated[cls][1]
+        got = rows_as_pairs(measured[cls][1])
+        if want != got:
+            names = sorted({n for _o, _l, ns in measured[cls][1] for n in ns})
+            mismatches.append((cls, want, got, names))
 
     if not mismatches:
-        print(f"PASS: {len(seen_arrays)} SchemaPad arrays agree with the "
-              f"compiler's own layout")
+        print(f"PASS: {len(classes)} classes: every byte outside a FIELD_ "
+              f"line is compiler padding or the vptr")
         return 0
 
-    for array, cls, declared_pairs, measured_pairs in mismatches:
-        print(f"FAIL: {cls} ({array}):")
-        print(f"    declared: {declared_pairs}")
-        print(f"    measured: {measured_pairs}")
+    for cls, want, got, names in mismatches:
+        print(f"FAIL: {cls}:")
+        print(f"    compiler padding and vptr: {want}")
+        print(f"    bytes no FIELD_ line reaches: {got}")
+        if names:
+            print(f"    members with no FIELD_ line: {', '.join(names)}")
     print()
-    print("Run tools/save_pad_rows.py and paste its output over the "
-          "matching arrays in src/SaveV1.cpp.")
+    print("Give each member listed a FIELD_ line, or FIELD_SKIP if it is "
+          "deliberately not saved.")
     return 1
 
 

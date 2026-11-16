@@ -4,13 +4,15 @@
 #
 #   INCURSION_RUNTO_PROBE=1 INCURSION_RUNTO_STAGE=M \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/runto-monster.keys 3
 #
 # [l] [o] opens the overview map, and opening it builds the scene
 # (src/RunToProbe.cpp). ESC closes it. The character then stands still for
 # thirty turns; the probe log records the ogre's square at each decision.
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 .*2
 l o
 ESC

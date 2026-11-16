@@ -1,0 +1,39 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): a human priest
+# of The Multitude, SAVED at the end of creation with nothing played. The
+# Multitude draws its domain pool at random (Create.cpp ChooseDomains), so the
+# walk hits domain_pool, domain and god. Point buy keeps the rolled sets and
+# their perks out of the character. The two domain menus offer names the
+# stream decides, so they take the first entry offered, the one choice here
+# that is not by name.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Priest"
+@choose "The Multitude"
+p       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+@choose "Neutral Evil"
+@while "Choose a Domain" a
+@while "Choose a Domain" a
+@choose "Alertness"
+@choose "Athletic"
+@choose "Dodge"
+@while "|  *" RIGHT RIGHT RIGHT DOWN   # spend every rank
+@while "Unspent Skill Ranks" ENTER y   # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Unspent Skill Ranks" ENTER y
+@choose "The Ambitious Conqueror"
+@expect "Learn Spells: Level"    # the starting-spells checklist
+UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE UP SPACE
+ENTER
+@while "Learn Spells: Level" ENTER
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

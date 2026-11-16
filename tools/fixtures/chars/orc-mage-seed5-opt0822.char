@@ -1,0 +1,156 @@
+# orc-mage-seed5-opt0822: converted from tools/fixtures/chars/orc-mage-seed5-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/chargen-mage-save.keys, seed 5, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 779 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/chargen-mage-save.keys 5 83 144 25:28:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (4), skeleton value -> old value:
+#   scalar: name: Hurk -> Holg
+#   scalar: character_name: Hurk the Anathema -> Holg the Anathema
+#   scalar: store_seed: 29 -> 30
+#   quantity: thrown_quantity: 5 -> 6
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 1 skill tool (alchemy set, alchemy 2) | built: 1 perk item (lenses) and 1 skill tool (alchemy set, alchemy 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: specialist_school: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 32 kept as the walk recorded it; the old character holds this annotation's item (longspear, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Mage;a17]: 70 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a18]: 4 kept as the walk recorded it; the old character holds this annotation's item (scroll, effect Wizard Sight, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Mage;a19]: 58 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a20]: 81 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Mage;a21]: 95 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 15 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 56 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 77 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 56 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   differs: ability CA_DEVOURING 1 -> Feats: Cannibalism -- commit 4e1fc266
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 5
+alter_options: no
+explore_continue: yes
+formula_seed: 6
+race: Orc
+subrace: Orc
+name: Holg
+surname: the Anathema
+class: Mage
+perk_type [0]: PERK_SPELL
+perk_spell [0]: Faerie Fire
+perk_type [1]: PERK_ITEM
+perk_item [1]: lenses, effect Precision;eyes, plus 2
+attr_str: 14
+attr_dex: 17
+attr_con: 7
+attr_int: 14
+attr_wis: 15
+attr_cha: 15
+attr_luc: 14
+alignment: Neutral
+specialist_school: Evocation
+feat: Acrobatic
+feat: Alertness
+hp_roll [Mage]: 4
+mana_roll [Mage]: 20
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 1
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: Antitoxin
+gear_stream [Orc]: 22
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 9
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 32
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Mage]: 23
+kit_item [Mage;a0]: dagger, quantity 5
+kit_item [Mage;a2]: gold piece, quantity 172
+kit_item [Mage;a3]: robes, quantity 1
+kit_item [Mage;a4]: potion, effect Mana, quantity 8
+kit_item [Mage;a5]: stone, effect Channeling, plus 2, quantity 1
+kit_item [Mage;a6]: spellbook [Adventurers' Arts], quantity 1
+kit_item [Mage;a7]: spellbook [Fundamentals of Magick], quantity 1
+kit_item [Mage;a8]: spellbook [Book of Shadows], quantity 1
+kit_item [Mage;a9]: spellbook [Mystic Aegis], quantity 1
+kit_item [Mage;a12]: scroll, effect Gaseous Form, quantity 1
+kit_item [Mage;a13]: scroll, effect Haste, quantity 1
+kit_item [Mage;a14]: scroll, effect Magic Circle vs. Evil, quantity 1
+kit_item [Mage;a15]: scroll, effect Protection from Undead, quantity 1
+kit_item [Mage;a16]: scroll, effect Wall of Fire, quantity 1
+gear_chance [Mage;a17]: 70
+gear_chance [Mage;a18]: 4
+kit_item [Mage;a18]: scroll, effect Wizard Sight, quantity 1
+gear_chance [Mage;a19]: 58
+gear_chance [Mage;a20]: 81
+gear_chance [Mage;a21]: 95
+gear_stream [Universal Gear]: 24
+gear_chance [Universal Gear;a3]: 15
+gear_chance [Universal Gear;a4]: 56
+gear_chance [Universal Gear;a6]: 77
+gear_chance [Universal Gear;a7]: 56
+kit_item [Universal Gear;a9]: gold piece, quantity 1
+thrown_quantity: 6
+script_yn [Orc;EV_150]: yes
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: Stimtab
+craft_formula [Alchemy]: sunrod
+spell_learn: Alarm [Arcane]
+spell_learn: Burning Hands [Arcane]
+spell_learn: Change Self [Arcane]
+store_seed: 30
+character_name: Holg the Anathema
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

@@ -1,21 +1,20 @@
 #!/bin/bash
 # gate: none — the reproduction for tools/check_resource_order.sh. It compiles
-# eight sandbox modules and is ~2 minutes of work, so the gate must not run it
+# eleven sandbox modules and is ~2 minutes of work, so the gate must not run it
 # on every branch; tools/check_resource_order.sh (gate: live) is the gate.
 #
 # docs/SAVE-SCHEMA-SPEC.md, test-plan case 26. The build-time order check must
-# be RED, and --record must REFUSE, for each of the six changes the append-only
-# rule forbids in lib/:
+# be RED, and --record must REFUSE, for each of the three changes the append-only
+# rule forbids to resource arrays in lib/:
 #
-#   insert a variable before an existing one in a body
-#   remove a variable
-#   swap two variables in one body
 #   insert an Effect in the middle of the Effect array
 #   remove an Effect
 #   swap two Effects
 #
-# and it must be GREEN, with --record ACCEPTING, for the two legal appends and
-# the two legal in-place renames (docs/SAVE-SCHEMA-SPEC.md, case 26, amended
+# and it must be GREEN, with --record ACCEPTING, for the three variable changes
+# a name-keyed loader makes legal (inc-cjos0: insert a variable before an
+# existing one, remove a variable, swap two variables in one body), for the two
+# legal appends and the two legal in-place renames (docs/SAVE-SCHEMA-SPEC.md, case 26, amended
 # 2026-09-26):
 #
 #   append a variable at the end of a body
@@ -38,6 +37,7 @@
 #
 # Specimens (compiled modules, compile logs, check output) stay under
 # logs/resource-order-mutations/.  Usage: tools/check_resource_order_mutations.sh
+# fact: array entries and variables of each module -- the check's own sandbox edits of lib/, read from -resorder with no game session and no seed
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -159,6 +159,25 @@ expect_accepted() { # name edit-fn needle label
     cmp -s "$LEDGER" "$copy" && { fail "$name: --record left the ledger unchanged"; return; }
 
     echo "  GREEN check=$crc record=$rc ($label): $needle"
+}
+
+# expect_var_change <name> <edit-fn> <label>
+# A variable insert, removal or swap: GREEN, and --record ACCEPTS a changed ledger.
+expect_var_change() { # name edit-fn label
+    local name="$1" edit="$2" label="$3"
+    local sb; sb="$(new_sandbox "$name")"
+    "$edit" "$sb" || { fail "$name: the sandbox edit did not apply"; return; }
+    compile_sandbox "$sb"
+    local out rc crc
+    out="$(run_check "$sb" "$sb/check.log")"; crc=$?
+    [ "$crc" = 0 ] || { fail "$name: the check exited $crc, wanted 0 ($label is legal)"; return; }
+    grep -q "^PASS:" <<< "$out" || { fail "$name: the check did not say PASS"; return; }
+    local copy="$sb/ledger.copy"
+    out="$(run_record "$sb" "$copy" "$sb/record.log")"; rc=$?
+    [ "$rc" = 0 ] || { fail "$name: --record exited $rc, wanted 0 ($label is legal)"; return; }
+    grep -qF "RECORDED" "$sb/record.log" || { fail "$name: --record did not say RECORDED"; return; }
+    cmp -s "$LEDGER" "$copy" && { fail "$name: --record left the ledger unchanged"; return; }
+    echo "  GREEN check=$crc record=$rc ($label)"
 }
 
 # --- the edits, each on a fresh sandbox of lib/ ---------------------------
@@ -310,19 +329,19 @@ PY
 # --- run them --------------------------------------------------------------
 
 echo
-echo "Illegal changes -- each must be RED, and --record must REFUSE:"
-expect_refused "insert-var"  entangle_insert \
-    "owner Entangle (array 3, position 807)"
-expect_refused "remove-var"  entangle_remove \
-    "owner Entangle (array 3, position 807)"
-expect_refused "swap-var"    entangle_swap \
-    "owner Entangle (array 3, position 807)"
+echo "Illegal array changes -- each must be RED, and --record must REFUSE:"
 expect_refused "insert-effect" effect_insert \
     "array 3 (Effect) in module slot 0"
 expect_refused "remove-effect" effect_remove \
     "array 3 (Effect) in module slot 0"
 expect_refused "swap-effect"  effect_swap \
     "array 3 (Effect) in module slot 0"
+
+echo
+echo "Variable changes are legal (placed by name) -- GREEN, and --record must ACCEPT:"
+expect_var_change "insert-var" entangle_insert "insert a variable"
+expect_var_change "remove-var" entangle_remove "remove a variable"
+expect_var_change "swap-var"   entangle_swap   "swap two variables"
 
 echo
 echo "Legal appends -- each must be GREEN before --record, and --record must ACCEPT:"
@@ -339,7 +358,7 @@ if [ "$FAILED" -ne 0 ]; then
     echo "FAIL: see above. Every specimen is under $WORK"
     exit 1
 fi
-echo "PASS: the six illegal changes are red and refused by --record; the two"
+echo "PASS: the three illegal array changes are red and refused by --record; the three variable changes, the two"
 echo "      legal appends and two legal in-place renames are green and accepted"
 echo "      by --record."
 echo "      Specimens: $WORK"

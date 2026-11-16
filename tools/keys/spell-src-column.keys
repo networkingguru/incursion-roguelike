@@ -6,6 +6,8 @@
 #
 # 's' searches (one real turn), 'm' opens the cast menu, @dump captures it.
 
+# The fixture holds only the created character; setup-underdark-deepgnome-seed3-opt0818.keys makes the state the old save held (bd inc-10v7f).
+@include setup-underdark-deepgnome-seed3-opt0818.keys
 s
 m
 @dump:cast-menu

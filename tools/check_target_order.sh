@@ -14,7 +14,7 @@
 # in the direction of the first press. WHICH things are candidates did not
 # change; that is the calling prompt's business and the filters are untouched.
 #
-# fact: character -- fixture orc-barbarian-seed1-opt0818
+# fact: character -- fixture orc-barbarian-seed1-opt0818 -- orc-barbarian-seed1-opt0818 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/orc-barbarian-seed1-opt0818.sav)
 # fact: map, player square (111,110), nine corpses in view -- same fixture (a save pins the dungeon)
 # fact: no monster acts, no roll is made -- Look and the target cursor take no game turn
 #
@@ -51,7 +51,7 @@ SEED=1
     exit 2
 }
 
-out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818.sav tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
+out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat INCURSION_LOAD=tools/fixtures/specimens/orc-barbarian-seed1-opt0818.sav tools/headless.sh tools/keys/target-ring.keys "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/targetprobe.log"
 

@@ -1,0 +1,19 @@
+diff --git a/lib/landed-inc-g03b.irh b/lib/landed-inc-g03b.irh
+new file mode 100644
+index 0000000..7bf9482
+--- /dev/null
++++ b/lib/landed-inc-g03b.irh
+@@ -0,0 +1,7 @@
++God "Grw B Deity"
++  {
++    Domains: $"Fate", $"Knowledge", $"Night", $"Planning",
++             $"Retribution", $"Trickery";
++    Desc: "A growth-test god.";
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..c2efa01 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g03b.irh"

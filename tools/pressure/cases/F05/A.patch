@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..f84924b 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4792,6 +4792,7 @@ typedef signed int        hObj;
+ #define OPT_WIZ_SIGHT           810
+ #define OPT_FREEZE_MON          811
+ #define OPT_ALL_ROLLS           812
++#define OPT_AC8_A               899
+ 
+ #define OPT_LAST                900
+ // end family: opt

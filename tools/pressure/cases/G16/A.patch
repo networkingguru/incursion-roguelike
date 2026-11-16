@@ -1,0 +1,35 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..f735f6a 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2903,6 +2903,7 @@ typedef signed int        hObj;
+ #define FT_ZEN_DEFENSE         358
+ #define FT_WILD_SHAPE_MASTERY  359
+ #define FT_WEAPON_HIGH_MASTERY 360
++#define FT_GRWA 364
+ #define FT_WEAPON_GRAND_MASTERY 361
+ /* inc-08js: general Cannibalism feat, appended after FT_WEAPON_GRAND_MASTERY
+    so existing feat numbers stored in saves are unchanged. */
+@@ -2910,7 +2911,7 @@ typedef signed int        hObj;
+ /* inc-2jd0: Lucubration, appended after FT_CANNIBALISM so existing feat
+    numbers stored in saves are unchanged. */
+ #define FT_LUCUBRATION         363
+-#define FT_LAST                364
++#define FT_LAST                365
+ // end family: ft
+ // family: mm stored bits u32 field-of Player.QuickKeys.QuickKey.QuickKeys_MM elem-of Player.MMArray
+ 
+diff --git a/src/FeatTab.cpp b/src/FeatTab.cpp
+index 75a1ff4..4ac5287 100644
+--- a/src/FeatTab.cpp
++++ b/src/FeatTab.cpp
+@@ -1682,6 +1682,9 @@ struct FeatInfoStruct FeatInfo[] = {
+ 
+ 
+   /* growth feat slot A */
++  { FT_GRWA, FF_WIZARD|FF_MULTIPLE, "Grw A",
++    "A growth-test feat.",
++    {{{FP_ALWAYS}}} },
+   /* growth feat slot B */
+   { 0, } , // ending element
+ 

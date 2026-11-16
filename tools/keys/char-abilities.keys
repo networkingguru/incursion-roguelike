@@ -1,7 +1,7 @@
 # Capture the frozen character's sheet abilities and My Character help page.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-gate.char \
 #       tools/headless.sh tools/keys/char-abilities.keys 1
 #
 # The harness passes -load: start in play, with no character generation.

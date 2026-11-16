@@ -1,0 +1,479 @@
+QC s1 base lvl=0
+QC s1 q=1 lvl=2
+QC s1 q=2 lvl=2
+QC s1 q=3 lvl=2
+QC s1 q=4 lvl=2
+QC s1 q=5 lvl=2
+QC s1 q=6 lvl=1
+QC s1 q=7 lvl=1
+QC s1 q=8 lvl=1
+QC s1 q=9 lvl=1
+QC s1 q=10 lvl=1
+QC s1 q=11 lvl=1
+QC s1 q=12 lvl=2
+QC s1 q=13 lvl=1
+QC s1 q=14 lvl=5
+QC s1 q=15 lvl=0
+QC s1 q=16 lvl=1
+QC s1 q=17 lvl=1
+QC s1 q=18 lvl=1
+QC s1 q=19 lvl=1
+QC s1 q=20 lvl=3
+QC s1 q=21 lvl=1
+QC s1 q=22 lvl=3
+QC s1 q=23 lvl=1
+QC s1 q=24 lvl=3
+QC s1 q=25 lvl=0
+QC s1 q=26 lvl=2
+QC s1 q=27 lvl=1
+QC s1 q=28 lvl=3
+QC s1 q=29 lvl=3
+QC s1 q=30 lvl=1
+QC s1 q=31 lvl=1
+QC s1 q=32 lvl=3
+QC s1 q=33 lvl=0
+QC s1 q=34 lvl=0
+QC s1 q=35 lvl=1
+QC s1 q=36 lvl=0
+QC s1 q=37 lvl=1
+QC s1 q=38 lvl=1
+QC s1 q=39 lvl=1
+QC s1 q=40 lvl=1
+QC s1 q=41 lvl=0
+QC s1 q=42 lvl=1
+QC s1 q=43 lvl=2
+QC s1 q=44 lvl=2
+QC s1 q=45 lvl=2
+QC s1 q=46 lvl=4
+QC s1 q=47 lvl=1
+QC s1 q=48 lvl=1
+QC s1 q=49 lvl=1
+QC s1 q=50 lvl=0
+QC s1 q=51 lvl=0
+QC s1 q=52 lvl=1
+QC s1 q=53 lvl=0
+QC s1 q=54 lvl=0
+QC s1 q=55 lvl=2
+QC s1 q=56 lvl=0
+QC s1 q=57 lvl=0
+QC s1 q=58 lvl=0
+QC s1 q=59 lvl=0
+QC s1 q=60 lvl=0
+QC s1 q=61 lvl=0
+QC s1 q=62 lvl=0
+QC s1 q=63 lvl=0
+QC s1 q=64 lvl=0
+QC s1 q=65 lvl=0
+QC s1 q=66 lvl=0
+QC s1 q=67 lvl=0
+QC s1 q=68 lvl=0
+QC s1 q=69 lvl=0
+QC s1 q=70 lvl=0
+QC s1 q=71 lvl=0
+QC s1 q=72 lvl=0
+QC s1 q=73 lvl=0
+QC s1 q=74 lvl=0
+QC s1 q=75 lvl=0
+QC s1 q=76 lvl=0
+QC s1 q=77 lvl=0
+QC s1 q=78 lvl=0
+QC s1 q=79 lvl=0
+QC s1 q=80 lvl=0
+QC s1 q=81 lvl=0
+QC s1 q=82 lvl=0
+QC s2 base lvl=0
+QC s2 q=1 lvl=1
+QC s2 q=2 lvl=3
+QC s2 q=3 lvl=4
+QC s2 q=4 lvl=1
+QC s2 q=5 lvl=1
+QC s2 q=6 lvl=1
+QC s2 q=7 lvl=1
+QC s2 q=8 lvl=1
+QC s2 q=9 lvl=0
+QC s2 q=10 lvl=4
+QC s2 q=11 lvl=1
+QC s2 q=12 lvl=1
+QC s2 q=13 lvl=3
+QC s2 q=14 lvl=7
+QC s2 q=15 lvl=0
+QC s2 q=16 lvl=0
+QC s2 q=17 lvl=1
+QC s2 q=18 lvl=4
+QC s2 q=19 lvl=3
+QC s2 q=20 lvl=4
+QC s2 q=21 lvl=1
+QC s2 q=22 lvl=1
+QC s2 q=23 lvl=1
+QC s2 q=24 lvl=1
+QC s2 q=25 lvl=1
+QC s2 q=26 lvl=1
+QC s2 q=27 lvl=1
+QC s2 q=28 lvl=6
+QC s2 q=29 lvl=1
+QC s2 q=30 lvl=3
+QC s2 q=31 lvl=1
+QC s2 q=32 lvl=3
+QC s2 q=33 lvl=1
+QC s2 q=34 lvl=1
+QC s2 q=35 lvl=1
+QC s2 q=36 lvl=3
+QC s2 q=37 lvl=3
+QC s2 q=38 lvl=0
+QC s2 q=39 lvl=4
+QC s2 q=40 lvl=0
+QC s2 q=41 lvl=1
+QC s2 q=42 lvl=0
+QC s2 q=43 lvl=0
+QC s2 q=44 lvl=0
+QC s2 q=45 lvl=0
+QC s2 q=46 lvl=0
+QC s2 q=47 lvl=0
+QC s2 q=48 lvl=0
+QC s2 q=49 lvl=0
+QC s2 q=50 lvl=0
+QC s2 q=51 lvl=0
+QC s2 q=52 lvl=0
+QC s2 q=53 lvl=0
+QC s2 q=54 lvl=0
+QC s2 q=55 lvl=0
+QC s2 q=56 lvl=0
+QC s2 q=57 lvl=0
+QC s2 q=58 lvl=0
+QC s2 q=59 lvl=0
+QC s2 q=60 lvl=0
+QC s2 q=61 lvl=0
+QC s2 q=62 lvl=0
+QC s2 q=63 lvl=0
+QC s2 q=64 lvl=0
+QC s2 q=65 lvl=0
+QC s2 q=66 lvl=0
+QC s2 q=67 lvl=0
+QC s2 q=68 lvl=0
+QC s2 q=69 lvl=0
+QC s2 q=70 lvl=0
+QC s2 q=71 lvl=0
+QC s2 q=72 lvl=0
+QC s2 q=73 lvl=0
+QC s2 q=74 lvl=0
+QC s2 q=75 lvl=0
+QC s2 q=76 lvl=0
+QC s2 q=77 lvl=0
+QC s2 q=78 lvl=0
+QC s2 q=79 lvl=0
+QC s2 q=80 lvl=0
+QC s2 q=81 lvl=0
+QC s2 q=82 lvl=0
+QC s3 base lvl=0
+QC s3 q=1 lvl=1
+QC s3 q=2 lvl=3
+QC s3 q=3 lvl=4
+QC s3 q=4 lvl=1
+QC s3 q=5 lvl=1
+QC s3 q=6 lvl=1
+QC s3 q=7 lvl=1
+QC s3 q=8 lvl=1
+QC s3 q=9 lvl=0
+QC s3 q=10 lvl=4
+QC s3 q=11 lvl=1
+QC s3 q=12 lvl=1
+QC s3 q=13 lvl=3
+QC s3 q=14 lvl=7
+QC s3 q=15 lvl=0
+QC s3 q=16 lvl=0
+QC s3 q=17 lvl=1
+QC s3 q=18 lvl=4
+QC s3 q=19 lvl=3
+QC s3 q=20 lvl=4
+QC s3 q=21 lvl=1
+QC s3 q=22 lvl=1
+QC s3 q=23 lvl=1
+QC s3 q=24 lvl=1
+QC s3 q=25 lvl=1
+QC s3 q=26 lvl=1
+QC s3 q=27 lvl=1
+QC s3 q=28 lvl=6
+QC s3 q=29 lvl=1
+QC s3 q=30 lvl=3
+QC s3 q=31 lvl=1
+QC s3 q=32 lvl=3
+QC s3 q=33 lvl=1
+QC s3 q=34 lvl=1
+QC s3 q=35 lvl=1
+QC s3 q=36 lvl=3
+QC s3 q=37 lvl=3
+QC s3 q=38 lvl=0
+QC s3 q=39 lvl=4
+QC s3 q=40 lvl=0
+QC s3 q=41 lvl=1
+QC s3 q=42 lvl=0
+QC s3 q=43 lvl=0
+QC s3 q=44 lvl=0
+QC s3 q=45 lvl=0
+QC s3 q=46 lvl=0
+QC s3 q=47 lvl=0
+QC s3 q=48 lvl=0
+QC s3 q=49 lvl=0
+QC s3 q=50 lvl=0
+QC s3 q=51 lvl=0
+QC s3 q=52 lvl=0
+QC s3 q=53 lvl=0
+QC s3 q=54 lvl=0
+QC s3 q=55 lvl=0
+QC s3 q=56 lvl=0
+QC s3 q=57 lvl=0
+QC s3 q=58 lvl=0
+QC s3 q=59 lvl=0
+QC s3 q=60 lvl=0
+QC s3 q=61 lvl=0
+QC s3 q=62 lvl=0
+QC s3 q=63 lvl=0
+QC s3 q=64 lvl=0
+QC s3 q=65 lvl=0
+QC s3 q=66 lvl=0
+QC s3 q=67 lvl=0
+QC s3 q=68 lvl=0
+QC s3 q=69 lvl=0
+QC s3 q=70 lvl=0
+QC s3 q=71 lvl=0
+QC s3 q=72 lvl=0
+QC s3 q=73 lvl=0
+QC s3 q=74 lvl=0
+QC s3 q=75 lvl=0
+QC s3 q=76 lvl=0
+QC s3 q=77 lvl=0
+QC s3 q=78 lvl=0
+QC s3 q=79 lvl=0
+QC s3 q=80 lvl=0
+QC s3 q=81 lvl=0
+QC s3 q=82 lvl=0
+QC s6 item=weapon q=1 name=holy long sword
+QC s6 item=armor q=1 name=leather armour of light fortification
+QC s6 item=weapon q=2 name=unholy long sword
+QC s6 item=armor q=2 name=leather armour of medium fortification
+QC s6 item=weapon q=3 name=chaotic long sword
+QC s6 item=armor q=3 name=leather armour of heavy fortification
+QC s6 item=weapon q=4 name=lawful long sword
+QC s6 item=armor q=4 name=leather armour of fire resistance
+QC s6 item=weapon q=5 name=long sword of balance
+QC s6 item=armor q=5 name=leather armour of cold resistance
+QC s6 item=weapon q=6 name=corrosive long sword
+QC s6 item=armor q=6 name=leather armour of acid resistance
+QC s6 item=weapon q=7 name=flaming long sword
+QC s6 item=armor q=7 name=leather armour of lightning resistance
+QC s6 item=weapon q=8 name=shocking long sword
+QC s6 item=armor q=8 name=leather armour of sonic resistance
+QC s6 item=weapon q=9 name=frost long sword
+QC s6 item=armor q=9 name=leather armour of poison resistance
+QC s6 item=weapon q=10 name=thundering long sword
+QC s6 item=armor q=10 name=animated leather armour
+QC s6 item=weapon q=11 name=burst long sword
+QC s6 item=armor q=11 name=arrow-deflecting leather armour
+QC s6 item=weapon q=12 name=soul-drinking long sword
+QC s6 item=armor q=12 name=bashing leather armour
+QC s6 item=weapon q=13 name=keen long sword
+QC s6 item=armor q=13 name=blinding leather armour
+QC s6 item=weapon q=14 name=vorpal long sword
+QC s6 item=armor q=14 name=leather armour of etherealness
+QC s6 item=weapon q=15 name=(undefined 15) long sword
+QC s6 item=armor q=15 name=(undefined 15) leather armour
+QC s6 item=weapon q=16 name=defending long sword
+QC s6 item=armor q=16 name=(undefined 16) leather armour
+QC s6 item=weapon q=17 name=long sword of warning
+QC s6 item=armor q=17 name=graceful leather armour
+QC s6 item=weapon q=18 name=cleaving long sword
+QC s6 item=armor q=18 name=leather armour of great invulnerability
+QC s6 item=weapon q=19 name=smiting long sword
+QC s6 item=armor q=19 name=leather armour of invulnerability
+QC s6 item=weapon q=20 name=brilliant energy long sword
+QC s6 item=armor q=20 name=leather armour of magic resistance
+QC s6 item=weapon q=21 name=long sword of distance
+QC s6 item=armor q=21 name=leather armour of reflection
+QC s6 item=weapon q=22 name=long sword of speed
+QC s6 item=armor q=22 name=shadow leather armour
+QC s6 item=weapon q=23 name=long sword of accuracy
+QC s6 item=armor q=23 name=leather armour of silent moves
+QC s6 item=weapon q=24 name=long sword of Human Slaying
+QC s6 item=armor q=24 name=slick leather armour
+QC s6 item=weapon q=25 name=dancing long sword
+QC s6 item=armor q=25 name=leather armour of might
+QC s6 item=weapon q=26 name=long sword of disruption
+QC s6 item=armor q=26 name=leather armour of agility
+QC s6 item=weapon q=27 name=returning long sword
+QC s6 item=armor q=27 name=leather armour of endurance
+QC s6 item=weapon q=28 name=long sword of wounding
+QC s6 item=armor q=28 name=leather armour of rapid healing
+QC s6 item=weapon q=29 name=long sword of sleep
+QC s6 item=armor q=29 name=leather armour of stability
+QC s6 item=weapon q=30 name=long sword of stunning
+QC s6 item=armor q=30 name=leather armour of command
+QC s6 item=weapon q=31 name=long sword of terror
+QC s6 item=armor q=31 name=radiant leather armour
+QC s6 item=weapon q=32 name=vampiric long sword
+QC s6 item=armor q=32 name=fearsome leather armour
+QC s6 item=weapon q=33 name=parrying long sword
+QC s6 item=armor q=33 name=sacred leather armour
+QC s6 item=weapon q=34 name=(undefined 34) long sword
+QC s6 item=armor q=34 name=shifting leather armour
+QC s6 item=weapon q=35 name=Beastbane long sword
+QC s6 item=armor q=35 name=bane-blind leather armour
+QC s6 item=weapon q=36 name=long sword of entropy
+QC s6 item=armor q=36 name=resistant leather armour
+QC s6 item=weapon q=37 name=long sword of weakening
+QC s6 item=armor q=37 name=auspicious leather armour
+QC s6 item=weapon q=38 name=long sword of numbing
+QC s6 item=armor q=38 name=spiked leather armour
+QC s6 item=weapon q=39 name=long sword of withering
+QC s6 item=armor q=39 name=leather armour of life-keeping
+QC s6 item=weapon q=40 name=vicious long sword
+QC s6 item=armor q=40 name=(undefined 40) leather armour
+QC s6 item=weapon q=41 name=binding long sword
+QC s6 item=armor q=41 name=graven leather armour
+QC s6 item=weapon q=42 name=seeking long sword
+QC s6 item=armor q=42 name=(undefined 42) leather armour
+QC s6 item=weapon q=43 name=mighty long sword
+QC s6 item=armor q=43 name=leather armour of shattering
+QC s6 item=weapon q=44 name=long sword of the night
+QC s6 item=armor q=44 name=(undefined 44) leather armour
+QC s6 item=weapon q=45 name=quick-loading long sword
+QC s6 item=armor q=45 name=(undefined 45) leather armour
+QC s6 item=weapon q=46 name=impact long sword
+QC s6 item=armor q=46 name=(undefined 46) leather armour
+QC s6 item=weapon q=47 name=long sword of venom
+QC s6 item=armor q=47 name=(undefined 47) leather armour
+QC s6 item=weapon q=48 name=sundering long sword
+QC s6 item=armor q=48 name=(undefined 48) leather armour
+QC s6 item=weapon q=49 name=long sword of fey-trapping
+QC s6 item=armor q=49 name=(undefined 49) leather armour
+QC s6 item=weapon q=50 name=forking long sword
+QC s6 item=armor q=50 name=(undefined 50) leather armour
+QC s6 item=weapon q=51 name=roaring long sword
+QC s6 item=armor q=51 name=(undefined 51) leather armour
+QC s6 item=weapon q=52 name=glowing long sword
+QC s6 item=armor q=52 name=(undefined 52) leather armour
+QC s6 item=weapon q=53 name=long sword of pain
+QC s6 item=armor q=53 name=(undefined 53) leather armour
+QC s6 item=weapon q=54 name=long sword of subtlety
+QC s6 item=armor q=54 name=(undefined 54) leather armour
+QC s6 item=weapon q=55 name=thirsty long sword
+QC s6 item=armor q=55 name=(undefined 55) leather armour
+QC s6 item=weapon q=56 name=(undefined 56) long sword
+QC s6 item=armor q=56 name=(undefined 56) leather armour
+QC s6 item=weapon q=57 name=(undefined 57) long sword
+QC s6 item=armor q=57 name=(undefined 57) leather armour
+QC s6 item=weapon q=58 name=(undefined 58) long sword
+QC s6 item=armor q=58 name=(undefined 58) leather armour
+QC s6 item=weapon q=59 name=(undefined 59) long sword
+QC s6 item=armor q=59 name=(undefined 59) leather armour
+QC s6 item=weapon q=60 name=(undefined 60) long sword
+QC s6 item=armor q=60 name=(undefined 60) leather armour
+QC s6 item=weapon q=61 name=(undefined 61) long sword
+QC s6 item=armor q=61 name=(undefined 61) leather armour
+QC s6 item=weapon q=62 name=(undefined 62) long sword
+QC s6 item=armor q=62 name=(undefined 62) leather armour
+QC s6 item=weapon q=63 name=(undefined 63) long sword
+QC s6 item=armor q=63 name=(undefined 63) leather armour
+QC s6 item=weapon q=64 name=(undefined 64) long sword
+QC s6 item=armor q=64 name=(undefined 64) leather armour
+QC s6 item=weapon q=65 name=(undefined 65) long sword
+QC s6 item=armor q=65 name=(undefined 65) leather armour
+QC s6 item=weapon q=66 name=(undefined 66) long sword
+QC s6 item=armor q=66 name=(undefined 66) leather armour
+QC s6 item=weapon q=67 name=dwarven long sword
+QC s6 item=armor q=67 name=dwarven leather armour
+QC s6 item=weapon q=68 name=elven long sword
+QC s6 item=armor q=68 name=elven leather armour
+QC s6 item=weapon q=69 name=orcish long sword
+QC s6 item=armor q=69 name=orcish leather armour
+QC s6 item=weapon q=70 name=adamant long sword
+QC s6 item=armor q=70 name=adamant leather armour
+QC s6 item=weapon q=71 name=darkwood long sword
+QC s6 item=armor q=71 name=darkwood leather armour
+QC s6 item=weapon q=72 name=ironwood long sword
+QC s6 item=armor q=72 name=ironwood leather armour
+QC s6 item=weapon q=73 name=mithril long sword
+QC s6 item=armor q=73 name=mithril leather armour
+QC s6 item=weapon q=74 name=silver long sword
+QC s6 item=armor q=74 name=silver leather armour
+QC s6 item=weapon q=75 name=proficient long sword
+QC s6 item=armor q=75 name=proficient leather armour
+QC s6 item=weapon q=76 name=feather-light long sword
+QC s6 item=armor q=76 name=feather-light leather armour
+QC s6 item=weapon q=77 name=ghost-touch long sword
+QC s6 item=armor q=77 name=ghost-touch leather armour
+QC s6 item=weapon q=78 name=(undefined 78) long sword
+QC s6 item=armor q=78 name=(undefined 78) leather armour
+QC s6 item=weapon q=79 name=(undefined 79) long sword
+QC s6 item=armor q=79 name=(undefined 79) leather armour
+QC s6 item=weapon q=80 name=(undefined 80) long sword
+QC s6 item=armor q=80 name=(undefined 80) leather armour
+QC s6 item=weapon q=81 name=wrought iron long sword
+QC s6 item=armor q=81 name=wrought iron leather armour
+QC s6 item=weapon q=82 name=long sword
+QC s6 item=armor q=82 name=leather armour
+QC s6 item=weapon q=1+67 name=holy dwarven long sword
+QC s4 item=weapon n=5
+QC s4 item=weapon n=6
+QC s4 item=weapon n=7
+QC s4 item=weapon n=8
+QC s4 item=weapon n=9
+QC s4 item=weapon n=10
+QC s4 item=weapon n=12
+QC s4 item=weapon n=16
+QC s4 item=weapon n=17
+QC s4 item=weapon n=19
+QC s4 item=weapon n=20
+QC s4 item=weapon n=22
+QC s4 item=weapon n=23
+QC s4 item=weapon n=26
+QC s4 item=weapon n=28
+QC s4 item=weapon n=29
+QC s4 item=weapon n=31
+QC s4 item=weapon n=32
+QC s4 item=weapon n=35
+QC s4 item=weapon n=37
+QC s4 item=weapon n=38
+QC s4 item=weapon n=39
+QC s4 item=weapon n=40
+QC s4 item=weapon n=41
+QC s4 item=weapon n=42
+QC s4 item=weapon n=46
+QC s4 item=weapon n=48
+QC s4 item=weapon n=49
+QC s4 item=weapon n=52
+QC s4 item=weapon n=55
+QC s4 item=weapon ret=ABORT count=30
+QC s4 item=armor n=1
+QC s4 item=armor n=2
+QC s4 item=armor n=3
+QC s4 item=armor n=4
+QC s4 item=armor n=5
+QC s4 item=armor n=6
+QC s4 item=armor n=7
+QC s4 item=armor n=8
+QC s4 item=armor n=9
+QC s4 item=armor n=13
+QC s4 item=armor n=14
+QC s4 item=armor n=17
+QC s4 item=armor n=18
+QC s4 item=armor n=19
+QC s4 item=armor n=22
+QC s4 item=armor n=23
+QC s4 item=armor n=24
+QC s4 item=armor n=25
+QC s4 item=armor n=26
+QC s4 item=armor n=27
+QC s4 item=armor n=28
+QC s4 item=armor n=29
+QC s4 item=armor n=30
+QC s4 item=armor n=31
+QC s4 item=armor n=33
+QC s4 item=armor n=36
+QC s4 item=armor n=37
+QC s4 item=armor n=39
+QC s4 item=armor n=41
+QC s4 item=armor ret=ABORT count=29
+QC s5 case=plain ret=DONE slots=7,74,0,0,0,0,0,0
+QC s5 case=unnamed ret=DONE slots=7,15,34,60,0,0,0,0
+QC s5 case=eight ret=DONE slots=31,0,0,0,0,0,0,0
+END lines=478 errors=0

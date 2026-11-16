@@ -1,0 +1,7 @@
+# One row per unstatedDraw site: <file> TAB <function> TAB <reason>. No line numbers.
+# tools/check_fixture_tripwires.sh holds this file equal to the code and lets it only shrink.
+src/Create.cpp	BuildPerkItem	overwritten by stated perk_charges
+src/Create.cpp	NamePerk	a perk item made only to read its name, then deleted
+src/Create.cpp	Player::Create	tripwire probe: a draw the probe makes on purpose
+src/CreationSource.cpp	CreationMakeItem	overwritten by stated charges, quantity and flags
+src/Magic.cpp	TEffect::Power	builds a description string; the rolled value reaches no saved field

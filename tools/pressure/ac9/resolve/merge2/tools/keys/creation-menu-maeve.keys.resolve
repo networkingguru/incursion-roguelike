@@ -1,0 +1,23 @@
+@while "silky, sultry" SPACE
+@while "Choose a Domain" a
+@while "Choose a feat" a
+@while "Do you want to turn or command undead" t
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Skill Manager" ENTER y
+@while "personality archetype" a
+@while "silky, sultry" SPACE
+@while "Choose a Domain" a
+@while "Choose a feat" a
+@while "Do you want to turn or command undead" t
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Skill Manager" ENTER y
+@while "personality archetype" a
+@while "silky, sultry" SPACE
+@while "Choose a Domain" a
+@while "Choose a feat" a
+@while "Do you want to turn or command undead" t
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+@while "Skill Manager" ENTER y
+@while "personality archetype" a
+@expect "Learn Spells: Level"    # starting-spells checklist (priests only)
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark rows; a full level refuses the rest
