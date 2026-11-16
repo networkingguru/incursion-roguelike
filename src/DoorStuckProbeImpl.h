@@ -54,6 +54,7 @@ static std::string DSActs(const DSPair &p) {
 }
 static void DSReport() {
     unsigned count=0, cls[4]={0,0,0,0};
+    /* inc-zm6li: INCURSION_DOORSTUCK_MIN lowers the stuck-streak floor (10) for tools/measure_door_stuck.py */
     const char *minEnv=getenv("INCURSION_DOORSTUCK_MIN");   /* diagnostic: lower the 10 */
     uint32 minTurns = minEnv ? (uint32)atoi(minEnv) : 10;
     for (auto &entry : DSPairs) {
