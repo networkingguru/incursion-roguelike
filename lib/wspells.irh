@@ -2070,9 +2070,9 @@ Wizard Spell "Glitterdust" : EA_INFLICT
   { SC_ARC; Base: SP_MEDIUM; Cost: 4; Level: 2; sval: FORT; 
     qval: Q_TAR | Q_LOC | Q_DIR; 
     Purpose: EP_CURSE | AIM_AT_SELF; Flags: EF_CASTER_IMMUNE, EF_DROUND;
-    aval: AR_BALL; lval: 8; cval: COL_RAINBOW; xval: BLIND; }
+    aval: AR_BALL; lval: 1; cval: COL_RAINBOW; xval: BLIND; }
   and EA_INFLICT {
-    aval: AR_BALL; lval: 8; xval: ILLUMINATED; pval: +1; 
+    aval: AR_BALL; lval: 1; xval: ILLUMINATED; pval: +1; 
     On Event EV_MAGIC_HIT {
       EVictim->RemoveStati(INVIS); 
       EVictim->Reveal(false); 
@@ -2173,11 +2173,11 @@ Terrain "strong updraft"
 
 Wizard / Scroll Spell "Spirit Net" : EA_GENERIC
   { SC_ARC; SC_NEC; Base: SP_EASY; Cost: 4; Level: 2; 
-    aval: AR_BALL; lval : 4; qval: Q_DIR|Q_TAR|Q_LOC;
+    aval: AR_BALL; lval : 2; qval: Q_DIR|Q_TAR|Q_LOC;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY | EP_COUNTER (VS_SUMMON); 
     sval: NOSAVE;
     Desc: "Mystically inscribes open surfaces and wall edges within a
-    volumetric 'blast' of radius 40 feet (4 squares) with warding runes.
+    volumetric 'blast' of radius 20 feet (2 squares) with warding runes.
     The runes prevent incorporeal creatures and summoned creatures from
     passing. Such creatures can still attack and cast spells. The runes
     appear simultaneously but fade and disappear at a slightly staggered
@@ -4080,7 +4080,7 @@ Wizard Spell "Alisdair's Fundamental Breakdown" : EA_BLAST
       "The <EActor> throws a potion -- and it explodes!",
     MSG_BLASTNAME
       "alchemical fireball";
-    aval: AR_BALL; cval: COL_POISON; lval: 18; sval: REF partial; 
+    aval: AR_BALL; cval: COL_POISON; lval: 5; sval: REF partial; 
     pval: (LEVEL_EVERY2)d6; xval: AD_FIRE; }
 and EA_BLAST
   { pval: (LEVEL_1PER2)d6; xval: AD_TOXI; }
@@ -4491,7 +4491,7 @@ Wizard / Scroll Spell "Suggestion" : EA_INFLICT
 Wizard Spell "Fireball" : EA_BLAST
   { SC_EVO|SC_FIRE; Base: SP_MEDIUM; Cost: 6; Level: 3; sval: REF partial;
     xval: AD_FIRE; pval: (LEVEL_SCALED)d6; Purpose: EP_ATTACK;
-    aval: AR_BALL; qval: Q_DIR | Q_TAR | Q_LOC; cval: COL_FIRE; lval: 8;
+    aval: AR_BALL; qval: Q_DIR | Q_TAR | Q_LOC; cval: COL_FIRE; lval: 2;
     Flags: EF_COMMON;
     Desc: "Creates a volumetric blast of fire that inflicts 1d6 
       points of damage for every caster level. The blast can also
@@ -6355,14 +6355,14 @@ and EA_INFLICT
     On Event MSG_BLASTNAME "deafening shout"; }
 
 Wizard / Druid Spell "Ice Storm" : EA_BLAST
-  { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 8; Level: 4; lval: 6; aval: AR_BALL;
+  { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 8; Level: 4; lval: 2; aval: AR_BALL;
     xval: AD_COLD; sval: REF partial; pval: 3d10+(LEVEL_1PER1);
     Flags: EF_HALF_UNTYPED, EF_COMMON; Purpose: EP_ATTACK; cval: AZURE;
 	On Event MSG_BLASTNAME "storm of hail";	qval: Q_LOC;
     Desc: "This spell can be cast in one of two forms, at the caster's
       elective, as follows:\n
       __<9>Hail Storm:<1> Conjures a brief storm of biting cold and huge, hard 
-      hailstones in a 60 foot (6 square) radius area, inflicting 3d10 points of
+      hailstones in a 20 foot (2 square) radius area, inflicting 3d10 points of
       damage, plus one per caster level. Half this damage is cold damage; the
       other half is trauma damage, and cannot be avoided by resistances.\n
       __<9>Sleet Storm:<1> Driving sleet blocks all sight (even darkvision) 
@@ -7482,7 +7482,7 @@ Wizard / Priest / Druid Spell "Resist the Elements" : EA_INFLICT
 
 Wizard / Scroll Spell "Cloudkill" : EA_BLAST
   { SC_ARC|SC_AIR; Base: SP_MEDIUM; Cost: 10; Level: 5; qval: Q_DIR | Q_TAR | Q_LOC;
-    lval: 8; 
+    lval: 2; 
     xval: AD_TOXI; pval: (LEVEL_SCALED)d4; aval: AR_BALL;
     cval: COL_POISON;	Purpose: EP_ATTACK; sval: FORT;
     Flags: EF_PARTIAL, EF_LIM_MTYPE, EF_GLYPH_FOG, EF_CASTER_IMMUNE; 
@@ -7944,7 +7944,7 @@ Wizard Spell "Advanced Illusion" : EA_ILLUSION
 Wizard / Sorcerer Spell "Colour Burst" : EA_GENERIC
   {
     SC_ILL|SC_LIGHT; Base: SP_MEDIUM; Cost: 9; Level: 5; sval: REF;
-    Purpose: EP_ATTACK (VS_GENERAL); lval: 8;
+    Purpose: EP_ATTACK (VS_GENERAL); lval: 3;
     cval: COL_RAINBOW; aval: AR_BALL; 
 	Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE;
     On Event EV_ISTARGET {
@@ -8276,7 +8276,7 @@ Wizard Spell "Eldritch Bolt" : EA_BLAST
 /* --THAUMATURGY 5-- */
 
 Wizard / Scroll Spell "Force Shapechange" : EA_DRAIN
-{ SC_THA; Base: SP_HARD; Cost: 9; Level: 5; aval: AR_BALL; lval: 8;
+{ SC_THA; Base: SP_HARD; Cost: 9; Level: 5; aval: AR_BALL; lval: 3;
   cval: MAGENTA; Flags: EF_DLONG, EF_CASTER_IMMUNE;	
   xval: AD_NORM; pval: 3d12;
   Purpose: EP_ATTACK | EP_CURSE; 

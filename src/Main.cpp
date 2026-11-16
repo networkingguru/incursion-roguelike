@@ -462,6 +462,10 @@ void Game::Play() {
        See AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
     extern void AreaRadiusProbe(Player *pl);
     AreaRadiusProbe(pp);
+    /* inc-az4d2: off unless INCURSION_BALL_PROBE is set. See
+       BallShapeProbe (src/BallShapeProbe.cpp). */
+    extern void BallShapeProbe(Player *pl);
+    BallShapeProbe(pp);
     extern void TerraformEdgeProbe(Player *pl);
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);

@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <time.h>
 #include <limits.h>
+#include <vector> /* inc-az4d2: before the 'array' macro below */
+#include <algorithm>
 
 #ifdef DEBUG_MEMORY_CORRUPTION
 

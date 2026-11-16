@@ -1000,7 +1000,7 @@ Druid Spell "Detect Natural Traps" : EA_GENERIC
 
 Druid Spell "Puffball" : EA_BLAST
   { SC_ENC; Base: SP_MEDIUM; Cost: 1; Level: 1; qval: Q_DIR|Q_TAR|Q_LOC;
-    aval: AR_BALL; lval: 3; cval: BROWN; sval: FORT;
+    aval: AR_BALL; lval: 2; cval: BROWN; sval: FORT;
     xval: AD_NORM; pval: (LEVEL_EVERY4)d3; }
 and EA_INFLICT
   { xval: STUNNED; sval: FORT; tval: MA_BREATHER;
