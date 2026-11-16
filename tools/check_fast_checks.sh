@@ -358,7 +358,7 @@ rm -f "$DIR/check_child_m.sh"
 # ---- AC1. one fake per kind is refused with EXPENSIVE naming the kind
 D1="$TMP/d_ac1"
 plant "$D1" check_k_game.sh cheap "fake" "\"$ROOT/tools/headless.sh\" >/dev/null 2>&1; exit 0"
-plant "$D1" check_k_build.sh cheap "fake" "\"$ROOT/build_macos.sh\" >/dev/null 2>&1; exit 0"
+plant "$D1" check_k_build.sh cheap "fake" " OUT=incursion-fastfake EXTRA_CXXFLAGS=-DFAST_FAKE \"$ROOT/build_macos.sh\" >/dev/null 2>&1; exit 0"
 plant "$D1" check_k_git-history.sh cheap "fake" 'git log --oneline >/dev/null 2>&1; exit 0'
 plant "$D1" check_k_sleep.sh cheap "fake" 'sleep 0.2; exit 0'
 plant "$D1" check_k_bd.sh cheap "fake" 'bd list --limit 1 >/dev/null 2>&1; exit 0'
