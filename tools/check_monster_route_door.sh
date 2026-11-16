@@ -21,6 +21,7 @@
 # fact: route result before AI decisions -- RouteProbe calls SmartDirTo once at staging
 # fact: monster AI choice, one staged pursuer -- INCURSION_FORCE_PURSUE=1
 # fact: break outcome for door-bashcap -- the door is a vault door, Break DC 35 (src/Feature.cpp DoorBreakDC), above any kick roll
+# fact: the two extra locked doors of door-twobreak -- RouteProbe twob staging at (13,10) and (11,10), logged as x13/x13f/x11/x11f on every observe line
 # fact: bypass squares for the -alt scenarios -- RouteProbe alt staging, logged as bypass= on the "door" line
 # fact: reclosed door and monster returned to far side -- RouteProbe reclose staging, logged on reclose line
 # fact: skill roll of the lock pick -- INCURSION_RUNTO_SKILL_ROLL=20 (door-pick) or 1 (door-pick-fail), set below per scenario
@@ -30,7 +31,7 @@
 # Usage: tools/check_monster_route_door.sh [scenario|all] [seed]
 #   scenarios: door door-reclose door-locked door-locked-alt door-nohands door-nohands-alt
 #              door-secret door-trap door-bashcap door-pet door-pick door-pick-fail
-#              door-knock-spell door-knock-wand door-knock-scroll
+#              door-knock-spell door-knock-wand door-knock-scroll door-twobreak
 #   door-missing stages no door and MUST report UNMEASURED (exit 2).
 # Exit: 0 all PASS, 1 any FAIL, 2 any UNMEASURED and no FAIL.
 set -uo pipefail
@@ -40,7 +41,7 @@ seed=${2:-3}
 if [ "$which" = all ]; then
     set -- door door-reclose door-locked door-locked-alt door-nohands door-nohands-alt \
         door-secret door-trap door-bashcap door-pet door-pick door-pick-fail \
-        door-knock-spell door-knock-wand door-knock-scroll
+        door-knock-spell door-knock-wand door-knock-scroll door-twobreak
 else
     set -- "$which"
 fi
@@ -73,12 +74,12 @@ print(f'{sc}: {setups[0]}'); print(f'{sc}: door {" ".join(f"{k}={v}" for k, v in
 d = doors[0]; f = kv(setups[0])
 if f.get('missing') != '0': unmeasured('no staged monster')
 want_flags = {'door-locked': 8, 'door-locked-alt': 8, 'door-bashcap': 8, 'door-secret': 32,
-              'door-pick': 8, 'door-pick-fail': 8, 'door-knock-spell': 8,
+              'door-pick': 8, 'door-pick-fail': 8, 'door-knock-spell': 8, 'door-twobreak': 8,
               'door-knock-wand': 8, 'door-knock-scroll': 8}.get(sc, 0)
 want_alt = 3 if sc.endswith('-alt') else 0
 want_vault = 1 if sc == 'door-bashcap' else 0
 want_trap = 1 if sc == 'door-trap' else 0
-want_hands = 1 if sc.startswith('door-nohands') else 0
+want_hands = 1 if sc.startswith('door-nohands') or sc == 'door-twobreak' else 0
 want_pet = 1 if sc == 'door-pet' else 0
 if (d['exists'], d['at']) != ('1', '12,14'): unmeasured('the staging produced no door at 12,14')
 if (int(d['flags']) & ~1, int(d['solid']), int(d['trap']), int(d['nohands']), int(d['pet']),
@@ -162,6 +163,25 @@ elif sc in ('door-locked', 'door-nohands', 'door-locked-alt', 'door-nohands-alt'
             unmeasured('turn budget ended before the creature reached the door: ' + ' '.join(why))
     for line in raw:
         if line.startswith('final '): print(sc + ': ' + line)
+elif sc == 'door-twobreak':
+    # A monster that must break doors takes the route with fewer breaks even
+    # when a route with more breaks is shorter: it steps south and breaks the
+    # U door, not the row's two doors.
+    if gone: unmeasured('the watched creature died or vanished')
+    if len(live) < 40: unmeasured(f'only {len(live)} of 41 samples')
+    last = live[-1]; bashes = int(last['bashes'])
+    first = direction == expected and direction not in (center, straight)
+    # A bash that lands on a door other than the U door shows as bashes above the
+    # U door's own tries. Once the U door has failed five tries it is a wall to
+    # this rat, and the row doors are the only way left, so that is no stray.
+    stray = [o for o in live if o['dooropen'] == '0' and int(o['mag2']) < 5 and int(o['bashes']) > int(o['mag2'])]
+    row_ok = not stray and all(o['x13'] == '0' and o['x11'] == '0' for o in live if int(o['mag2']) < 5)
+    main = any(o['dooropen'] == '1' or int(o['mag2']) >= 1 for o in live)
+    ok = first and bashes >= 1 and main and row_ok
+    why = [f'first_step={"ok" if first else "bad"}(dir={direction},expected={expected})',
+           f'bashes={bashes}', f'u_door_touched={int(main)}', f'row_doors_untouched_before_u_door_fails={int(row_ok)}']
+    if not ok and first and row_ok and bashes == 0 and max(int(o['idx']) for o in live) < 5:
+        unmeasured('turn budget ended before the creature reached the door: ' + ' '.join(why))
 elif sc in ('door-pick', 'door-pick-fail', 'door-knock-spell', 'door-knock-wand', 'door-knock-scroll'):
     if gone: unmeasured('the watched creature died or vanished')
     if len(live) < 40: unmeasured(f'only {len(live)} of 41 samples')

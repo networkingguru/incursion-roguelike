@@ -156,6 +156,10 @@ static int UIndex(int x, int y) {
      door-nohands  a giant rat (M_NOHANDS), door unlocked
      door-locked-alt, door-nohands-alt   the same, plus an open bypass around
                    the door that is longer than the way through it
+     door-twobreak a giant rat, all doors locked: the U door (12,14) is one
+                   break; a shorter row y=10 holds two, (13,10) and (11,10).
+                   A monster that must break doors takes the route with
+                   fewer breaks even when a route with more is shorter.
      door-bashcap  the door is a vault door (Break DC 35, out of reach of any
                    kick), locked, so the monster fails every break
      door-pick, door-pick-fail   a locked door, a kobold with Lockpicking
@@ -170,6 +174,7 @@ static void RouteProbe(Map *m, Player *p) {
     const char *mode = getenv("INCURSION_ROUTE_PROBE");
     if (!mode || !*mode || !m || !p) return;
     const bool doorMode = !strncmp(mode, "door", 4);
+    const bool twob2 = !strcmp(mode, "door-twobreak");
     static bool staged = false;
     static hObj watched = 0;
     static int sample = 0;
@@ -184,7 +189,7 @@ static void RouteProbe(Map *m, Player *p) {
         staged = true;
         rID wall = FIND("Dungeon Wall"), floor_ = FIND("Floor");
         rID region = FIND("Winding Corridor"), rat = FIND("giant rat");
-        if (doorMode && strncmp(mode, "door-nohands", 12))
+        if (doorMode && strncmp(mode, "door-nohands", 12) && strcmp(mode, "door-twobreak"))
             rat = FIND("kobold");
         /* A kobold has the Lockpicking feat and picks a locked door. These
            scenarios need a monster with hands and neither Lockpicking nor
@@ -206,12 +211,15 @@ static void RouteProbe(Map *m, Player *p) {
                         t->Remove(true);
                 }
         const bool alt = doorMode && strstr(mode, "-alt");
+        const bool twob = !strcmp(mode, "door-twobreak");
         for (int x = 9; x <= 15; ++x)
             for (int y = 9; y <= 16; ++y) {
                 bool open = ((x == 10 || x == 14) && y >= 10 && y <= 14) ||
                             (y == 14 && x >= 10 && x <= 14);
                 /* bypass: (13,14) -> (13,15) -> (12,16) -> (11,15) -> (11,14),
                    10 cost units against 6 through the door at (12,14) */
+                if (twob && y == 10 && x >= 11 && x <= 13)
+                    open = true;
                 if (alt && ((x == 13 && y == 15) || (x == 12 && y == 16) ||
                             (x == 11 && y == 15)))
                     open = true;
@@ -235,7 +243,7 @@ static void RouteProbe(Map *m, Player *p) {
         Trap *tp = NULL;
         if (doorMode && strcmp(mode, "door-missing")) {
             dr = new Door(FIND(!strcmp(mode, "door-bashcap") ? "vault door" : "oak door"));
-            dr->DoorFlags = (!strcmp(mode, "door-locked") || !strcmp(mode, "door-locked-alt") ||
+            dr->DoorFlags = (!strcmp(mode, "door-locked") || twob || !strcmp(mode, "door-locked-alt") ||
                              !strcmp(mode, "door-bashcap") || !strncmp(mode, "door-pick", 9) ||
                              !strncmp(mode, "door-knock", 10)) ? DF_LOCKED :
                             !strcmp(mode, "door-secret") ? DF_SECRET : 0;
@@ -247,6 +255,16 @@ static void RouteProbe(Map *m, Player *p) {
                 tp->TrapFlags |= TS_FOUND;
             }
             m->At(DOOR_X, DOOR_Y).Memory = m->At(DOOR_X, DOOR_Y).Glyph;
+            if (twob) {
+                static const int ex[2] = {13, 11};
+                for (int k = 0; k < 2; k++) {
+                    Door *d2 = new Door(FIND("oak door"));
+                    d2->DoorFlags = DF_LOCKED;
+                    d2->PlaceAt(m, ex[k], 10);
+                    d2->SetImage();
+                    m->At(ex[k], 10).Memory = m->At(ex[k], 10).Glyph;
+                }
+            }
         }
         Monster *mn = new Monster(rat);
         mn->PlaceAt(m, 14, 10);
@@ -329,6 +347,12 @@ static void RouteProbe(Map *m, Player *p) {
         if (doorMode) {
             p->cHP = p->mHP;   /* the kobold bites; keep the character alive */
             Door *fd = m->FDoorAt(DOOR_X, DOOR_Y);
+            if (twob2) {
+                Door *a = m->FDoorAt(13, 10), *b = m->FDoorAt(11, 10);
+                fprintf(f, " x13=%d x13f=%d x11=%d x11f=%d",
+                        a ? (int)a->isPassable() : -1, a ? (int)a->DoorFlags : -1,
+                        b ? (int)b->isPassable() : -1, b ? (int)b->DoorFlags : -1);
+            }
             fprintf(f, " idx=%d dist=%d dooropen=%d doorflags=%d",
                     UIndex(mn->x, mn->y), (int)dist(mn->x,mn->y,p->x,p->y),
                     fd ? (int)fd->isPassable() : -1, fd ? (int)fd->DoorFlags : -1);
