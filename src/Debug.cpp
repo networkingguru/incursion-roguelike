@@ -706,6 +706,11 @@ void Player::WizardOptions() {
                 TMON(mn->tmID)->PEvent(EV_BIRTH,mn,mn->tmID);
                 mn->PlaceAt(m,e.EXVal,e.EYVal);
                 mn->Initialize(true);
+                /* inc-b4l3g.15, test-only: the probe follows this monster. */
+                if (getenv("INCURSION_LOWHP_FEAR_PROBE")) {
+                    extern void LowHpFearProbeTarget(Monster *m);
+                    LowHpFearProbeTarget(mn);
+                }
             }
         } 
         break;

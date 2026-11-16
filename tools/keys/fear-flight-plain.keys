@@ -1,8 +1,7 @@
 # inc-c36o: wizard-summon a bugbear 3 squares east, then wait 16 turns.
-@include chargen.keys
-.*2
+@until "Wizard Mode Options" w y
+@choose "Genocide Everything"
 w
-y
 @choose "Monster Summoning"
 @choose "Goblinkin"
 @choose "bugbear"
