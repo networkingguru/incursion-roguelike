@@ -1,7 +1,7 @@
 # REPRODUCTION for bead inc-akac, rebuilt by inc-b4l3g.2: a summoned frost giant
 # (lib/mon2.irh, ABILITY(CA_FEED_UPON_PAIN,6)) is a level-6 source of Feed upon
 # Pain. It lands blows on a LOADED player (INCURSION_LOAD=
-# tools/fixtures/chars/orc-priest-pain-seed1-sneakopts.sav) who only waits. The
+# tools/fixtures/chars/orc-priest-pain-seed1-sneakopts.char) who only waits. The
 # priest is the target because he does not hide: a hiding rogue goes unseen, so
 # the giant never attacks. Read with tools/check_feed_upon_pain.sh via
 # logs/pain.log (INCURSION_PAIN_PROBE=1). One giant is summoned beside the
@@ -10,6 +10,8 @@
 # INCURSION_SUMMON_NO_GEAR=1, so the giant has no gear and its blow is fixed.
 # '.' (rest) is the wait: 's' opened a "What do you want to push?" prompt, which
 # turned every later wait into a no-op.
+# The fixture holds only the created character; setup-orc-priest-pain-seed1-sneakopts.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-priest-pain-seed1-sneakopts.keys
 w
 @choose "Genocide Everything"
 

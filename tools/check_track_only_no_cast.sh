@@ -16,7 +16,7 @@
 # Twenty eligible samples demand repeated opportunities, not one lucky quiet turn.
 . "$(dirname "$0")/check_lib.sh"
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char
 variant=${TRACK_ONLY_VARIANT:-armed}
 run="$CHECK_ROOT/logs/track-only/$variant-$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$run/mod" "$run/save" "$run/logs"

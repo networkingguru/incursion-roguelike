@@ -30,8 +30,8 @@ def compile(sb):
     assert run(sb,['-compile','main.irc'],'compile.log')==0, sb/'logs/compile.log'
     assert (sb/'mod/Incursion.Mod').exists()
 
-def dump(sb,save):
-    rc=run(sb,['-dump',save],'dump.log')
+def dump(sb,save,extra_env=None):
+    rc=run(sb,['-dump',save],'dump.log',extra_env)
     text=(sb/'logs/dump.log').read_text(errors='replace')
     rows={}
     for m in re.finditer(r'  slot=(\d+) owner=(.*?) ordinal=(\d+) ident=(\S+) type=(.*?) value=(-?\d+)',text):
@@ -56,7 +56,7 @@ assert original[('Khasrach',0)][2]==13579
 assert any(v[0]=='oracleGlobal' and v[2]==24680 for v in original.values())
 print(f'baseline variables={len(original)} nonzero={sum(v[2]!=0 for v in original.values())}',flush=True)
 failed=0
-for case in [16,17,18,19,22,23,24,29]:
+for case in [16,17,18,19,22,23,24,29,31]:
     sb=sandbox(str(case),base)
     if case==16: edit(sb,'religion.irh','int32 oracleGod;','int32 oracleGod, oracleNew;')
     if case==17:
@@ -87,7 +87,7 @@ for case in [16,17,18,19,22,23,24,29]:
         source+='\nEffect "Variable Append Oracle" : '+effect_kind+' { int32 oracleNew; }\n'
         source+='\n'.join(blocks)+'\n'
         (sb/'lib/main.irc').write_text(source)
-    if case==19:
+    if case in [19,31]:
         p=sb/'lib/races.irh';p.write_text(p.read_text().replace('oracleA','oracleRenamed'))
     if case==22: edit(sb,'races.irh','int32 oracleA, oracleB;','int32 oracleInserted, oracleA, oracleB;')
     if case==23: edit(sb,'races.irh','int32 oracleA, oracleB;','int32 oracleB, oracleA;')
@@ -95,9 +95,22 @@ for case in [16,17,18,19,22,23,24,29]:
         edit(sb,'races.irh','int32 oracleA, oracleB;','int32 oracleA;')
         edit(sb,'races.irh','oracleB = 67890;','')
     compile(sb)
-    rc,rows,text=dump(sb,save)
-    if case in [22,23,24]:
-        good=rc!=0 and all(word in text for word in ['owner','ordinal','recorded','found'])
+    # case 31 is case 19 plus a Game.ScriptVariable rename row: the value must follow the name (DEBUG hook, same table the engine reads)
+    rc,rows,text=dump(sb,save,{'INCURSION_RENAMED_EXTRA':'Orc;race.oracleA Orc;race.oracleRenamed'} if case==31 else None)
+    if case in [19,22,23,24]:
+        # inc-cjos0: values land BY NAME; a renamed or removed name is dropped.
+        byname={(k[0],v[0]):v[1:3] for k,v in rows.items()}
+        gone={19:'oracleA',22:None,23:None,24:'oracleB'}[case]
+        good=rc==0 and all(byname.get((k[0],v[0]))==v[1:3] for k,v in original.items() if v[0]!=gone)
+        good=good and all(v[2]==0 for k,v in rows.items() if (k[0],v[0]) not in {(o[0],x[0]) for o,x in original.items()})
+        if case==19: good=good and f'variable owner' in text and "'oracleA' no longer exists" in text
+        if case==22: good=good and byname[('Orc;race','oracleInserted')][1]==0 and byname[('Orc;race','oracleA')][1]==12345 and byname[('Orc;race','oracleB')][1]==67890
+    elif case==31:
+        byname={(k[0],v[0]):v[1:3] for k,v in rows.items()}
+        good=rc==0
+        gone=[v for v in rows.values() if v[0]=='oracleRenamed']
+        good=good and len(gone)==1 and gone[0][2]==12345 and "no longer exists" not in text
+        good=good and all(byname.get((k[0],v[0]))==v[1:3] for k,v in original.items() if v[0]!='oracleA')
     else:
         good=rc==0 and all(k in rows and rows[k][1:3]==v[1:3] for k,v in original.items())
         good=good and all(v[2]==0 for k,v in rows.items() if k not in original)

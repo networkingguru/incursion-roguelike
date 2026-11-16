@@ -8,7 +8,7 @@
 #
 # A seed MUST NOT change the verdict (docs/VERIFICATION.md, "A check must not
 # depend on the seed"). Every fact the check reads, and what fixes it:
-# fact: character (Chaotic Evil orc barbarian, stats, kit) -- fixture orc-barbarian-ce-opt0822 (INCURSION_LOAD, every session)
+# fact: character (Chaotic Evil orc barbarian, stats, kit) -- fixture orc-barbarian-ce-opt0822 (INCURSION_LOAD, every session) -- orc-barbarian-ce-opt0822 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/orc-barbarian-ce-opt0822.sav)
 # fact: arrival level holds no other monster -- wizard "Genocide Everything"
 # fact: archon placement (five squares east) -- wizard "Monster Summoning"
 # fact: archon is hostile to the character -- wizard "All Monster Aggravate" (src/Target.cpp LowPriorityStatiHostility)
@@ -63,7 +63,7 @@ HITKEYS=tools/keys/aura-of-menace-hit.keys
 HITONLY=0
 if [ "${1:-}" = "--hit" ]; then HITONLY=1; shift; fi
 if [ "$#" -gt 0 ]; then SEEDS="$*"; else SEEDS="4"; fi
-CHAR=tools/fixtures/chars/orc-barbarian-ce-opt0822.sav
+CHAR=tools/fixtures/specimens/orc-barbarian-ce-opt0822.sav
 [ -f "$CHAR" ] || { echo "INCONCLUSIVE: fixture $CHAR is not there"; exit 2; }
 TOKEN="$$-$(date +%s)"
 FIRED=0; PENALTY=0; IMMUNE=0; NOTFIRED=0; TOTAL=0

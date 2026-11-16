@@ -1,5 +1,12 @@
 #!/bin/bash
 # gate: live
+# fact: Mage character: race, class, stats, kit, memorized spells, mana -- fixture orc-mage-seed1-opt0822, built from its .char alone (INCURSION_LOAD)
+# fact: Priest character: race, class, stats, kit -- fixture xsummon-priest-seed5-opt0822, built from its .char alone (INCURSION_LOAD)
+# fact: options -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: depth and the monsters near the Mage -- wizard menu "Ascend / Descend Depth" and "Genocide Everything" in mage-cast-nobook.keys
+# fact: the divine refusal text for the Priest -- a rule test made before any roll; it reads no random value
+# fact: Shield's cast-success roll -- wizard menu "Wizard Mode Switches", "Ignore Spell Failure" set to YES in mage-cast-nobook.keys
+# fact: Shield's own message and its 5 mana cost -- fixed text and a fixed cost of the spell; no roll chooses them
 # Can a Mage cast a memorized arcane spell with no spellbook in his pack, while a
 # Priest with no holy symbol still cannot cast a divine one? (bd inc-q04n)
 #
@@ -30,8 +37,8 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-MAGE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
-PRIEST=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+MAGE=tools/fixtures/chars/orc-mage-seed1-opt0822.char
+PRIEST=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 SEED=1
 
 check_mutation tools/keys/mage-cast-nobook.keys \

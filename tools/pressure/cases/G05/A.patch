@@ -1,0 +1,42 @@
+diff --git a/lib/landed-inc-g05a.irh b/lib/landed-inc-g05a.irh
+new file mode 100644
+index 0000000..dd71074
+--- /dev/null
++++ b/lib/landed-inc-g05a.irh
+@@ -0,0 +1,30 @@
++Class "Grw A Class"
++  {
++    Desc: "A growth-test class.";
++  }
++
++Race "Grw A Race"
++  {
++    Desc: "A growth-test race.";
++  }
++
++Domain "Grw A Domain" : 0 {
++  Desc: "__<15>Granted Power:<7> A growth-test domain.";
++  Grants:
++        Ability[CA_SLOW_FALL] at 1st level;
++  Spells:
++        $"Wall of Fog",
++        $"Wind Wall",
++        $"Gaseous Form",
++        $"Air Walk",
++        $"Cloudkill";
++}
++
++Item "grw-a carrier" : T_TOOL
++  {
++    Image: grey GLYPH_POTION;
++    Level: 1; Mat: MAT_GLASS; Weight: 1; hp: 5;
++    Flags: IT_NOGEN;
++    rID grw_a_ref;
++  }
++
+diff --git a/lib/landed.irc b/lib/landed.irc
+index e69de29..0e8e272 100644
+--- a/lib/landed.irc
++++ b/lib/landed.irc
+@@ -0,0 +1 @@
++#include "landed-inc-g05a.irh"

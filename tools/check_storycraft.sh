@@ -3,7 +3,7 @@
 # inc-1brg: Storycraft (bard CA_STORYCRAFT, Character::CraftItem Augment:,
 # src/Skills.cpp) must offer a +0 weapon, armor or shield for a first plus, and
 # must ask for confirmation before it spends a charge. Frozen fixture: the orc
-# bard tools/fixtures/chars/orc-bard-reapply-seed1.sav (5 unspent charges,
+# bard tools/fixtures/chars/orc-bard-reapply-seed1.char (5 unspent charges,
 # plain orcish studded leather). Two runs: tools/keys/storycraft-menu.keys (A, D)
 # and tools/keys/storycraft-confirm.keys (B, C).
 # A  the +0 studded leather is in the "Augment which item?" menu (red on the
@@ -22,6 +22,9 @@
 #    it; D passes on the old code too and only guards the new filter's reach.
 # Every value prints. Missing menu, prompt, sheet line or inventory fails as
 # "measured nothing".
+# fact: character -- fixture orc-bard-reapply-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the Lenses +3 of the Scholar (the A control: a non-weapon that already has a plus) -- wizard Item Acquisition in tools/keys/storycraft-menu.keys, Item Level 3, @expect on the inventory line (the old save carried them as a perk item; a perk is not a choice)
+# fact: the bard's wizard mode and level (Bard 6, level cleared) -- tools/keys/setup-orc-bard-reapply-seed1.keys (the old .sav held them; V7-1 moved them into the check)
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -32,7 +35,7 @@ cd "$ROOT"
 run_keys() { # run_keys <keys>; prints the run directory
     local keys="$1" out run rc
     out="$(INCURSION_BIN=./incursion-headless INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-           INCURSION_LOAD=tools/fixtures/chars/orc-bard-reapply-seed1.sav \
+           INCURSION_LOAD=orc-bard-reapply-seed1 \
            tools/headless.sh "$keys" 1 2>&1)"
     rc=$?
     run="$(echo "$out" | awk '/^run:/ {print $2}')"

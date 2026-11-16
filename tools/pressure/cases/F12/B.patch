@@ -1,0 +1,12 @@
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index b7d756e..b12e665 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -117,6 +117,7 @@ struct V1Migration {
+ static const V1Migration v1Migrations[] = {
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
++    { "Ac8SpellRepairB", 0, &Player::MigrateSpellFlagsRev6 },
+ };
+ #define V1_NMIGRATIONS (sizeof(v1Migrations)/sizeof(v1Migrations[0]))
+ static std::string v1FileMigrations;   /* the loaded file's Migrations field */

@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # Reproduction for bd inc-vmpk: the overview map's Run to Point ([R]) routes
 # the character into a hazard with no warning.
 #
@@ -27,7 +29,7 @@
 #      target it cannot see (src/Monster.cpp, Movement, "ts.t[i].vis == 0"), and
 #      the walls hide the character.
 #
-# The cases T, D and S load tools/fixtures/chars/kobold-rogue-seed1.sav, opens the
+# The cases T, D and S load kobold-rogue-seed1, opens the
 # overview map, moves the cursor to the far end and presses [R]; the next key
 # is [n], the answer to the fixed build's prompt.
 #
@@ -54,9 +56,9 @@ SEED="${1:-3}"
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
-CHAR=tools/fixtures/chars/kobold-rogue-seed1.sav
+CHAR=kobold-rogue-seed1
 OPTS=tools/fixtures/options-2026-08-22.dat
-[ -f "$CHAR" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
+[ -f "tools/fixtures/chars/$CHAR.char" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
 
 stamp="$$"
 worst=0

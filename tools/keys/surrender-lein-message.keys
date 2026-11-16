@@ -2,11 +2,13 @@
 # Before the fix __XPrint read past the supplied varargs.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/surrender-lein-message.keys 2
 #
 # A hobgoblin has CR OPT_CR(1,1), so its lein is 750 under either option.
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 w
 y
 @choose "Monster Summoning"

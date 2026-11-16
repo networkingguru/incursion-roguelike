@@ -1,0 +1,21 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..be97d97 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1147,6 +1147,7 @@ class Character: public Creature
+       static_assert(sizeof(hObj) == 4, "handles are one 32-bit word");
+       static_assert(sizeof(rID) == 4, "rIDs are one 32-bit word");
+       static_assert(sizeof(bool) == 1, "isFallenPaladin travels as K_U8");
++      #define AC8_REASON_B 61
+       int i;
+       FIELD_ARRAY("Inv", Inv, sizeof(hObj), NUM_SLOTS);
+       FIELD_H  ("defMelee", defMelee);
+@@ -1178,6 +1179,8 @@ class Character: public Creature
+       FIELD_U8 ("RageCount", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
++      uint32 ac8ReasonB = AC8_REASON_B;
++      FIELD_U32("Ac8ReasonB", ac8ReasonB);
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);
+       FIELD_I16("alignLC", alignLC);

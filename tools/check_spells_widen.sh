@@ -1,13 +1,15 @@
 #!/bin/bash
 # gate: live
+# fact: the IS1.6 character human-priest-mage-seed4-gate -- the frozen old save tools/fixtures/specimens/human-priest-mage-seed4-gate.sav, kept as a specimen because this check reads its old-format bytes (flags that no migration touched)
+# fact: the IS1.3 character orc-priest-seed4-gate -- the frozen old save tools/fixtures/specimens/orc-priest-seed4-gate.sav, kept as a specimen because this check reads its old-format bytes
 # inc-vqla phase 2: a v1 save written before Character::Spells[] was widened
 # loads with the flags the file actually holds -- and the loader is exercised
 # on both a current-revision (IS1.6) and a legacy (IS1.3) file.
 #
 # WHAT IS BEING GUARDED. Phase 1 widened Character::Spells[] from uint16 to
 # uint32 and retired the old tag-434 (2049 x uint16) array, whose read now runs
-# through Registry::V1ArrayWiden16 (inc/Creature.h:1145). A regression there --
-# dropping the legacy read, or folding it wrongly into the new tag 448 -- would
+# through Registry::V1ArrayWiden16 (inc/Creature.h:1201). A regression there --
+# dropping the legacy read, or folding it wrongly into the new "Spells" field -- would
 # silently lose or misread a pre-change save's flags. Because a raw uint16 and
 # its uint32 widening share the low bits, the whole 32-bit word must survive
 # the round trip; this check watches the whole word, not one named bit.
@@ -29,25 +31,31 @@
 #
 # TWO RUNS.
 #
-#   IS1.6  tools/fixtures/chars/human-priest-mage-seed4-gate.sav, written by
+#   IS1.6  tools/fixtures/specimens/human-priest-mage-seed4-gate.sav, written by
 #          master BEFORE this change. Its flags are a faithful copy of the file
 #          (no migration runs: migrated=0), so the probe's idx/raw pairs must
 #          equal the python reader's exactly -- every pair the file holds
 #          appears with the same raw value, and the probe reports no non-zero
 #          index the file lacks.
 #
-#   IS1.3  tools/fixtures/chars/orc-priest-seed4-gate.sav, whose flags ARE
+#   IS1.3  tools/fixtures/specimens/orc-priest-seed4-gate.sav, whose flags ARE
 #          migrated on load (migrated=1), so its raw words deliberately change.
 #          The check asserts only that the load succeeds and the probe prints
 #          lines, proving the legacy read is exercised on a rev-3 file too.
 #
 # PROVED RED with --prove-red (docs/VERIFICATION.md step 2). The declared
-# mutation deletes the `r.V1ArrayWiden16(448, 434, Spells, MAX_SPELLS+1);` call
-# in inc/Creature.h:1145. Without it the loader never reads tag 434; the v0
+# mutation deletes the `r.V1ArrayWiden16("Spells", "SpellsU16", Spells, MAX_SPELLS+1);`
+# call in inc/Creature.h:1201 (inc-cjos0: names replaced the tag numbers 448
+# and 434; the legacy table maps tag 434 of a revision 3-6 file to "SpellsU16").
+# Without it the loader never reads tag 434; the v0
 # loader refuses the file (or the flags come back empty), so the IS1.6 probe
 # disagrees with the python reader and the check fails. --prove-red performs
 # this mutation itself on a scratch copy of Creature.h (the check_lib mechanism
 # restores it), rebuilds, re-runs, and restores.
+#
+# fact: character -- fixtures tools/fixtures/chars/human-priest-mage-seed4-gate.sav and orc-priest-seed4-gate.sav, loaded with INCURSION_LOAD (frozen saves; the files hold the flags)
+# fact: the file's spell flag words -- read from the fixture's own bytes by tools/v1_spells_tag434.py, which reads the revision 6 file by its frozen tag 434
+# fact: the settings -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
 #
 # Usage: tools/check_spells_widen.sh [--prove-red]
 #        (0 pass, 1 fail, 2 inconclusive)
@@ -55,16 +63,16 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-FIXTURE=tools/fixtures/chars/human-priest-mage-seed4-gate.sav
+FIXTURE=tools/fixtures/specimens/human-priest-mage-seed4-gate.sav
 SEED=4
-LEGACY=tools/fixtures/chars/orc-priest-seed4-gate.sav
+LEGACY=tools/fixtures/specimens/orc-priest-seed4-gate.sav
 LEGACY_SEED=4
 READER=tools/v1_spells_tag434.py
 
 # The mutation this check defends: the phase-1 legacy read of tag 434. Declared
 # before any run so --prove-red intercepts here, before the measurement runs.
 check_mutation inc/Creature.h \
-'      r.V1ArrayWiden16(448, 434, Spells, MAX_SPELLS+1);' \
+'      r.V1ArrayWiden16("Spells", "SpellsU16", Spells, MAX_SPELLS+1);' \
 '      /* mutation: tag-434 legacy widen disabled */'
 
 [ -f "$FIXTURE" ] || _check_die 2 \
@@ -136,6 +144,17 @@ if [ -z "$SPELLS" ]; then
     if _load_refused "$LOG_16" "$(cat "$RUN_16/harness.txt" 2>/dev/null)"; then
         echo "FAIL: the IS1.6 fixture was refused (headless exit $STATUS) and" \
             "the probe printed no lines; the legacy tag-434 read is missing."
+        echo "      See $RUN_16."
+        exit 1
+    fi
+    # Names retired from the file (inc-cjos0; tools/retired_field_names.txt) are
+    # ignored by the reader, not refused, so a build that no longer reads the
+    # fixture's tag 434 loads it and loses the flags silently. The summary line
+    # proves the probe ran; the fixture's non-zero words (FILE_PAIRS, checked
+    # above) are then gone, which is the defect this check guards.
+    if grep -q 'SPELLFLAG_PROBE migrated=' "$LOG_16"; then
+        echo "FAIL: the IS1.6 fixture loaded and the probe ran, but printed no" \
+            "per-spell lines; the fixture's tag-434 flag words were lost."
         echo "      See $RUN_16."
         exit 1
     fi

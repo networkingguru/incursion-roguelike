@@ -22,7 +22,7 @@
 # bef32c3 replaced his long sword with a quarterstaff, the stow that used to
 # empty his hands was refused for size, and the Brawl row this script exists to
 # read stopped being drawn at all (bd inc-sls0). He now comes from
-# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav, which holds the same
+# tools/fixtures/chars/lizardfolk-monk-barehand-seed1.char, which holds the same
 # character with his hands already empty; tools/fixtures/README.md says why a
 # character who must stay himself has to be loaded rather than rolled. Levels
 # still come from wizard mode's Free Advancement switch, as in
@@ -31,7 +31,7 @@
 # RUN IT WITH THE FIXTURE NAMED, or there is no character at all:
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-barehand-seed1.sav \
+#   INCURSION_LOAD=lizardfolk-monk-barehand-seed1 \
 #       tools/headless.sh tools/keys/monk-tempest.keys 1
 #
 # THE THREE DUMPS ARE THE WHOLE OUTPUT, in this order, because
@@ -45,6 +45,8 @@
 # unless a turn actually completes, and this script otherwise spends every key
 # inside menus. The 's' buys the one turn that makes this a session. Same
 # reason, same key, as tools/keys/load-char-sheet.keys.
+# The fixture holds only the created character; setup-lizardfolk-monk-barehand-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-lizardfolk-monk-barehand-seed1.keys
 s
 
 # The sidebar is the regression oracle for inc-dzz: two Punch lines, equal

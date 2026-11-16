@@ -50,7 +50,7 @@ cd "$ROOT"
 SEED=1
 KEYS=tools/keys/gravestone.keys
 OPTS="$ROOT/tools/gates/Options.Dat"
-LOAD="$ROOT/tools/fixtures/chars/orc-barbarian-seed1-gate.sav"
+LOAD="$ROOT/tools/fixtures/chars/orc-barbarian-seed1-gate.char"
 
 # The epitaph line exactly as the screen must show it. The leading spaces are
 # part of the assertion: they are what proves the fix did not shift the

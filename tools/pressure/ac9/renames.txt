@@ -1,0 +1,3 @@
+# values1 (tools/pressure/ac9.sh): a resource the epic renamed in place on purpose. old name TAB new name TAB commit TAB bead.
+# The save schema spec (Amendment 1) says a bare rename loads silently: the slot keeps its resource. A line passes only for a pair listed here.
+Essiah;symbol	Essiah's Traveling Pack;symbol	a6217384	inc-pu6v.4

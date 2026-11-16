@@ -46,9 +46,8 @@
 # dagger at the illusion. R4: the illusory goblin strikes a real kobold that has
 # 3 hit points.
 #
-# fact: character -- fixture elf-mage-illusions-seed1 (INCURSION_LOAD)
-# fact: the spells known, and cast without a failure roll -- the fixture; its spells are innate
-# fact: wizard mode, Infinite Mana, Freeze Monsters -- saved in the fixture
+# fact: character -- fixture elf-mage-illusions-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the spells known, and cast without a failure roll; wizard mode, Infinite Mana, Freeze Monsters -- the wizard mode, Infinite Mana, Freeze Monsters and the four illusion spells -- tools/keys/setup-elf-mage-illusions-seed1.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: two watchers where the caster aims (R1, R2) -- wizard Monster Summoning
 # fact: the watchers differ by name (R2) -- goblin and goblin vizier, lib/dungeon.irh
 # fact: each watcher's Will save passes (R1, R2) -- INCURSION_FORCE_SAVE_ROLL=20
@@ -90,7 +89,7 @@ for _i in "${!CHECK_ARGS[@]}"; do
 done
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav
+export INCURSION_LOAD=elf-mage-illusions-seed1
 export INCURSION_DISBELIEF_PROBE=1
 export INCURSION_LOF_FORCE_ROLL=20
 export INCURSION_FORCE_DAMAGE_ROLL=99

@@ -13,11 +13,11 @@
 # per-module manifest (v1ConvertManifestRid, src/SaveV1.cpp). This check is the
 # standing proof of that claim for the first fixture, and the proof that the
 # machinery around it -- INCURSION_LOAD in tools/headless.sh,
-# tools/make_char_fixture.sh, tools/keys/load-char-sheet.keys -- still works
+# tools/fixture_cache.sh, tools/keys/load-char-sheet.keys -- still works
 # end to end.
 #
 # THE ORACLE IS THE FIXTURE'S OWN SHEET, not a list of numbers typed into this
-# file. tools/fixtures/chars/<name>.sheet.txt is written by the same run that
+# file. The sheet beside the cached .sav (tools/fixture_cache.sh) is written by the same build that
 # made the .sav, so a check that reads its expectations out of that file asks
 # the only question worth asking: does the save still hold the character its
 # audit record says it holds? Numbers copied into a check would drift from the
@@ -47,6 +47,11 @@
 # Strength, which is a thing somebody should be told about rather than
 # discover.
 #
+# fact: the character -- tools/fixtures/chars/lizardfolk-monk-seed1.char, committed; built from the file alone, so no seed and no walk decide him
+# fact: the settings -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS), the file the .char's options: line names
+# fact: the session after the load -- tools/keys/load-char-sheet.keys under the SEED variable of this file, which pins only what the session does; the character comes from the file
+# fact: the expected name, race, class and stored Strength -- read from the sheet of the same build, not typed here
+#
 # Usage: tools/check_char_fixture.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
 
@@ -57,17 +62,21 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # the two would show up as the character failing to be himself.
 FIXTURE=lizardfolk-monk-seed1
 SEED=1
-SAV="tools/fixtures/chars/$FIXTURE.sav"
-SHEET="tools/fixtures/chars/$FIXTURE.sheet.txt"
+# The fixture is a .char file; the .sav is the cache's build of it (tools/fixture_cache.sh).
+# The sheet is a scratch copy of the cache's sheet, so the mutation below never edits the cache.
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "no tools/fixtures/chars/$FIXTURE.char, so there is no fixture to check."
+SAV="$(tools/fixture_cache.sh "$FIXTURE")" || _check_die 2 "the fixture cache could not serve $FIXTURE."
+mkdir -p logs
+SHEET="logs/char-fixture-sheet.$FIXTURE.txt"
+# The --prove-red run starts this script again on the mutated copy, so a run
+# that is not the mutated one refreshes the copy, and none removes it.
+if [ "${CHECK_MUTATED:-0}" != 1 ]; then
+    cp "${SAV%.sav}.sheet.txt" "$SHEET" || _check_die 2 "no sheet beside $SAV."
+fi
 
 # Before the mutation, so a missing fixture says how to make one rather than
 # reporting that a file the mutation names cannot be found.
-for f in "$SAV" "$SHEET"; do
-    [ -f "$f" ] || _check_die 2 \
-        "no $f, so there is no fixture to check." \
-        "Make one with:" \
-        "  tools/make_char_fixture.sh $FIXTURE tools/keys/lizardfolk-monk-save.keys $SEED $CHECK_OPTIONS"
-done
+[ -f "$SAV" ] || _check_die 2 "no $SAV, so there is no fixture to check."
 
 check_mutation "$SHEET" '(base 12, +2 natural)' '(base 16, +2 natural)'
 
@@ -100,7 +109,7 @@ for v in "$WANT_NAME" "$WANT_RACE" "$WANT_CLASS" "$WANT_STR"; do
     [ -n "$v" ] || _check_die 2 \
         "$SHEET does not carry the name, race, class and Strength this check" \
         "reads its expectations from, so there is nothing to assert. The sheet" \
-        "is written by tools/make_char_fixture.sh; regenerate the fixture."
+        "is written by tools/fixture_cache.sh; rebuild the fixture."
 done
 
 # The same four again with the label cut off, for prose only. The assertions
@@ -118,7 +127,7 @@ BEFORE="$(shasum -a 256 "$SAV" | awk '{print $1}')"
 # ---------------------------------------------------------------------------
 # Load him. The seed still matters even though the character comes from the
 # file: it pins everything the session does after the load.
-export INCURSION_LOAD="$SAV"
+export INCURSION_LOAD="$FIXTURE"
 check_run tools/keys/load-char-sheet.keys "$SEED"
 
 check_screens '*-sheet'

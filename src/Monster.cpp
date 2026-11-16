@@ -29,6 +29,9 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#ifdef REUSE_SELFCHECK
+#include "SelfCheckTerm.h"
+#endif
 
 #ifdef INCURSION_OOB_PROBE
 /* Diagnostic only, for bead inc-5xn and upstream issue #40. Defined in
@@ -349,6 +352,9 @@ void Monster::ChooseAction()
      watchers it can newly see, its light band and its distraction. Runs before
      the monster reads the world for this action. */
   HideTurnStart(this);
+#ifdef DOOR_STUCK_PROBE
+  { extern void DoorStuckBegin(Monster*); DoorStuckBegin(this); }
+#endif
 
 
   TMonster *tm    = TMON(mID),
@@ -457,6 +463,32 @@ void Monster::ChooseAction()
   {
     Timeout = max(Timeout,30);
     return;
+  }
+
+  /* inc-zm6li: opt-in control for the single RouteProbe pursuer. */
+  { extern hObj RouteProbeWatched;
+    const char *force = getenv("INCURSION_FORCE_PURSUE");
+    if (force && !strcmp(force, "1") && RouteProbeWatched == myHandle) {
+      Target *target = ts.getTargetOfType(TargetEnemy);
+      Creature *leader = ts.getLeader();
+      if (target && target->isValid()) {
+        int16 px = target->X(), py = target->Y();
+        target->vis = Perceives(target->GetThing());
+        rtarg = (Creature*)target->GetThing();
+        targVis = target->vis != 0;
+        (void)px; (void)py;
+      } else if (leader) {
+        int16 px = leader->x, py = leader->y;
+        (void)px; (void)py;
+      }
+      { extern void RouteDoorBeginTurn(); RouteDoorBeginTurn(); }
+      /* The normal turn lists the effects before it moves; this shortcut
+         skips that, and the door code reads the list (Knock). */
+      hasInnateSpellStati = HasStati(INNATE_SPELL);
+      ListEffects();
+      Movement();
+      return;
+    }
   }
 
   charmer = (Creature*)GetStatiObj(CHARMED,CH_CHARM);
@@ -1641,6 +1673,10 @@ NothingToDo:
         LostEnemyProbeAction(this, Acts[j].Act, res);
       }
 
+#ifdef DOOR_STUCK_PROBE
+      { extern void DoorStuckChosen(Monster*, int, int);
+        DoorStuckChosen(this,Acts[j].Act,res); }
+#endif
       if (isDead() || res == DONE || Timeout)
         return;
 
@@ -1974,6 +2010,17 @@ static void RR_Report()
             RR_Reuses, RR_Bad, RR_Unreach);
     fflush(stderr);
   }
+static void (*RR_Prev)(int);
+static void RR_Term(int sig)
+  {
+    SC_Buf s;
+    s.Str("REUSE_SELFCHECK reuses="); s.Num(RR_Reuses);
+    s.Str(" bad="); s.Num(RR_Bad);
+    s.Str(" unreachable="); s.Num(RR_Unreach); s.Str("\n"); s.Flush();
+    SC_Done(RR_Prev, sig);
+  }
+/* at startup, so a run cut before its first reuse still writes a tally */
+static struct RR_Init { RR_Init() { atexit(RR_Report); SC_Install(RR_Term, &RR_Prev); } } RR_InitOnce;
 #endif
 
 static unsigned RouteReuseHash(hObj mon, hObj map, int16 tx, int16 ty)
@@ -2053,6 +2100,7 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
         return CENTER;
       }
       bool blocked; int16 dx, dy;
+      int32 df = HasMFlag(M_NOHANDS) ? DF_BASH_DOORS : (DF_OPEN_DOORS | DF_BASH_DOORS);
       { /* ROUTE REUSE: see the block comment above. */
         RouteReuse *re = RouteReuseFind(myHandle,m->myHandle,tx,ty);
         int why = 0, j = -1;
@@ -2071,7 +2119,7 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
 #ifdef REUSE_BREAK
             bool ok = true;
 #else
-            bool ok = m->RunOver(nx,ny,false,this,0,Incor,Meld,(nx==tx && ny==ty)) != 0;
+            bool ok = m->RunOver(nx,ny,false,this,df,Incor,Meld,(nx==tx && ny==ty)) != 0;
 #endif
             if (!ok) why = 5;
           }
@@ -2084,15 +2132,15 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
           int16 rx = re->sq[j+1] % 256, ry = re->sq[j+1] / 256;
           Dir rd = DirTo(rx,ry);
 #ifdef REUSE_SELFCHECK
-          { static bool reg = false; if (!reg) { reg = true; atexit(RR_Report); }
+          {
             bool onroute = false; uint16 here2 = (uint16)(x + y*256);
             for (int k = 0; k + 1 < re->len; k++)
               if (re->sq[k] == here2 && re->sq[k+1] == (uint16)(rx + ry*256)) onroute = true;
             bool Inc2 = HasMFlag(M_INCOR) || HasStati(PHASED);
             bool Mel2 = HasAbility(CA_EARTHMELD);
-            bool pass = m->RunOver(rx,ry,false,this,0,Inc2,Mel2,(rx==tx && ry==ty)) != 0;
+            bool pass = m->RunOver(rx,ry,false,this,df,Inc2,Mel2,(rx==tx && ry==ty)) != 0;
             static uint16 scratch[MAX_PATH_LENGTH];
-            if (!m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,scratch,NULL,false))
+            if (!m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,df,scratch,NULL,false))
               RR_Unreach++;
             RR_Reuses++;
             if (!onroute) RR_Bad++;
@@ -2116,7 +2164,15 @@ Dir Monster::SmartDirTo(int16 tx, int16 ty, bool is_pet)
          standing in ground the player never saw finds no route and waits. It
          misbehaves on upstream too: the flood reads the player's memory, not
          the real map, with no platform or compiler dependence. */
-      blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,0,thePath,NULL,false);
+      /* upstream: base-code defect. Observed. inc-zm6li. GitHub #1240. Not sent.
+           Invariant: a monster that can open doors (no M_NOHANDS) plans through
+         a closed door that is not locked or secret. Upstream's SmartDirTo
+         passed no flags, so RunOver refused every closed door and the monster
+         waited behind it; nothing here depends on the platform or typedefs.
+         DF_BASH_DOORS adds the last resort: a locked door (any closed door, for
+         a monster without hands) only when no other path exists. A secret door
+         and a found trap on a door square still refuse it. */
+      blocked = !m->ShortestPath((uint8)x,(uint8)y,(uint8)tx,(uint8)ty,this,df,thePath,NULL,false);
       if (blocked) {
         RouteReuseInvalidate(myHandle,m->myHandle,tx,ty);
         FailedRouteRecord(myHandle,m->myHandle,tx,ty,theGame->Turn);
@@ -2584,21 +2640,89 @@ EvReturn Monster::OpenDoor(Door *d)
        legs and Strength 14+). Failing all this, we treat
        the door like a wall. */
 
-    if (!HasMFlag(M_NOHANDS))
-      if (!d->HasStati(TRIED,1,this))
-        {
-          d->GainPermStati(TRIED,this,SS_MISC,1);
-          r = Throw(EV_OPEN,this,d);
-          if (Timeout)
-            return r;
-        }
+    /* upstream: base-code defect. Observed. inc-zm6li. Not sent.
+         Invariant: a monster with hands tries to open an unlocked closed door
+       every time it reaches one. Upstream marked the door TRIED,1 for the
+       monster on the first attempt and never threw EV_OPEN again, so a door
+       that closed after the first opening stayed shut to it. A monster knows
+       a lock when it sees one, so a locked door gets no open attempt and goes
+       straight to the break below (owner ruling, inc-zm6li). Nothing here
+       depends on the platform or typedefs. */
+    if (!HasMFlag(M_NOHANDS) && !(d->DoorFlags & DF_LOCKED))
+      {
+        { extern void RouteDoorAction(Monster*, Door*, bool); RouteDoorAction(this,d,true); }
+        r = Throw(EV_OPEN,this,d);
+        if (Timeout)
+          return r;
+      }
 
+    /* A monster with hands breaks a door down only while it is locked. */
+    if (!HasMFlag(M_NOHANDS) && !(d->DoorFlags & DF_LOCKED))
+      return ABORT;
+
+    /* This restores the original game's lock picking for monsters, which the
+         no-open-attempt rule above removed (owner ruling, inc-zm6li). Not an
+       upstream defect. At a locked door a monster tries, in order: picking the
+       lock (Lockpicking skill, five tries, counted on the door as TRIED,3 for
+       this monster), Knock (a known spell, else a wand with charges, else a
+       scroll; five tries, TRIED,4), then the break below. */
+    if (d->DoorFlags & DF_LOCKED)
+      {
+        if (HasSkill(SK_LOCKPICKING) && d->GetStatiMag(TRIED,3,this) < 5)
+          {
+            if (d->HasStati(TRIED,3,this))
+              d->SetStatiMag(TRIED,3,this,d->GetStatiMag(TRIED,3,this)+1);
+            else
+              d->GainPermStati(TRIED,this,SS_MISC,3,1,0,0);
+            { extern void RouteDoorNote(Monster*, Door*, int); RouteDoorNote(this,d,2); }
+            if (d->PickLockAttempt(this,20 + 2*m->Depth,EV_OPEN))
+              d->DoorFlags &= ~DF_LOCKED;
+            if (Timeout)
+              return DONE;
+          }
+        if (d->GetStatiMag(TRIED,4,this) < 5)
+          {
+            rID knock = FIND("Knock");
+            int best = -1, bestRank = 99, i;
+            for (i=0;i!=nEff;i++)
+              if (knock && Effs[i].eID == knock)
+                {
+                  Item *src = Effs[i].Source;
+                  int rank = (!src || src == (Item*)1) ? 0 :
+                    src->Type == T_WAND ? (src->GetCharges() > 0 ? 1 : 99) :
+                    src->Type == T_SCROLL ? 2 : 99;
+                  if (rank < bestRank)
+                    { best = i; bestRank = rank; }
+                }
+            if (best != -1)
+              {
+                Item *src = Effs[best].Source;
+                int16 ev = !src ? EV_CAST : src == (Item*)1 ? EV_INVOKE :
+                  src->Type == T_WAND ? EV_ZAP : EV_READ;
+                if (d->HasStati(TRIED,4,this))
+                  d->SetStatiMag(TRIED,4,this,d->GetStatiMag(TRIED,4,this)+1);
+                else
+                  d->GainPermStati(TRIED,this,SS_MISC,4,1,0,0);
+                { extern void RouteDoorNote(Monster*, Door*, int); RouteDoorNote(this,d,3); }
+                r = ThrowEff(ev,knock,this,NULL,(src == (Item*)1) ? NULL : src);
+                if (Timeout)
+                  return r;
+              }
+          }
+      }
+
+    /* upstream: base-code defect. Observed. inc-zm6li. Not sent.
+         Invariant: the five-try limit counts the door's TRIED,2 magnitude for
+       this monster. Upstream read the monster's own stati, so the door's
+       counter stayed 1 and the monster broke at a door without end. Nothing
+       here depends on the platform or typedefs. */
     if (d->GetStatiMag(TRIED,2,this) < 5)
     {
       if (d->HasStati(TRIED,2,this))
-        d->SetStatiMag(TRIED,2,this,GetStatiMag(TRIED,2,this)+1);
+        d->SetStatiMag(TRIED,2,this,d->GetStatiMag(TRIED,2,this)+1);
       else
         d->GainPermStati(TRIED,this,SS_MISC,2,1,0,0);
+      { extern void RouteDoorAction(Monster*, Door*, bool); RouteDoorAction(this,d,false); }
       r = TryToDestroyThing(d);
       if (Timeout)
         return r;

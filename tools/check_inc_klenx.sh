@@ -18,7 +18,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-CHARACTER=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+CHARACTER=tools/fixtures/chars/human-paladin-seed4-opt0822.char
 FIXTURE=tools/fixtures/inc-klenx-growth.irh
 KEYS=tools/keys/inc-klenx-growth.keys
 MODULE="$ROOT/logs/inc-klenx-module"

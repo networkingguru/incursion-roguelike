@@ -2152,7 +2152,7 @@ Priest  Spell "Shield Other" : EA_INFLICT
     Flags: EF_LIM_MTYPE, EF_PERSISTANT, EF_LOSEMANA, EF_NOTBAD, EF_CANCEL, EF_SHOWNAME; Purpose: EP_PLAYER_ONLY;
     On Event META(EVICTIM(EV_DAMAGE)) {
       hObj sh;
-      if (e.DType > AD_LAST_PHYSICAL)
+      if (!DTypeTakesHP(e.DType))
         return NOTHING;
       e.vDmg /= 2;
       sh = EVictim->GetEffStatiObj(TRAP_EVENT,$"shield other");
@@ -5687,7 +5687,7 @@ Priest Spell "Animate Objects" : EA_GENERIC
         hObj hItem, hAnim; int16 percent;                            \
         /* Send damage the animated object takes directly to its     \
            actual Item object, and adjust cHP accordingly */         \
-        if (e.DType <= AD_LAST_PHYSICAL)                             \
+        if (DTypeTakesHP(e.DType))                                   \
           {                                                          \
             hItem = EVictim->GetStatiObj(TRANSFORMED);               \
             hAnim = GetHandle(EVictim);                              \

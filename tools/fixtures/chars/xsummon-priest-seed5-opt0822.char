@@ -1,0 +1,156 @@
+# xsummon-priest-seed5-opt0822: converted from tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/xsummon-priest-save.keys, seed 5, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 510 computed line(s) differ (diff.txt); 1 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/xsummon-priest-save.keys 5 46 75 34:37:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (15), skeleton value -> old value:
+#   scalar: name: Hurk -> Holg
+#   scalar: character_name: Hurk the Anathema -> Holg the Anathema
+#   scalar: store_seed: 38 -> 40
+#   scalar: attr_str: 11 -> 10
+#   scalar: attr_dex: 16 -> 15
+#   scalar: attr_con: 18 -> 14
+#   scalar: attr_int: 8 -> 14
+#   scalar: attr_wis: 13 -> 11
+#   scalar: attr_cha: 14 -> 15
+#   scalar: attr_luc: 16 -> 18
+#   feat: feat queue: Acrobatic, Endurance -> Alertness, Domain Focus
+#   spell: spell queue: Bane [Divine] -> Bane [Divine], Call Light [Divine], Call Companions [Divine]
+#   skill: skill_ranks [Craft]: 1 -> 2
+#   skill: skill_ranks [Healing]: 0 -> 2
+#   quantity: thrown_quantity: 6 -> 7
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (buckler) and 2 skill tools (healing kit, heal 2; craftsman's tools, craft 2) | built: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 1)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: domain: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 99 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 55 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 63 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 34 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 7 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 78 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 81 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 20 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 42 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a22]: 20 kept as the walk recorded it; the old character holds this annotation's item (coat of plates, quantity 1), so its roll is within the annotation's chance
+#   differs: ability CA_DEVOURING 1 -> Feats: Cannibalism -- commit 4e1fc266
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 5
+alter_options: no
+explore_continue: yes
+formula_seed: 6
+race: Orc
+subrace: Orc
+name: Holg
+surname: the Anathema
+class: Priest
+god: Aiswin
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Loadbearer
+perk_type [1]: PERK_FEAT
+perk_feat [1]: Shield Proficiency
+attr_str: 10
+attr_dex: 15
+attr_con: 14
+attr_int: 14
+attr_wis: 11
+attr_cha: 15
+attr_luc: 18
+alignment: Lawful Good
+domain: Fate
+domain: Knowledge
+domain: Night
+feat: Alertness
+feat: Domain Focus
+hp_roll [Priest]: 8
+mana_roll [Priest]: 12
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 0
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 2
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 32
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 99
+kit_item [Orc;a4]: ranseur, quantity 1
+gear_stream [Priest]: 33
+kit_item [Priest;a1]: heavy mace, quantity 1
+kit_item [Priest;a2]: flask, effect water, flag blessed, quantity 12
+kit_item [Priest;a3]: potion, effect Healing, quantity 7
+kit_item [Priest;a4]: gold piece, quantity 70
+kit_item [Priest;a5]: clerical vestment, quantity 1
+gear_stream [Universal Gear]: 34
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 55
+gear_chance [Universal Gear;a6]: 63
+gear_chance [Universal Gear;a7]: 34
+gear_chance [Universal Gear;a10]: 7
+gear_chance [Universal Gear;a14]: 78
+gear_chance [Universal Gear;a18]: 81
+gear_chance [Universal Gear;a19]: 20
+gear_chance [Universal Gear;a20]: 42
+gear_chance [Universal Gear;a22]: 20
+kit_item [Universal Gear;a22]: coat of plates, quantity 1
+thrown_quantity: 7
+personality: The Ambitious Conqueror
+spell_learn: Bane [Divine]
+spell_learn: Call Light [Divine]
+spell_learn: Call Companions [Divine]
+store_seed: 40
+character_name: Holg the Anathema
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

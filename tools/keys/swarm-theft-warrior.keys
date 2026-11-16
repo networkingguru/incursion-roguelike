@@ -1,0 +1,4 @@
+# swarm-theft.keys on the base character after the warrior derivation (bd inc-10v7f). The warrior scenario of tools/check_swarm_theft.sh;
+# the defense scenario runs swarm-theft.keys alone on its own fixture.
+@include setup-alignment-drain-warrior.keys
+@include swarm-theft.keys

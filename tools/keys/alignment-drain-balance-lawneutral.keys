@@ -1,0 +1,3 @@
+# alignment-drain-balance.keys on the built Lawful Neutral fixture, after its setup (bd inc-10v7f). Run C of tools/check_alignment_drain_edges.sh.
+@include setup-alignment-drain-lawful-neutral.keys
+@include alignment-drain-balance.keys

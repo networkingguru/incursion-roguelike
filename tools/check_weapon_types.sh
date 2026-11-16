@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/orc-mage-seed4-gate.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the probe places items on free cells the old save's player perceives
 # Places that decide "is this a weapon?" with an exact isType(T_WEAPON) must
 # treat BOWS (T_BOW) and AMMUNITION (T_MISSILE) as weapons. (bd inc-f38k)
 #
@@ -68,7 +69,7 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 SEED=1
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed4-gate.sav
+export INCURSION_LOAD=tools/fixtures/specimens/orc-mage-seed4-gate.sav
 
 SITE="${CHECK_ARGS[0]:-}"
 

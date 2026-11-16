@@ -2,10 +2,11 @@
 # each stage. Read by tools/check_alignment_drain.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/alignment-drain-warrior.sav \
+#   INCURSION_LOAD=quality-item-magic-seed5-opt0822 \
 #       tools/headless.sh tools/keys/alignment-drain-wield.keys 1
 #
-# THE CHARACTER is the fixture alignment-drain-warrior: a level 5 Chaotic Good
+# THE CHARACTER is alignment-drain-warrior, which tools/check_alignment_drain.sh derives from
+# quality-item-magic-seed5-opt0822 with tools/keys/setup-alignment-drain-warrior.keys: a level 5 Chaotic Good
 # orc warrior with 10000 XP. Chaotic Good is wrong for an UNHOLY weapon
 # (src/Inv.cpp:401), and level 5 leaves effective level 1 even after four
 # drained levels. The fixture is a save the wizard flag is already set in,
@@ -21,9 +22,11 @@
 #   sheet-1-wield      first wield
 #   sheet-2-unwield    unwielded again (the sword is stowed in the pack)
 #   sheet-3-rewield    second wield, same sword, picked as pack row 04
-# Pack row 04 is the sword because the fixture's pack holds three weapons in
-# front of it; the @expect below fails the script if that ever changes.
+# Pack row 03 is the sword because the built character's pack holds two weapons in front of it
+# (row 04 in the old frozen pack, which held three); the @expect below fails the script if that changes.
 
+# The base character after the warrior derivation, Warrior 5 (bd inc-10v7f): tools/keys/setup-alignment-drain-warrior.keys.
+@include setup-alignment-drain-warrior.keys
 s                       # one real turn, so this counts as a session
 d
 @expect "Align  Chaotic Good"
@@ -54,7 +57,7 @@ i
 @until ">>b)Weapon" b
 SPACE                   # unwield: the sword goes "In the Air"
 s                       # stow it in the pack
-@expect "04) mildly damaged Long Sword, Nine Lives"
+@expect "03) mildly damaged Long Sword, Nine Lives"
 ESC
 d
 @dump:sheet-2-unwield
@@ -62,7 +65,7 @@ ESC
 
 i
 0
-4                       # pick the sword in the pack
+3                       # pick the sword in the pack (row 03)
 SPACE                   # take it out, into the air
 @until ">>b)Weapon" b
 SPACE                   # swap it into the Weapon Hand

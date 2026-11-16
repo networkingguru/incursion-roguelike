@@ -18,8 +18,10 @@ extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
 
 namespace {
 
+// no-family
 const int MAXRING = 80;
 const int BANDMAX = 160;
+// end no-family
 struct RingRec {
     int ring, nt, nd, wait;
     int16 tx[BANDMAX], ty[BANDMAX], dx[BANDMAX], dy[BANDMAX];
@@ -57,7 +59,9 @@ struct Shot {
     bool Struck(int x, int y) const { return hit[y * sx + x] != 0; }
 };
 
+// no-family
 const int CX = 26, CY = 17;   /* the center every case aims at */
+// end no-family
 
 struct Setup { Map *mp; Player *pl; rID floor, wall, door, kobold, fire, hell; };
 

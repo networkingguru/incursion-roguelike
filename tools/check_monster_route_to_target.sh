@@ -2,7 +2,8 @@
 # gate: live
 # inc-rabe: SmartDirTo must route to a perceived hostile creature behind a wall.
 # fact: key bindings and overview entry -- options-2026-08-22.dat and monster-route-check.keys
-# fact: player identity and initial world -- fixture kobold-rogue-seed1.sav
+# fact: player identity -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh); no setup keys: the probe stages the whole scene, so the empty-hands setup is not needed
+# fact: initial world -- RouteProbe staging replaces it (the built level differs from the old save's)
 # fact: monster identity, position and no ambient creatures -- RouteProbe staging
 # fact: player position and survival -- RouteProbe staging (10,10; 10000 HP)
 # fact: known floor, size-compatible region and U corridor -- RouteProbe staging
@@ -21,7 +22,7 @@ mkdir -p logs/runs
 run=$(mktemp -d "$PWD/logs/runs/monster-route-check.XXXXXX") || exit 2
 INCURSION_ROUTE_PROBE="${INCURSION_ROUTE_PROBE:-1}" INCURSION_RUN_DIR="$run" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+INCURSION_LOAD=kobold-rogue-seed1 \
     tools/headless.sh tools/keys/monster-route-check.keys "${1:-3}" > "$run/harness.txt" 2>&1
 rc=$?
 python3 - "$run" "$rc" <<'PY'

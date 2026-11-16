@@ -22,7 +22,7 @@ for case_id in 1 2 3 4 5 6; do
     INCURSION_BIN="$ROOT/incursion-headless" \
     INCURSION_MOUNT_SIZE_PROBE="$case_id" INCURSION_RUN_DIR="$RUN_DIR/case-$case_id" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+    INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char \
         tools/headless.sh tools/keys/template-alignment.keys 1 \
         > "$RUN_DIR/case-$case_id.harness.txt" 2>&1 || status=$?
     if [ "$status" -ne 0 ]; then

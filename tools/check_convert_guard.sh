@@ -34,6 +34,13 @@
 #      lib/ changed.
 #
 # Usage: tools/check_convert_guard.sh   (exits 0 on pass, 1 on fail)
+#
+# Every fact this check reads, and the control that fixes it
+# (docs/VERIFICATION.md, "A check must not depend on the seed"):
+# fact: the two v0 saves -- docs/evidence/inc-upw.13/Furious_Fox.sav and Jaoin.sav, committed bytes, compared with cmp before and after
+# fact: the v1 save -- fixture human-priest-mage-seed4-gate (built from its .char, served by tools/fixture_cache.sh); any v1 save serves, the check copies it and compares the copy
+# fact: the refusal exit codes and messages -- read from the binary's own output on each -convert run; no game session, no seed
+# fact: nothing real touched -- the save/ listing (names and bytes) and git status of docs/evidence/ and lib/, taken before and after
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -44,7 +51,9 @@ fail() { echo "FAIL: $1"; FAILED=1; }
 
 BIN="${INCURSION_BIN:-./incursion-headless}"
 FIX_DIR="$ROOT/docs/evidence/inc-upw.13"
-V1_FIX="$ROOT/tools/fixtures/chars/human-priest-mage-seed4-gate.sav"
+# The built fixture's cached .sav (tools/fixture_cache.sh builds it from the .char on a miss). The check only
+# copies it and compares the copy, so no setup keys are needed: any v1 save would do.
+V1_FIX="$(INCURSION_BIN="$BIN" "$ROOT/tools/fixture_cache.sh" human-priest-mage-seed4-gate)" || { fail "fixture_cache could not serve human-priest-mage-seed4-gate"; exit 1; }
 
 [ -x "$BIN" ] || { fail "$BIN is not built. Run: BACKEND=posix ./build_macos.sh"; exit 1; }
 [ -f "$FIX_DIR/Furious_Fox.sav" ] || { fail "fixture Furious_Fox.sav is missing"; exit 1; }

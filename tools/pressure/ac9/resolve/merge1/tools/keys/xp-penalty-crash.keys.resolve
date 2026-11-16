@@ -1,0 +1,5 @@
+# Wood Elf Rogue 1 on a loaded character, then Rogue 2 / Warrior 1 by wizard level-ups.
+# tools/check_xp_penalty.sh sets INCURSION_LOAD to the fixture wood-elf-rogue-seed7-opt0818,
+# built by tools/keys/wood-elf-rogue-save.keys, so no seed decides his skill ranks.
+# The first key is one real turn: after a load the first menu key does not open without it.
+s

@@ -8,7 +8,7 @@
 # SS_ATTK and val FEAR_MAGIC. Before the fix the Duration and Cause arguments
 # were swapped, so the fear lasts SS_ATTK (6) units and carries the roll as its cause.
 # FAIL, INCONCLUSIVE or missing results exit nonzero.
-# fact: map layout and adjacent open square -- loaded fixture sav (tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav pins the dungeon), probe INCONCLUSIVE if none
+# fact: map layout and adjacent open square -- loaded fixture sav (tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav pins the dungeon), probe INCONCLUSIVE if none -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: victim save result -- LOFSetForcedSaveThrowRoll(1) forces a natural 1
 # fact: victim identity and living type -- FIND("kobold"), fixed resource
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
@@ -22,7 +22,7 @@ cd "$ROOT"
 SEED=1
 KEYS=tools/keys/bane-radius.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+LOAD=tools/fixtures/specimens/xsummon-priest-seed5-opt0822.sav
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

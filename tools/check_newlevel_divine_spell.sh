@@ -1,5 +1,10 @@
 #!/bin/bash
 # gate: live
+# fact: character: race, class, stats, kit, held spells -- fixture orc-priest-seed4-gate, built from its .char alone (INCURSION_LOAD)
+# fact: options -- tools/fixtures/options-2026-08-22.dat (CHECK_OPTIONS)
+# fact: the extra level -- wizard menu, Wizard Mode Switches, "Free Advancement" set to YES, then G on the character sheet
+# fact: level-up menu answers -- fixed by the fixture and the key script; hit points are not asserted
+# fact: slot count "4 of 5" and the Detect Evil row -- the Priest class table and the fixture's held spells; no roll decides them
 # inc-5p2z: is a divine spell picked into a FREE slot at level-up held at once?
 #
 # THE DEFECT. Player::LearnSpell (src/Create.cpp) treats every arcane, divine
@@ -17,7 +22,7 @@
 #
 # THE ORACLE is the cast menu (the Spell Manager opened with 'm'): it lists only
 # HELD spells, by bare name with a Src column. Tracing: the fixture Henk
-# (orc-priest-seed4-gate.sav) is Priest 1; the key script gains Priest 2, whose
+# (orc-priest-seed4-gate.char) is Priest 1; the key script gains Priest 2, whose
 # Learn Spells table reads "Learn Spells: Level 1 (4 of 5 slots used)". It marks
 # Detect Evil, Enter opens the summary box, Enter confirms, and the cast menu
 # opens without a rest. Preconditions are asserted, so a drifted run exits 2:
@@ -31,7 +36,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-priest-seed4-gate.sav
+FIXTURE=tools/fixtures/chars/orc-priest-seed4-gate.char
 [ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE."
 
 export INCURSION_LOAD="$FIXTURE"

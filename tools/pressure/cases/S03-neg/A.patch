@@ -1,0 +1,15 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index d62a9c3..474ab21 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1249,6 +1249,10 @@ class Character: public Creature
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
++      uint32 ac8LeftValue = 17;
++      r.V1EmbedBegin("Ac8Left", &ac8LeftValue, sizeof(ac8LeftValue));
++      FIELD_U32("value", ac8LeftValue);
++      r.V1EmbedEnd();
+       /* Load-direction fixups, below every field they read (wire format,
+          load-direction ordering). Both are guarded by V1Active(): on the v0
+          path the raw dump supplies these bytes and rejecting a v0 save this

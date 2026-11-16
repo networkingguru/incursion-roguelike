@@ -123,7 +123,7 @@ TOUCH_KEYS=tools/keys/dispel-evil-touch.keys
 DEFL_KEYS=tools/keys/dispel-evil-deflection.keys
 SEED=1
 OPTIONS=tools/gates/Options.Dat
-FIXTURE=tools/fixtures/chars/orc-priest-seed4-gate.sav
+FIXTURE=tools/fixtures/chars/orc-priest-seed4-gate.char
 
 field() { # field "<line>" "<prefix>"  ->  value, or empty if absent
     awk -v p="$2" '{for(i=1;i<=NF;i++) if (index($i,p)==1) {print substr($i,length(p)+1); exit}}' <<< "$1"

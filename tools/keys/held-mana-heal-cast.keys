@@ -1,5 +1,7 @@
 # Property 2: the fixture is already wounded; then cast Cure
 # Light Wounds on the caster ('*' = Target Self), then save.
+# The fixture holds only the created character; setup-human-priest-mage-wounded-seed4-gate.keys makes the state the old save held (bd inc-10v7f).
+@include setup-human-priest-mage-wounded-seed4-gate.keys
 @dump:hurt
 @until "Select Spell" m
 @choose "Cure Light Wounds"

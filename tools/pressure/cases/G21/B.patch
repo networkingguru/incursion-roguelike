@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..e60f09a 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -337,6 +337,7 @@ typedef signed int        hObj;
+ // family: kn stored bits u16
+ 
+ #define KN_NATURE    0x01
++#define KN_GRWB 0x100
+ #define KN_CURSE     0x02
+ #define KN_BLESS     0x02  /* alias of KN_CURSE */
+ #define KN_MAGIC     0x04

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Stand-in for git (inc-rst61). Records "git-history <args>" when the subcommand
+# is log, rev-list or shortlog with no bound (-n N, -nN, -N, --max-count), since
+# an unbounded history walk is expensive in a fast check. Then runs real git.
+self=$(cd -P "$(dirname "$0")" && pwd -P)
+name=$(basename "$0")
+real=
+IFS=:
+for d in $PATH; do
+  [ -n "$d" ] || d=.
+  r=$(cd -P "$d" 2>/dev/null && pwd -P) || continue
+  [ "$r" = "$self" ] && continue
+  if [ -f "$r/$name" ] && [ -x "$r/$name" ]; then real="$r/$name"; break; fi
+done
+unset IFS
+if [ -z "$real" ]; then echo "fast_probe: no real $name on PATH" >&2; exit 127; fi
+record() {
+  [ -n "${INCURSION_FAST_PROBE:-}" ] || return 0
+  printf "%s\n" "$1" >> "$INCURSION_FAST_PROBE" 2>/dev/null ||
+    echo "fast_probe: cannot record to $INCURSION_FAST_PROBE" >&2
+  return 0
+}
+sub=
+bounded=0
+skip=0
+seen=0
+for a in "$@"; do
+  if [ "$seen" = 0 ]; then
+    if [ "$skip" = 1 ]; then skip=0; continue; fi
+    case "$a" in
+      -C|-c|--git-dir|--work-tree) skip=1 ;;
+      -*) ;;
+      *) sub=$a; seen=1 ;;
+    esac
+  else
+    if [ "$skip" = 1 ]; then skip=0; bounded=1; continue; fi
+    case "$a" in
+      -n|--max-count) skip=1 ;;
+      -n[0-9]*|--max-count=*) bounded=1 ;;
+      -[0-9]*) case "${a#-}" in *[!0-9]*) ;; *) bounded=1 ;; esac ;;
+    esac
+  fi
+done
+case "$sub" in
+  log|rev-list|shortlog) [ "$bounded" = 1 ] || record "git-history $*" ;;
+esac
+exec "$real" "$@"

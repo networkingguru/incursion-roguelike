@@ -1,0 +1,138 @@
+# druid-shoulder-metal-seed7-opt0822: converted from tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/druid-shoulder-metal-save.keys, seed 7, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 298 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/druid-shoulder-metal-save.keys 7 34 73 32:37:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (7), skeleton value -> old value:
+#   scalar: name: Ivellios -> Heian
+#   scalar: surname: Gemflower -> Diamonddew
+#   scalar: character_name: Ivellios Gemflower -> Heian Diamonddew
+#   scalar: store_seed: 38 -> 41
+#   kit: kit_item [Universal Gear;a10]: bark armour, quantity 1 -> none (the old character has no item for this ask)
+#   kit: kit_item [Druid;a2]: quarterstaff, quantity 1 -> none (the old character has no item for this ask)
+#   quantity: ammo_quantity: 37 -> 31
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 1) | built: 0 perk items (-) and 1 skill tool (craftsman's tools, craft 1)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 1 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Wood Elf;a2]: 92 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Wood Elf;a4]: 8 kept as the walk recorded it; the old character holds this annotation's item (long sword, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Druid;a1]: 69 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Druid;a2]: 4 kept as the walk recorded it; the old character holds no item for this annotation (kit_item is none); the dump does not say whether the old roll failed the chance, which lets an else-annotation grant, or the item pick gave nothing
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 55 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 63 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 34 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 7 kept as the walk recorded it; the old character holds no item for this annotation (kit_item is none); the dump does not say whether the old roll failed the chance, which lets an else-annotation grant, or the item pick gave nothing
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 7
+alter_options: no
+explore_continue: yes
+formula_seed: 8
+race: Elf
+subrace: Wood Elf
+name: Heian
+surname: Diamonddew
+class: Druid
+perk_type [0]: PERK_ABILITY
+perk_ability [0]: Animal Companions 1
+attr_str: 13
+attr_dex: 11
+attr_con: 15
+attr_int: 13
+attr_wis: 14
+attr_cha: 15
+attr_luc: 17
+alignment: Neutral
+feat: Expertise
+feat: Acrobatic
+hp_roll [Druid]: 8
+mana_roll [Druid]: 12
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 2
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 1
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Wood Elf]: 32
+kit_item [Wood Elf;a0]: medium backpack, quantity 1
+kit_item [Wood Elf;a1]: piece of elven waybread, quantity 8
+gear_chance [Wood Elf;a2]: 92
+kit_item [Wood Elf;a3]: short bow, quantity 1
+gear_chance [Wood Elf;a4]: 8
+kit_item [Wood Elf;a4]: long sword, quantity 1
+kit_item [Wood Elf;a6]: torch, quantity 6
+gear_stream [Druid]: 33
+gear_chance [Druid;a1]: 69
+gear_chance [Druid;a2]: 4
+kit_item [Druid;a2]: none
+kit_item [Druid;a7]: robes, quantity 1
+kit_item [Druid;a8]: ring, effect Climbing, plus 1, quantity 1
+kit_item [Druid;a9]: gold piece, quantity 8
+kit_item [Druid;a10]: potion, effect Healing, quantity 5
+kit_item [Druid;a11]: potion, effect Dimension Door, quantity 5
+gear_stream [Universal Gear]: 34
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 55
+gear_chance [Universal Gear;a6]: 63
+gear_chance [Universal Gear;a7]: 34
+gear_chance [Universal Gear;a10]: 7
+kit_item [Universal Gear;a10]: none
+ammo_quantity: 31
+personality: The Ambitious Conqueror
+spell_learn: Call Companions [Primal]
+spell_learn: Call Light [Primal]
+spell_learn: Calm Animals [Primal]
+store_seed: 41
+character_name: Heian Diamonddew
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

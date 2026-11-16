@@ -42,12 +42,14 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
+# fact: character -- fixture prestige-geomancy-seed1-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Free Advancement, Show All Combat Rolls, Bard 7 and the Craft ranks -- tools/keys/setup-prestige-geomancy-seed1-opt0822.keys (the old .sav held them; V7-1 moved them into the check)
 SEED=1
-KEYS=tools/keys/load-char-sheet.keys
+KEYS=tools/keys/study-slots-sheet.keys
 # A frozen single-class caster: Bard 7, caster level 3 on the chart, so the
 # study step takes it to 4 and the two charts differ in a way a check can see.
 # Known-good under the 2026-08-22 settings. See tools/fixtures/README.md.
-LOAD=tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav
+LOAD=prestige-geomancy-seed1-opt0822
 
 export INCURSION_STUDY_PROBE=1
 export INCURSION_LOAD="$LOAD"

@@ -3,7 +3,7 @@
 # before and after the arcane spellbook requirement is removed.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
 #       tools/headless.sh tools/keys/priest-cast-nosymbol.keys 1
 #
 # THE CHARACTER. Holg, the frozen Orc Priest of Aiswin. His Holy symbol of

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Stand-in for sleep (inc-rst61). Records "sleep <args>" only when the real
+# sleep ran to completion (exit 0): a sleep that a check kills is not a wait.
+# On SIGTERM/SIGINT/SIGHUP it kills the child and exits 128+signal, unrecorded.
+# SIGKILL of this script cannot be trapped: the child is orphaned in the same
+# process group, and the runner must clean it up (a later phase).
+self=$(cd -P "$(dirname "$0")" && pwd -P)
+name=$(basename "$0")
+real=
+IFS=:
+for d in $PATH; do
+  [ -n "$d" ] || d=.
+  r=$(cd -P "$d" 2>/dev/null && pwd -P) || continue
+  [ "$r" = "$self" ] && continue
+  if [ -f "$r/$name" ] && [ -x "$r/$name" ]; then real="$r/$name"; break; fi
+done
+unset IFS
+if [ -z "$real" ]; then echo "fast_probe: no real $name on PATH" >&2; exit 127; fi
+record() {
+  [ -n "${INCURSION_FAST_PROBE:-}" ] || return 0
+  printf "%s\n" "$1" >> "$INCURSION_FAST_PROBE" 2>/dev/null ||
+    echo "fast_probe: cannot record to $INCURSION_FAST_PROBE" >&2
+  return 0
+}
+"$real" "$@" &
+child=$!
+trap 'kill "$child" 2>/dev/null; exit 143' TERM
+trap 'kill "$child" 2>/dev/null; exit 130' INT
+trap 'kill "$child" 2>/dev/null; exit 129' HUP
+rc=
+while [ -z "$rc" ]; do
+  wait "$child"; st=$?
+  # a trapped signal makes wait return >128 while the child still runs
+  if kill -0 "$child" 2>/dev/null; then continue; fi
+  rc=$st
+done
+[ "$rc" = 0 ] && record "sleep $*"
+exit "$rc"

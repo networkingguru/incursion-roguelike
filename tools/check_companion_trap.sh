@@ -2,16 +2,17 @@
 # gate: live
 # inc-47ws: does an animal companion walk over a trap that already sprung?
 # Prints one COMPANION_TRAP line per mode; asserts only that the control works.
-# fact: class, kit, animal-companion capacity -- druid-shoulder-metal-seed7-opt0822.sav
+# fact: class, kit, animal-companion capacity -- druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh)
+# fact: the wizard mode and the long sword on the L. Shoulder -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: options (incl. Monsters Use Djikstra) -- tools/fixtures/options-2026-08-22.dat
-# fact: map, no AI, wall with one gap holding the trap -- INCURSION_COMPANION_TRAP_PROBE scene
+# fact: map, no AI, wall with one gap holding the trap, and no monster but the wolf (the probe clears the level as wizard Genocide Everything does, before it calls the wolf) -- INCURSION_COMPANION_TRAP_PROBE scene
 # fact: companion relationship -- probe calls MakeCompanion(player, PHD_ANIMAL) on a wolf
 # fact: trap save (sprung = failed, avoided = made) -- INCURSION_FORCE_SAVE_ROLL=1 / 20
 # fact: trap flags -- read from the trap after the real TriggerTrap, never written by the probe
 # fact: player stays put -- tools/keys/companion-trap.keys sends only wait keys
 . "$(dirname "$0")/check_lib.sh"
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav
+export INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822
 for mode in sprung avoided armed none; do
     export INCURSION_COMPANION_TRAP_PROBE="$mode" INCURSION_FORCE_SAVE_ROLL=1
     [ "$mode" = avoided ] && export INCURSION_FORCE_SAVE_ROLL=20

@@ -1,0 +1,19 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..799bc65 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -546,11 +546,12 @@ typedef signed int        hObj;
+ #define SL_BELT1     18
+ #define SL_BELT2     19
+ #define SL_BELT3     20
++#define SL_GRWA 24
+ #define SL_BELT4     21
+ #define SL_BELT5     22
+ #define SL_PACK      23
+-#define SL_LAST      24
+-#define NUM_SLOTS    24  /* alias of SL_LAST */
++#define SL_LAST      25
++#define NUM_SLOTS    25  /* alias of SL_LAST */
+ 
+ /* Hack -- see Monster::Inventory() */
+ #define SL_ARCHERY   50

@@ -7,15 +7,28 @@
 # Studied Elemental Covenant supplies Endure Cold at rest after all books drop;
 # Alarm from unstudied Adventurers' Arts cannot be memorized at that same rest.
 # A symbol-less Priest picks Bless and casts it (mana -5); Call Light refuses.
-# Red proof: copy this check and its five key scripts into a scratch archive
-# of master under logs/, build there with BACKEND=posix ./build_macos.sh, run
-# there. Use that tree's module AND executable. No git state changes required.
+# Every run first sets four wizard switches (tools/keys/wizard-switches.keys,
+# inc-b4l3g.10). The rest is a safe, instant rest on the fixture's own level.
+# fact: character -- fixtures orc-mage-seed1-opt0822 (Mage runs) and xsummon-priest-seed5-opt0822 (Priest run), loaded by INCURSION_LOAD
+# fact: book titles, menu letters and pack numbers -- the built fixture orc-mage-seed1-opt0822: Elemental Covenant is [b] in the book pick, the six books are pack items 10 to 15 (tools/keys/lucubration-mage.keys), asserted by the book-pick and books-gone observations
+# fact: level-up menus (feat, spells) -- the fixture's class and level, with wizard switch Free Advancement
+# fact: level map and player position -- the fixture save; no run changes depth
+# fact: monsters on the level -- wizard switch Freeze Monsters in every run, plus wizard Genocide Everything in the Lucubration run
+# fact: rest encounter roll and monsters a rest adds -- wizard switch Always Rest Safely (REST_SAFE|REST_INSTANT, src/Player.cpp), so Map::DaysPassed does not run
+# fact: spell success roll -- wizard switch Ignore Spell Failure (src/Magic.cpp)
+# fact: hit point roll at level-up -- not asserted; the check matches no hit point value
+# fact: text matched -- game strings and fixture content only; no seed-decided text is asserted
+# Red proof (inc-b4l3g.10): in src/Create.cpp, Player::ApplySpellSelection, the
+# arcane branch (line 6620) `hasBook = HasBookFor(sn);` became `hasBook = true;`.
+# Run in the worktree, then restored. Two assertions FAILED: "rest refuses the
+# unstudied-book control" and "unstudied-book spell is not memorized after rest".
+# The restored source passes all assertions.
 # Any missing screen, failed harness directive, or assertion is FAIL (exit 1).
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-MAGE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
-PRIEST=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+MAGE=tools/fixtures/chars/orc-mage-seed1-opt0822.char
+PRIEST=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 FAIL=0
 RUN=
 result() {
@@ -108,14 +121,14 @@ if run inherent-mage "$MAGE"; then
 fi
 if run lucubration-mage "$MAGE"; then
     observe book-pick 'Choose a spellbook to study:' 'GainFeat opens the book pick menu'
-    observe book-pick '[e] spellbook [Elemental Covenant]' 'the selected book kind is carried'
+    observe book-pick '[b] spellbook [Elemental Covenant]' 'the selected book kind is carried'
     # Table row: a "[*]" Pick cell whose Status is "Learn at rest".
     observe selected '[*]  Endure Cold            Arcane  Abjuration      2   Learn at rest' \
         'Endure Cold is selected for the next rest'
     observe cast-before '] Alarm' 'unpicked-book control starts memorized'
     observe cast-before '] Endure Cold' 'Endure Cold is not yet memorized' absent
     observe books-before "spellbook [Adventurers' Arts]" 'the control book is carried before dropping'
-    observe books-gone 'Wand of Identify' 'post-drop inventory was reached'
+    observe books-gone 'orcish longspear' 'post-drop inventory was reached'
     observe books-gone 'spellbook [' 'all six books have left the pack' absent
     # A held, marked arcane row whose book is missing reads "Needs book"
     # (inc-g045 ruling).

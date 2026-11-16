@@ -1,0 +1,14 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1790,9 +1790,10 @@
+ #define MA_SWARM        70  
+ #define MA_PLANETOUCHED 71
+ #define MA_DEMON        72
++#define MA_GRWB 74
+ #define MA_DEVIL        73
+ 
+-#define MA_LAST_REAL    74
++#define MA_LAST_REAL    75
+ 
+ #define MA_LIVING       75 /* !construct, !vortex, !elemental, !elementalkin */
+ #define MA_UNDEAD       76

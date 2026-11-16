@@ -29,16 +29,16 @@
 # a permanent "Save Bonus: +4 vs. Poison" perk -- src/Create.cpp:1690's
 # random(FT_LAST - FT_FIRST) + FT_FIRST, shifted by inc-08js's Cannibalism
 # feat -- which rode under every Will-vs-poison reading below. Now the caller
-# starts this script from INCURSION_LOAD=tools/fixtures/chars/orc-bard-reapply-seed1.sav
-# instead: a character frozen (tools/keys/reapply-bard-save.keys) from a
+# starts this script from INCURSION_LOAD=tools/fixtures/chars/orc-bard-reapply-seed1.char
+# instead: a character built (tools/fixtures/chars/orc-bard-reapply-seed1.char) from a
 # reroll of that same draw with no Poison perk at all, so the session begins
 # already in play, on the saved empty level, wizard mode already on, and
 # "Afoot" already showing. See tools/fixtures/README.md.
 
-e                       # eat once: the frozen fixture loads Hungry, whose
-a                       # -1 CON would ride under every reading below
-@while "Stop eating" y
-@while "-- more --" SPACE
+# The fixture holds only the created character; setup-orc-bard-reapply-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-bard-reapply-seed1.keys
+# The old frozen fixture loaded Hungry, so an eat step stood here to clear its -1 CON. The built character is
+# Satiated (the sidebar says so), and the eat menu now lists the floor corpse first, so no eat step remains.
 @dump:ate
 
 d

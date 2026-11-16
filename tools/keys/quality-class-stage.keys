@@ -1,0 +1,14 @@
+# Key script for tools/check_quality_class.sh --pack, first half:
+# INCURSION_QUALITY_CLASS_PROBE=stage puts a light mace (qualities 7, 15, 26, 34,
+# 60) and a leather armour (qualities 15, 25) in the pack at the start of
+# Game::Play; this script then searches once and saves (System Menu [b], Save
+# and Continue, as tools/keys/load-char-sheet.keys does). inc-rddai.
+@dump:arrival
+
+s               # search: one real turn, so this counts as a session
+@dump:played
+
+ESC             # System Menu -- NOT a cancel; see tools/keys/load-char-sheet.keys
+@expect "System Menu"
+b               # [b] Save and Continue
+@dump:saved

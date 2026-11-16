@@ -1,0 +1,4 @@
+# G29: P's own build: a flask in the pack, a barbazu beside the player, and the Dance of Ruin variable
+item flask
+monster barbazu
+var Dance of Ruin vrock_count 7

@@ -14,7 +14,7 @@
 # after the paladin walks out of the radius and back in. The count of "sacred
 # courage" lines MUST stay equal to the control at both later points.
 #
-# fact: character -- fixture human-paladin-seed4-opt0822
+# fact: character -- fixture human-paladin-seed4-opt0822 -- human-paladin-seed4-opt0822 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/human-paladin-seed4-opt0822.sav)
 # fact: character level 2 (aura starts) -- wizard Free Advancement + sheet G
 # fact: no other creature (Keeper, wild monsters) -- wizard Genocide Everything
 # fact: the ally -- wizard Monster Summoning kobold + Make Player Master
@@ -34,7 +34,7 @@ cd "$ROOT"
 }
 
 OUT="$(INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-       INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+       INCURSION_LOAD=tools/fixtures/specimens/human-paladin-seed4-opt0822.sav \
        tools/headless.sh tools/keys/valour-ally-message.keys 1 2>&1)"
 STATUS=$?
 RUN="$(echo "$OUT" | awk '/^run:/ {print $2}')"

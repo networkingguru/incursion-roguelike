@@ -2751,7 +2751,7 @@ Monster "blue jelly" : MA_JELLY
     Feats: FT_SWARM;
     On Event EVICTIM(POST(EV_DAMAGE)) {
       if (!(EVictim->isDead()))
-        if (e->DType != AD_FIRE && e->DType <= AD_LAST_PHYSICAL)
+        if (e->DType != AD_FIRE && DTypeTakesHP(e->DType))
           EVictim->Multiply(1,true);
       return NOTHING;
       };
@@ -3360,7 +3360,7 @@ Monster "white worm mass" : MA_WORM, MA_VERMIN
 	   M_NOLIMBS, M_BLIND, M_NO_CORPSE, M_GROUP;
     Feats: FT_SWARM;
     On Event POST(EVICTIM(EV_HIT)) {
-      if (e->DType <= AD_LAST_PHYSICAL)
+      if (DTypeTakesHP(e->DType))
         if (!(EVictim->Flags & F_DELETE))
           EVictim->Multiply(1,false);
       };

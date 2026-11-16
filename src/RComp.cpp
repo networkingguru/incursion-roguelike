@@ -882,31 +882,36 @@ Repeat:
                 fprintf(fp,"        case %d:\n          REGS(n) = UNCAST_RECT(",b2->varid);
             else
                 fprintf(fp,"        case %d:\n          REGS(n) = ",b2->varid);
+            const char *pfx = "";
             switch(b2->OType)
             { 
-            case T_EVENTINFO: fprintf(fp,"(pe"); break;
-            case T_MAP:       fprintf(fp,"(oMap(h)"); break;
-            case T_OBJECT:    fprintf(fp,"(oObject(h)"); break;
-            case T_THING:     fprintf(fp,"(oThing(h)"); break;
-            case T_PLAYER:    fprintf(fp,"(oPlayer(h)"); break;
-            case T_CREATURE:  fprintf(fp,"(oCreature(h)"); break;
-            case T_CHARACTER: fprintf(fp,"(oCharacter(h)"); break; 
-            case T_MONSTER:   fprintf(fp,"(oMonster(h)"); break; 
-            case T_ITEM:      fprintf(fp,"(oItem(h)"); break;
-            case T_FEATURE:   fprintf(fp,"(oFeature(h)"); break;
-            case T_PORTAL:    fprintf(fp,"(oPortal(h)"); break;
-            case T_DOOR:      fprintf(fp,"(oDoor(h)"); break;                            
-            case T_TRAP:      fprintf(fp,"(oTrap(h)"); break;                            
-            case T_GAME:      fprintf(fp,"(oGame(h)"); break;                            
-            case T_CONTAIN:   fprintf(fp,"(oContain(h)"); break;
-            case T_TERM:      fprintf(fp,"(T1"); break;
+            case T_EVENTINFO: pfx = "(pe"; break;
+            case T_MAP:       pfx = "(oMap(h)"; break;
+            case T_OBJECT:    pfx = "(oObject(h)"; break;
+            case T_THING:     pfx = "(oThing(h)"; break;
+            case T_PLAYER:    pfx = "(oPlayer(h)"; break;
+            case T_CREATURE:  pfx = "(oCreature(h)"; break;
+            case T_CHARACTER: pfx = "(oCharacter(h)"; break; 
+            case T_MONSTER:   pfx = "(oMonster(h)"; break; 
+            case T_ITEM:      pfx = "(oItem(h)"; break;
+            case T_FEATURE:   pfx = "(oFeature(h)"; break;
+            case T_PORTAL:    pfx = "(oPortal(h)"; break;
+            case T_DOOR:      pfx = "(oDoor(h)"; break;                            
+            case T_TRAP:      pfx = "(oTrap(h)"; break;                            
+            case T_GAME:      pfx = "(oGame(h)"; break;                            
+            case T_CONTAIN:   pfx = "(oContain(h)"; break;
+            case T_TERM:      pfx = "(T1"; break;
             }
             if (!strcmp(theSymTab[i],"m"))
-                fprintf (fp, "->%s->myHandle);\n         break;\n",theSymTab[i]);
+                /* upstream: a thing off the map (removed, in a pack, not yet
+                   placed) has m == NULL, and the unguarded read faults on every
+                   platform. Traced on master, Observed on the pantheon branch
+                   under lldb. inc-m2c6. Not sent. */
+                fprintf (fp, "%s->m) ? %s->m->myHandle) : 0;\n         break;\n",pfx,pfx);
             else if (b2->VarType == DT_RECT)
-                fprintf (fp, "->%s));\n         break;\n",theSymTab[i]);
+                fprintf (fp, "%s->%s));\n         break;\n",pfx,theSymTab[i]);
             else 
-                fprintf (fp, "->%s);\n         break;\n",theSymTab[i]);
+                fprintf (fp, "%s->%s);\n         break;\n",pfx,theSymTab[i]);
         }
         rb2 = (BResMem*)theSymTab.GetBinding(i,0,1,RES_MEM);
         if (!rb2)
@@ -1070,7 +1075,12 @@ void VBlock::ProcessContinues()
                   }
                 size++;
                 rel_dest++;
-                memmove(&(vc[i+2]),&vc[i+1],size-i);
+                /* upstream: the count is in bytes; the old size-i was in
+                   entries, so the code after the insert was cut off. Traced;
+                   inc-b0ii; not sent. */
+                memmove(&(vc[i+2]),&vc[i+1],(size-i-2)*sizeof(VCode));
+                vc[i].P1Type = RT_CONSTANT | RT_EXTENDED;
+                vc[i].Param1 = 0;
                 *((int32*)(&(vc[i+1]))) = rel_dest;
                 goto start_again;
               }       
@@ -1082,10 +1092,34 @@ void VBlock::ProcessContinues()
               j++;
             if (vc[i].P2Type & RT_EXTENDED)
               j++;
+            /* upstream: the jump table after a JTAB holds raw data words, and
+               the scan read them as opcodes, so a case value or address whose
+               low six bits are 62 became a JUMP. Reached only now that every
+               loop scans its body. Traced; inc-b0ii; not sent. */
+            if (vc[i].Opcode == JTAB)
+              {
+                ASSERT(!(vc[i].P2Type & RT_EXTENDED));
+                j += 2 * vc[i].Param2 + 1;
+              }
             i = j;
           }
       }
   
+  }
+
+/* Wrap this loop in a break target: SBRK before it, FBRK after it. `break;`
+   (JBRK) then lands on the FBRK and the VM steps past it. */
+void VBlock::AddBreakTarget()
+  {
+    VBlock w;
+    int32 rel = size + 1;
+    if (rel > 511)
+      rel++;               /* an extended parameter takes a second word */
+    w.Generate(SBRK, RT_CONSTANT, rel);
+    w.Add(this);
+    w.Generate(FBRK);
+    free(vc);
+    vc = w.vc; size = w.size; space = w.space;
   }
 
 

@@ -1,6 +1,6 @@
 # Reproduction for inc-vc44: Aura of Valour's gain message reaches the player
 # when an ALLY gains the buff. Run by tools/check_valour_ally_message.sh with
-#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char
 # The paladin is level 1; the aura starts at level 2, so Free Advancement and
 # the character sheet's G give him that level (the player's OWN gain line is
 # the control). A tamed monster then stands inside the radius while the

@@ -23,9 +23,9 @@
      void cursesTerm::Color(uint16 _attr) 
      void cursesTerm::StopWatch(int16 milli)  
    Input Functions
-     int16 cursesTerm::GetCharRaw()
-     int16 cursesTerm::GetCharCmd()
-     int16 cursesTerm::GetCharCmd(KeyCmdMode mode)
+     int16 cursesTerm::GetCharRawImpl()
+     int16 cursesTerm::GetCharCmdImpl()
+     int16 cursesTerm::GetCharCmdImpl(KeyCmdMode mode)
      bool  cursesTerm::CheckEscape()
    General Functions
      void cursesTerm::Initialize()
@@ -258,9 +258,9 @@ class cursesTerm: public TextTerm
 	  virtual int32 ConvertChar(Glyph g, char **out);
 
       /* Input Functions */
-      virtual int16 GetCharRaw();
-      virtual int16 GetCharCmd();
-      virtual int16 GetCharCmd(KeyCmdMode mode);
+      virtual int16 GetCharRawImpl();
+      virtual int16 GetCharCmdImpl();
+      virtual int16 GetCharCmdImpl(KeyCmdMode mode);
       virtual bool CheckEscape();
       virtual void ClearKeyBuff();
       virtual void PrePrompt();
@@ -416,6 +416,14 @@ ExceptionHandler* crashdumpHandler;
 \*****************************************************************************/
 
 int main(int argc, char *argv[]) {
+    /* INCURSION_FAST_PROBE names a file: log this entry and exit 3 (inc-rst61). */
+    if (getenv("INCURSION_FAST_PROBE") != NULL && getenv("INCURSION_FAST_PROBE")[0] != '\0') {
+        FILE *probeFile = fopen(getenv("INCURSION_FAST_PROBE"), "a");
+        if (probeFile == NULL || fprintf(probeFile, "game %s\n", argv[0]) < 0)
+            fprintf(stderr, "INCURSION_FAST_PROBE: cannot append\n");
+        if (probeFile != NULL) fclose(probeFile);
+        exit(3);
+    }
     /* This path code is currently present in libtcod and curses code. */
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");
@@ -1206,15 +1214,15 @@ void cursesTerm::BlitScrollLine(int16 wn, int32 buffline, int32 winline) {
 *                              Input Functions                                *
 \*****************************************************************************/
 
-int16 cursesTerm::GetCharRaw() {
+int16 cursesTerm::GetCharRawImpl() {
 	return GetCharCmd(KY_CMD_RAW);
 }
 
-int16 cursesTerm::GetCharCmd() {
+int16 cursesTerm::GetCharCmdImpl() {
 	return GetCharCmd(KY_CMD_NORMAL_MODE);
 }
 
-int16 cursesTerm::GetCharCmd(KeyCmdMode mode) {
+int16 cursesTerm::GetCharCmdImpl(KeyCmdMode mode) {
     KeySetItem * keyset = theGame->Opt(OPT_ROGUELIKE) ? RoguelikeKeySet : StandardKeySet;
     int16 keyset_start = 0, keyset_delta = 0, keyset_last;
     int16 i, ox, oy, ch;

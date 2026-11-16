@@ -1610,7 +1610,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 307:
         VERIFY(h,T_CHARACTER,"UseSkill")
         ASSERT(REGS(63) >= 1)
-        oCharacter(h)->UseSkill((uint8)STACK(1));
+        oCharacter(h)->UseSkill((int16)STACK(1));
         return;
     case 308:
         VERIFY(h,T_CHARACTER,"UseAbility")
@@ -2764,6 +2764,22 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 3)
         REGS(n) = AutoStackIntoPack(oCreature(STACK(1)), oItem(STACK(2)), STACK(3)!=0);
         return;
+    case 538:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = DTypeTakesHP((int16)STACK(1));
+        return;
+    case 539:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = QualityIsWeapon((int16)STACK(1));
+        return;
+    case 540:
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = QualityIsArmor((int16)STACK(1));
+        return;
+    case 541:
+        ASSERT(REGS(63) >= 0)
+        REGS(n) = QualityMaxNumber();
+        return;
       default:
         Error("Illegal member function call!");
       }
@@ -2820,7 +2836,7 @@ void VMachine::GetMemberVar(int16 varid, hObj h, int8 n)
           REGS(n) = (pe->enAlign);
          break;
         case 2:
-          REGS(n) = (oThing(h)->m->myHandle);
+          REGS(n) = (oThing(h)->m) ? (oThing(h)->m->myHandle) : 0;
          break;
         case 3:
           REGS(n) = (oThing(h)->Next);

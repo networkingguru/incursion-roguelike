@@ -4,6 +4,8 @@
 # the Cancel and then end by itself. Each wait is 16 ticks (the turn counter in
 # every dump's header); see the check for the timing it measured.
 # Lowercase x opens the Cancel menu; see concentration-core.keys.
+# The fixture holds only the created character; setup-elf-mage-illusions-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-elf-mage-illusions-seed1.keys
 @until "Select Spell" m
 @choose "Improved Phantasmal Fo"
 c

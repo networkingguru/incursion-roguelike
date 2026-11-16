@@ -1,5 +1,5 @@
 # tools/keys/dequ-save-dc-setup.keys with its chargen removed: the DEX-13 orc warrior
-# comes from tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav (INCURSION_LOAD),
+# comes from tools/fixtures/chars/dequ-save-dc-seed5-opt0822.char (INCURSION_LOAD),
 # so no attribute set is picked by its shown values. What the setup did AFTER
 # chargen is kept: wizard mode on, Cheat Death on (a long run of failed saves
 # cannot end the session), Freeze Monsters on. bd inc-cr8v.

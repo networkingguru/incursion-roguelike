@@ -17,6 +17,15 @@
 s
 @dump:searched
 
+# Creation readies the kite shield, and a crossbow needs both hands, so the
+# shield goes to the pack first. The cursor opens on [a] Ready Hand; the
+# @expect lines fail the run loudly if that is not the shield or it stays.
+i
+@expect "a)Ready Hand   :orcish kite shield"
+s
+@expect "a)Ready Hand   :Empty"
+ESC
+
 w
 y
 @choose "Item Acquisition"

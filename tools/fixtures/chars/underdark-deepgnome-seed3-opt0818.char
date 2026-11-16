@@ -1,0 +1,150 @@
+# underdark-deepgnome-seed3-opt0818: converted from tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/underdark-deepgnome-save.keys, seed 3, settings tools/fixtures/options-2026-08-18.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 445 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/underdark-deepgnome-save.keys 3 128 67 23:24:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (7), skeleton value -> old value:
+#   scalar: name: Boddynock -> Bofi
+#   scalar: surname: Raulnor -> Nackle
+#   scalar: character_name: Boddynock Raulnor -> Bofi Nackle
+#   scalar: store_seed: 25 -> 26
+#   kit: kit_item [Deep Gnome;a1]: food ration, quantity 4 -> food ration, quantity 13
+#   kit: kit_item [Universal Gear;a14]: leather armour, quantity 1 -> none (the old character has no item for this ask)
+#   quantity: ammo_quantity: 30 -> 36
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 0 perk items (-) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 2) | built: 0 perk items (-) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 11 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_chance [Rogue;a3]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a4]: 45 kept as the walk recorded it; the old character holds this annotation's item (stiletto, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Rogue;a7]: 83 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a8]: 92 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Rogue;a9]: 69 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a3]: 92 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 47 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 17 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 98 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 31 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 13 kept as the walk recorded it; the old character holds no item for this annotation (kit_item is none); the dump does not say whether the old roll failed the chance, which lets an else-annotation grant, or the item pick gave nothing
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-18.dat
+seed: 3
+alter_options: no
+explore_continue: yes
+formula_seed: 4
+race: Gnome
+subrace: Deep Gnome
+name: Bofi
+surname: Nackle
+class: Rogue
+attr_str: 14
+attr_dex: 18
+attr_con: 18
+attr_int: 16
+attr_wis: 15
+attr_cha: 17
+attr_luc: 14
+craft_formula [Alchemy]: Silversheen;alchemy
+alignment: Neutral
+feat: Endurance
+feat: Roll With It
+hp_roll [Rogue]: 6
+mana_roll [Rogue]: 6
+craft_formula [Potion]: Weakness;potion
+craft_formula [Potion]: flask of fey wine
+craft_formula [Scroll]: Force Shapechange
+craft_formula [Scroll]: Wall of Ice
+craft_formula [Scroll]: Power Word: Stun
+craft_formula [Scroll]: Detect Secret Doors
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 2
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 2
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 2
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 2
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: twilight salve
+craft_formula [Alchemy]: Scentblind
+gear_stream [Deep Gnome]: 21
+kit_item [Deep Gnome;a0]: gnomish backpack, quantity 1
+kit_item [Deep Gnome;a1]: food ration, quantity 13
+kit_item [Deep Gnome;a2]: pickaxe, quantity 1
+gear_stream [Rogue]: 22
+kit_item [Rogue;a0]: cranquin, quantity 1
+kit_item [Rogue;a2]: short sword, quantity 1
+gear_chance [Rogue;a3]: 97
+gear_chance [Rogue;a4]: 45
+kit_item [Rogue;a4]: stiletto, quantity 1
+kit_item [Rogue;a6]: cloak, effect Nondetection;item, quantity 1
+gear_chance [Rogue;a7]: 83
+gear_chance [Rogue;a8]: 92
+gear_chance [Rogue;a9]: 69
+kit_item [Rogue;a10]: potion, effect Invisibility, quantity 4
+kit_item [Rogue;a11]: potion, effect Healing, quantity 11
+kit_item [Rogue;a12]: bag, effect tanglefoot bag, quantity 6
+kit_item [Rogue;a13]: potion, effect Dimension Door, quantity 8
+kit_item [Rogue;a14]: gold piece, quantity 262
+kit_item [Rogue;a18]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 23
+gear_chance [Universal Gear;a3]: 92
+gear_chance [Universal Gear;a4]: 47
+gear_chance [Universal Gear;a6]: 17
+gear_chance [Universal Gear;a7]: 98
+gear_chance [Universal Gear;a10]: 31
+gear_chance [Universal Gear;a14]: 13
+kit_item [Universal Gear;a14]: none
+ammo_quantity: 36
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: Universal Solvent
+craft_formula [Alchemy]: eggshell flash-bomb
+store_seed: 26
+character_name: Bofi Nackle
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 2

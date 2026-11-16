@@ -19,13 +19,13 @@
 # once more after the rest. The second block IS the proof that the rest ran;
 # a case with no second block exits 2, never 0.
 #
-#   a. Priest/Mage (tools/fixtures/chars/human-priest-mage-seed4-gate.sav),
+#   a. Priest/Mage (tools/fixtures/chars/human-priest-mage-seed4-gate.char),
 #      full rest, no menu change: every spell divine=1 at load is divine=1 after.
-#   b. Priest (orc-priest-seed4-gate.sav, no spellbook), Learn Spells: unmark
+#   b. Priest (orc-priest-seed4-gate.char, no spellbook), Learn Spells: unmark
 #      Bane, Bless and Call Companions (the level holds 6 of 4 slots and a mark
 #      is refused until it drops below 4), mark Detect Evil, confirm, rest.
 #      Bane divine=0 after, Detect Evil divine=1 after.
-#   c. Bard (orc-bard-reapply-seed1.sav), full rest: every bardic=1 spell is
+#   c. Bard (orc-bard-reapply-seed1.char), full rest: every bardic=1 spell is
 #      still bardic=1.
 #   d. Priest/Mage dual version: mark the ARCANE row of a spell held divine
 #      where a carried spellbook holds it; after the rest arcane=1 and divine=1.
@@ -34,7 +34,8 @@
 #      inventory, because then d needs a key script this check does not have.
 #
 # FACTS the check reads (docs/VERIFICATION.md, "A check must not depend on the seed"):
-# fact: character -- fixtures human-priest-mage-seed4-gate, orc-priest-seed4-gate, orc-bard-reapply-seed1 (INCURSION_LOAD)
+# fact: the priest-mage's and the bard's wizard mode and levels -- tools/keys/setup-human-priest-mage-seed4-gate.keys and tools/keys/setup-orc-bard-reapply-seed1.keys (the old .sav files held them; V7-1 moved them into the check)
+# fact: character -- fixtures human-priest-mage-seed4-gate and orc-bard-reapply-seed1 (built from their .char files, served by tools/fixture_cache.sh), orc-priest-seed4-gate (built from its .char) (INCURSION_LOAD)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat
 # fact: depth 2 and no hostile in view (a rest needs both) -- wizard Ascend/Descend Depth, Genocide Everything
 # fact: arrival square may be a chasm ("You fall..." waits for ENTER) -- key scripts answer it with @while "You fall" ENTER
@@ -56,9 +57,9 @@
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 CHARS=tools/fixtures/chars
-PM=$CHARS/human-priest-mage-seed4-gate
-PRIEST=$CHARS/orc-priest-seed4-gate.sav
-BARD=$CHARS/orc-bard-reapply-seed1.sav
+PM=human-priest-mage-seed4-gate   # bare names: built from tools/fixtures/chars/<name>.char
+PRIEST=orc-priest-seed4-gate
+BARD=orc-bard-reapply-seed1
 
 check_mutation src/Create.cpp \
 '    for (i = 0; ls[i].spID; i++) {
@@ -71,7 +72,7 @@ check_mutation src/Create.cpp \
             && ls[i].Type != SP_PRIMAL)
             continue;'
 
-for f in "$PM.sav" "$PM.sheet.txt" "$PRIEST" "$BARD"; do
+for f in "$CHARS/$PM.char" "$CHARS/$PRIEST.char" "$CHARS/$BARD.char"; do
     [ -f "$f" ] || _check_die 2 "no $f."
 done
 
@@ -127,7 +128,7 @@ keep_all() {
 }
 
 # a. Priest/Mage, rest only
-run_case a "$PM.sav" tools/keys/rest-per-source-restonly.keys 4
+run_case a "$PM" tools/keys/rest-per-source-restonly-pm.keys 4
 need_rest a
 keep_all a divine
 
@@ -156,12 +157,12 @@ fi
 echo "  b: dropped $OLD (divine $(bit 1 $OLD divine) -> $(bit 2 $OLD divine)), picked $NEW (divine $(bit 1 $NEW divine) -> $(bit 2 $NEW divine))."
 
 # c. Bard, rest only
-run_case c "$BARD" tools/keys/rest-per-source-restonly.keys 1
+run_case c "$BARD" tools/keys/rest-per-source-restonly-bard.keys 1
 need_rest c
 keep_all c bardic
 
 # d. dual version needs a carried spellbook
-if sed -n '/^Inventory:/,/^On The Ground/p' "$PM.sheet.txt" | grep -qi 'book'; then
+if sed -n '/^Inventory:/,/^On The Ground/p' "$(tools/fixture_sheet.sh "$PM")" | grep -qi 'book'; then
     _check_die 2 "case d: the Priest/Mage now carries a spellbook, and this" \
         "check has no key script that marks the arcane row."
 fi

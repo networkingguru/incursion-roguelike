@@ -2,7 +2,7 @@
 # leaves the room and cannot see the drop. Read by tools/check_loot_claim.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-noroomdesc.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char \
 #       tools/headless.sh tools/keys/lootclaim-d-claim-ends.keys 4
 #
 # With monsters frozen the paladin kills a kobold beside the stairs and a

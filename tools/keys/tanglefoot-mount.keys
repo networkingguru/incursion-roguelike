@@ -18,7 +18,7 @@
 # script lays a STRIP of strands and rides along it: stepping onto the first
 # square rolls nothing, and each step after that rolls once.
 #
-# THE RIDE starts from human-paladin-seed4-opt0822.sav with Keeper west.
+# THE RIDE starts from human-paladin-seed4-opt0822.char with Keeper west.
 # The check forces Reflex rolls to 1: entering strands rolls nothing, and
 # attempting to leave them catches the mount. Repeated attempts remain stuck.
 #

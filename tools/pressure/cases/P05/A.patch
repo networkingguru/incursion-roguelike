@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -1965,6 +1965,7 @@
+ // family: al stored bits u16 val-of ALIGNMENT
+ 
+ #define AL_LAWFUL     0x0001
++#define AL_GRWA 0x100
+ #define AL_CHAOTIC    0x0002
+ #define AL_GOOD       0x0004
+ #define AL_EVIL       0x0008

@@ -1,0 +1,3 @@
+# alignment-drain-wield-once.keys on the base character after the level 2 derivation (bd inc-10v7f). Run A of tools/check_alignment_drain_edges.sh.
+@include setup-alignment-drain-level2.keys
+@include alignment-drain-wield-once.keys

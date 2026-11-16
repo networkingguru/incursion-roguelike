@@ -4,6 +4,7 @@
    intervention, divine blessings, crowning, etc. */
    
 #include "Incursion.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 static TextVal AidTypes[] = {
   { AID_HEAL,       "healing you" },
@@ -1403,6 +1404,7 @@ EvReturn Character::Retribution(EventInfo &e)
 EvReturn Character::GodDeflect(EventInfo &e)
   {
     int16 i; rID aidChart[64];
+    DamageClassGodEntry(e); /* inc-kx693 */
     if (!GodID)
       return NOTHING;
       
@@ -1724,7 +1726,10 @@ void Character::Transgress(rID gID, int16 mag, bool doWrath, const char *reason)
       return;
       
     if (gID != GodID) {
-      if (random(60) > mag)
+      /* A script's Transgress reaches this draw; in the creation window it is
+         the script's decision (inc-10v7f, phase 6c). */
+      if (SourcedRoll(CK_SCRIPT_ROLL, [&]() -> int32 { return random(60); },
+            NULL, CreationRange(0, 59)) > mag)
         return;
       if (Anger[theGame->GodNum(gID)] > 10 && !doWrath)
         return;

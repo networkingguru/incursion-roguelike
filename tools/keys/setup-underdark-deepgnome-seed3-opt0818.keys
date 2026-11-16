@@ -1,0 +1,40 @@
+# Prepares the built fixture underdark-deepgnome-seed3-opt0818 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on with Free Advancement; the deep gnome Rogue raised
+# to level 6 (Toughness at level 3, Blind Fight at level 6), and the new skill ranks spent. The deep gnome's
+# racial innate spells (Cause Blindness, Passwall, ...) arrive with levels, so a check that reads them needs it.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+ESC
+
+d                       # character sheet
+
+# Level to 3, where the third feat is offered, and to 6 for the fourth.
+# Pressing G until the menu appears is safer than counting levels: it does
+# not care which levels a rogue is given a feat at.
+@until "Choose a feat" G
+# Toughness is drawn as "[ ] Toughness": the feat list is longer than the 52
+# letters LMenu has to give out, so the entries past the 52nd get a blank
+# bracket. A menu ignores the space bar, so the only way in is to put the
+# cursor on the row and press ENTER.
+@cursorto "Toughness" DOWN
+ENTER
+@until "Choose a feat" G
+@choose "Blind Fight"
+@expect "Rogue 6"
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Move Silently" DOWN
+RIGHT*9
+@cursorto:mark "Hide in Shadows" UP
+RIGHT*9
+@cursorto:mark "Climb" UP
+RIGHT*9
+ENTER y
+@until "Things in View" ESC

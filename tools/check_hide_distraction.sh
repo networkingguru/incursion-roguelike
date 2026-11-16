@@ -16,7 +16,7 @@
 # check used mod=-5. RED: any mismatch. INCONCLUSIVE: no COMPLETE line, an
 # INCONCLUSIVE line, a wrong case count, or an abnormal headless exit.
 #
-# fact: character -- fixture orc-rogue-seed1-opt0822 (INCURSION_LOAD)
+# fact: character -- fixture orc-rogue-seed1-opt0822 (INCURSION_LOAD) -- orc-rogue-seed1-opt0822 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/orc-rogue-seed1-opt0822.sav)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat (INCURSION_OPTIONS)
 # fact: every creature and its placement -- placed by the probe (hdSpawn, hdNear)
 # fact: the map and free squares near the player -- the fixture save pins the map; the probe finds squares with hdNear
@@ -35,7 +35,7 @@ cd "$(dirname "$0")/.."
 RUN="$(mktemp -d "$PWD/logs/hide-distraction-XXXXXX")"
 INCURSION_HIDE_DIST_PROBE=1 INCURSION_RUN_DIR="$RUN" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/orc-rogue-seed1-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/specimens/orc-rogue-seed1-opt0822.sav \
     tools/headless.sh tools/keys/hide-distraction.keys "${1:-1}" > "$RUN.out" 2>&1
 status=$?
 python3 - "$RUN" "$status" <<'PY'

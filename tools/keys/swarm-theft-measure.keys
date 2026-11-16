@@ -1,4 +1,6 @@
 # inc-67gh: frozen Warrior; fifteen waits = 240 ticks (four EV_TURN intervals), cleared map, wizard-created (not SUMMONED) swarm.
+# The fixture holds only the created character; setup-alignment-drain-warrior.keys makes the state the old save held (bd inc-10v7f).
+@include setup-alignment-drain-warrior.keys
 @until "System Menu" ESC
 ESC
 w

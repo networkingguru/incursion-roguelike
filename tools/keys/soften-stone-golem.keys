@@ -1,7 +1,7 @@
 # Does Soften Stone cast at a stone golem's square reach it as a spell hit, and
 # does it lower the golem's armour without slowing it? (inc-wqql)
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char \
 #       tools/headless.sh tools/keys/soften-stone-golem.keys 1
 # The fixture druid has wizard mode, Infinite Mana and Freeze Monsters on.
 #
@@ -26,6 +26,8 @@
 # case 6: EffectPrompt(e,Q_LOC,...)). Four RIGHTs put the golem four squares
 # east: the summoned map reads "#..........@G.........#", open floor east of
 # the player, and distance 4 is clear of reach 2.
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 SPACE
 w
 @choose "Learn Any Spell"

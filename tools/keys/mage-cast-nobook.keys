@@ -2,7 +2,7 @@
 # pack. Read by tools/check_mage_cast_nobook.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char \
 #       tools/headless.sh tools/keys/mage-cast-nobook.keys 1
 #
 # THE CHARACTER. Varag, the frozen Orc Mage (see mage-loadout-rest.keys). Burning
@@ -26,6 +26,11 @@ w y                     # wizard mode, confirm
 @until "HP:" ESC
 w
 @choose "Genocide Everything"
+@until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE             # Row 6: Ignore Spell Failure ON (the cast-success roll).
+ESC
 @until "HP:" ESC
 
 @dump:before-drop

@@ -2,7 +2,7 @@
 # victim. Read by tools/check_auto_terms.sh (outcomes 1, 2 and 4).
 #
 #   INCURSION_OPTIONS=<noroomdesc settings, byte 312 set or clear> \
-#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.char \
 #       tools/headless.sh tools/keys/auto-terms-natural.keys <seed>
 #
 # THE CHARACTER is the Lawful Good paladin fixture. THE VICTIM is a

@@ -1,5 +1,8 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the Reflex bonus -- read live from the character sheet the key script dumps after eating (it was a number typed from the old sheet)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # Does the known-trap confirm tell the player the odds? (bd inc-o6xj)
 #
 # Before the change the prompt read "Confirm move over the <trap>?" and gave no
@@ -14,13 +17,13 @@
 # on screen, and when the prompt lacks the odds. It also checks N against an
 # independent figure: 5 * the d20 results r with r == 20 or (r != 1 and
 # bonus + r >= DC), DC = 15 + 8 (trap level) for a found trap, bonus = the
-# fixture's Reflex save on its character sheet.
+# Reflex save on the character sheet (dumped by the key script, read live).
 #
 # Usage: tools/check_known_trap_prompt.sh   (0 pass, 1 fail, 2 could not measure)
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav
+export INCURSION_LOAD=kobold-rogue-seed1
 TRAP_LEVEL=8    # lib/, TEffect "deathblade scythe trap"
 
 check_run tools/keys/known-trap-prompt.keys 3
@@ -39,7 +42,8 @@ case "$line" in
 *) CHECK_FAIL=1; echo "  FAIL  the prompt shows no odds" ;;
 esac
 
-want=4    # the fixture sheet's Reflex: +4 (Rogue +2, Dex +4, encumbrance -2)
+want="$(sed -nE 's/^ *Reflex +([+-]?[0-9]+).*/\1/p' "$CHECK_RUN"/logs/screens/*-sheet.txt 2>/dev/null | head -1)"
+[ -n "$want" ] || _check_die 2 "could not read the Reflex bonus from the character sheet dump in $CHECK_RUN"
 n="$(sed -n 's/.*(\([0-9]*\)% to avoid).*/\1/p' <<<"$line")"
 if [ -n "$n" ] && [ -n "$want" ]; then
     dc=$((15 + TRAP_LEVEL)); hits=0

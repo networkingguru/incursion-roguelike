@@ -26,7 +26,7 @@
 # illusory copy in "Things in View", the HP on the bottom status row).
 #
 # THE FIXTURE is the frozen elf mage (tools/fixtures/chars/
-# elf-mage-illusions-seed1.sav), whose illusion spells are INNATE, so a player
+# elf-mage-illusions-seed1.char), whose illusion spells are INNATE, so a player
 # cast reaches Creature::Invoke and not Creature::Cast. The refused cast
 # therefore reports event=invoke; event=cast is the same gate on the other path.
 #
@@ -50,7 +50,8 @@
 # Usage: tools/check_concentration.sh [--prove-red]
 # Exit: 0 all pass, 1 any fail, 2 could not measure.
 
-# fact: character -- fixture elf-mage-illusions-seed1 (INCURSION_LOAD)
+# fact: character -- fixture elf-mage-illusions-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Infinite Mana, Freeze Monsters and the four illusion spells -- tools/keys/setup-elf-mage-illusions-seed1.keys (the old .sav held them; V7-1 moved them into the checks)
 # fact: settings -- options-2026-08-22.dat (CHECK_OPTIONS)
 # fact: what the illusion copies (species, glyph) -- not fixed; the check reads the "illusory" entry in Things in View by shape
 # fact: the goblin's blows hit the caster -- INCURSION_LOF_FORCE_ROLL=20 (damage session only)
@@ -61,7 +62,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/elf-mage-illusions-seed1.sav
+export INCURSION_LOAD=elf-mage-illusions-seed1
 export INCURSION_CONCENT_PROBE=1
 
 # The mutations. --prove-red performs the FIRST; the other two are proved by

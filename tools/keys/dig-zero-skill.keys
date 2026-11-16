@@ -1,7 +1,7 @@
 # Reach Creature::Dig's division with SkillLevel(SK_MINING) exactly 0 (bd inc-4ht).
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/gnome-warrior-wis3-pickaxe-seed1-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/gnome-warrior-wis3-pickaxe-seed1-opt0822.char \
 #       tools/headless.sh tools/keys/dig-zero-skill.keys 1
 #
 # THE CHARACTER is a frozen fixture, bd inc-inr80: a gnome warrior with Wisdom 3

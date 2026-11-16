@@ -1,0 +1,21 @@
+# Rehearsal stand-ins (inc-cjos0 AC9 E2): name TAB bead TAB reason. The merged tree keeps the epic's own pre-merge .sav, .keys, sheet and MANIFEST row for each, instead of master's deletion and master's .char.
+alignment-drain-lawful-neutral	inc-6jqgz	char_convert.sh: the walk of alignment-drain-lawneutral-save.keys never reaches the System Menu
+dequ-save-dc-seed5-opt0822	inc-6jqgz	char_convert.sh: the walk stops at the god menu (Which of the five attribute sets never shows)
+dwarf-barbarian-focus	inc-6jqgz	char_convert.sh: the walk's @choose "Neutral" finds no entry
+elf-mage-illusions-seed1	inc-6jqgz	char_convert.sh: the walk's god differs from the old character's (Maeve)
+elf-mage-spotted-seed1	inc-6jqgz	char_convert.sh: the walk's god differs from the old character's (Maeve)
+elf-search-seed1-opt0818	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+human-paladin-seed4-gate	inc-6jqgz	char_convert.sh: "Healing" names 2 effects (Healing, Healing;staff)
+human-paladin-seed4-opt0822	inc-6jqgz	char_convert.sh: "Healing" names 2 effects (Healing, Healing;staff)
+human-priest-mage-seed4-gate	inc-6jqgz	char_convert.sh: the final fill hangs (watchdog, no key read)
+human-priest-mage-wounded-seed4-gate	inc-6jqgz	char_convert.sh: the old character holds a dire flail the skeleton has no ask for
+lizardfolk-monk-seed1	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+monk-ki-strike-seed1-opt0818	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+monk-weapon-immunity-seed1-opt0818	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+orc-bard-reapply-seed1	inc-6jqgz	char_convert.sh: the walk's @expect "[*] Sleep" fails on master's Learn Spells checklist
+orc-priest-pain-seed1-sneakopts	inc-6jqgz	char_convert.sh: the old character holds a longspear the skeleton has no ask for
+orc-priest-seed4-gate	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+quality-item-magic-seed5-opt0822	inc-6jqgz	char_convert.sh: the old character holds 3 kit items the skeleton has no ask for
+skill-by-name-seed1-opt0818	inc-6jqgz	char_convert.sh: the old character holds a holy symbol the skeleton has no ask for
+xsummon-priest-seed5-opt0822	inc-6jqgz	char_convert.sh: "Healing" names 2 effects (Healing, Healing;staff)
+orc-priest-seed1-opt0822	inc-xgs1x	master-only (no epic .sav); keeps master's .char with the owner-ruled edits, whose build hangs (watchdog, exit 4)

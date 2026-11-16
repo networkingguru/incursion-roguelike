@@ -33,6 +33,13 @@
 #include <vector> /* inc-az4d2: before the 'array' macro below */
 #include <algorithm>
 
+/* The C++ library headers MUST come before the macros below: this project
+   defines array(), I() and random(), which break libc++ (inc/CreationSource.h). */
+#include <string>
+#include <vector>
+#include <map>
+#include <utility>
+
 #ifdef DEBUG_MEMORY_CORRUPTION
 
 void * _malloc(size_t sz);
@@ -68,9 +75,9 @@ long  array_index(long x,long y);
 #include "Base.h"
 #include "Target.h"
 #include "RComp.h"
+#include "Res.h"
 #include "Events.h"
 #include "Magic.h"
-#include "Res.h"
 #include "Map.h"
 #include "Creature.h"
 #include "Item.h"
@@ -78,4 +85,5 @@ long  array_index(long x,long y);
 #include "Light.h"
 #include "Term.h"
 #include "Inline.h"
+#include "CreationSource.h"
 

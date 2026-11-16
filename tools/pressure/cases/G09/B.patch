@@ -1,0 +1,20 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 53b563d..7fd6479 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -862,6 +862,7 @@ class Character: public Creature
+     public:
+       rID ClassID[6];
+       rID RaceID, GodID;
++      int16 GrwAngerPrev = 29;
+     protected:
+       hObj Mount;
+ 	    uint32 XP, XP_Drained;
+@@ -1247,6 +1248,7 @@ class Character: public Creature
+       FIELD_ARRAY("AngerThisTurn", AngerThisTurn, sizeof(int16), MAX_GODS);
+       FIELD_ARRAY("lastPulse", lastPulse, sizeof(int32), MAX_GODS);
+       FIELD_ARRAY("godFlags", godFlags, sizeof(uint16), MAX_GODS);
++      FIELD_I16("GrwAngerPrev", GrwAngerPrev);
+       FIELD_U16("desiredAlign", desiredAlign);
+       FIELD_U32("Proficiencies", Proficiencies);
+       /* Load-direction fixups, below every field they read (wire format,

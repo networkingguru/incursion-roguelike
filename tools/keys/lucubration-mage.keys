@@ -1,14 +1,11 @@
 # inc-2jd0: Elemental Covenant is studied; Adventurers' Arts is not.
+@include wizard-switches.keys
 @include feat-level3.keys
 @choose "Lucubration"
 @dump:book-pick
-@expect "[e] spellbook [Elemental Covenant]"
-e
+@expect "[b] spellbook [Elemental Covenant]"
+b
 @until "Things in View" ESC
-w
-@choose "Ascend / Descend Depth"
-"2" ENTER
-@until "HP:" ESC
 w
 @choose "Genocide Everything"
 @until "HP:" ESC
@@ -28,12 +25,14 @@ i
 1 6
 @dump:books-before
 # Drop all six books, including the picked kind and the unpicked control.
+# The built Mage packs the books as items 10 to 15; the dump view above scrolls to item 16.
+1 0
 d
-1 6 d
-1 6 d
-1 6 d
-1 6 d
-1 6 d
+1 0 d
+1 0 d
+1 0 d
+1 0 d
+1 0 d
 @dump:books-gone
 ESC
 @until "Things in View" ESC

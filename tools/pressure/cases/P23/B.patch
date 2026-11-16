@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -333,6 +333,7 @@
+ #define F_WARN          0x10000
+ #define F_BRIDGE        0x20000
+ #define F_ALTAR         0x40000
++#define F_GRWB 0x20
+ // end family: f_flag
+ // family: kn stored bits u16
+ 

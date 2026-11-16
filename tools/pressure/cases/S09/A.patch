@@ -1,0 +1,14 @@
+diff --git a/inc/Target.h b/inc/Target.h
+index 76a29fd..2898893 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -91,7 +91,8 @@ typedef struct Hostility {
+ 
+ // family: target_why_type stored enum i32
+ typedef enum {
+-    TargetDefault,
++    TargetAc8WhyA = 12,
++    TargetDefault = 0,
+     TargetGreedy,
+     TargetHitMe,
+     TargetSpelledMe,

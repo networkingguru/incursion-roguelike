@@ -10,6 +10,14 @@ static unsigned long long PP_Calls=0, PP_RunOver=0, PP_Pops=0,
     PP_HitPops=0, PP_UnreachPops=0;
 static unsigned long long PP_LabelCut=0, PP_LabelRebuilds=0;
 static double PP_LabelSecs=0;
+struct PP_DoorCount { unsigned long long calls, hits, pops; };
+static PP_DoorCount PP_Doors[4];
+static unsigned long long PP_LabelCutSet[4];
+static double PP_TotalSecs=0;
+static unsigned long long PP_BrkN[2], PP_BrkPops[2]; /* BASH hits: route breaks 0 / >=1 doors */
+#include <sys/resource.h>
+struct PP_Worst { unsigned long long pops; int sx,sy,tx,ty,door,hit; };
+static PP_Worst PP_Top[3];
 static double PP_Reset=0, PP_Flood=0, PP_HitFlood=0, PP_UnreachFlood=0;
 static double PP_Now() {
     struct timespec ts;
@@ -209,14 +217,29 @@ static void PP_Report() {
         PP_LabelCut, PP_LabelRebuilds, PP_LabelSecs,
         PP_ReuseHit, PP_ReuseMiss[1], PP_ReuseMiss[2], PP_ReuseMiss[3],
         PP_ReuseMiss[4], PP_ReuseMiss[5], PP_ReuseDrop);
+    { struct rusage ru; getrusage(RUSAGE_SELF,&ru);
+      fprintf(stderr,"PATHCPU user_s=%.3f sys_s=%.3f shortestpath_s=%.3f\n",
+          ru.ru_utime.tv_sec+ru.ru_utime.tv_usec/1e6, ru.ru_stime.tv_sec+ru.ru_stime.tv_usec/1e6, PP_TotalSecs); }
+    fprintf(stderr,"PATHBRK nobreak_n=%llu nobreak_pops=%llu break_n=%llu break_pops=%llu\n",PP_BrkN[0],PP_BrkPops[0],PP_BrkN[1],PP_BrkPops[1]);
+    for (int d=0;d<4;d++)
+        fprintf(stderr,"PATHDOOR set=%d calls=%llu successes=%llu failures=%llu pops=%llu labelcut=%llu\n",
+            d,PP_Doors[d].calls,PP_Doors[d].hits,PP_Doors[d].calls-PP_Doors[d].hits,PP_Doors[d].pops,PP_LabelCutSet[d]);
+    for (int i=0;i<3;i++)
+        fprintf(stderr,"PATHWORST rank=%d door=%d start=%d,%d target=%d,%d result=%s pops=%llu\n",
+            i+1,PP_Top[i].door,PP_Top[i].sx,PP_Top[i].sy,PP_Top[i].tx,PP_Top[i].ty,
+            PP_Top[i].hit ? "success" : "failure",PP_Top[i].pops);
     fflush(stderr);
     PP_Detail();
 }
 struct PP_Call {
+    int door; double t0; int sx,sy,tx,ty;
+    unsigned long long hitsBefore;
     double start, lastT;
     unsigned long long pops, lastPops;
     unsigned long long rej[6], rr[PPR_N], wn[64];
-    PP_Call() : start(0), lastT(0), pops(PP_Pops), lastPops(0) {
+    PP_Call(int flags, int ax, int ay, int bx, int by) :
+        door((flags & DF_BASH_DOORS) ? ((flags & DF_OPEN_DOORS) ? 2 : 3) : ((flags & DF_OPEN_DOORS) ? 1 : 0)), t0(PP_Now()), sx(ax), sy(ay), tx(bx), ty(by),
+        hitsBefore(PP_TgtHit), start(0), lastT(0), pops(PP_Pops), lastPops(0) {
         for (int i=0;i<6;i++) rej[i]=0;
         for (int i=0;i<PPR_N;i++) rr[i]=0;
         for (int i=0;i<64;i++) wn[i]=0;
@@ -233,6 +256,15 @@ struct PP_Call {
     }
     ~PP_Call() {
         ++PP_Calls;
+        PP_TotalSecs += PP_Now()-t0;
+        bool hit=PP_TgtHit != hitsBefore;
+        unsigned long long expanded=PP_Pops-pops;
+        PP_Doors[door].calls++; PP_Doors[door].hits+=hit;
+        PP_Doors[door].pops+=expanded;
+        PP_Worst w={expanded,sx,sy,tx,ty,door,(int)hit};
+        for (int i=0;i<3;i++) if (w.pops > PP_Top[i].pops) {
+            PP_Worst old=PP_Top[i]; PP_Top[i]=w; w=old;
+        }
         static double last=0;
         double now=PP_Now();
         if (now-last >= 0.5) { PP_Report(); last=now; }

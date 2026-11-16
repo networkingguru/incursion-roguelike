@@ -10,7 +10,7 @@ OUT="$ROOT/logs/light-trap/repro-$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$OUT"
 for ((seed=1; seed<=N; seed++)); do
     INCURSION_OPTIONS="$ROOT/tools/fixtures/options-2026-08-22.dat" \
-    INCURSION_LOAD="$ROOT/tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav" \
+    INCURSION_LOAD="$ROOT/tools/fixtures/chars/orc-barbarian-seed1-opt0822.char" \
     INCURSION_RUN_DIR="$OUT/seed-$seed" INCURSION_LIGHT_TRAP_PROBE=1 \
     tools/headless.sh tools/keys/light-trap.keys "$seed" > "$OUT/seed-$seed.log" 2>&1
 done

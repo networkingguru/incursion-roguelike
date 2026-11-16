@@ -1,0 +1,12 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 6a26f06..98a1458 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3541,6 +3541,7 @@ typedef signed int        hObj;
+ #define ENTANGLED         237
+ #define PAIN_TALLY        238
+ #define HESITATION        239
++#define AC8_EXPR_A        251
+ /* inc-a7jq: the loot claim. LOOT_CLAIM (item) names the claiming player's
+    handle; LOOT_CLAIMS (player) names a claimed item's handle; LOOT_THIEF
+    (creature) names an item taken under a claim. */

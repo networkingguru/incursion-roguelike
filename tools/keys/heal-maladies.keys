@@ -170,6 +170,12 @@ DOWN*10
 @dump:para-cure
 ESC
 
+# The cured kobold wakes and attacks, which derails the nine-malady half below.
+# Remove it now that the paralysis measurement is dumped.
+w
+@choose "Genocide Everything"
+SPACE*40
+
 # SECOND MEASUREMENT: THE NINE, on the player himself. See the file header.
 w
 @choose "Become Divine Champion"

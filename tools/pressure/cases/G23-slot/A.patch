@@ -1,0 +1,12 @@
+diff --git a/inc/Target.h b/inc/Target.h
+index 673feb0..fb83811 100644
+--- a/inc/Target.h
++++ b/inc/Target.h
+@@ -105,6 +105,7 @@ typedef enum {
+     /* inc-9622 phase 1: append only. TargetWhy::type is stored in saves as a
+        raw int, so every existing value keeps its number. Phase 2 uses this. */
+     TargetLostTrack,
++    TargetGrwA = 12,
+     /* grw slot A */
+     /* grw slot B */
+ } TargetWhyType;

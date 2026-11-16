@@ -16,12 +16,12 @@ save.
 The committed ledger records, in order:
 
   * every entry of the module's 21 resource arrays, array by array; and
-  * every script variable, grouped by owner -- a variable's owner is its
-    resource, keyed by (owner array, owner position), or the module-level
-    list.
+  * every script variable, grouped by owner -- recorded for the record, but
+    NOT position-checked (inc-cjos0): the loader places a saved variable by
+    (owner, name), so inserting, removing or reordering variables is legal.
 
 The rule (docs/SAVE-SCHEMA-SPEC.md, "The build-time order check"). For every
-array and every owner, compare the ledger's list with the module's. It FAILS
+array, compare the ledger's list with the module's. It FAILS
 when:
 
   * the module's list is shorter than the ledger's (a removal); or
@@ -30,12 +30,12 @@ when:
     occurs more than once in the ledger's list is exempt from this test,
     because its position is already ambiguous.
 
+Variables are exempt from all of this.
 A name the ledger records and the module no longer has is a rename or a
 replacement, and PASSES (rule 3: a replaced slot loads as the new resource).
 Entries past the ledger's length PASS, so a legal append -- a new array entry
-at the end, a new variable at the end of its owner -- is accepted before the
-ledger is re-recorded. The check names the array or owner, the ledger's
-position, and both names.
+at the end -- is accepted before the ledger is re-recorded. The check names
+the array, the ledger's position, and both names.
 
 This is NOT a prefix test: a rename changes a name in place, so the ledger is
 not a prefix of the module and the check still passes. That is why a rename in
@@ -187,11 +187,11 @@ def list_failures(want, have, describe, unit, verb):
 def order_failures(ledger, module):
     """Every way the module breaks the ledger, in report order.
 
-    The ledger drives the comparison. Anything the module has beyond the
-    ledger (a new array, owner or entry) is an append and is not a failure.
+    The ledger drives the comparison for resource arrays only. Anything the
+    module has beyond the ledger is an append and is not a failure. Script
+    variables are never position-checked: the loader places them by name.
     """
     failures = []
-    bad_arrays = set()
 
     for key in sorted(ledger.arrays):
         want = ledger.arrays[key]
@@ -199,19 +199,8 @@ def order_failures(ledger, module):
         for line in list_failures(want, have, describe_array(key, ledger),
                                   "entry", "inserted, removed or moved"):
             failures.append(line)
-            bad_arrays.add(key)
 
-    for key in sorted(ledger.owners):
-        # An owner is keyed by its resource's position, so when the array
-        # itself already failed, every owner at or after the break point has
-        # moved too. That is one defect, not fifty: the array line names it,
-        # and reporting the cascade would bury the root cause.
-        if (key[0], key[1]) in bad_arrays:
-            continue
-        want = ledger.owners[key]
-        have = module.owners.get(key, [])
-        failures.extend(list_failures(want, have, describe_owner(key, ledger),
-                                      "variable", "inserted, removed or swapped"))
+    # Script variables are placed by name (inc-cjos0): no position test.
 
     return failures
 
@@ -499,6 +488,19 @@ def selftest():
     ok &= expect("rename a variable in place",
                  base, variant(owners={(0, 0, 0): ["v1", "RENAMED"], (0, -1, -1): ["g"]}),
                  False)
+    # inc-cjos0: variables are placed by name, so these are legal.
+    ok &= expect("insert a variable before an existing one",
+                 base, variant(owners={(0, 0, 0): ["v0", "v1", "v2"], (0, -1, -1): ["g"]}),
+                 False)
+    ok &= expect("remove a variable",
+                 base, variant(owners={(0, 0, 0): ["v1"], (0, -1, -1): ["g"]}),
+                 False)
+    ok &= expect("swap two variables in one owner",
+                 base, variant(owners={(0, 0, 0): ["v2", "v1"], (0, -1, -1): ["g"]}),
+                 False)
+    ok &= expect("ledger owner missing from the module",
+                 base, variant(owners={(0, -1, -1): ["g"]}),
+                 False)
     ok &= expect("a replacement with a different resource entirely",
                  base, variant(arrays={(0, 0): ["a", "WHOLLY DIFFERENT", "c"],
                                        (0, 1): ["x"]}),
@@ -520,15 +522,6 @@ def selftest():
                  False)
 
     # Red: every forbidden move.
-    ok &= expect("insert a variable before an existing one",
-                 base, variant(owners={(0, 0, 0): ["v0", "v1", "v2"], (0, -1, -1): ["g"]}),
-                 True)
-    ok &= expect("remove a variable",
-                 base, variant(owners={(0, 0, 0): ["v1"], (0, -1, -1): ["g"]}),
-                 True)
-    ok &= expect("swap two variables in one owner",
-                 base, variant(owners={(0, 0, 0): ["v2", "v1"], (0, -1, -1): ["g"]}),
-                 True)
     ok &= expect("insert an entry mid-array",
                  base, variant(arrays={(0, 0): ["a", "z", "b", "c"], (0, 1): ["x"]}),
                  True)
@@ -537,9 +530,6 @@ def selftest():
                  True)
     ok &= expect("swap two entries in one array",
                  base, variant(arrays={(0, 0): ["a", "c", "b"], (0, 1): ["x"]}),
-                 True)
-    ok &= expect("ledger owner missing from the module",
-                 base, variant(owners={(0, -1, -1): ["g"]}),
                  True)
     ok &= expect("ledger array missing from the module",
                  base, variant(arrays={(0, 1): ["x"]}),
@@ -557,14 +547,6 @@ def selftest():
         print("selftest FAIL  the array message does not name the moved entry "
               "and both positions: %s" % failures)
         ok = False
-    failures = order_failures(base, variant(owners={(0, 0, 0): ["v2", "v1"],
-                                                      (0, -1, -1): ["g"]}))
-    needle = "the ledger records 'v1' at position 0, but the module has it at position 1"
-    if not any(needle in f for f in failures):
-        print("selftest FAIL  the owner message does not name the moved "
-              "variable and both positions: %s" % failures)
-        ok = False
-
     # A short module names the removed element and the recorded name.
     failures = order_failures(base, variant(arrays={(0, 0): ["a", "b"],
                                                     (0, 1): ["x"]}))

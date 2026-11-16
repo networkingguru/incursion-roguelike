@@ -1,0 +1,156 @@
+# monk-weapon-immunity-seed1-opt0818: converted from tools/fixtures/chars/monk-weapon-immunity-seed1-opt0818.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/monk-weapon-immunity-save.keys, seed 1, settings tools/fixtures/options-2026-08-18.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 252 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/monk-weapon-immunity-save.keys 1 113 69 23:22:0
+# roll search: MATCH: script_roll [Monk;EV_150] #0, script_roll [Monk;EV_150] #1 = [11, 19] (recorded [20, 9]); other matches none; 400 tries in 713.1 s (1.78 s per try); record logs/phase12c/final2/monk-weapon-immunity-seed1-opt0818/roll-search.txt
+# rolls: script_roll|Monk;EV_150|0|1|20
+# rolls: script_roll|Monk;EV_150|1|1|20
+# Values set from the old dump (11), skeleton value -> old value:
+#   roll: script_roll [Monk;EV_150]: 20 -> 11 (searched)
+#   roll: script_roll [Monk;EV_150]: 9 -> 19 (searched)
+#   scalar: store_seed: 23 -> 24
+#   scalar: attr_str: 17 -> 12
+#   scalar: attr_dex: 13 -> 14
+#   scalar: attr_con: 14 -> 11
+#   scalar: attr_int: 14 -> 17
+#   scalar: attr_wis: 16 -> 13
+#   scalar: attr_cha: 13 -> 17
+#   scalar: attr_luc: 10 -> 11
+#   skill: skill_ranks [Balance]: 1 -> 2
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (helm) and 1 skill tool (alchemy set, alchemy 2) | built: 0 perk items (-) and 1 skill tool (alchemy set, alchemy 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Monk;a0]: 32 kept as the walk recorded it; the old character holds this annotation's item (quarterstaff, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 44 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 9 kept as the walk recorded it; the old character holds this annotation's item (main gauche, quantity 1), so its roll is within the annotation's chance
+#   pick: craft_formula [Potion]: Fury added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Valour;potion added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Identify;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: *Identify*;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (featherlight) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: sunrod added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: Antitoxin added: the dump does not show this decision; the build's default was taken
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-18.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Lizardfolk
+subrace: Lizardfolk
+name: Tabasci
+surname: of Life
+class: Monk
+god: Aiswin
+perk_type [0]: PERK_FEAT
+perk_feat [0]: Dodge
+perk_type [1]: PERK_RESIST
+perk_resist [1]: save disintegration
+attr_str: 12
+attr_dex: 14
+attr_con: 11
+attr_int: 17
+attr_wis: 13
+attr_cha: 17
+attr_luc: 11
+alignment: Lawful Good
+feat: Acrobatic
+feat: Alluring
+hp_roll [Monk]: 8
+mana_roll [Monk]: 4
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 2
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: tanglefoot bag
+gear_stream [Lizardfolk]: 19
+kit_item [Lizardfolk;a1]: medium backpack, quantity 1
+kit_item [Lizardfolk;a2]: torch, quantity 4
+kit_item [Lizardfolk;a3]: strip of cured meat, quantity 21
+kit_item [Lizardfolk;a4]: flask, effect water, flag blessed, quantity 9
+gear_stream [Monk]: 20
+gear_chance [Monk;a0]: 32
+kit_item [Monk;a0]: quarterstaff, quantity 1
+kit_item [Monk;a3]: chakram, quantity 1
+kit_item [Monk;a4]: robes, quantity 1
+kit_item [Monk;a6]: potion, effect Dimension Door, quantity 7
+gear_stream [Universal Gear]: 21
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 44
+gear_chance [Universal Gear;a6]: 37
+gear_chance [Universal Gear;a7]: 9
+kit_item [Universal Gear;a7]: main gauche, quantity 1
+kit_item [Universal Gear;a9]: gold piece, quantity 1
+thrown_quantity: 4
+script_roll [Monk;EV_150]: 11
+script_roll [Monk;EV_150]: 19
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: Scentblind
+craft_formula [Alchemy]: eggshell smoke-bomb
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: Antitoxin
+craft_formula [Potion]: Fury
+craft_formula [Potion]: Valour;potion
+craft_formula [Scroll]: Identify;scroll
+craft_formula [Scroll]: *Identify*;scroll
+craft_formula [Scroll]: Enchant Armour
+craft_formula [Scroll]: Enchant Armour (featherlight)
+store_seed: 24
+character_name: Harmonious_Fox
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

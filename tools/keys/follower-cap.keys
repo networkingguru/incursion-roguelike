@@ -1,6 +1,6 @@
 # Exercise the companion-pool follower cap (bd inc-omm1).
 #
-# Loaded character: tools/fixtures/chars/orc-mage-seed1-opt0822.sav (a level 1
+# Loaded character: tools/fixtures/chars/orc-mage-seed1-opt0822.char (a level 1
 # orc mage, CHA 14). See tools/check_follower_cap.sh.
 #
 # Wizard mode learns Dominate Monster and summons a hill giant (CR 7). A level

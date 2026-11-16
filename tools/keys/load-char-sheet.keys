@@ -12,10 +12,8 @@
 # and there is no character, the game sits in its title menu, and the run
 # reports NO GAMEPLAY rather than quietly measuring something else.
 #
-# Both users are deliberate. tools/make_char_fixture.sh runs it to write the
-# <name>.sheet.txt half of a new fixture, which means a fixture is never
-# published without having been loaded once. tools/check_char_fixture.sh runs
-# it to assert that the character who comes back is the one the sheet claims.
+# tools/check_char_fixture.sh runs it to assert that the character who comes
+# back is the one the sheet claims.
 #
 # THE SEARCH IS NOT FILLER. tools/headless.sh reports NO GAMEPLAY (exit 5)
 # unless a turn actually completes, and every assertion library in tools/
@@ -46,7 +44,7 @@ ESC             # leave the sheet, back to play mode
 # abilities, the whole inventory, the journal -- reaches disk another way:
 # INCURSION_CHAR_PROBE=1 makes Game::SaveGame write logs/charprobe.txt
 # (src/Registry.cpp:1105-1111), untruncated by the 80x48 terminal, and that
-# file is what tools/make_char_fixture.sh keeps as <name>.sheet.txt.
+# file is what a fixture build keeps as <name>.sheet.txt.
 
 ESC                     # System Menu -- and NOT a cancel; see the header
 @expect "System Menu"

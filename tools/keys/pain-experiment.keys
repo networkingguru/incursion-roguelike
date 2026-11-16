@@ -1,13 +1,15 @@
 # REPRODUCTION for bead inc-akac, rebuilt by inc-b4l3g.2: a LOADED orc priest of
 # Khasrach with the Pain domain (Feed upon Pain, ability level 1) punches a
 # summoned shrieker standing next to him. Load
-# tools/fixtures/chars/orc-priest-pain-seed1-sneakopts.sav (INCURSION_LOAD); its
-# key script tools/keys/pain-priest-wounded-save.keys says how he was made:
+# tools/fixtures/chars/orc-priest-pain-seed1-sneakopts.char (INCURSION_LOAD); its
+# .char file and tools/keys/setup-orc-priest-pain-seed1-sneakopts.keys say how he was made:
 # empty weapon hand (so he brawls, Punch 1d3+3, always <= 10 damage), about 30
 # of 36 hit points (so a heal is never capped at max HP), and a tally of 5.
 # Read with tools/check_feed_upon_pain.sh via logs/pain.log
 # (INCURSION_PAIN_PROBE=1). A shrieker (lib/mon3.irh) makes noise, not damage;
 # the extra RIGHTs after it dies only walk the priest east.
+# The fixture holds only the created character; setup-orc-priest-pain-seed1-sneakopts.keys makes the state the old save held (bd inc-10v7f).
+@include setup-orc-priest-pain-seed1-sneakopts.keys
 @dump:start
 
 w

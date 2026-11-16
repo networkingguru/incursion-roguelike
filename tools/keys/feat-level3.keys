@@ -1,10 +1,6 @@
 # inc-2jd0: real level-up feat path, with only Free Advancement switched on.
+# Free Advancement is set by wizard-switches.keys, included first.
 s
-w y
-@choose "Wizard Mode Switches"
-DOWN*2 SPACE
-ESC
-@until "Things in View" ESC
 d
 G
 @dump:level2

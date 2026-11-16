@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: character -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # Does an entangling thrown weapon (bolas) let go by itself? Bead inc-9smo.
 #
 # THE DEFECT. src/Fight.cpp Weapon::QualityDmg grants STUCK from an entangling
@@ -35,14 +37,14 @@ cd "$ROOT" || exit 2
 
 SEEDS="${1:-20}"
 KEYS=tools/keys/bolas-entangle-expiry.keys
-LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav
+LOAD=kobold-rogue-seed1
 OPTS=tools/fixtures/options-2026-08-22.dat
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
-[ -f "$LOAD" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
+[ -f "tools/fixtures/chars/$LOAD.char" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
 
 ran=0; hit=0; entangled=0; fail=0; pass=0; skipped=0
 for seed in $(seq 1 "$SEEDS"); do

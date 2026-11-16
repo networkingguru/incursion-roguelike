@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3341,6 +3341,7 @@
+ // end family: stati
+ // family: val_elevated stored ordinal i16 val-of ELEVATED
+   #define ELEV_TREE    1
++  #define ELEV_GRWA 3
+   #define ELEV_CEILING 2   
+ // end family: val_elevated
+ // family: stati stored ordinal u8

@@ -1,5 +1,7 @@
 #!/bin/bash
 # gate: live
+# fact: the IS1.3 character orc-mage-seed1-opt0822 -- the frozen old save tools/fixtures/specimens/orc-mage-seed1-opt0822.sav, kept as a specimen because this check reads its old-format bytes
+# fact: the IS1.3 character orc-priest-seed4-gate -- the frozen old save tools/fixtures/specimens/orc-priest-seed4-gate.sav, kept as a specimen because this check reads its old-format bytes
 # inc-4999 revision 6: loading a pre-revision-6 save gives every spell at most
 # one source, and every known spell the pending bit of the source it is held
 # from, so the first rest changes nothing.
@@ -24,7 +26,7 @@
 #
 # TWO RUNS.
 #
-#   Mage  tools/fixtures/chars/orc-mage-seed1-opt0822.sav (an IS1.3 save
+#   Mage  tools/fixtures/specimens/orc-mage-seed1-opt0822.sav (an IS1.3 save
 #         written with the OLD meaning). The migration must leave no spell a
 #         kind bit with known=0, and every known, non-granted, non-domain spell
 #         must carry exactly one kind bit and the pending bit of its source. A
@@ -33,7 +35,7 @@
 #         pending bit either -- the mage fixture has neither, so the check
 #         counts them only to exclude them from the pending assertion.
 #
-#   Priest tools/fixtures/chars/orc-priest-seed4-gate.sav (also IS1.3). Bead
+#   Priest tools/fixtures/specimens/orc-priest-seed4-gate.sav (also IS1.3). Bead
 #         inc-4999, owner ruling of 2026-10-17: the class grants a new character
 #         gets through GainSpell carry SP_GRANTED, but a pre-revision-5 save
 #         never had it, so MigrateSpellFlagsRev6 restores it for a spell the
@@ -62,9 +64,9 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
-FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/orc-mage-seed1-opt0822.sav
 SEED=1
-PRIEST=tools/fixtures/chars/orc-priest-seed4-gate.sav
+PRIEST=tools/fixtures/specimens/orc-priest-seed4-gate.sav
 PRIEST_SEED=4
 
 # --grants picks which of the two mutations --prove-red performs first. The
