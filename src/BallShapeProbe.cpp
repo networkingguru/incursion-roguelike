@@ -180,6 +180,7 @@ int SnapR(int vol) { int r = 0; while (DiscN(r) < vol) ++r; return r; }
 
 } /* namespace */
 
+/* inc-az4d2: opt-in ball shape probe (INCURSION_BALL_PROBE), graded by tools/check_ball_shape.sh. */
 void BallShapeProbe(Player *pl) {
     if (!getenv("INCURSION_BALL_PROBE"))
         return;
