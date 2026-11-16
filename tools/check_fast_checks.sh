@@ -9,7 +9,7 @@
 #   tools/check_fast_checks.sh              run every case
 #   tools/check_fast_checks.sh --prove-red  run the AC1 game case and the AC4
 #                                           unwatched case against the OLD runner
-#                                           (master's tools/fast_checks.sh) and
+#                                           (the runner at commit 8779bbdf) and
 #                                           demand both FAIL: "RED as expected"
 #
 # Cases:
@@ -51,8 +51,9 @@
 # fact: the vetted list entry for check_upstream_label.sh -- the case first greps tools/fast_checks.vetted for that line and fails by name when it is absent
 # fact: the real bd, git and clang++ binaries a fake calls -- the stand-in records the call before the real binary runs, and every fake ignores the real binary's status and output
 # fact: the real check copied in AC3 (check_devour_prose.sh) passes on this tree -- the case runs the original first and fails by name as a precondition when it does not
-# fact: logs/fast-alert.log -- the runner always appends to it, so the case counts its lines before the run and reads only the lines after
-# fact: master's tools/fast_checks.sh -- read only by --prove-red, via git show master
+# fact: the alert file the runner appends to -- every runner call sets INCURSION_FAST_ALERT_FILE to a file in this check's temp dir, each case empties it before the run and reads all of it after
+# fact: logs/fast-alert.log -- the real alert file; the check records its size before and demands it unchanged at the end (no writes to the real alert file)
+# fact: the old runner, tools/fast_checks.sh at commit 8779bbdf -- read only by --prove-red, via git show of that fixed commit
 # fact: seed, character, map, options -- none read; no case starts a game session
 #
 # The fast runner globs <dir>/check_*.sh, so every fake here is one of those.
@@ -62,14 +63,15 @@
 #
 # Exit: 0 every assertion held (--prove-red: both cases failed as expected)
 #       1 any assertion failed
-#       2 could not measure (mktemp failed, bad argument, no master copy)
+#       2 could not measure (mktemp failed, bad argument, no copy of the old runner)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 RUNNER="$ROOT/tools/fast_checks.sh"
 WT="$ROOT/tools/check_worktree_untracked.sh"
-ALERT_FILE="$ROOT/logs/fast-alert.log"
+REAL_ALERT="$ROOT/logs/fast-alert.log"
+REAL_ALERT_BEFORE="$(if [ -f "$REAL_ALERT" ]; then wc -c < "$REAL_ALERT"; else echo absent; fi)"
 
 PROVE_RED=0
 case "${1:-}" in
@@ -89,15 +91,19 @@ report() { # report <ok|FAIL> <label>
 }
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/check_fast_checks.XXXXXX")" || exit 2
-trap 'rm -rf "$TMP"' EXIT
+restore_real_alert() { # --prove-red only: put the real alert file back as it was
+    [ "$PROVE_RED" -eq 1 ] || return 0
+    if [ -f "$TMP/real-alert.saved" ]; then cp -p "$TMP/real-alert.saved" "$REAL_ALERT"; else rm -f "$REAL_ALERT"; fi
+}
+trap 'restore_real_alert; rm -rf "$TMP"' EXIT
 # inc-b0ziu.8: no case may write the real timing log.
 export INCURSION_CHECK_TIMING_LOG="$TMP/check-timing.tsv"
 # The guard is faked idle unless a case says otherwise; limits are loose.
 export INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 INCURSION_LOAD_GUARD_FAKE_PRESSURE=1
 export INCURSION_FAST_STALL=30 INCURSION_FAST_CPU=1000
 
-mkdir -p "$ROOT/logs" || exit 2
-touch "$ALERT_FILE" || exit 2
+ALERT_FILE="$TMP/fast-alert.log"
+: > "$ALERT_FILE" || exit 2
 
 plant() { # plant <dir> <name> <gate-or-empty> <marker-or-empty> <body line>...
     local dir="$1" name="$2" gate="$3" marker="$4"
@@ -120,7 +126,7 @@ runner() {
     shift 2
     [ "$mode" = watched ] && cc=1
     # shellcheck disable=SC2086
-    ( cd "$ROOT" && $PFX env -u INCURSION_FAST_WATCHED ${cc:+INCURSION_FAST_WATCHED=1} "$@" "$RUNNER" --dir "$dir" 2>&1 )
+    ( cd "$ROOT" && $PFX env -u INCURSION_FAST_WATCHED INCURSION_FAST_ALERT_FILE="$ALERT_FILE" ${cc:+INCURSION_FAST_WATCHED=1} "$@" "$RUNNER" --dir "$dir" 2>&1 )
 }
 
 # block <output> <name> -- the verdict line for <name> and its indented lines.
@@ -152,12 +158,12 @@ case_ac1_game() {
 
 case_ac4_unwatched() {
     # args: extra VAR=val for the runner (the CLAUDECODE case passes CLAUDECODE=1)
-    local d="$TMP/d_ac4u" fifo="$TMP/ac4u.fifo" base out rc lines
+    local d="$TMP/d_ac4u" fifo="$TMP/ac4u.fifo" out rc lines
     rm -rf "$d" "$fifo"; mkfifo "$fifo"
     plant "$d" check_blocked.sh cheap "blocks forever" "read x < '$fifo'" "exit 0"
-    base="$(wc -l < "$ALERT_FILE")"
+    : > "$ALERT_FILE"
     out="$(runner unwatched "$d" INCURSION_FAST_STALL=1 "$@")"; rc=$?
-    lines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    lines="$(cat "$ALERT_FILE")"
     case "$out" in *"EXPENSIVE check_blocked.sh"*) WHY="blocked check called EXPENSIVE"; return 1 ;; esac
     case "$out" in *"HANG check_blocked.sh"*) ;; *) WHY="no HANG verdict (exit $rc)"; return 1 ;; esac
     case "$lines" in *"HANG check_blocked.sh "*) ;; *) WHY="no HANG line in the alert file"; return 1 ;; esac
@@ -167,8 +173,11 @@ case_ac4_unwatched() {
 
 if [ "$PROVE_RED" -eq 1 ]; then
     OLD="$TMP/old_fast_checks.sh"
-    git -C "$ROOT" show master:tools/fast_checks.sh > "$OLD" 2>/dev/null || {
-        echo "COULD NOT MEASURE: git show master:tools/fast_checks.sh failed" >&2; exit 2; }
+    # 8779bbdf is master just before inc-rst61 landed: the last runner with a wall-clock limit. A commit id never moves; master does.
+    git -C "$ROOT" show 8779bbdf:tools/fast_checks.sh > "$OLD" 2>/dev/null || {
+        echo "COULD NOT MEASURE: git show 8779bbdf:tools/fast_checks.sh failed" >&2; exit 2; }
+    # The old runner ignores INCURSION_FAST_ALERT_FILE and writes the real alert file; the EXIT trap restores it.
+    if [ -f "$REAL_ALERT" ]; then cp -p "$REAL_ALERT" "$TMP/real-alert.saved"; fi
     chmod +x "$OLD"
     RUNNER="$OLD"
     export INCURSION_FAST_LIMIT=2     # the old runner's wall-clock limit; the new one ignores it
@@ -448,14 +457,14 @@ fi
 D4="$TMP/d_ac4w"; FIFO="$TMP/ac4w.fifo"; PIDF="$TMP/ac4w.pid"
 mkfifo "$FIFO"
 plant "$D4" check_blocked.sh cheap "blocks forever" "echo \$\$ > '$PIDF'" "read x < '$FIFO'" 'exit 0'
-base="$(wc -l < "$ALERT_FILE")"
+: > "$ALERT_FILE"
 set -m
-( cd "$ROOT" && exec env INCURSION_FAST_WATCHED=1 INCURSION_FAST_STALL=1 "$RUNNER" --dir "$D4" ) > "$TMP/ac4w.out" 2>&1 &
+( cd "$ROOT" && exec env INCURSION_FAST_ALERT_FILE="$ALERT_FILE" INCURSION_FAST_WATCHED=1 INCURSION_FAST_STALL=1 "$RUNNER" --dir "$D4" ) > "$TMP/ac4w.out" 2>&1 &
 rpid=$!
 set +m
 seen=0
 for _ in $(seq 1 80); do
-    newlines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    newlines="$(cat "$ALERT_FILE")"
     if grep -q '^ALERT check_blocked.sh ' <<<"$newlines"; then seen=1; break; fi
     sleep 0.25
 done
@@ -508,9 +517,9 @@ grep -q '^check_upstream_label.sh[[:space:]]\+bd[[:space:]]' "$ROOT/tools/fast_c
 for mode in watched unwatched; do
     D="$TMP/d_ac4bd_$mode"; rm -rf "$D"
     plant "$D" check_upstream_label.sh cheap "waits on bd" 'bd 7 >/dev/null 2>&1' 'exit 0'
-    base="$(wc -l < "$ALERT_FILE")"
+    : > "$ALERT_FILE"
     out="$(runner "$mode" "$D" INCURSION_FAST_STALL=1 PATH="$FBD:$PATH")"; rc=$?
-    lines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    lines="$(cat "$ALERT_FILE")"
     bad=""
     [ "$rc" -eq 0 ] || bad="exit $rc"
     case "$out" in *"HANG check_upstream_label.sh"*|*"EXPENSIVE check_upstream_label.sh"*) bad="$bad verdict: $(block "$out" check_upstream_label.sh | head -2 | tr '\n' '|')" ;; esac
@@ -529,6 +538,13 @@ case "$out" in
     *"EXPENSIVE check_novet_bd.sh (bd"*) report ok "AC4 vetted bd wait: control, an unvetted bd call is still EXPENSIVE" ;;
     *) report FAIL "AC4 vetted bd wait: control not EXPENSIVE bd (exit $rc): $(printf '%s' "$out" | head -4 | tr '\n' '|')" ;;
 esac
+
+REAL_ALERT_AFTER="$(if [ -f "$REAL_ALERT" ]; then wc -c < "$REAL_ALERT"; else echo absent; fi)"
+if [ "$REAL_ALERT_AFTER" = "$REAL_ALERT_BEFORE" ]; then
+    report ok "no writes to the real alert file"
+else
+    report FAIL "no writes to the real alert file (size $REAL_ALERT_BEFORE -> $REAL_ALERT_AFTER)"
+fi
 
 echo
 if [ "$fails" -eq 0 ]; then
