@@ -529,6 +529,7 @@ class Map: public Object
                         Creature *c, int32 dangerFactor,
                         uint16 *ThePath = NULL, int32 *outCost = NULL,
                         bool memonly = true);
+// family: path_flags internal
 #define DF_ALL_SAFE             0
 #define DF_IGNORE_TRAPS         1
 #define DF_IGNORE_TERRAIN       2
@@ -539,6 +540,7 @@ class Map: public Object
    locked door when it also has DF_OPEN_DOORS, any closed door when it does not.
    ShortestPath minimises the number of such doors first, then the distance. */
 #define DF_BASH_DOORS           8
+// end family: path_flags
 
     uint16 PathPoint(int16 n);
     uint16 RunOver(uint8 x, uint8 y, bool memonly, Creature *c,

@@ -133,9 +133,11 @@ static void RunToStageM(Map *m, Player *p) {
 
 /* Position along the U corridor, counted from the far end (14,10); the door
    square (12,14) is DOOR_IDX and the player's square (10,10) is 12. */
+// no-family
 #define DOOR_X 12
 #define DOOR_Y 14
 #define DOOR_IDX 6
+// end no-family
 static int UIndex(int x, int y) {
     if (x == 14) return y - 10;
     if (y == 14) return 4 + (14 - x);
@@ -205,7 +207,7 @@ static void RouteProbe(Map *m, Player *p) {
                 }
         const bool alt = doorMode && strstr(mode, "-alt");
         for (int x = 9; x <= 15; ++x)
-            for (int y = 9; y <= (alt ? 16 : 15); ++y) {
+            for (int y = 9; y <= 16; ++y) {
                 bool open = ((x == 10 || x == 14) && y >= 10 && y <= 14) ||
                             (y == 14 && x >= 10 && x <= 14);
                 /* bypass: (13,14) -> (13,15) -> (12,16) -> (11,15) -> (11,14),
@@ -270,7 +272,7 @@ static void RouteProbe(Map *m, Player *p) {
         mn->RemoveStati(ASLEEP);
         mn->RemoveStati(SLEEPING);
         if (!strcmp(mode, "door-pet"))
-            mn->MakeCompanion(p, PHD_FREEBIE);
+            { mn->MakeCompanion(p, PHD_FREEBIE); mn->ts.Wanderlust(mn, p); }
         else {
             mn->GainPermStati(EXTRA_ABILITY, NULL, SS_MISC, CA_TELEPATHY, 30);
             mn->CalcValues();

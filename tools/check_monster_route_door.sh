@@ -6,11 +6,12 @@
 # Same RouteProbe U corridor as check_monster_route_to_target.sh, with one door
 # on the bottom of the U at (12,14). Each scenario is a separate seeded session.
 # fact: key bindings and overview entry -- options-2026-08-22.dat and monster-route-door.keys
-# fact: player identity and initial world -- fixture kobold-rogue-seed1.sav
+# fact: player identity and initial world -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh)
 # fact: monster identity, position and no ambient creatures -- RouteProbe staging
 # fact: staged pursuer survival -- RouteProbe sets and replenishes 10000 HP
 # fact: player position and survival -- RouteProbe staging (10,10; 10000 HP)
-# fact: known floor, size-compatible region and U corridor -- RouteProbe U corridor staging
+# fact: pet's wander target -- RouteProbe sets it to the player's square (Wanderlust(mn, p)) for door-pet
+# fact: known floor, size-compatible region and U corridor -- RouteProbe U corridor staging (writes x 9..15, y 9..16, so no square the bypass count reads comes from the loaded level)
 # fact: the door, its flags and its trap -- RouteProbe door staging, logged on the "door" line
 # fact: no line of fire and straight step blocked -- RouteProbe U corridor staging
 # fact: mutual hostility and perception through wall -- RouteProbe TargetEnemy entries, CA_TELEPATHY=30
@@ -52,7 +53,7 @@ for sc in "$@"; do
     [ "$sc" = door-pick-fail ] && roll=1
     INCURSION_RUNTO_SKILL_ROLL=$roll INCURSION_FORCE_PURSUE=1 INCURSION_ROUTE_PROBE="$sc" INCURSION_RUN_DIR="$run" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+    INCURSION_LOAD=kobold-rogue-seed1 \
         tools/headless.sh tools/keys/monster-route-door.keys "$seed" > "$run/harness.txt" 2>&1
     rc=$?
     python3 - "$run" "$rc" "$sc" <<'PY'
