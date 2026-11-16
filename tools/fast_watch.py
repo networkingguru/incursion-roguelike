@@ -2,7 +2,7 @@
 """Run a fast check and report a stall or heavy CPU use, with no wall limit (inc-rst61).
 
 Usage: tools/fast_watch.py --name NAME --alert-file FILE (--watched|--unwatched)
-                           [--debug] -- CMD [ARG...]
+                           [--exempt-wait NAME]... [--debug] -- CMD [ARG...]
 Why: a wall-clock limit made machine load decide failures. This tool watches
 PROGRESS instead: some process of the check gained CPU, or one started or ended.
 Every 0.25 s it reads the CPU of the process tree (libproc, as tools/proc_tree_rss.py).
@@ -10,6 +10,8 @@ Limits, in seconds: INCURSION_FAST_STALL (no progress, default 5) and
 INCURSION_FAST_CPU (cumulative CPU of every process ever seen, default 50).
 --watched: append `ALERT NAME pgid P: ...` once per kind; the check keeps running.
 --unwatched: limits are 5x; at a limit append `HANG NAME pgid P: ...`, stop the group.
+--exempt-wait NAME (repeatable): while a live process of the tree has that executable
+name, the no-progress timer does not advance. The CPU limit still applies.
 When the root exits, the rest of its process group is stopped (tools/run_capped.py).
 Exit: the child's status (signal N -> 128+N); 125 HANG; 128+N on SIGTERM/SIGINT to
 this tool; 2 on bad usage, a bad limit, or when libproc cannot measure.
@@ -64,6 +66,12 @@ class Meter:
             return None
         return (info.user_time + info.system_time) * self.scale
 
+    def name(self, pid):
+        buf = ctypes.create_string_buffer(256)
+        if self.lib.proc_name(pid, buf, ctypes.sizeof(buf)) <= 0:
+            return ""
+        return buf.value.decode("utf-8", "replace")
+
     def children(self, pid):
         buf = (ctypes.c_int * 1024)()
         n = self.lib.proc_listchildpids(pid, buf, ctypes.sizeof(buf))
@@ -109,6 +117,7 @@ def main(argv):
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--watched", action="store_true")
     mode.add_argument("--unwatched", action="store_true")
+    ap.add_argument("--exempt-wait", action="append", default=[])
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("cmd", nargs=argparse.REMAINDER)
     try:
@@ -145,6 +154,7 @@ def main(argv):
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
 
+    exempt = set(a.exempt_wait)
     warned = [False]
 
     def emit(line):
@@ -179,6 +189,8 @@ def main(argv):
             total[pid] = max(total.get(pid, 0.0), v)
             if v > prev_cpu.get(pid, -1.0):
                 moved = True
+        if exempt and any(meter.name(pid) in exempt for pid in cur):
+            moved = True
         prev_live = set(cur)
         prev_cpu = cur
         if moved:

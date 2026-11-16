@@ -39,6 +39,9 @@
 #   AC4  a check blocked on a fifo: watched -> an ALERT line while the runner still
 #        runs, and the fake is gone once the runner's group is stopped; unwatched
 #        -> HANG (not EXPENSIVE), and the alert file holds the HANG line
+#   AC4 vetted bd wait  a fake bd blocking past the stall limit under the vetted
+#        check_upstream_label.sh: ok, no alert line, watched and unwatched; the
+#        same call from an unvetted check is EXPENSIVE bd
 #   AC5  --prove-red (above)
 #
 # inc-rst61: a check's verdict must not depend on how busy the machine is. Every
@@ -490,6 +493,42 @@ if case_ac4_unwatched CLAUDECODE=1; then
 else
     report FAIL "AC4: CLAUDECODE=1 alone case: $WHY"
 fi
+
+# ---- AC4 (vetted bd wait). A vetted bd may wait on the shared beads database past
+# the stall limit: no ALERT watched, no HANG unwatched. The same call from a check
+# that is not vetted stays EXPENSIVE bd. The fake bd is a re-signed copy of
+# /bin/sleep named bd (fast_watch.py reads the executable name, so a script would
+# show as bash): `bd 7` blocks 7 s with no child and no CPU, longer than the
+# unwatched limit (5 x INCURSION_FAST_STALL=1).
+FBD="$TMP/fakebd"; mkdir -p "$FBD"
+cp /bin/sleep "$FBD/bd" && codesign -s - -f "$FBD/bd" >/dev/null 2>&1 ||
+    report FAIL "AC4 vetted bd wait: cannot make the fake bd"
+grep -q '^check_upstream_label.sh[[:space:]]\+bd[[:space:]]' "$ROOT/tools/fast_checks.vetted" ||
+    report FAIL "AC4 vetted bd wait: tools/fast_checks.vetted has no bd line for check_upstream_label.sh"
+for mode in watched unwatched; do
+    D="$TMP/d_ac4bd_$mode"; rm -rf "$D"
+    plant "$D" check_upstream_label.sh cheap "waits on bd" 'bd 7 >/dev/null 2>&1' 'exit 0'
+    base="$(wc -l < "$ALERT_FILE")"
+    out="$(runner "$mode" "$D" INCURSION_FAST_STALL=1 PATH="$FBD:$PATH")"; rc=$?
+    lines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    bad=""
+    [ "$rc" -eq 0 ] || bad="exit $rc"
+    case "$out" in *"HANG check_upstream_label.sh"*|*"EXPENSIVE check_upstream_label.sh"*) bad="$bad verdict: $(block "$out" check_upstream_label.sh | head -2 | tr '\n' '|')" ;; esac
+    case "$lines" in *"ALERT check_upstream_label.sh "*|*"HANG check_upstream_label.sh "*) bad="$bad alert line: $lines" ;; esac
+    if [ -z "$bad" ]; then
+        report ok "AC4 vetted bd wait: a vetted bd waiting past the stall limit is ok, no alert ($mode)"
+    else
+        report FAIL "AC4 vetted bd wait ($mode): $bad"
+    fi
+done
+# control: the same wait from a check that is not vetted is EXPENSIVE bd
+D="$TMP/d_ac4bd_ctl"; rm -rf "$D"
+plant "$D" check_novet_bd.sh cheap "calls bd" 'bd 1 >/dev/null 2>&1' 'exit 0'
+out="$(runner unwatched "$D" INCURSION_FAST_STALL=1 PATH="$FBD:$PATH")"; rc=$?
+case "$out" in
+    *"EXPENSIVE check_novet_bd.sh (bd"*) report ok "AC4 vetted bd wait: control, an unvetted bd call is still EXPENSIVE" ;;
+    *) report FAIL "AC4 vetted bd wait: control not EXPENSIVE bd (exit $rc): $(printf '%s' "$out" | head -4 | tr '\n' '|')" ;;
+esac
 
 echo
 if [ "$fails" -eq 0 ]; then

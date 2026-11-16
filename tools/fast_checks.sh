@@ -133,9 +133,12 @@ for i in "${!CHECKS[@]}"; do
         echo 1 > "$st"; date +%s > "$end"
         continue
     fi
+    # A vetted `bd` may wait on the shared beads database: no stall limit for it.
+    EX=()
+    case ",$(vetted_kinds "$(basename "${CHECKS[$i]}")")," in *,bd,*) EX=( --exempt-wait bd ) ;; esac
     (
         env INCURSION_FAST_PROBE="$probe" PATH="$ROOT/tools/fast_probe:$PATH" \
-            python3 "$WATCH" --name "$(basename "${CHECKS[$i]}")" \
+            python3 "$WATCH" --name "$(basename "${CHECKS[$i]}")" ${EX[@]+"${EX[@]}"} \
             --alert-file "$ALERT" "--$MODE" -- "${CHECKS[$i]}" > "$out" 2>&1
         echo $? > "$st"
         date +%s > "$end"
