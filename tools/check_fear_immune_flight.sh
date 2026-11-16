@@ -9,6 +9,14 @@
 #   CONTROL plain bugbear pinned at 1/4 HP      : MUST reach the flee branch
 #   HEALTHY blackguard goblin at full HP       : MUST NOT reach the flee branch
 # Exit 0 only when every case passes.
+# fact: settings -- pinned options file tools/fixtures/options-2026-08-22.dat
+# fact: character and map -- tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav (INCURSION_LOAD), frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
+# fact: other monsters on the level -- wizard "Genocide Everything"
+# fact: summon placement (three squares east) -- wizard "Monster Summoning" on the specimen's fixed map
+# fact: other monsters of the same name -- the probe follows only the summoned monster's handle (second guard)
+# fact: the monster's hit points -- the probe pins them (PIN cases)
+# fact: the flee decision -- no roll, only the HP test (the roll sets only fear duration)
+# fact: the template -- none for the bugbear, blackguard from the wizard menu
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -16,6 +24,7 @@ mkdir -p logs/runs
 BASE="$(mktemp -d "$ROOT/logs/runs/fear-immune-flight.XXXXXX")"
 echo "Specimens: $BASE"
 status=0
+CHAR=tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav
 
 # run_case <name> <keys> <pin 0|1> <want-flee 0|1> <immune 0|1> [monster]
 run_case() {
@@ -28,6 +37,7 @@ run_case() {
     env INCURSION_BIN="$ROOT/incursion-headless" \
         INCURSION_LOWHP_FEAR_PROBE=$mon ${pinenv[@]+"${pinenv[@]}"} \
         INCURSION_RUN_DIR="$rd" \
+        INCURSION_LOAD="$CHAR" \
         INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
         tools/headless.sh "$keys" 1 > "$rd.harness.txt" 2>&1
     local log="$rd/logs/lowhp-fear.log"

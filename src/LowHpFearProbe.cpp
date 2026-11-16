@@ -1,7 +1,8 @@
 /* inc-c36o: observe the low-HP morale branch of Monster::ChooseAction.
    Off unless INCURSION_LOWHP_FEAR_PROBE=<monster name> is set. With
    INCURSION_LOWHP_FEAR_PROBE_PIN=1 it holds that monster at 1/4 of its hit
-   points. Writes logs/lowhp-fear.log. No morale rule lives here. */
+   points. It follows only the monster the wizard summon recorded
+   (inc-b4l3g.15). Writes logs/lowhp-fear.log. No morale rule lives here. */
 #include "Incursion.h"
 
 static FILE *LowHpFearLog()
@@ -16,18 +17,23 @@ static FILE *LowHpFearLog()
     return log;
 }
 
+/* inc-b4l3g.15: the one monster the probe follows; the wizard summon sets it. */
+static hObj LowHpFearTarget = 0;
+void LowHpFearProbeTarget(Monster *m) { LowHpFearTarget = m->myHandle; }
+
 /* phase 0: top of the morale check; 1: the flee branch fired. */
 void LowHpFearProbe(Monster *m, int phase)
 {
     const char *want = getenv("INCURSION_LOWHP_FEAR_PROBE");
-    if (!want || strcmp((const char*)NAME(m->mID), want)) return;
+    if (!want || !LowHpFearTarget || m->myHandle != LowHpFearTarget ||
+        strcmp((const char*)NAME(m->mID), want)) return;
     FILE *log = LowHpFearLog();
     if (!log) return;
     const int maxHP = m->mHP + m->Attr[A_THP];
     if (phase == 0 && getenv("INCURSION_LOWHP_FEAR_PROBE_PIN"))
         m->cHP = max(1, maxHP / 4);
-    fprintf(log, "%s mon=%s cHP=%d maxHP=%d lowhp=%d psycho=%d mindless=%d "
-        "fearRes=%d afraid=%d\n", phase ? "FLEE-BRANCH" : "ACT",
+    fprintf(log, "%s id=%d mon=%s cHP=%d maxHP=%d lowhp=%d psycho=%d mindless=%d "
+        "fearRes=%d afraid=%d\n", phase ? "FLEE-BRANCH" : "ACT", (int)m->myHandle,
         (const char*)NAME(m->mID), (int)m->cHP, maxHP,
         (int)(m->cHP * 3 < maxHP), (int)m->HasMFlag(M_PSYCHO),
         (int)m->HasMFlag(M_MINDLESS), (int)m->ResistLevel(AD_FEAR),
