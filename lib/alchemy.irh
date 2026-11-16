@@ -2133,7 +2133,7 @@ AI_PSIONIC Effect "Ectoplasmic Cocoon" : EA_GENERIC
   
 AI_PSIONIC Effect "Whitefire" : EA_BLAST
   { sval: REF partial; xval: AD_FIRE; pval: 3d4; Purpose: EP_ATTACK;
-    aval: AR_BALL; qval: Q_DIR | Q_TAR; cval: COL_SILVERY; lval: 12;
+    aval: AR_BALL; qval: Q_DIR | Q_TAR; cval: COL_SILVERY; lval: 4;
     Flags: EF_AFFECTS_ITEMS;
     Desc: "By manifesting this power, you conjure intensely unstable
       strands of excited matter from the astral plane that combust

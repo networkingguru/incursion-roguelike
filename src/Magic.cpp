@@ -1612,6 +1612,11 @@ EvReturn Magic::MagicHit(EventInfo &e) {
 
 /* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
 void (*AreaProbeXYHook)(int16,int16) = NULL;
+/* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
+   opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
+   ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
+void (*BallRingHook)(int ring, int ntaken, const int16 *tx, const int16 *ty,
+    int ndrawn, const int16 *dx, const int16 *dy, int waitMs) = NULL;
 
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
@@ -2096,6 +2101,110 @@ EvReturn Magic::AField(EventInfo &e)
 // If isBeam is true, we travel through creatures and continue to strike
 // things.
 // If isBall is true, at the end of our travels we explode outward.
+
+/* inc-az4d2: squares in the disc of radius r: 4(x^2+y^2) <= (2r+1)^2. */
+int16 Magic::BallDiscCount(int r)
+  {
+    int n = 0;
+    for (int x = -r - 1; x <= r + 1; x++)
+      for (int y = -r - 1; y <= r + 1; y++)
+        if (4*(x*x + y*y) <= (2*r + 1)*(2*r + 1))
+          n++;
+    return (int16)n;
+  }
+
+/* inc-az4d2: how many squares a ball takes, used by the strike and by the
+   prediction. lval is the radius; Enlarge doubles the disc, Focus divides it
+   by 3, then the volume snaps to the nearest disc count (a tie takes the
+   larger). Compared in thirds, so the division by 3 stays exact. */
+int16 Magic::BallVolume(EventInfo &e, int16 lval)
+  {
+    const int r = lval < 0 ? 0 : lval;
+    const int base = BallDiscCount(r);
+    const int want3 = (e.MM & MM_ENLARGE) ? 6*base :
+                      (e.MM & MM_FOCUS)   ? base : 3*base;
+    int best = base, bestDiff = abs(3*base - want3);
+    for (int rr = 0; rr < 100; rr++) {
+      const int c = BallDiscCount(rr);
+      const int diff = abs(3*c - want3);
+      if (diff <= bestDiff) { best = c; bestDiff = diff; }
+      if (3*c > want3 && diff > bestDiff)
+        break;
+      }
+    return (int16)best;
+  }
+
+/* inc-az4d2: the rounded true distance of an offset: band k holds
+   (2k-1)^2 < 4(x^2+y^2) <= (2k+1)^2; band 0 is the center. */
+static int16 BallBand(int dx, int dy)
+  {
+    const int d4 = 4*(dx*dx + dy*dy);
+    int k = 0;
+    while ((2*k + 1)*(2*k + 1) < d4)
+      k++;
+    return (int16)k;
+  }
+
+/* inc-az4d2: the ball's squares, grouped by distance band. Nothing is drawn or
+   struck here. Order: each step takes the whole shell of the smallest x^2+y^2
+   in the frontier, only if the total stays within count; a square found behind
+   that value is taken in the next step. Solid terrain and solid features are
+   recorded once (kind 1, 2) and never expanded. */
+void Magic::BallFill(Map &m, int16 cx, int16 cy, int16 count,
+    std::vector<BallSquare> &out)
+  {
+    out.clear();
+    /* upstream: the fill must record taken squares itself; the original marks them only by drawn glyphs (o.IsGlyphAt), so out of the player's sight it takes a square twice, and the original code does so on every platform. Observed, tools/check_ball_shape.sh C1. inc-az4d2, not sent. */
+    const int sx = m.SizeX();
+    std::vector<char> seen(sx * m.SizeY(), 0);
+    struct Fr { int x, y, d2; };
+    std::vector<Fr> frontier, shell;
+    Fr c = { cx, cy, 0 };
+    seen[cy*sx + cx] = 1;
+    frontier.push_back(c);
+    int taken = 0;
+    int16 wesCount = 0; // no infinite loops
+    while (!frontier.empty() && wesCount++ < 5000) {
+      int d = frontier[0].d2;
+      for (size_t i = 1; i < frontier.size(); i++)
+        if (frontier[i].d2 < d) d = frontier[i].d2;
+      shell.clear();
+      std::vector<Fr> rest;
+      for (size_t i = 0; i < frontier.size(); i++)
+        (frontier[i].d2 == d ? shell : rest).push_back(frontier[i]);
+      if (taken + (int)shell.size() > count)
+        break;
+      frontier.swap(rest);
+      for (size_t k = 0; k < shell.size(); k++) {
+        const Fr s = shell[k];
+        BallSquare t = { (int16)s.x, (int16)s.y,
+            BallBand(s.x - cx, s.y - cy), 0 };
+        out.push_back(t);
+        taken++;
+        for (int j = 0; j != 8; j++) {
+          const int nx = s.x + DirX[j], ny = s.y + DirY[j];
+          if (!m.InBounds(nx,ny) || seen[ny*sx + nx])
+            continue;
+          seen[ny*sx + nx] = 1;
+          BallSquare n = { (int16)nx, (int16)ny,
+              BallBand(nx - cx, ny - cy), 1 };
+          if (!m.At(nx,ny).Solid) {
+            n.kind = 0;
+            for (Feature *ft=m.FFeatureAt(nx,ny);ft;ft=m.NFeatureAt(nx,ny))
+              if (ft->Flags & F_SOLID) { n.kind = 2; break; }
+            }
+          if (n.kind == 0) {
+            Fr f = { nx, ny, (nx-cx)*(nx-cx) + (ny-cy)*(ny-cy) };
+            frontier.push_back(f);
+            }
+          else
+            out.push_back(n);
+          }
+        }
+      }
+    std::stable_sort(out.begin(), out.end(),
+        [](const BallSquare &a, const BallSquare &b) { return a.ring < b.ring; });
+  }
 
 EvReturn Magic::ABallBeamBolt(EventInfo &e)
 {
@@ -2647,82 +2756,60 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   if (isBall) { 
     int x = cx / 2;
     int y = cy / 2; 
-    int i = 0; 
 
     m.SetQueue(QUEUE_AREA_EFFECT);
 
-    int16 ListX[60],   ListY[60],
-          OListX[60], OListY[60], 
-          szList, szOList,
-          GlyphCount,MinGlyphs;
+    std::vector<BallSquare> fill;
+    BallFill(m, x, y, BallVolume(e, e.EMagic->lval), fill);
 
-    OListX[0] = x; OListY[0] = y;
-    szOList = 1; szList = 0;
-    GlyphCount = 0; 
-    MinGlyphs = e.MM & MM_ENLARGE ? 20*e.EMagic->lval : 
-                e.MM & MM_FOCUS   ?    e.EMagic->lval :
-                                     3*e.EMagic->lval;
-
-
-
-    int16 wesCount = 0; // no infinite loops
-    while (GlyphCount < MinGlyphs && wesCount++ < 5000) {
-      for(i=0;i!=szOList;i++)
-        for (j=0;j!=4;j++) {
-          vis = PossiblyPause(T1,OListX[i] + DirX[j],OListY[i] + DirY[j],0); 
-          if (m.InBounds(OListX[i] + DirX[j], OListY[i] + DirY[j]) && 
-                  !o.IsGlyphAt(OListX[i] + DirX[j],OListY[i] + DirY[j])) {                          
-            eCopy = e; eCopy.isLoc = true;
-            eCopy.EXVal = OListX[i] + DirX[j]; 
-            eCopy.EYVal = OListY[i] + DirY[j]; 
-            MagicXY(eCopy,eCopy.EXVal,eCopy.EYVal);
-            if (!m.At(OListX[i] + DirX[j],OListY[i] + DirY[j]).Solid)                          
-              {     
-//NotSolidAfterAll:                                                             
-                for (ft=m.FFeatureAt(OListX[i] + DirX[j],OListY[i] + DirY[j]);ft;
-                        ft=m.NFeatureAt(OListX[i] + DirX[j],OListY[i] + DirY[j])) {                    
-                  ADD_TARGET(ft);            
-                  if (ft->Flags & F_SOLID)
-                    goto lt;                                                   
-                  }                                                              
-                for (Thing *t=m.FirstAt(OListX[i] + DirX[j],OListY[i] + DirY[j]);
-                          t;t=m.NextAt(OListX[i] + DirX[j],OListY[i] + DirY[j]))                   
-                  { ADD_TARGET(t); }         
-                ListX[szList] = OListX[i] + DirX[j];                                    
-                ListY[szList] = OListY[i] + DirY[j];                                    
-                if (vis)                                                         
-                  o.AddGlyph(ListX[szList],ListY[szList],                        
-				  GLYPH_VALUE(GLYPH_BLAST, BlastColourSets[Color * 4 + 1 + random(3)]));
-                szList++; GlyphCount++;                                          
-                if (szList > 58)                                                 
-                  goto Breakout;                                                 
-                lt:;                                                             
-              }
-            }
+    int16 RingX[160], RingY[160], DrawX[160], DrawY[160];
+    bool anyDrawn = false;
+    if (BallRingHook) {
+      int16 bcx = x, bcy = y;
+      BallRingHook(-2, 1, &bcx, &bcy, 0, NULL, NULL, 0);
+    }
+    for (size_t first = 0; first < fill.size(); ) {
+      const int16 ringNo = fill[first].ring;
+      int nTaken = 0, nDraw = 0;
+      size_t i;
+      for (i = first; i < fill.size() && fill[i].ring == ringNo; i++) {
+        const int16 sqx = fill[i].x, sqy = fill[i].y;
+        eCopy = e; eCopy.isLoc = true;
+        eCopy.EXVal = sqx; eCopy.EYVal = sqy;
+        MagicXY(eCopy,sqx,sqy);
+        if (fill[i].kind == 1)
+          continue;
+        for (ft=m.FFeatureAt(sqx,sqy);ft;ft=m.NFeatureAt(sqx,sqy)) {
+          ADD_TARGET(ft);
+          if (ft->Flags & F_SOLID)
+            break;
           }
-
-
-
-
+        if (fill[i].kind == 2)
+          continue;
+        for (Thing *t=m.FirstAt(sqx,sqy);t;t=m.NextAt(sqx,sqy))
+          { ADD_TARGET(t); }
+        if (nTaken < 160) { RingX[nTaken] = sqx; RingY[nTaken] = sqy; }
+        nTaken++;
+        if (PossiblyPause(T1,sqx,sqy,0) && nDraw < 160) {
+          o.AddGlyph(sqx,sqy,
+              GLYPH_VALUE(GLYPH_BLAST, BlastColourSets[Color * 4 + 1 + random(3)]));
+          DrawX[nDraw] = sqx; DrawY[nDraw] = sqy;
+          nDraw++;
+          }
+        }
+      first = i;
       o.ShowGlyphs();
-      if (vis)
+      if (nDraw) {
         T1->StopWatch(70);
-      /*if (GlyphCount < MinGlyphs) {
-        for(i=0;i!=szOList;i++)
-          {
-            APPLY_GLYPH_AT(+1,+1,EEE)
-            APPLY_GLYPH_AT(+1,-1,FFF)
-            APPLY_GLYPH_AT(-1,+1,GGG)
-            APPLY_GLYPH_AT(-1,-1,HHH)
-          }
-        o.ShowGlyphs();
-        }*/
-      memcpy(OListX,ListX,sizeof(OListX));
-      memcpy(OListY,ListY,sizeof(OListY));
-      szOList = szList; szList = 0;
+        anyDrawn = true;
+        }
+      if (BallRingHook)
+        BallRingHook(ringNo, min(nTaken,160), RingX, RingY, nDraw, DrawX, DrawY,
+            nDraw ? 70 : 0);
       }
-    Breakout:
-    if (vis)
+    if (BallRingHook)
+      BallRingHook(-1, 0, NULL, NULL, 0, NULL, NULL, anyDrawn ? 300 : 0);
+    if (anyDrawn)
       T1->StopWatch(300);
     m.UnsetQueue(QUEUE_AREA_EFFECT);
     m.PrintQueue(QUEUE_AREA_EFFECT);
@@ -2966,52 +3053,23 @@ void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
   DoneProject:
 
   if (isBall) { 
-    int x = cx / 2;
-    int y = cy / 2; 
-    int i = 0, j; 
-
-    int16 ListX[60],   ListY[60],
-          OListX[60], OListY[60], 
-          szList, szOList,
-          GlyphCount,MinGlyphs;
-
-    OListX[0] = x; OListY[0] = y;
-    szOList = 1; szList = 0;
-    GlyphCount = 0; 
-    MinGlyphs = e.MM & MM_ENLARGE ? 10*e.vRadius : 
-                e.MM & MM_FOCUS   ?    e.vRadius :
-                                     3*e.vRadius;
-
-    int16 wesCount = 0;  // no infinite loops!
-    while (GlyphCount < MinGlyphs && wesCount++ < 5000) {
-      for(i=0;i!=szOList;i++)
-        for (j=0;j!=4;j++)
-          {
-            if (m.InBounds(OListX[i] + DirX[j],OListY[i] + DirY[j]))                             
-              if (!m.At(OListX[i] + DirX[j],OListY[i] + DirY[j]).Solid)                          
-                {                                                                  
-                  for (ft=m.FFeatureAt(OListX[i] + DirX[j],OListY[i] + DirY[j]);ft;
-                       ft=m.NFeatureAt(OListX[i] + DirX[j],OListY[i] + DirY[j])) {                    
-                    if (ft->Flags & F_SOLID)
-                        goto lt;                                                   
-                    }                                                              
-                  for (Thing *t=m.FirstAt(OListX[i] + DirX[j],OListY[i] + DirY[j]);t;
-                              t=m.NextAt(OListX[i] + DirX[j],OListY[i] + DirY[j]))                   
-                    { if (t->isCreature()) 
-                        victim[numVic++] = (Creature *)t; } 
-                  ListX[szList] = OListX[i] + DirX[j];                                    
-                  ListY[szList] = OListY[i] + DirY[j];                                    
-                  szList++; GlyphCount++; 
-                  if (szList > 58)
-                    goto Breakout;                                         
-                  lt:;                                                             
-                }
+    /* upstream: the prediction must count squares by lval as the strike does; the original counted from e.vRadius, so with Enlarge it predicted 10 x lval squares while the strike fills 20 x lval (it also had no repeat test and skipped solid features), on every platform. Traced, inc-az4d2, not sent. */
+    std::vector<BallSquare> fill;
+    BallFill(m, cx / 2, cy / 2,
+        BallVolume(e, e.EMagic ? e.EMagic->lval : e.vRadius), fill);
+    for (size_t i = 0; i < fill.size(); i++) {
+      if (fill[i].kind != 0)
+        continue;
+      for (Thing *t=m.FirstAt(fill[i].x,fill[i].y);t;
+                  t=m.NextAt(fill[i].x,fill[i].y))
+        if (t->isCreature()) {
+          bool dup = false;
+          for (int16 v = 0; v < numVic; v++)
+            if (victim[v] == (Creature *)t) dup = true;
+          if (!dup)
+            victim[numVic++] = (Creature *)t;
           }
-      memcpy(OListX,ListX,sizeof(OListX));
-      memcpy(OListY,ListY,sizeof(OListY));
-      szOList = szList; szList = 0;
       }
-    Breakout:;
   } 
 
   // now we're done projecting
