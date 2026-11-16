@@ -23,6 +23,16 @@
 # negated or earlier-only mention, an assistant mention and a system-reminder
 # mention all block.
 #
+# Defends bead inc-rst61 too: a foreground `git commit` or tools/finish_bead.sh
+# Bash call in the main session is refused, with a reason that names
+# run_in_background and the fast-alert.log Monitor; a background call with
+# INCURSION_FAST_WATCHED=1 (prefix or export), a quoted mention, git commit-tree, a subagent, NIGHTLY_BRANCH and a non-Incursion
+# folder are allowed.
+#
+# fact: NIGHTLY_BRANCH -- unset at the top of this file, set only by the one case that tests it
+# fact: the session folder -- GATE_CWD names a path under ~/Scripts; the hook compares path parts and never reads the folder, so no checkout state decides
+# fact: the payloads, ledger and log -- built and written by this file in a temp directory; the real files are never read
+#
 # Fully offline, against a temp ledger and a temp log (env overrides); it never
 # touches the real files. Every case asserts the exit code AND exactly one new
 # log line carrying the right `decision` and `label`.
@@ -44,6 +54,7 @@
 # Exit: 0 pass, 1 fail, 2 could not run.
 
 set -uo pipefail
+unset NIGHTLY_BRANCH
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GATE="$ROOT/tools/dispatch_gate.py"
@@ -251,6 +262,35 @@ PY
         echo "PASS (as intended): scope case (a) went red with the folder test disabled"
     else
         echo "FAIL: scope case (a) stayed green with the folder test disabled (rc=$MUTATED_RC)"
+        PROVE_FAIL=1
+    fi
+    cp "$BACKUP" "$GATE"
+    cmp -s "$BACKUP" "$GATE" || { echo "restore of dispatch_gate.py failed" >&2; exit 2; }
+
+    # Disable the foreground-commit case: a foreground git commit is allowed,
+    # so the FG cases must go red.
+    NEEDLE_FG='    what = runs_commit_or_landing(command)'
+    if ! grep -qF "$NEEDLE_FG" "$GATE"; then
+        echo "could not find the foreground case to mutate: $NEEDLE_FG" >&2
+        exit 2
+    fi
+    python3 - "$GATE" "$NEEDLE_FG" <<'PY'
+import sys
+path, needle = sys.argv[1], sys.argv[2]
+src = open(path).read()
+open(path, "w").write(src.replace(
+    needle, '    return  # MUTATED by --prove-red\n' + needle, 1))
+PY
+    echo "mutated tools/dispatch_gate.py: foreground commit case disabled"
+    MUTATED_OUTPUT="$("$ROOT/tools/check_dispatch_gate.sh")"
+    MUTATED_RC=$?
+    echo "--- output of the mutated run ---"
+    echo "$MUTATED_OUTPUT"
+    echo "--- end output of the mutated run ---"
+    if [ "$MUTATED_RC" -ne 0 ] && grep -q 'FAIL.*FG git commit -m x: block' <<< "$MUTATED_OUTPUT"; then
+        echo "PASS (as intended): the FG cases went red with the foreground case disabled"
+    else
+        echo "FAIL: the FG cases stayed green with the foreground case disabled (rc=$MUTATED_RC)"
         PROVE_FAIL=1
     fi
     cp "$BACKUP" "$GATE"
@@ -887,6 +927,77 @@ if [ "$rc" = 2 ] && [ ! -e "$TMP/stub-ran" ]; then
 else
     fail "AC7 wrapper under normal (rc=$rc)"
 fi
+
+# --- foreground commit cases (bead inc-rst61) -----------------------------
+# fg_payload <command> [background:true|false] [agent_id]
+fg_payload() {
+    python3 - "$1" "${2:-false}" "${3:-}" > "$TMP/in.json" <<'PY'
+import json, os, sys
+ti = {"command": sys.argv[1]}
+if sys.argv[2] == "true":
+    ti["run_in_background"] = True
+p = {"session_id": "sess-1", "transcript_path": "/tmp/t.jsonl",
+     "cwd": os.environ.get("GATE_CWD", os.path.expanduser("~/Scripts/Incursion-inc-3vyok")),
+     "hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": ti}
+if sys.argv[3]:
+    p["agent_id"] = sys.argv[3]
+print(json.dumps(p))
+PY
+}
+fg_block() {
+    fg_payload "$1" "${2:-false}"
+    rc=0
+    run_gate || rc=$?
+    expect "FG $1: block" 2 block foreground-commit "$rc" 1
+}
+fg_allow() {
+    rc=0
+    run_gate || rc=$?
+    expect "FG $1: allow, no log" 0 "" "" "$rc" 0
+}
+fg_block "git commit -m x"
+if grep -q "run_in_background" "$TMP/last.stderr" && grep -q "fast-alert.log" "$TMP/last.stderr" \
+    && grep -q "Monitor" "$TMP/last.stderr"; then
+    pass "FG block reason names run_in_background, Monitor and fast-alert.log"
+else
+    fail "FG block reason (stderr=$(head -2 "$TMP/last.stderr"))"
+fi
+fg_block "git -C /some/path commit -m x"
+fg_block "cd x && git commit -m x"
+fg_block "make; git commit -am x"
+fg_block "tools/finish_bead.sh inc-x"
+fg_block "bash ~/Scripts/Incursion/tools/finish_bead.sh inc-x"
+fg_block "git add f
+git commit -m x"
+fg_block "git commit -m x" true
+fg_block "tools/finish_bead.sh inc-x" true
+fg_block "INCURSION_FAST_WATCHED=1 git commit -m x"
+fg_block "INCURSION_FAST_WATCHED=0 git commit -m x" true
+fg_block "INCURSION_FAST_WATCHED=1 make && git commit -m x" true
+fg_payload "INCURSION_FAST_WATCHED=1 git commit -m x" true
+fg_allow "git commit, background with the marker prefix"
+fg_payload "INCURSION_FAST_WATCHED=1 tools/finish_bead.sh inc-x" true
+fg_allow "finish_bead.sh, background with the marker prefix"
+fg_payload "export INCURSION_FAST_WATCHED=1 && git commit -m x" true
+fg_allow "git commit, background with export form"
+fg_payload 'echo "git commit"'
+fg_allow 'echo "git commit"'
+fg_payload "grep 'git commit' docs/x.md"
+fg_allow "grep 'git commit'"
+fg_payload "git commit-tree abc"
+fg_allow "git commit-tree"
+fg_payload "git commit-graph write"
+fg_allow "git commit-graph"
+fg_payload "git log --grep commit"
+fg_allow "git log --grep commit"
+fg_payload "git commit -m x" false "agent-x"
+fg_allow "git commit, agent_id set"
+fg_payload "git commit -m x"
+rc=0
+NIGHTLY_BRANCH=nightly/2026-11-16 run_gate || rc=$?
+expect "FG git commit, NIGHTLY_BRANCH set: allow, no log" 0 "" "" "$rc" 0
+GATE_CWD="$HOME/Scripts/other-project" fg_payload "git commit -m x"
+fg_allow "git commit, cwd other-project"
 
 # --- scope cases (bead inc-3vyok) -----------------------------------------
 write_usage 4 $R_DAY1

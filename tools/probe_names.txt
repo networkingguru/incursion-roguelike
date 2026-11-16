@@ -59,6 +59,7 @@ INCURSION_ERROR_PROMPT	pre-registry	-
 INCURSION_EXACTMON_PROBE	pre-registry	-
 INCURSION_FALL_CHAIN	pre-registry	-
 INCURSION_FALL_CHAIN_SKIP	pre-registry	-
+INCURSION_FAST_PROBE	inc-rst61	names a file; an expensive entry point logs itself there and exits 3
 INCURSION_FEAR_DUR_PROBE	pre-registry	-
 INCURSION_FIELD_VALUES	pre-registry	-
 INCURSION_FOLLOWER_PROBE	pre-registry	-

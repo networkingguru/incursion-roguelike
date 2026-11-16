@@ -2,51 +2,78 @@
 # gate: cheap
 #
 # Does tools/fast_checks.sh still bite? Plant fake checks in a temp directory,
-# run the runner over them, and demand each verdict:
+# run the runner over them with --dir, and demand each verdict. The runner judges
+# a fast check by the KIND of work it does (game, build, git-history, sleep, bd,
+# compiler) and watches progress, never wall-clock time (bead inc-rst61).
 #
-#   a. one passing fast check           -> exit 0
-#   b. add one failing fast check       -> exit 1, naming that check
-#   c. a check that overruns the limit  -> exit 1, "TOO SLOW", under 5 s
-#   d. a check with no gate-fast marker -> never run (it would fail if it were)
-#   e. an empty directory               -> exit 2 (nothing is not a pass)
-#   f. tools/check_worktree_untracked.sh clean/untracked/ignored in a scratch
-#      git repo                          -> 0 / 1 / 0
-#   g. a slow check beside a fast one    -> 1; only the slow one is TOO SLOW,
-#      the fast one still prints ok
-#   h. a check exiting 2 alone           -> 0, output says UNMEASURED
-#   i. tools/check_worktree_untracked.sh lists "a b.txt" as one line
-#   j. a failing check + the guard faked to refuse -> an OVERLOADED: line, the
-#      TOO SLOW line says "retry, do not change the check", no line says
-#      "remove its gate-fast marker"; exit 1
-#   k. the same failing checks, guard faked idle   -> no OVERLOADED: line, the
-#      TOO SLOW line is the original text; exit 1
-#   l. all checks pass, guard faked to refuse       -> 0, no OVERLOADED: line
-#      (the guard is not consulted when nothing failed)
-#   m. a check that starts a child and overruns -> TOO SLOW, and the child is
-#      dead within 3 s (the cap stops the whole process group; inc-7382r)
+#   tools/check_fast_checks.sh              run every case
+#   tools/check_fast_checks.sh --prove-red  run the AC1 game case and the AC4
+#                                           unwatched case against the OLD runner
+#                                           (master's tools/fast_checks.sh) and
+#                                           demand both FAIL: "RED as expected"
 #
-# inc-p8bw: the load guard is what tells a load failure from a defect. Every
+# Cases:
+#   a.   one passing fast check                 -> exit 0
+#   b.   add one failing fast check             -> exit 1, naming that check
+#   d.   a check with no gate-fast marker       -> never run
+#   e.   an empty directory                     -> exit 2
+#   f.   check_worktree_untracked.sh clean/untracked/ignored in a scratch git repo
+#        -> 0 / 1 / 0
+#   i.   check_worktree_untracked.sh lists "a b.txt" as one line
+#   h.   a check exiting 2 alone                -> 0, output says UNMEASURED
+#   j.   a failing check and a HANG, guard faked to refuse -> OVERLOADED line, exit 1
+#   j2.  the runs log one timing row per check
+#   k.   a failing check, guard faked idle      -> no OVERLOADED line
+#   l.   all checks pass, guard faked to refuse -> 0, no OVERLOADED line
+#   m.   a check that starts a background child and exits -> the child is dead
+#        after the runner returns
+#   AC1  one fake per kind (game, build, git-history, sleep, bd, compiler) is
+#        refused with EXPENSIVE naming the kind; `git log -1`, a killed
+#        placeholder sleep, and a fake named check_upstream_label.sh calling bd
+#        (vetted) are ok; a fake naming /bin/sleep by full path is EXPENSIVE; the
+#        advice offers marker removal for `# gate: cheap` and not for `# gate: none`
+#   AC2  one ok, one EXPENSIVE and one FAIL, run normally and under
+#        `taskpolicy -c background` -> identical verdicts (seconds stripped)
+#   AC3  a real fast check copied unchanged -> ok; the same copy with one line
+#        calling headless.sh added -> EXPENSIVE game
+#   AC4  a check blocked on a fifo: watched -> an ALERT line while the runner still
+#        runs, and the fake is gone once the runner's group is stopped; unwatched
+#        -> HANG (not EXPENSIVE), and the alert file holds the HANG line
+#   AC5  --prove-red (above)
+#
+# inc-rst61: a check's verdict must not depend on how busy the machine is. Every
 # fact this check reads, and the control that fixes it:
-# fact: machine load / cpu count / pressure / running gate -- the
-#       INCURSION_LOAD_GUARD_FAKE_LOAD/_NCPU/_PRESSURE/_GATES variables
-# fact: the bypass log location (guard OFF path) -- INCURSION_LOAD_GUARD_LOG
-# fact: which checks fail, and why -- fakes planted in a temp dir via --dir
-# fact: a check is too slow -- INCURSION_FAST_LIMIT in the temp runner env
-# fact: the child's liveness after the cap -- polled by PID for up to 3 s, so
-#       only the child's death matters, not how fast it dies
+# fact: machine load, memory pressure, core type (performance or efficiency) -- every case sets INCURSION_FAST_STALL=30 and INCURSION_FAST_CPU=1000 so no ordinary fake can trip a limit, only the fakes that block forever use INCURSION_FAST_STALL=1, INCURSION_LOAD_GUARD_FAKE_LOAD/_NCPU/_PRESSURE fix the guard, and AC2 reruns the set under taskpolicy -c background
+# fact: which checks pass, fail, hang or are refused -- fakes planted in a temp dir via --dir, each case sets the mode (INCURSION_FAST_WATCHED) itself
+# fact: the vetted list entry for check_upstream_label.sh -- the case first greps tools/fast_checks.vetted for that line and fails by name when it is absent
+# fact: the real bd, git and clang++ binaries a fake calls -- the stand-in records the call before the real binary runs, and every fake ignores the real binary's status and output
+# fact: the real check copied in AC3 (check_devour_prose.sh) passes on this tree -- the case runs the original first and fails by name as a precondition when it does not
+# fact: logs/fast-alert.log -- the runner always appends to it, so the case counts its lines before the run and reads only the lines after
+# fact: master's tools/fast_checks.sh -- read only by --prove-red, via git show master
+# fact: seed, character, map, options -- none read; no case starts a game session
 #
-# The fast runner globs tools/check_*.sh, so every fake here is one of those.
-# Each is `chmod +x` and carries a `# gate-fast: <reason>` marker unless the
-# case is about a file that must NOT have one.
+# The fast runner globs <dir>/check_*.sh, so every fake here is one of those.
+# Each is `chmod +x` and carries `# gate: cheap` (unless the case needs otherwise)
+# and a `# gate-fast: <reason>` marker unless the case is about a file that must
+# NOT have one.
 #
-# Exit: 0 every assertion held
+# Exit: 0 every assertion held (--prove-red: both cases failed as expected)
 #       1 any assertion failed
-#       2 could not measure (mktemp failed)
+#       2 could not measure (mktemp failed, bad argument, no master copy)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT" || exit 2
 RUNNER="$ROOT/tools/fast_checks.sh"
 WT="$ROOT/tools/check_worktree_untracked.sh"
+ALERT_FILE="$ROOT/logs/fast-alert.log"
+
+PROVE_RED=0
+case "${1:-}" in
+    "") ;;
+    --prove-red) PROVE_RED=1 ;;
+    *) echo "usage: $0 [--prove-red]" >&2; exit 2 ;;
+esac
 
 fails=0
 report() { # report <ok|FAIL> <label>
@@ -62,30 +89,107 @@ TMP="$(mktemp -d "${TMPDIR:-/tmp}/check_fast_checks.XXXXXX")" || exit 2
 trap 'rm -rf "$TMP"' EXIT
 # inc-b0ziu.8: no case may write the real timing log.
 export INCURSION_CHECK_TIMING_LOG="$TMP/check-timing.tsv"
+# The guard is faked idle unless a case says otherwise; limits are loose.
+export INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 INCURSION_LOAD_GUARD_FAKE_PRESSURE=1
+export INCURSION_FAST_STALL=30 INCURSION_FAST_CPU=1000
+
+mkdir -p "$ROOT/logs" || exit 2
+touch "$ALERT_FILE" || exit 2
+
+plant() { # plant <dir> <name> <gate-or-empty> <marker-or-empty> <body line>...
+    local dir="$1" name="$2" gate="$3" marker="$4"
+    shift 4
+    mkdir -p "$dir"
+    {
+        printf '#!/usr/bin/env bash\n'
+        [ -n "$gate" ] && printf '# gate: %s\n' "$gate"
+        [ -n "$marker" ] && printf '# gate-fast: %s\n' "$marker"
+        printf '%s\n' "$@"
+    } > "$dir/$name"
+    chmod +x "$dir/$name"
+}
+
+# runner <watched|unwatched> <dir> [VAR=val...] -- the runner's output, one stream.
+# $PFX, when set, is a command prefix (the taskpolicy case).
+PFX=""
+runner() {
+    local mode="$1" dir="$2" cc=""
+    shift 2
+    [ "$mode" = watched ] && cc=1
+    # shellcheck disable=SC2086
+    ( cd "$ROOT" && $PFX env -u INCURSION_FAST_WATCHED ${cc:+INCURSION_FAST_WATCHED=1} "$@" "$RUNNER" --dir "$dir" 2>&1 )
+}
+
+# block <output> <name> -- the verdict line for <name> and its indented lines.
+block() {
+    printf '%s\n' "$1" | awk -v n="$2" '
+        index($0, "EXPENSIVE " n " ") == 1 || index($0, "HANG " n) == 1 || index($0, "FAIL " n " ") == 1 { p = 1; print; next }
+        p && /^    / { print; next }
+        { p = 0 }'
+}
+
+# strip elapsed seconds so two runs compare
+strip_secs() { sed -E 's/\([0-9]+s\)/(Ns)/; s/, [0-9]+s\)/, Ns)/'; }
+
+# ---- the AC cases are functions so --prove-red can run two of them against
+# another runner. Each returns 0 when the verdict holds, and sets WHY otherwise.
+WHY=""
+
+case_ac1_game() {
+    local d="$TMP/d_ac1g" out rc
+    rm -rf "$d"
+    plant "$d" check_g_game.sh cheap "fake" "\"$ROOT/tools/headless.sh\" >/dev/null 2>&1; exit 0"
+    out="$(runner unwatched "$d")"; rc=$?
+    case "$out" in
+        *"EXPENSIVE check_g_game.sh (game:"*) [ "$rc" -eq 1 ] && return 0 ;;
+    esac
+    WHY="no EXPENSIVE game verdict (exit $rc): $(printf '%s' "$out" | head -4 | tr '\n' '|')"
+    return 1
+}
+
+case_ac4_unwatched() {
+    # args: extra VAR=val for the runner (the CLAUDECODE case passes CLAUDECODE=1)
+    local d="$TMP/d_ac4u" fifo="$TMP/ac4u.fifo" base out rc lines
+    rm -rf "$d" "$fifo"; mkfifo "$fifo"
+    plant "$d" check_blocked.sh cheap "blocks forever" "read x < '$fifo'" "exit 0"
+    base="$(wc -l < "$ALERT_FILE")"
+    out="$(runner unwatched "$d" INCURSION_FAST_STALL=1 "$@")"; rc=$?
+    lines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    case "$out" in *"EXPENSIVE check_blocked.sh"*) WHY="blocked check called EXPENSIVE"; return 1 ;; esac
+    case "$out" in *"HANG check_blocked.sh"*) ;; *) WHY="no HANG verdict (exit $rc)"; return 1 ;; esac
+    case "$lines" in *"HANG check_blocked.sh "*) ;; *) WHY="no HANG line in the alert file"; return 1 ;; esac
+    [ "$rc" -eq 1 ] || { WHY="exit $rc, not 1"; return 1; }
+    return 0
+}
+
+if [ "$PROVE_RED" -eq 1 ]; then
+    OLD="$TMP/old_fast_checks.sh"
+    git -C "$ROOT" show master:tools/fast_checks.sh > "$OLD" 2>/dev/null || {
+        echo "COULD NOT MEASURE: git show master:tools/fast_checks.sh failed" >&2; exit 2; }
+    chmod +x "$OLD"
+    RUNNER="$OLD"
+    export INCURSION_FAST_LIMIT=2     # the old runner's wall-clock limit; the new one ignores it
+    red=0
+    if case_ac1_game; then echo "NOT RED  AC1 game case passed under the old runner"; red=1
+    else echo "red      AC1 game case failed under the old runner: $WHY"; fi
+    if case_ac4_unwatched; then echo "NOT RED  AC4 unwatched case passed under the old runner"; red=1
+    else echo "red      AC4 unwatched case failed under the old runner: $WHY"; fi
+    if [ "$red" -eq 0 ]; then echo "RED as expected"; exit 0; fi
+    exit 1
+fi
 
 DIR="$TMP/checks"
 mkdir -p "$DIR"
 
-plant() { # plant <name> <marker-line-or-empty> <body...>
-    local name="$1" marker="$2"
-    shift 2
-    {
-        printf '#!/usr/bin/env bash\n'
-        [ -n "$marker" ] && printf '# gate-fast: %s\n' "$marker"
-        printf '%s\n' "$@"
-    } > "$DIR/$name"
-    chmod +x "$DIR/$name"
-}
-
 # ---- a. one passing fast check -> exit 0
-plant check_pass.sh "static test" 'exit 0'
-out="$("$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_pass.sh cheap "static test" 'exit 0'
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 0 ]; then report ok "a: a passing fast check exits 0"; else
     report FAIL "a: a passing fast check exits 0 (got $rc)"; printf '%s\n' "$out"; fi
 
 # ---- b. add one failing fast check -> exit 1, naming it
-plant check_fail.sh "static test" 'echo "the failure text"; exit 1'
-out="$("$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_fail.sh cheap "static test" 'echo "the failure text"; exit 1'
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 1 ]; then
     case "$out" in
         *check_fail.sh*) report ok "b: a failing fast check exits 1 and names the check" ;;
@@ -96,24 +200,9 @@ else
 fi
 rm -f "$DIR/check_fail.sh"
 
-# ---- c. a check that sleeps past the limit -> exit 1, TOO SLOW, under 5 s
-plant check_slow.sh "static test" 'sleep 5; exit 0'
-start="$SECONDS"
-out="$(INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
-elapsed=$(( SECONDS - start ))
-if [ "$rc" -eq 1 ] && [ "$elapsed" -lt 5 ]; then
-    case "$out" in
-        *"TOO SLOW"*) report ok "c: an overrunning check is killed (TOO SLOW, ${elapsed}s)" ;;
-        *) report FAIL "c: an overrunning check did not say TOO SLOW"; printf '%s\n' "$out" ;;
-    esac
-else
-    report FAIL "c: overrun case (exit $rc, ${elapsed}s)"; printf '%s\n' "$out"
-fi
-rm -f "$DIR/check_slow.sh"
-
 # ---- d. a check with no marker is not run
-plant check_nomarker.sh "" 'echo "I must not run"; exit 1'
-out="$("$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_nomarker.sh cheap "" 'echo "I must not run"; exit 1'
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 0 ]; then
     case "$out" in
         *check_nomarker.sh*) report FAIL "d: an unmarked check was run"; printf '%s\n' "$out" ;;
@@ -125,7 +214,7 @@ fi
 rm -f "$DIR/check_nomarker.sh" "$DIR/check_pass.sh"
 
 # ---- e. an empty directory -> exit 2
-out="$("$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 2 ]; then report ok "e: an empty directory exits 2"; else
     report FAIL "e: an empty directory exits 2 (got $rc)"; printf '%s\n' "$out"; fi
 
@@ -136,12 +225,10 @@ cp "$WT" "$REPO/tools/check_worktree_untracked.sh"
 if git -C "$REPO" init -q 2>/dev/null; then
     git -C "$REPO" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init 2>/dev/null
     git -C "$REPO" add tools/check_worktree_untracked.sh 2>/dev/null
-    # clean
     out="$(cd "$REPO" && bash tools/check_worktree_untracked.sh 2>&1)"; rc=$?
     if [ "$rc" -eq 0 ]; then report ok "f1: a clean repo exits 0"; else
         report FAIL "f1: a clean repo exits 0 (got $rc)"; printf '%s\n' "$out"; fi
 
-    # untracked file
     : > "$REPO/loose.txt"
     out="$(cd "$REPO" && bash tools/check_worktree_untracked.sh 2>&1)"; rc=$?
     if [ "$rc" -eq 1 ]; then
@@ -153,7 +240,6 @@ if git -C "$REPO" init -q 2>/dev/null; then
         report FAIL "f2: an untracked file exits 1 (got $rc)"; printf '%s\n' "$out"
     fi
 
-    # ignored file
     printf 'loose.txt\n' > "$REPO/.gitignore"
     git -C "$REPO" add .gitignore 2>/dev/null
     out="$(cd "$REPO" && bash tools/check_worktree_untracked.sh 2>&1)"; rc=$?
@@ -176,33 +262,9 @@ else
     report FAIL "f: could not git init a scratch repo"
 fi
 
-# ---- g. a slow check beside a fast one: only the slow one is TOO SLOW
-plant check_slow_g.sh "static test" 'sleep 5; exit 0'
-plant check_fast_g.sh "static test" 'exit 0'
-out="$(INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
-if [ "$rc" -eq 1 ]; then
-    case "$out" in
-        *"ok   check_fast_g.sh"*) fast_ok=1 ;;
-        *) fast_ok=0 ;;
-    esac
-    case "$out" in
-        *check_slow_g.sh*) slow_seen=1 ;;
-        *) slow_seen=0 ;;
-    esac
-    if [ "$fast_ok" -eq 1 ] && [ "$slow_seen" -eq 1 ]; then
-        report ok "g: only the slow check is TOO SLOW; the fast one still says ok"
-    else
-        report FAIL "g: a slow check flagged its neighbour (fast_ok=$fast_ok slow=$slow_seen)"
-        printf '%s\n' "$out"
-    fi
-else
-    report FAIL "g: slow+fast run exits 1 (got $rc)"; printf '%s\n' "$out"
-fi
-rm -f "$DIR/check_slow_g.sh" "$DIR/check_fast_g.sh"
-
 # ---- h. a check exiting 2 alone -> exit 0, output says UNMEASURED
-plant check_unmeasured.sh "static test" 'echo "cannot measure"; exit 2'
-out="$("$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_unmeasured.sh cheap "static test" 'echo "cannot measure"; exit 2'
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 0 ]; then
     case "$out" in
         *UNMEASURED*) report ok "h: a check exiting 2 does not fail the run (UNMEASURED)" ;;
@@ -213,37 +275,27 @@ else
 fi
 rm -f "$DIR/check_unmeasured.sh"
 
-# ---- j. a failing check and a slow one, guard faked to REFUSE (memory pressure 2):
-# an OVERLOADED: line, the "retry, do not change the check" TOO SLOW text, and
-# no "remove its gate-fast marker". A short limit keeps the slow fake quick.
-plant check_fail_j.sh "static test" 'echo "j failed"; exit 1'
-plant check_slow_j.sh "static test" 'sleep 5; exit 0'
-out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=2 \
-          INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+# ---- j. a failing check and a HANG, guard faked to REFUSE (memory pressure 2):
+# an OVERLOADED: line and a HANG line; exit 1.
+plant "$DIR" check_fail_j.sh cheap "static test" 'echo "j failed"; exit 1'
+plant "$DIR" check_hang_j.sh cheap "static test" "read x < '$TMP/j.fifo'" 'exit 0'
+mkfifo "$TMP/j.fifo"
+out="$(runner unwatched "$DIR" INCURSION_LOAD_GUARD_FAKE_PRESSURE=2 INCURSION_FAST_STALL=1)"; rc=$?
 if [ "$rc" -eq 1 ]; then
     case "$out" in
         OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
         *) overloaded=0 ;;
     esac
-    case "$out" in
-        *"retry, do not change the check"*) retry=1 ;;
-        *) retry=0 ;;
-    esac
-    case "$out" in
-        *"remove its gate-fast marker"*) nomarker=1 ;;
-        *) nomarker=0 ;;
-    esac
-    if [ "$overloaded" -eq 1 ] && [ "$retry" -eq 1 ] && [ "$nomarker" -eq 0 ]; then
-        report ok "j: a refusing guard labels the failure OVERLOADED and tells the reader to retry"
+    case "$out" in *"HANG check_hang_j.sh"*) hang=1 ;; *) hang=0 ;; esac
+    if [ "$overloaded" -eq 1 ] && [ "$hang" -eq 1 ]; then
+        report ok "j: a refusing guard labels a failure and a HANG OVERLOADED"
     else
-        report FAIL "j: refusing guard (overloaded=$overloaded retry=$retry marker=$nomarker)"
-        printf '%s\n' "$out"
+        report FAIL "j: refusing guard (overloaded=$overloaded hang=$hang)"; printf '%s\n' "$out"
     fi
 else
-    report FAIL "j: failing+slow under a refusing guard exits 1 (got $rc)"; printf '%s\n' "$out"
+    report FAIL "j: failing+hanging under a refusing guard exits 1 (got $rc)"; printf '%s\n' "$out"
 fi
-rm -f "$DIR/check_fail_j.sh" "$DIR/check_slow_j.sh"
+rm -f "$DIR/check_fail_j.sh" "$DIR/check_hang_j.sh" "$TMP/j.fifo"
 # inc-b0ziu.8: the runs above logged one row per check, after a header row.
 if [ "$(head -1 "$INCURSION_CHECK_TIMING_LOG" 2>/dev/null | cut -f1)" = "utc_time" ] \
    && [ "$(grep -c "	fast	" "$INCURSION_CHECK_TIMING_LOG" 2>/dev/null)" -ge 2 ]; then
@@ -252,59 +304,38 @@ else
     report FAIL "j2: no timing rows in $INCURSION_CHECK_TIMING_LOG"
 fi
 
-# ---- k. the same failing checks, guard faked IDLE: no OVERLOADED: line, the
-# TOO SLOW line carries the original wording.
-plant check_fail_k.sh "static test" 'echo "k failed"; exit 1'
-plant check_slow_k.sh "static test" 'sleep 5; exit 0'
-out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=1 \
-          INCURSION_FAST_LIMIT=2 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+# ---- k. a failing check, guard faked IDLE: no OVERLOADED: line
+plant "$DIR" check_fail_k.sh cheap "static test" 'echo "k failed"; exit 1'
+out="$(runner unwatched "$DIR")"; rc=$?
 if [ "$rc" -eq 1 ]; then
     case "$out" in
-        OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
-        *) overloaded=0 ;;
+        OVERLOADED:*|*$'\n'OVERLOADED:*) report FAIL "k: idle guard printed OVERLOADED:"; printf '%s\n' "$out" ;;
+        *) report ok "k: an idle guard leaves no OVERLOADED: line" ;;
     esac
-    case "$out" in
-        *"TOO SLOW for the fast set"*) original=1 ;;
-        *) original=0 ;;
-    esac
-    if [ "$overloaded" -eq 0 ] && [ "$original" -eq 1 ]; then
-        report ok "k: an idle guard leaves the original TOO SLOW text and no OVERLOADED: line"
-    else
-        report FAIL "k: idle guard (overloaded=$overloaded original=$original)"
-        printf '%s\n' "$out"
-    fi
 else
-    report FAIL "k: failing+slow under an idle guard exits 1 (got $rc)"; printf '%s\n' "$out"
+    report FAIL "k: failing check under an idle guard exits 1 (got $rc)"; printf '%s\n' "$out"
 fi
-rm -f "$DIR/check_fail_k.sh" "$DIR/check_slow_k.sh"
+rm -f "$DIR/check_fail_k.sh"
 
-# ---- l. every check passes, guard faked to REFUSE (memory pressure 2): exit 0 and no OVERLOADED:
+# ---- l. every check passes, guard faked to REFUSE: exit 0 and no OVERLOADED:
 # line, because the guard must not be consulted when nothing failed.
-plant check_pass_l.sh "static test" 'exit 0'
-out="$(env INCURSION_LOAD_GUARD_FAKE_LOAD=1.0 INCURSION_LOAD_GUARD_FAKE_NCPU=10 \
-          INCURSION_LOAD_GUARD_FAKE_PRESSURE=2 \
-          "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_pass_l.sh cheap "static test" 'exit 0'
+out="$(runner unwatched "$DIR" INCURSION_LOAD_GUARD_FAKE_PRESSURE=2)"; rc=$?
 if [ "$rc" -eq 0 ]; then
     case "$out" in
-        OVERLOADED:*|*$'\n'OVERLOADED:*) overloaded=1 ;;
-        *) overloaded=0 ;;
+        OVERLOADED:*|*$'\n'OVERLOADED:*) report FAIL "l: a passing set printed OVERLOADED:"; printf '%s\n' "$out" ;;
+        *) report ok "l: a passing set never consults the guard (exit 0, no OVERLOADED:)" ;;
     esac
-    if [ "$overloaded" -eq 0 ]; then
-        report ok "l: a passing set never consults the guard (exit 0, no OVERLOADED:)"
-    else
-        report FAIL "l: a passing set printed OVERLOADED:"; printf '%s\n' "$out"
-    fi
 else
     report FAIL "l: a passing set exits 0 (got $rc)"; printf '%s\n' "$out"
 fi
 rm -f "$DIR/check_pass_l.sh"
 
-# ---- m. a check that starts a child, then overruns: the child must not outlive
-# the cap. Run through the runner's real launch path.
+# ---- m. a check that starts a background child and exits: the child must not
+# outlive the runner (the sandbox bars ps, so the stand-in's pid is the witness).
 CHILDPID="$TMP/childpid"
-plant check_child_m.sh "static test" "sleep 60 & echo \$! > '$CHILDPID'; sleep 30; exit 0"
-out="$(INCURSION_FAST_LIMIT=1 "$RUNNER" --dir "$DIR" 2>&1)"; rc=$?
+plant "$DIR" check_child_m.sh cheap "static test" "sleep 61 & echo \$! > '$CHILDPID'" 'exit 0'
+out="$(runner unwatched "$DIR")"; rc=$?
 child="$(cat "$CHILDPID" 2>/dev/null)"
 alive=1
 if [ -n "$child" ]; then
@@ -312,16 +343,153 @@ if [ -n "$child" ]; then
         kill -0 "$child" 2>/dev/null || { alive=0; break; }
         sleep 0.5
     done
-    # Our own sleep: stop it so a RED run leaves nothing behind.
     [ "$alive" -eq 1 ] && kill "$child" 2>/dev/null
 fi
-case "$out" in *"TOO SLOW"*) slow=1 ;; *) slow=0 ;; esac
-if [ "$rc" -eq 1 ] && [ "$slow" -eq 1 ] && [ -n "$child" ] && [ "$alive" -eq 0 ]; then
-    report ok "m: a capped check's child process is dead after TOO SLOW"
+if [ "$rc" -eq 0 ] && [ -n "$child" ] && [ "$alive" -eq 0 ]; then
+    report ok "m: a check's background child is dead after the runner returns"
 else
-    report FAIL "m: child case (exit $rc, slow=$slow, child='$child', alive=$alive)"; printf '%s\n' "$out"
+    report FAIL "m: child case (exit $rc, child='$child', alive=$alive)"; printf '%s\n' "$out"
 fi
 rm -f "$DIR/check_child_m.sh"
+
+# ---- AC1. one fake per kind is refused with EXPENSIVE naming the kind
+D1="$TMP/d_ac1"
+plant "$D1" check_k_game.sh cheap "fake" "\"$ROOT/tools/headless.sh\" >/dev/null 2>&1; exit 0"
+plant "$D1" check_k_build.sh cheap "fake" "\"$ROOT/build_macos.sh\" >/dev/null 2>&1; exit 0"
+plant "$D1" check_k_git-history.sh cheap "fake" 'git log --oneline >/dev/null 2>&1; exit 0'
+plant "$D1" check_k_sleep.sh cheap "fake" 'sleep 0.2; exit 0'
+plant "$D1" check_k_bd.sh cheap "fake" 'bd list --limit 1 >/dev/null 2>&1; exit 0'
+plant "$D1" check_k_compiler.sh cheap "fake" 'clang++ --version >/dev/null 2>&1; exit 0'
+plant "$D1" check_o_bounded.sh cheap "fake" 'git log -1 >/dev/null 2>&1; exit 0'
+plant "$D1" check_o_killed.sh cheap "fake" 'sleep 30 & p=$!; kill $p; wait $p 2>/dev/null; exit 0'
+plant "$D1" check_upstream_label.sh cheap "fake" 'bd list --limit 1 >/dev/null 2>&1; exit 0'
+plant "$D1" check_o_fullpath.sh cheap "fake" '/bin/sleep 0.1; exit 0'
+plant "$D1" check_adv_cheap.sh cheap "fake" 'sleep 0.2; exit 0'
+plant "$D1" check_adv_none.sh "none x" "fake" 'sleep 0.2; exit 0'
+if grep -Eq '^check_upstream_label\.sh[[:space:]]+bd([[:space:],]|$)' "$ROOT/tools/fast_checks.vetted"; then
+    out="$(runner unwatched "$D1")"; rc=$?
+    [ "$rc" -eq 1 ] || report FAIL "AC1: the mixed set exits 1 (got $rc)"
+    for kind in game build git-history sleep bd compiler; do
+        case "$out" in
+            *"EXPENSIVE check_k_$kind.sh ($kind:"*) report ok "AC1: a $kind fake is refused as EXPENSIVE ($kind)" ;;
+            *) report FAIL "AC1: a $kind fake is not refused naming $kind"; block "$out" "check_k_$kind.sh" ;;
+        esac
+    done
+    for name in check_o_bounded.sh check_o_killed.sh check_upstream_label.sh; do
+        case "$out" in
+            *"ok   $name "*) report ok "AC1: $name is ok" ;;
+            *) report FAIL "AC1: $name is not ok"; printf '%s\n' "$out" | grep "$name" ;;
+        esac
+    done
+    case "$out" in
+        *"EXPENSIVE check_o_fullpath.sh ("*"/bin/sleep"*) report ok "AC1: /bin/sleep by full path is EXPENSIVE" ;;
+        *) report FAIL "AC1: /bin/sleep by full path is not refused"; printf '%s\n' "$out" | grep check_o_fullpath ;;
+    esac
+    case "$(block "$out" check_adv_cheap.sh)" in
+        *"remove its gate-fast marker"*) report ok "AC1: a refused '# gate: cheap' fake is offered marker removal" ;;
+        *) report FAIL "AC1: no marker-removal advice for a '# gate: cheap' fake" ;;
+    esac
+    adv="$(block "$out" check_adv_none.sh)"
+    case "$adv" in
+        *EXPENSIVE*"remove its gate-fast marker"*) report FAIL "AC1: marker-removal advice offered for '# gate: none'" ;;
+        *EXPENSIVE*) report ok "AC1: a refused '# gate: none' fake is not offered marker removal" ;;
+        *) report FAIL "AC1: the '# gate: none' fake was not refused"; printf '%s\n' "$out" ;;
+    esac
+else
+    report FAIL "AC1: tools/fast_checks.vetted has no 'check_upstream_label.sh bd' line"
+fi
+
+# ---- AC2. the same set normally and under taskpolicy -c background
+D2="$TMP/d_ac2"
+plant "$D2" check_s_ok.sh cheap "fake" 'exit 0'
+plant "$D2" check_s_exp.sh cheap "fake" 'sleep 0.2; exit 0'
+plant "$D2" check_s_fail.sh cheap "fake" 'echo "s failed"; exit 1'
+norm="$(runner unwatched "$D2" | strip_secs)"; rc1=$?
+bg="$(PFX="taskpolicy -c background" runner unwatched "$D2" | strip_secs)"; rc2=$?
+case "$norm" in *"EXPENSIVE check_s_exp.sh"*"FAIL check_s_fail.sh"*"ok   check_s_ok.sh"*) shaped=1 ;; *) shaped=0 ;; esac
+if [ "$norm" = "$bg" ] && [ "$shaped" -eq 1 ]; then
+    report ok "AC2: verdicts are identical normally and under taskpolicy -c background"
+else
+    report FAIL "AC2: verdicts differ or are malformed (shaped=$shaped)"
+    diff <(printf '%s\n' "$norm") <(printf '%s\n' "$bg")
+fi
+
+# ---- AC3. a real fast check copied unchanged is ok; with a game call added it is
+# EXPENSIVE. check_devour_prose.sh does `cd "$(dirname "$0")/.."`, so the copy sits
+# in a mirror tree whose lib/ and src/ are symlinks to this tree.
+REAL="$ROOT/tools/check_devour_prose.sh"
+M="$TMP/mirror"
+mkdir -p "$M/tools"
+for l in lib src inc; do ln -sfn "$ROOT/$l" "$M/$l"; done
+if ! bash "$REAL" >/dev/null 2>&1; then
+    report FAIL "AC3: precondition: the original check_devour_prose.sh does not pass on this tree"
+else
+    cp "$REAL" "$M/tools/check_devour_prose.sh"
+    out="$(runner unwatched "$M/tools")"; rc=$?
+    case "$out" in
+        *"ok   check_devour_prose.sh "*) [ "$rc" -eq 0 ] && report ok "AC3: an unchanged copy of a real fast check is ok" \
+                                                         || report FAIL "AC3: unchanged copy ok but exit $rc" ;;
+        *) report FAIL "AC3: the unchanged copy is not ok"; printf '%s\n' "$out" ;;
+    esac
+    { sed '$d' "$REAL"; printf '"%s/tools/headless.sh" >/dev/null 2>&1\n' "$ROOT"; tail -n 1 "$REAL"; } \
+        > "$M/tools/check_devour_prose.sh"
+    out="$(runner unwatched "$M/tools")"; rc=$?
+    case "$out" in
+        *"EXPENSIVE check_devour_prose.sh (game:"*) report ok "AC3: the copy with one headless.sh call is EXPENSIVE game" ;;
+        *) report FAIL "AC3: the mutated copy is not refused as game (exit $rc)"; printf '%s\n' "$out" ;;
+    esac
+fi
+
+# ---- AC4 (watched). A check blocked on a fifo: an ALERT line appears while the
+# runner still runs; stopping the runner's process group leaves no fake behind.
+D4="$TMP/d_ac4w"; FIFO="$TMP/ac4w.fifo"; PIDF="$TMP/ac4w.pid"
+mkfifo "$FIFO"
+plant "$D4" check_blocked.sh cheap "blocks forever" "echo \$\$ > '$PIDF'" "read x < '$FIFO'" 'exit 0'
+base="$(wc -l < "$ALERT_FILE")"
+set -m
+( cd "$ROOT" && exec env INCURSION_FAST_WATCHED=1 INCURSION_FAST_STALL=1 "$RUNNER" --dir "$D4" ) > "$TMP/ac4w.out" 2>&1 &
+rpid=$!
+set +m
+seen=0
+for _ in $(seq 1 80); do
+    newlines="$(tail -n +$((base + 1)) "$ALERT_FILE")"
+    if grep -q '^ALERT check_blocked.sh ' <<<"$newlines"; then seen=1; break; fi
+    sleep 0.25
+done
+running=0
+kill -0 "$rpid" 2>/dev/null && running=1
+{
+    kill -TERM -- "-$rpid"
+    for _ in 1 2 3 4 5 6 7 8; do kill -0 "$rpid" 2>/dev/null || break; sleep 0.25; done
+    kill -KILL -- "-$rpid"
+    wait "$rpid"
+} 2>/dev/null
+fake="$(cat "$PIDF" 2>/dev/null)"
+gone=0
+if [ -n "$fake" ]; then
+    for _ in 1 2 3 4 5 6 7 8; do kill -0 "$fake" 2>/dev/null || { gone=1; break; }; sleep 0.25; done
+    [ "$gone" -eq 0 ] && kill -KILL "$fake" 2>/dev/null
+fi
+if [ "$seen" -eq 1 ] && [ "$running" -eq 1 ] && [ "$gone" -eq 1 ]; then
+    report ok "AC4: a watched blocked check raises an ALERT while the runner runs, and stopping the group removes it"
+else
+    report FAIL "AC4: watched case (alert=$seen runner-still-running=$running fake-gone=$gone fake='$fake')"
+fi
+rm -f "$FIFO"
+
+# ---- AC4 (unwatched). The same block is a HANG, not EXPENSIVE; the alert file holds HANG.
+if case_ac4_unwatched; then
+    report ok "AC4: an unwatched blocked check is HANG, and the alert file holds the HANG line"
+else
+    report FAIL "AC4: unwatched case: $WHY"
+fi
+
+# ---- AC4 (CLAUDECODE alone). CLAUDECODE=1 without INCURSION_FAST_WATCHED=1 is unwatched.
+if case_ac4_unwatched CLAUDECODE=1; then
+    report ok "AC4: CLAUDECODE=1 alone is unwatched: the blocked check is HANG"
+else
+    report FAIL "AC4: CLAUDECODE=1 alone case: $WHY"
+fi
 
 echo
 if [ "$fails" -eq 0 ]; then

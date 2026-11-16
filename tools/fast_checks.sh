@@ -1,36 +1,42 @@
 #!/usr/bin/env bash
 #
 # fast_checks.sh -- run the FAST set: the checks that are safe to run on every
-# commit, in seconds, before the landing gate.
+# commit, before the landing gate.
 #
-# WHY THIS EXISTS. Some repository-hygiene checks cost 2-4 seconds each and
-# only run inside the 4-minute cheap tier of the landing gate. This runner
-# gives them a separate set that finishes in seconds, so a commit gets fast
-# feedback. It is called by .beads/hooks/pre-commit (from bead worktrees only)
-# and by tools/finish_bead.sh before the gate (bead inc-3s7w).
+# WHY THIS EXISTS. Some repository-hygiene checks only run inside the 4-minute
+# cheap tier of the landing gate. This runner gives them a separate set, so a
+# commit gets fast feedback. It is called by .beads/hooks/pre-commit (from bead
+# worktrees only) and by tools/finish_bead.sh before the gate (bead inc-3s7w).
 #
 # A CHECK JOINS THE FAST SET with one comment line in its first 40 lines:
 #   # gate-fast: <reason>
-# mirroring `# gate-serial: <reason>`. The reason MUST be non-empty. This
-# marker does NOT change the check's own `# gate:` tier.
+# The reason MUST be non-empty. This marker does NOT change the check's own
+# `# gate:` tier.
 #
-# THE LIMIT. Each check gets FAST_LIMIT seconds (env INCURSION_FAST_LIMIT,
-# default 15). A check still running at the limit is killed and counted as a
-# failure: it is too slow for a set that promises seconds.
+# THE RULE (inc-rst61). A fast check is judged by the KIND of work it does, never
+# by time. Six kinds are expensive: game, build, git-history, sleep, bd, compiler.
+# tools/fast_probe/ stand-ins record each kind to $INCURSION_FAST_PROBE. A check
+# that does one is refused (EXPENSIVE), unless tools/fast_checks.vetted lists it
+# for that kind. A check that names git, sleep, bd or a compiler by absolute path
+# is refused too, because the stand-ins cannot see it.
+# THERE IS NO WALL-CLOCK LIMIT. tools/fast_watch.py watches progress. A watched
+# run (INCURSION_FAST_WATCHED=1 in the environment) appends ALERT lines to
+# logs/fast-alert.log and lets the check finish. Every other run is unwatched:
+# at 5x the alert limits the check stops with a HANG. Only the marker counts:
+# CLAUDECODE and NIGHTLY_BRANCH do not change the mode.
 #
 # Usage: tools/fast_checks.sh [--dir <path>] [--help]
 #
 # Exit: 0 every fast check passed (a check exiting 2 is UNMEASURED, not a fail)
-#       1 at least one fast check failed or timed out
-#       2 no fast check was found (a missing set is not a pass)
+#       1 at least one fast check failed, hung or was refused as expensive
+#       2 no fast check was found, or the runner could not measure
 #
 set -uo pipefail
 
-LIMIT="${INCURSION_FAST_LIMIT:-15}"
 CHECK_DIR=""
 DIR_GIVEN=0
 
-usage() { sed -n '2,26p' "$0"; }
+usage() { sed -n '2,33p' "$0"; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -41,11 +47,6 @@ while [ $# -gt 0 ]; do
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-
-case "$LIMIT" in
-    ''|*[!0-9]*) echo "INCURSION_FAST_LIMIT must be a positive integer, got '$LIMIT'" >&2; exit 2 ;;
-esac
-[ "$LIMIT" -gt 0 ] || { echo "INCURSION_FAST_LIMIT must be positive" >&2; exit 2; }
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
     echo "COULD NOT MEASURE: not in a git repository" >&2; exit 2; }
@@ -63,6 +64,27 @@ is_fast_file() { # <check file>
         <<<"$(sed -n '1,40p' "$1")"
 }
 
+# The check's gate tier: the word after '# gate:' in its first 40 lines.
+# Prints "none" when there is no such line.
+gate_tier() { # <check file>
+    local t
+    t="$(sed -n '1,40p' "$1" | sed -n 's/^#[[:space:]]*gate:[[:space:]]*//p' | head -1)"
+    t="${t%% *}"
+    [ -n "$t" ] && printf '%s' "$t" || printf 'none'
+}
+
+# Kinds the vetted file allows for a check, comma-separated, or empty.
+vetted_kinds() { # <basename>
+    [ -f "$VETTED" ] || return 0
+    awk -v n="$1" '$0 !~ /^[[:space:]]*#/ && $1 == n { print $2; exit }' "$VETTED"
+}
+
+# A non-comment line that names a watched command by absolute path.
+FULLPATH_RE='/((usr|opt/homebrew)/)?(local/)?bin/(git|sleep|bd|clang|clang\+\+|cc|c\+\+)([^A-Za-z0-9_]|$)'
+fullpath_call() { # <check file>
+    grep -vE '^[[:space:]]*#' "$1" | grep -oE "$FULLPATH_RE" | head -1 | sed -E 's/[^A-Za-z0-9_]$//'
+}
+
 CHECKS=()
 for f in "$CHECK_DIR"/check_*.sh "$CHECK_DIR"/check_*.py; do
     [ -f "$f" ] || continue
@@ -74,31 +96,47 @@ if [ "${#CHECKS[@]}" -eq 0 ]; then
     exit 2
 fi
 
-CAPPED="$ROOT/tools/run_capped.py"
-command -v python3 >/dev/null 2>&1 && [ -f "$CAPPED" ] || {
-    echo "COULD NOT MEASURE: python3 and tools/run_capped.py are needed to enforce the time limit" >&2
+WATCH="$ROOT/tools/fast_watch.py"
+VETTED="$ROOT/tools/fast_checks.vetted"
+if ! command -v python3 >/dev/null 2>&1 || [ ! -f "$WATCH" ] || [ ! -d "$ROOT/tools/fast_probe" ]; then
+    echo "COULD NOT MEASURE: python3, tools/fast_watch.py and tools/fast_probe/ are needed" >&2
     exit 2
-}
+fi
+
+MODE=unwatched
+if [ "${INCURSION_FAST_WATCHED:-}" = 1 ]; then
+    MODE=watched
+fi
+ALERT="$ROOT/logs/fast-alert.log"
+mkdir -p "$ROOT/logs" || { echo "COULD NOT MEASURE: cannot create $ROOT/logs" >&2; exit 2; }
+printf 'RUN %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$MODE" "$$" >> "$ALERT"
+printf 'fast checks: %s; alerts go to %s\n' "$MODE" "$ALERT"
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/fast_checks.XXXXXX")" || exit 2
 trap 'rm -rf "$TMP"' EXIT
 
-# Launch every check in parallel. Each runs under tools/run_capped.py so a check
-# that overruns is stopped even though macOS ships no timeout(1). run_capped.py
-# starts the check in its own session and stops the WHOLE process group at the
-# limit (SIGTERM, 2 s, SIGKILL), so a child of the check does not outlive it
-# (inc-7382r; perl's alarm killed only the check's own process). It exits 124
-# at the limit. The wrapper records the exit code so the report can be printed
-# in a stable order once every job is done.
+# Launch every check in parallel under fast_watch.py, with the probe stand-ins
+# first on PATH and a fresh probe file. A check that names a watched command by
+# absolute path is not run: the probe could not see what it does.
 PIDS=()
 for i in "${!CHECKS[@]}"; do
     out="$TMP/$i.out"
     st="$TMP/$i.exit"
     start="$TMP/$i.start"
     end="$TMP/$i.end"
+    probe="$TMP/$i.probe"
+    : > "$probe"
     date +%s > "$start"
+    fp="$(fullpath_call "${CHECKS[$i]}")"
+    if [ -n "$fp" ]; then
+        printf '%s\n' "$fp" > "$TMP/$i.fullpath"
+        echo 1 > "$st"; date +%s > "$end"
+        continue
+    fi
     (
-        "$CAPPED" "$LIMIT" "${CHECKS[$i]}" > "$out" 2>&1
+        env INCURSION_FAST_PROBE="$probe" PATH="$ROOT/tools/fast_probe:$PATH" \
+            python3 "$WATCH" --name "$(basename "${CHECKS[$i]}")" \
+            --alert-file "$ALERT" "--$MODE" -- "${CHECKS[$i]}" > "$out" 2>&1
         echo $? > "$st"
         date +%s > "$end"
     ) &
@@ -109,30 +147,49 @@ for p in "${PIDS[@]}"; do
     wait "$p"
 done
 
-# Did any check fail? Use the same tests the report loop uses below: a non-0,
-# non-2 exit, or a TOO SLOW overrun. This must run BEFORE the report prints,
-# so a failure can be labelled.
+# Decide each check's verdict. Precedence: HANG, EXPENSIVE, ok, UNMEASURED, FAIL.
+VERDICT=()   # ok | hang | expensive | unmeasured | fail
+DETAIL=()
+ELAPSED=()
+RC=()
 any_failed=0
 for i in "${!CHECKS[@]}"; do
+    name="$(basename "${CHECKS[$i]}")"
     rc="$(cat "$TMP/$i.exit" 2>/dev/null)"
     [ -n "$rc" ] || rc=1
     elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
-    too_slow=0
-    [ "$rc" -eq 124 ] && too_slow=1
-    [ "$elapsed" -ge "$LIMIT" ] && too_slow=1
-    if [ "$too_slow" -eq 1 ]; then
-        any_failed=1
-    elif [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
-        any_failed=1
+    RC+=( "$rc" ); ELAPSED+=( "$elapsed" )
+    if [ -f "$TMP/$i.fullpath" ]; then
+        VERDICT+=( expensive )
+        DETAIL+=( "calls $(cat "$TMP/$i.fullpath") by full path, which the probe cannot see" )
+        any_failed=1; continue
+    fi
+    # Kinds recorded, minus the kinds the vetted file allows.
+    allowed=",$(vetted_kinds "$name"),"
+    bad=""; badlines=""
+    for kind in game build git-history sleep bd compiler; do
+        line="$(grep -m1 -E "^$kind( |\$)" "$TMP/$i.probe" 2>/dev/null)"
+        [ -n "$line" ] || continue
+        case "$allowed" in *",$kind,"*) continue ;; esac
+        bad="$bad $kind"
+        badlines="${badlines:+$badlines; }$kind: $line"
+    done
+    if [ "$rc" -eq 125 ]; then
+        VERDICT+=( hang ); DETAIL+=( "" ); any_failed=1
+    elif [ -n "$bad" ]; then
+        VERDICT+=( expensive ); DETAIL+=( "$badlines" ); any_failed=1
+    elif [ "$rc" -eq 0 ]; then
+        VERDICT+=( ok ); DETAIL+=( "" )
+    elif [ "$rc" -eq 2 ]; then
+        VERDICT+=( unmeasured ); DETAIL+=( "" )
+    else
+        VERDICT+=( fail ); DETAIL+=( "" ); any_failed=1
     fi
 done
 
 # Log each check's timing beside the machine state (inc-b0ziu.8).
 for i in "${!CHECKS[@]}"; do
-    rc="$(cat "$TMP/$i.exit" 2>/dev/null)"
-    [ -n "$rc" ] || rc=1
-    elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
-    [ -x "$ROOT/tools/timing_log.sh" ] && "$ROOT/tools/timing_log.sh" fast "$(basename "${CHECKS[$i]}")" "$rc" "$elapsed" >/dev/null
+    [ -x "$ROOT/tools/timing_log.sh" ] && "$ROOT/tools/timing_log.sh" fast "$(basename "${CHECKS[$i]}")" "${RC[$i]}" "${ELAPSED[$i]}" >/dev/null
 done
 
 # Only when something failed, ask the load guard whether the machine was
@@ -147,7 +204,7 @@ if [ "$any_failed" -eq 1 ]; then
 fi
 
 if [ "$guard_refused" -eq 1 ]; then
-    printf 'OVERLOADED: the machine was under memory pressure when the checks ran, so a failure below may be memory and not a defect in the check; retry with:\n'
+    printf 'OVERLOADED: the machine was under memory pressure when the checks ran, so a failure or HANG below may be memory and not a defect in the check; retry with:\n'
     printf '    until tools/load_guard.sh; do sleep 30; done\n'
     printf '%s\n' "$GUARD_OUT" | sed 's/^/    /'
 fi
@@ -158,37 +215,29 @@ for i in "${!CHECKS[@]}"; do
     f="${CHECKS[$i]}"
     name="$(basename "$f")"
     out="$TMP/$i.out"
-    st="$TMP/$i.exit"
-    rc="$(cat "$st" 2>/dev/null)"
-    [ -n "$rc" ] || rc=1
-    elapsed=$(( $(cat "$TMP/$i.end" 2>/dev/null || cat "$TMP/$i.start") - $(cat "$TMP/$i.start") ))
-
-    # TOO SLOW is per check: run_capped.py stopped the check at the limit
-    # (exit 124), or the check's own elapsed reached the limit.
-    too_slow=0
-    [ "$rc" -eq 124 ] && too_slow=1
-    [ "$elapsed" -ge "$LIMIT" ] && too_slow=1
-
-    if [ "$rc" -eq 0 ] && [ "$too_slow" -eq 0 ]; then
-        printf 'ok   %s (%ss)\n' "$name" "$elapsed"
-    elif [ "$too_slow" -eq 1 ]; then
-        if [ "$guard_refused" -eq 1 ]; then
-            printf 'FAIL %s (TOO SLOW (over %s s) while the machine was under memory pressure; retry, do not change the check)\n' \
-                "$name" "$LIMIT"
-        else
-            printf 'FAIL %s (TOO SLOW for the fast set (over %s s); fix it or remove its gate-fast marker)\n' \
-                "$name" "$LIMIT"
-        fi
-        tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
-        failed=1
-    elif [ "$rc" -eq 2 ]; then
-        printf 'UNMEASURED %s (exit 2, %ss)\n' "$name" "$elapsed"
-        tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
-    else
-        printf 'FAIL %s (exit %s, %ss)\n' "$name" "$rc" "$elapsed"
-        tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
-        failed=1
-    fi
+    case "${VERDICT[$i]}" in
+        ok)
+            printf 'ok   %s (%ss)\n' "$name" "${ELAPSED[$i]}" ;;
+        unmeasured)
+            printf 'UNMEASURED %s (exit 2, %ss)\n' "$name" "${ELAPSED[$i]}"
+            tail -n 15 "$out" 2>/dev/null | sed 's/^/    /' ;;
+        hang)
+            printf 'HANG %s\n' "$name"
+            printf '    see %s; unwatched runs stop a check at 5x the alert limits\n' "$ALERT"
+            tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
+            failed=1 ;;
+        expensive)
+            printf 'EXPENSIVE %s (%s)\n' "$name" "${DETAIL[$i]}"
+            advice='move that work out of the check, or ask Brian to vet it in tools/fast_checks.vetted'
+            [ "$(gate_tier "$f")" = none ] || advice="$advice; or remove its gate-fast marker (its gate tier still runs it)"
+            printf '    %s\n' "$advice"
+            tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
+            failed=1 ;;
+        *)
+            printf 'FAIL %s (exit %s)\n' "$name" "${RC[$i]}"
+            tail -n 15 "$out" 2>/dev/null | sed 's/^/    /'
+            failed=1 ;;
+    esac
 done
 
 [ "$failed" -eq 0 ] || exit 1

@@ -50,6 +50,12 @@
 # "Die? [yn]" on the last screen; "Abort, Flee or Disengage" on the last
 # screen) so a caller that cares can decide for itself. See tools/gate_lib.sh,
 # which does.
+# INCURSION_FAST_PROBE names a file: log this entry point and stop (inc-rst61).
+if [ -n "${INCURSION_FAST_PROBE:-}" ]; then
+    echo "game $0" >> "$INCURSION_FAST_PROBE" || echo "INCURSION_FAST_PROBE: cannot append to $INCURSION_FAST_PROBE" >&2
+    exit 3
+fi
+
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
