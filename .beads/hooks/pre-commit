@@ -158,6 +158,26 @@ if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
   fi
 fi
 
+# --- INCURSION: only the owner vets a fast check; a fast check keeps a run (inc-rst61) ---
+# tools/check_fast_vetted.py reads the STAGED change: a new or changed line in
+# tools/fast_checks.vetted needs the owner's one-commit vetting pass, and a
+# check may not lose its gate-fast marker when it has no gate tier. Exit 1
+# refuses the commit; exit 2 is "could not measure" and only warns. Process
+# script: runs from the shared checkout (inc-x604).
+if [ -z "${BD_GIT_HOOK_NESTED:-}" ]; then
+  _inc_shared=$(dirname "$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)")
+  if [ -x "$_inc_shared/tools/check_fast_vetted.py" ]; then
+    "$_inc_shared/tools/check_fast_vetted.py"
+    _inc_vet=$?
+    if [ $_inc_vet -eq 1 ]; then
+      echo >&2 "pre-commit: REFUSED. A staged change breaks the fast-check vetting rules (reasons above)."
+      exit 1
+    elif [ $_inc_vet -ne 0 ]; then
+      echo >&2 "pre-commit: tools/check_fast_vetted.py could not measure (exit $_inc_vet); the commit CONTINUES."
+    fi
+  fi
+fi
+
 # --- INCURSION: a bare `git merge master` on an epic branch is refused ---
 # (inc-pu6v, 2026-09-24). The reason, the gated path and the escape hatch are
 # in tools/check_epic_merge.sh, whose --selftest proves each case.

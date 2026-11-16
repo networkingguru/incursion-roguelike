@@ -569,6 +569,14 @@ extern bool RunResourceOrder();
 extern int RunSaveConvert(const char *path);
 
 int main(int argc, char *argv[]) {
+    /* INCURSION_FAST_PROBE names a file: log this entry and exit 3 (inc-rst61). */
+    if (getenv("INCURSION_FAST_PROBE") != NULL && getenv("INCURSION_FAST_PROBE")[0] != '\0') {
+        FILE *probeFile = fopen(getenv("INCURSION_FAST_PROBE"), "a");
+        if (probeFile == NULL || fprintf(probeFile, "game %s\n", argv[0]) < 0)
+            fprintf(stderr, "INCURSION_FAST_PROBE: cannot append\n");
+        if (probeFile != NULL) fclose(probeFile);
+        exit(3);
+    }
     /* This path code is currently present in libtcod and curses code. */
     char executablePath[MAX_PATH_LENGTH] = "";
     char *envPath = getenv("INCURSIONPATH");

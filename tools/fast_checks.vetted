@@ -1,0 +1,7 @@
+# fast_checks.vetted -- fast checks allowed to do an expensive kind of work (inc-rst61).
+# Format, one per line: <check basename> <kind>[,<kind>...] <reason>
+# Kinds: game, build, git-history, sleep, bd, compiler. '#' lines and blank lines are ignored.
+# tools/fast_checks.sh refuses a fast check that does a kind not listed for it here.
+# Only the owner adds a line. A later phase guards this file.
+check_upstream_label.sh bd guards the upstream label tools/sync_issues.sh needs; a missing label blocks a landing; it reads labels with `bd list`
+check_stored_values.py compiler guards stored values on master (a changed one breaks saves); it compiles one small file against inc/Incursion.h
