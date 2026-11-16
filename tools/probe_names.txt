@@ -40,6 +40,7 @@ INCURSION_DISBELIEF_PROBE	pre-registry	-
 INCURSION_DMGPOST_PROBE	pre-registry	-
 INCURSION_DOORGEN_PROBE	pre-registry	-
 INCURSION_DOORPICK_PROBE	pre-registry	-
+INCURSION_DOORSTUCK_MIN	inc-zm6li	lowers the door-stuck streak floor of 10, for tools/measure_door_stuck.py
 INCURSION_DOOR_BOLT_PROBE	pre-registry	-
 INCURSION_DOOR_LOCK_ROLL	pre-registry	-
 INCURSION_DOOR_PROBE	pre-registry	-
@@ -64,6 +65,7 @@ INCURSION_FEAR_DUR_PROBE	pre-registry	-
 INCURSION_FIELD_VALUES	pre-registry	-
 INCURSION_FOLLOWER_PROBE	pre-registry	-
 INCURSION_FORCE_DAMAGE_ROLL	pre-registry	-
+INCURSION_FORCE_PURSUE	inc-zm6li	forces the single RouteProbe pursuer to pursue its target (RouteProbe checks only)
 INCURSION_FORCE_SAVE_DC	pre-registry	-
 INCURSION_FORCE_SAVE_ROLL	pre-registry	-
 INCURSION_FORT_PROBE	pre-registry	-

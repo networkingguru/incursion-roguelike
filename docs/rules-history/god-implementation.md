@@ -25,3 +25,9 @@ Asked whether engine code used by only one god could live on that god's branch, 
 "If it is engine code, by. definition it is outside the god's branch. We do NOT make bespoke shit, we make reusable shit"
 
 The rule now classifies by branch: work outside the god's branch (all engine code) and unsettled core design questions are blockers; work on the god's branch (data, scripts, text) is a landing requirement. Each god gets one master-to-epic merge, one epic-to-god merge and one landing merge. Bead inc-6j7w.
+
+2026-11-16. During Ekliazeh (inc-pu6v.15) phase 9, Claude found that divine insight identifies only the first item type in a god's aid table (inc-6mtib). Because master's own gods (Erich, Sabine) also list several Identify rows, Claude read "engine code that the base game needs without the pantheon lives on master" as sending the fix to master, recommended it, and built it there. The epic had already rewritten that insight loop, so the master fix would have conflicted at the next master-to-epic merge and helped no build Brian plays. Brian wrote:
+
+"God damnit this is for an epic god. FFS. Why would you put a change for an epic god on master. WE DO NOT FIX MASTER GODS. THEY ARE GETTING REPLACED. Whrite this shit down"
+
+The rule now states that every engine change a pantheon god needs is built on the epic, never on master, and that master's gods are not fixed. Bead inc-9tsa9.
