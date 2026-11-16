@@ -1,0 +1,20 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2425,6 +2425,7 @@
+ // family: wq stored ordinal i8 elem-of QItem.Qualities shares aq
+ 
+ #define WQ_HOLY          1
++#define WQ_GRWA 82
+ #define WQ_UNHOLY        2
+ #define WQ_CHAOTIC       3
+ #define WQ_LAWFUL        4
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1174,6 +1174,7 @@
+    inc-rddai. */
+ QualityRow QualityTable[] = {
+   { WQ_HOLY, true, false },
++  { WQ_GRWA, true, false },
+   { WQ_UNHOLY, true, false },
+   { WQ_CHAOTIC, true, false },
+   { WQ_LAWFUL, true, false },

@@ -29,7 +29,7 @@
 # was needed.
 #
 # facts read, and the control that fixes each:
-# fact: character, his map and where he stands -- fixture tools/fixtures/chars/human-paladin-seed4-opt0822.sav via INCURSION_LOAD
+# fact: character, his map and where he stands -- fixture tools/fixtures/specimens/human-paladin-seed4-opt0822.sav via INCURSION_LOAD -- frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 # fact: which map row is the window's first row -- AdjustMap runs at load from the saved player square alone (src/Registry.cpp:1476), so the fixture fixes it
 # fact: settings, including OPT_CENTER_MAP -- tools/fixtures/options-2026-08-22.dat via INCURSION_OPTIONS
 # fact: the first row is lit enough to see the golem -- wizard "Change terrain type", Wall Torch (the call tools/check_hide_dynamic_light.sh makes)
@@ -146,7 +146,7 @@ esac
 }
 
 out="$(INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-       INCURSION_LOAD=tools/fixtures/chars/human-paladin-seed4-opt0822.sav \
+       INCURSION_LOAD=tools/fixtures/specimens/human-paladin-seed4-opt0822.sav \
        tools/headless.sh tools/keys/edge-target.keys 1 2>&1)"
 run="$(printf '%s\n' "$out" | awk '/^run:/ {print $2}')"
 log="$run/logs/targetprobe.log"

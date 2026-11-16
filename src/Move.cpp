@@ -1103,6 +1103,11 @@ SkipConfirms:
 				Move(ox, oy);
 				return ABORT;
 			}
+			/* upstream: the EV_PUSH walk can remove the mover (terrain effects), and
+			   the code below dereferences m. Plain control flow, so Win32 crashes
+			   the same way. Observed, dive-depth-4 seed 16; inc-qapjo, not sent. */
+			if (isDead() || !m)
+				return DONE;
 			if (dis->isIllusion() && !dis->isRealTo(this)) {
 				TPrint(e, "You pass through the <EVictim>.",
 					"The <EActor> passes through you.",
@@ -1257,6 +1262,13 @@ SkipConfirms:
 				thisp->MyTerm->ShowTraits();
 
 	TerrainEffects();
+
+	/* upstream: the walker may leave the level during TerrainEffects (a chasm
+	   fall), so nothing below may read m for it. Upstream's: it is a NULL
+	   dereference on Win32 with the original compiler too. Observed.
+	   inc-06ndv. NOT SENT. */
+	if (isDead() || !m)
+		return DONE;
 
 	if (szChange < 0)
 		IDPrint("You crouch down to enter the <Str1>. It's cramped in here!",

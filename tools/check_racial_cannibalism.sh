@@ -16,9 +16,9 @@
 #                    same meal. Feat list AND XP rise.
 #   3 new black orc  Black Orc barbarian (racial-cannibalism-blackorc.keys),
 #                    feat list only.
-#   4 old orc        tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav, made
+#   4 old orc        tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav, made
 #                    BEFORE the change, loaded, eats the same corpse.
-#   5 old dragonkin  tools/fixtures/chars/dragonkin-sheet-seed1-opt0818.sav,
+#   5 old dragonkin  tools/fixtures/specimens/dragonkin-sheet-seed1-opt0818.sav,
 #                    likewise.
 #   (cases 4 and 5 use tools/keys/cannibalism-feat-meal.keys unchanged.)
 #
@@ -42,8 +42,9 @@ cd "$ROOT"
 OPT22=tools/fixtures/options-2026-08-22.dat
 OPT18=tools/fixtures/options-2026-08-18.dat
 STAMP="$$"
-ORCSAV=tools/fixtures/chars/orc-barbarian-seed1-opt0822
-DRGSAV=tools/fixtures/chars/dragonkin-sheet-seed1-opt0818
+# fact: the pre-change orc and dragonkin, saved before Cannibalism was a feat -- the frozen old saves tools/fixtures/specimens/orc-barbarian-seed1-opt0822.sav and dragonkin-sheet-seed1-opt0818.char with their .sheet.txt beside them; a built fixture always has the feat, so this check keeps the old bytes
+ORCSAV=tools/fixtures/specimens/orc-barbarian-seed1-opt0822
+DRGSAV=tools/fixtures/specimens/dragonkin-sheet-seed1-opt0818
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

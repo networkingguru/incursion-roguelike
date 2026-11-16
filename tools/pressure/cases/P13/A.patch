@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3290,6 +3290,7 @@
+ // end family: stati
+ // family: val_hiding stored ordinal i16 val-of HIDING
+   #define HI_SHADOWS   1 /* rogues */
++  #define HI_GRWA 5
+   #define HI_CEILING   2 /* lurker above, darkmantle, etc. */
+   #define HI_UNDER     3 /* hide under objects */
+   #define HI_WATER     4 /* hiding beneath the water */

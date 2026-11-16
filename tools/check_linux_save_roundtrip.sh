@@ -9,7 +9,7 @@
 # Docker containers tools/linux_run.sh builds:
 #   Case A  a character SAVED on Linux (chargen-default-save.keys) is LOADED
 #           on Linux (load-char-sheet.keys --load <that .sav>).
-#   Case B  a save made on macOS (the frozen lizardfolk-monk-seed1.sav) is
+#   Case B  a save made on macOS (the built fixture lizardfolk-monk-seed1) is
 #           LOADED on Linux.
 #
 # THE ORACLE. A load run must reach play with the saved character on screen,
@@ -73,8 +73,9 @@ RUNNER="$ROOT/tools/linux_run.sh"
 
 CHARGEN_KEYS=tools/keys/chargen-default-save.keys
 LOAD_KEYS=tools/keys/load-char-sheet.keys
-MAC_SAV=tools/fixtures/chars/lizardfolk-monk-seed1.sav
-MAC_SHEET=tools/fixtures/chars/lizardfolk-monk-seed1.sheet.txt
+# fact: the macOS-written save and its name, race and class -- the built fixture lizardfolk-monk-seed1, served from the fixture cache (tools/fixture_cache.sh builds it on this host from its .char) with its sheet from tools/fixture_sheet.sh
+MAC_SAV="$(tools/fixture_cache.sh lizardfolk-monk-seed1)" || { echo "FAIL: the fixture cache could not serve lizardfolk-monk-seed1"; exit 2; }
+MAC_SHEET="$(tools/fixture_sheet.sh lizardfolk-monk-seed1)" || { echo "FAIL: the fixture cache could not serve the sheet of lizardfolk-monk-seed1"; exit 2; }
 
 for f in "$RUNNER" "$CHARGEN_KEYS" "$LOAD_KEYS" "$MAC_SAV" "$MAC_SHEET"; do
     [ -f "$f" ] || { echo "FAIL: needed file is missing: $f"; exit 2; }

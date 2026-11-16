@@ -3,7 +3,7 @@
 # tools/check_newlevel_divine_spell.sh.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed4-gate.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed4-gate.char \
 #       tools/headless.sh tools/keys/newlevel-divine-mark.keys 4
 #
 # THE CHARACTER. Henk, Orc Priest 1, not saved in wizard mode (so `w y`). At

@@ -1,7 +1,8 @@
 #!/bin/bash
 # gate: live
 # inc-8fl6: wrought iron must be metallic and impose the primal armor penalty.
-# fact: druid class, stats and statuses -- INCURSION_LOAD druid-shoulder-metal-seed7-opt0822.sav fixture
+# fact: druid class, stats and statuses -- INCURSION_LOAD druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh) fixture
+# fact: the wizard mode and the long sword the old .sav held -- not needed: the probe removes every occupied slot, and the key script uses no wizard command
 # fact: options -- tools/fixtures/options-2026-08-22.dat
 # fact: armor base and qualities -- probe Item::Create/AddQuality (Item Acquisition equivalent), verifies MAT_IRON/MAT_WROUGHT
 # fact: equipment isolation -- probe removes every occupied slot before each setup and verifies only the test armor is equipped
@@ -16,7 +17,7 @@ base="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-wrought-metal"
 mkdir -p "$base"
 INCURSION_WROUGHT_METAL_PROBE=1 INCURSION_RUN_DIR="$base/run" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-    INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+    INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
     tools/headless.sh tools/keys/wrought-metal.keys 7 > "$base/harness.log" 2>&1
 rc=$?
 log="$base/run/logs/wrought-metal.log"

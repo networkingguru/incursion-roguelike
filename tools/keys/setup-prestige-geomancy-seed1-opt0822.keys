@@ -1,0 +1,28 @@
+# Prepares the built fixture prestige-geomancy-seed1-opt0822 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on with Free Advancement and Show All Combat Rolls
+# (it makes the engine print the "Damage:" line, src/Fight.cpp, where Grounded Stance writes its own term);
+# the Bard raised to Bard 7 (G until the sheet reads it; a feat menu in the way takes the key as offered, as
+# the old script did: the level-up feat menu moved, Great Fortitude -> Focus Spell, KNOWN_DIFFERENCES,
+# bd inc-10v7f.1); the new skill ranks put in Craft.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN DOWN
+SPACE   # Free Advancement: NO -> YES
+DOWN*9
+SPACE   # Show All Combat Rolls: NO -> YES
+ESC
+
+d                               # character sheet
+@until "Class  Bard 7" G
+@while "Learn Spells: Level" ESC
+
+S
+@expect "Unspent Skill Ranks"
+@cursorto:mark "Craft" DOWN
+RIGHT*10
+ENTER y
+@until "Things in View" ESC

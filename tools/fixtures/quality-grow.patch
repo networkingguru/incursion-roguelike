@@ -1,0 +1,20 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2416,2 +2416,3 @@
+ #define WQ_BLOODED       63
++#define WQ_TESTGROW      82
+ 
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1279,2 +1279,3 @@
+   { IQ_ORCISH, false, false },
++  { WQ_TESTGROW, true, false },
+   { IQ_ADAMANT, false, false },
+@@ -1829,2 +1830,3 @@
+   { WQ_ROARING, "roaring" },
++  { WQ_TESTGROW, "growtest" },
+   { 0, NULL } };
+@@ -2091,2 +2093,3 @@
+                 "light-averse creatures." },
++  { WQ_TESTGROW, "A growtest weapon exists only to test that a new quality is offered." },
+   { 0, NULL } };

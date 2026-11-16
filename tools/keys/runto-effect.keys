@@ -8,9 +8,11 @@
 #   INCURSION_RUNTO_TRAP=<trap> INCURSION_RUNTO_TERRAIN=<terrain> \
 #   INCURSION_FORCE_SAVE_ROLL=<1..20> INCURSION_RUNTO_SKILL_ROLL=<1..20> \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/runto-effect.keys 3
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 .*2
 l o
 RIGHT*10

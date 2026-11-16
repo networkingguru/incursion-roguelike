@@ -8,6 +8,8 @@
 # the System Menu, whose [a] is Save and Quit; a stray ESC ends the run and
 # still exits 0.
 
+# The fixture holds only the created character; setup-elf-mage-illusions-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-elf-mage-illusions-seed1.keys
 @dump:arrival
 
 @until "Select Spell" m

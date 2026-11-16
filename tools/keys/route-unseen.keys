@@ -3,7 +3,7 @@
 #   INCURSION_ROUTE_UNSEEN=<hostile|companion|neutral> \
 #   INCURSION_ROUTE_OPT=<0|1|2> INCURSION_ROUTE_TURNS=30 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/route-unseen.keys 3
 #
 # [l] [o] opens the overview map, and opening it stages the scene
@@ -12,6 +12,8 @@
 # it. The character then waits one turn at a time ('.', Wait One Turn, which
 # always ends); the creature's OWN AI (Monster::Movement -> Monster::SmartDirTo)
 # moves it, and a per-turn hook logs its square and distance.
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 .*2
 l o
 ESC

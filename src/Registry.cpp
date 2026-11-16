@@ -1248,6 +1248,62 @@ failed:
       return true;
 }
 
+/* The walk side of the fixture round trip (tools/check_fixture_equivalence.sh,
+   bead inc-10v7f R1). Writes the character exactly as Game::SaveGame would,
+   to `path`, and leaves the game as it found it: no gallery write, no SaveFile
+   change, and the two fields SaveGame resets (the level statistics and the
+   message queue) restored after the write. It draws no random number. */
+bool Game::SaveRecordedWalk(Player &p, const char *path) {
+      fileHeader fh; int32 i;
+      String desc;
+      GameTimeInfoType savedTime;
+      String savedQueue[8];
+      bool ok = true;
+
+      {
+        String whyNot;
+        if (!SaveV1_CanWrite(*this, whyNot))
+          return false;
+      }
+
+      savedTime = p.GameTimeInfo;
+      for (i = 0; i != 8; i++) {
+          savedQueue[i] = p.MessageQueue[i];
+          p.MessageQueue[i].Empty();
+      }
+
+      desc = p.Named + SC(", ");
+      desc += NAME(p.RaceID);
+      for(i=0;i!=3 && p.ClassID[i];i++)
+          desc += Format("%s %s %d", i ? " /" : "",
+          NAME(p.ClassID[i]), p.Level[i]);
+      desc = desc.Left(63);
+
+      theGame->GetPlayer(0)->StoreLevelStats((uint8)(theGame->GetPlayer(0)->m->Depth));
+
+      try {
+          T1->OpenWrite(path);
+          memset(&fh,0,sizeof(fh));
+          strcpy(fh.Version,SaveSchemaID());
+          fh.Sig = SIGNATURE;
+          fh.numGroups = 1;
+          fh.Compression = SaveV1_Raw() ? 0 : 1;
+          strncpy(fh.Name,desc,71);
+          T1->FWrite(&fh,sizeof(fh));
+          theRegistry->SaveGroupV1(*T1,0);
+          T1->Close();
+      }
+      catch (int error_number) {
+          T1->Close();
+          ok = false;
+      }
+
+      p.GameTimeInfo = savedTime;
+      for (i = 0; i != 8; i++)
+          p.MessageQueue[i] = savedQueue[i];
+      return ok;
+}
+
 bool Game::LoadGame(bool backup) {
     int32 i;
     String Filenames[128], Filedescs[128], fn;
@@ -1432,28 +1488,16 @@ bool Game::LoadNamedGame(const char *savefile) {
         Error("Error reading saved game (%s).", Lookup(FileErrors, error_number));
         return false;
     }
-    /* inc-j5yo/inc-4999: revisions 5 and 6 each changed the meaning of
-       Player spell flags. Revision 5 added SP_PENDING and SP_GRANTED;
-       revision 6 made a kind bit mean the source a spell is held from, with
-       pending tracked per source. A v1 file older than a revision is migrated
-       once here -- after the player object and modules are fully loaded and
-       SaveV1_ResolveNames() has converted every queued reference, and before
-       any CalcValues/report code reads a spell flag. This is the one restore
-       path both a load from the title menu (Game::LoadGame) and
-       INCURSION_LOAD (Game::LoadNamedGame, which the -load option calls
-       directly) take. The probe runs once per load, after both migrations,
-       with migrated=1 when either ran. */
+    /* inc-j5yo/inc-4999/inc-cjos0: a v1 load runs every named migration the
+       file lacks (SaveV1_RunMigrations), once, after SaveV1_ResolveNames()
+       and before any CalcValues/report code reads a spell flag. Every v1
+       load path takes this one site. */
     if (!strncmp(recoveryHeader.Version, "IS", 2)) {
-        bool migrated = false;
-        if (SaveV1_FileRevision() < 5) {
-            oPlayer(p[0])->MigrateSpellFlagsRev5();
-            migrated = true;
-        }
-        if (SaveV1_FileRevision() < 6) {
-            oPlayer(p[0])->MigrateSpellFlagsRev6();
-            migrated = true;
-        }
+        bool migrated = SaveV1_RunMigrations(oPlayer(p[0]));
         oPlayer(p[0])->SpellFlagProbe(migrated);
+        if (getenv("INCURSION_SPELLFLAG_PROBE"))
+            Error("MIGRATION_PROBE ran=%s rev=%d", SaveV1_RanMigrations(),
+                (int)SaveV1_FileRevision());
     }
     memset(oPlayer(p[0])->MessageQueue, 0, sizeof(String) * 8);
     InitGodArrays();

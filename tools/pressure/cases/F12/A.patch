@@ -1,0 +1,12 @@
+diff --git a/src/SaveV1.cpp b/src/SaveV1.cpp
+index b7d756e..fc11bde 100644
+--- a/src/SaveV1.cpp
++++ b/src/SaveV1.cpp
+@@ -115,6 +115,7 @@ struct V1Migration {
+     void      (Player::*fn)();
+ };
+ static const V1Migration v1Migrations[] = {
++    { "Ac8SpellRepairA", 0, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev5", 5, &Player::MigrateSpellFlagsRev5 },
+     { "SpellFlagsRev6", 6, &Player::MigrateSpellFlagsRev6 },
+ };

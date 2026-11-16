@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4551,6 +4551,7 @@
+ // family: qky stored ordinal i16 field-of Player.QuickKeys.QuickKey.QuickKeys_Type
+ 
+ #define QKY_SPELL    1
++#define QKY_GRWA 6
+ #define QKY_ITEM     2
+ #define QKY_TACTIC   3
+ #define QKY_VERB     4

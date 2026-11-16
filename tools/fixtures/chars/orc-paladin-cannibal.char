@@ -1,0 +1,109 @@
+# orc-paladin-cannibal: a standard Orc, Paladin, Lawful Good. Recorded from tools/keys/cannibal-orc-chargen.keys (first attribute set, default skill spending), seed 4, settings tools/fixtures/options-2026-08-22.dat, by INCURSION_RECORD_CHAR. Used by tools/check_cannibal_alignment.sh cases 3 and 4 (bd inc-10v7f).
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 4
+alter_options: no
+explore_continue: yes
+formula_seed: 5
+race: Orc
+subrace: Orc
+name: Gell
+surname: the Wise
+class: Paladin
+god: Immotian
+perk_type [0]: PERK_TALENT
+perk_spell [0]: Cell Adjustment
+perk_type [1]: PERK_ITEM
+perk_item [1]: ring, effect Channeling, plus 2
+attr_str: 10
+attr_dex: 17
+attr_con: 12
+attr_int: 15
+attr_wis: 12
+attr_cha: 13
+attr_luc: 16
+alignment: Lawful Good
+feat: Acrobatic
+feat: Alertness
+hp_roll [Paladin]: 10
+mana_roll [Paladin]: 8
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 1
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 26
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 29
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Paladin]: 27
+kit_item [Paladin;a3]: long sword, plus 1, quantity 1
+kit_item [Paladin;a4]: light lance, quantity 1
+kit_item [Paladin;a6]: kite shield, quantity 1
+kit_item [Paladin;a7]: noble attire, quantity 1
+kit_item [Paladin;a8]: gold piece, quantity 8
+kit_item [Paladin;a9]: potion, effect Healing, quantity 3
+kit_item [Paladin;a10]: flask, effect water, flag blessed, quantity 12
+gear_stream [Universal Gear]: 28
+gear_chance [Universal Gear;a3]: 78
+gear_chance [Universal Gear;a4]: 10
+gear_chance [Universal Gear;a6]: 34
+gear_chance [Universal Gear;a7]: 79
+gear_chance [Universal Gear;a10]: 89
+gear_chance [Universal Gear;a14]: 5
+kit_item [Universal Gear;a17]: field plate armour, quantity 1
+thrown_quantity: 7
+personality: The Ambitious Conqueror
+store_seed: 31
+character_name: Gell the Wise
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

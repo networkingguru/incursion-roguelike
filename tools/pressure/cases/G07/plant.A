@@ -1,0 +1,3 @@
+# G07: A's content, a potion effect's flavour, the encounter through an rID variable
+flavor Fury @ grw-a puce
+varrid grw-a carrier grw_a_ref @ Grw A Pack

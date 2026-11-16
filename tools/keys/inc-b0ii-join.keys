@@ -1,0 +1,12 @@
+# Joins the test god of tools/repro_inc_b0ii.sh in wizard mode (the frozen druid
+# is already in wizard mode, so `w` opens the menu). The god's EV_BLESSING runs
+# one loop case and prints "B0II ..." lines (bd inc-b0ii).
+@while "-- more --" SPACE
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
+w
+@choose "Become Divine Champion"
+"Break Continue Test God" ENTER
+@until "HP:" ESC
+@dump:b0ii
+@quit

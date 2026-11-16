@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/human-paladin-seed4-opt0822.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): scenario D walks out the south door of the old save's room
 # Reproduction for bd inc-a7jq (the loot claim). Expected RED for A and B on
 # the unfixed build, GREEN for C before and after the feature.
 #
@@ -31,7 +32,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 SEED="${SEED:-4}"
 OPTS=tools/fixtures/options-2026-08-22-noroomdesc.dat
-CHAR=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+CHAR=tools/fixtures/specimens/human-paladin-seed4-opt0822.sav
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 
 [ -x ./incursion-headless ] || {

@@ -2,7 +2,7 @@
 # between every step. Read by tools/check_favour_awards.sh, bd inc-rgzr.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/favour-trap.keys 1
 #
 # Trap::TriggerTrap (src/Feature.cpp) pays the character who RESET the trap
@@ -57,6 +57,8 @@
 # INCURSION_LOF_FORCE_ROLL=20 (the bolt hits), INCURSION_RUNTO_SKILL_ROLL=20
 # (the search and every Handle Device check succeed).
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 w
 @while "Enter wizard mode" y
 @until "Wizard Mode Options" w

@@ -1,0 +1,38 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index 4c9aa4f..437c23c 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1175,7 +1175,7 @@ class Character: public Creature
+       FIELD_I16("ExoticCount", ExoticCount);
+       FIELD_I16("aStoryPluses", aStoryPluses);
+       FIELD_I16("tStoryPluses", tStoryPluses);
+-      FIELD_U8 ("RageCount", RageCount);
++      FIELD_U8 ("RageCounter", RageCount);
+       FIELD_I32("xpTicks", xpTicks);
+       FIELD_U32("Personality", Personality);
+       FIELD_I16("polyTicks", polyTicks);
+diff --git a/inc/SaveRetiredNames.h b/inc/SaveRetiredNames.h
+index b67de67..ac3f2a7 100644
+--- a/inc/SaveRetiredNames.h
++++ b/inc/SaveRetiredNames.h
+@@ -16,7 +16,7 @@ static const RetiredFieldName RETIRED_FIELD_NAMES[] = {
+ };
+ 
+ static const RenamedFieldName RENAMED_FIELD_NAMES[] = {
+-  /* grw slot A */
++  { "Character", "RageCount", "RageCounter" },
+   { NULL, NULL, NULL }
+ };
+ 
+diff --git a/tools/retired_field_names.txt b/tools/retired_field_names.txt
+index a33610d..4238c44 100644
+--- a/tools/retired_field_names.txt
++++ b/tools/retired_field_names.txt
+@@ -3,6 +3,6 @@
+ #          rename <scope> <old> <new>  the reader matches either name
+ # inc/SaveRetiredNames.h is the engine's copy; tools/check_field_names.sh keeps the two equal.
+ # A retired name is never reused.
+-# grw slot A
++rename Character RageCount RageCounter
+ Character SpellsU16
+ # grw slot B

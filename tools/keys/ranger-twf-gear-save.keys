@@ -1,0 +1,38 @@
+# inc-10v7f phase 5: a Drow Ranger who takes the two-weapon style, so Universal
+# Gear grants its "of random 3 to 4" off-hand weapon (lib/races.irh:61-65), then
+# the character is saved and the session ends. Derived from kit-ranger.keys, the
+# Human Ranger walk; only the race, the style and the ending differ. Read by
+# tools/compare_creation_walks.sh.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Drow"
+@choose "Ranger"
+p       # Attributes: abort to Point Buy, so no roll and no perk decides the build (inc-b4l3g.20)
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+a       # Alignment: the first offered
+
+@while "favoured enemy" a      # the class asks for a favoured enemy
+@while "Choose a feat" a
+@while "Combat style" t        # two-weapon
+@while "Choose a feat" a
+@while "Combat style" t
+
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y # Done, and confirm keeping the ranks
+
+@while "wish to worship" y
+@while "personality archetype" a
+
+ESC*3   # dismiss the arrival room description
+w       # wizard mode
+y       # Enter wizard mode? -- yes
+@choose "Genocide Everything"   # no monster can interrupt the quit; the genocide itself is the played turn
+@quit

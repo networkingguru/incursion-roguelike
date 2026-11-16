@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3357,6 +3357,7 @@
+ // family: val_engulfed stored ordinal i16 val-of ENGULFED+ENGULFER
+   #define EG_SWALLOW  1   
+   #define EG_ENGULF   2
++  #define EG_GRWB 3
+ // end family: val_engulfed
+ // family: stati stored ordinal u8
+ #define ENGULFER      95

@@ -4,7 +4,7 @@
 # in the Inventory Manager ..." line and then, before inc-3ax, also printed the false
 # "You fumble the items you were trying to exchange, dropping them!" line.
 #
-# WHY A FIXTURE. tools/fixtures/chars/lizardfolk-monk-seed1.sav carries no
+# WHY A FIXTURE. tools/fixtures/chars/lizardfolk-monk-seed1.char carries no
 # default weapons, so the swap command cannot even begin; that is the path under
 # test. The character is frozen, so the same save takes the same path on every
 # run.

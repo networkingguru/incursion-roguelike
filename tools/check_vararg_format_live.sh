@@ -10,13 +10,14 @@
 # on the corpse item: the fixture stands among corpses, and every map thing
 # gets EV_TURN once per 60 game turns (src/Main.cpp, the Turn%60 loop).
 # INCURSION_BIN points the same check at an unfixed binary (it must go red).
+# fact: character and map -- tools/fixtures/specimens/lizardfolk-monk-seed1.sav, frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 BIN="${INCURSION_BIN:-$ROOT/incursion-headless}"
 [ -x "$BIN" ] || { echo "FAIL: $BIN not built. Run: BACKEND=posix ./build_macos.sh"; exit 1; }
 case "$BIN" in /*) ;; *) BIN="$ROOT/$BIN" ;; esac
-FIX="$ROOT/tools/fixtures/chars/lizardfolk-monk-seed1.sav"
+FIX="$ROOT/tools/fixtures/specimens/lizardfolk-monk-seed1.sav"
 OPTS="$ROOT/tools/fixtures/options-2026-08-22.dat"
 KEYS="$ROOT/tools/keys/script-format-live.keys"
 BASE="$(mktemp -d "$ROOT/logs/vararg-format-live.XXXXXX")"

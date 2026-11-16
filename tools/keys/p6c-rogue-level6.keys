@@ -1,0 +1,94 @@
+# inc-10v7f phase 6c: make a Human Rogue and level him to 6 IN PLAY, then SAVE.
+# Level 6 raises the Rogue special ability menu (lib/classes.irh, Class Rogue
+# EV_ADVANCE, "Choose a Rogue special ability:", P43). That level-up happens
+# after the creation window has closed: the menu must be asked exactly as
+# before and record nothing. Used by tools/compare_creation_walks.sh.
+
+a
+n
+y
+@choose "Human"
+@choose "Spot"
+@choose "Searching"
+@choose "Rogue"
+a
+@choose "Neutral"
+@until "Unspent Skill Ranks" a
+@cursorto:mark "Alchemy" DOWN
+RIGHT*3
+@cursorto:mark "Appraise" DOWN
+RIGHT*3
+@cursorto:mark "Balance" DOWN
+RIGHT*3
+@cursorto:mark "Bluff" DOWN
+RIGHT*3
+@cursorto:mark "Climb" DOWN
+RIGHT*3
+@cursorto:mark "Craft" DOWN
+RIGHT*3
+@cursorto:mark "Decipher Script" DOWN
+RIGHT*3
+@cursorto:mark "Diplomacy" DOWN
+RIGHT*3
+@cursorto:mark "Disguise" DOWN
+RIGHT*3
+ENTER y
+a                       # personality archetype
+@until "Afoot" ESC
+w
+@expect "Enter wizard mode"
+y
+w
+DOWN DOWN
+SPACE                   # Free Advancement: NO -> YES
+ESC
+
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl2
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl3
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl4
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl5
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl6
+ESC
+d
+G
+@while "Bonus To Which Attribute" a
+@while "Choose a feat" c
+@while "special ability" a
+@dump:lvl7
+ESC
+d
+@dump:final
+ESC
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved

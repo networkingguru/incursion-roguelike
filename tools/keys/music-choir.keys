@@ -22,7 +22,7 @@
 #
 #   INCURSION_MUSIC_CHOIR_PROBE=1 \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
 #       tools/headless.sh tools/keys/music-choir.keys 1
 #
 # The character is loaded, not built: a key-built character moves when lib/

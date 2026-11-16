@@ -26,7 +26,7 @@ fail_control() { echo "INCONCLUSIVE: $*"; exit 2; }
 [ -x ./incursion-headless ] || fail_control 'build with BACKEND=posix ./build_macos.sh'
 SEED="${1:-1}"
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.char
 TEMPLATE=tools/keys/mounted-cast-time.keys
 [ -f "$OPTIONS" ] && [ -f "$FIXTURE" ] && [ -f "$TEMPLATE" ] || fail_control 'missing frozen fixture'
 BASE="$ROOT/logs/runs/check-mounted-cast-time-$(date +%s)-$$"

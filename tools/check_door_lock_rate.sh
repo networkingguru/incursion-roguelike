@@ -44,7 +44,7 @@ check_mutation src/Feature.cpp \
     '    int lockChance = 25 + (depth - 1) * 50 / 9;' \
     '    int lockChance = 50;'
 
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char
 export INCURSION_DOORGEN_PROBE=1
 
 # tally <log> <depth>: prints "<closed> <locked>".

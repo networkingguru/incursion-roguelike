@@ -1,0 +1,28 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): a human paladin
+# of Erich made with a rolled attribute set, SAVED at the end of creation with
+# nothing played. The set the walk takes offers an immunity perk and a spell
+# perk, so the walk hits perk_immune and perk_spell. WHICH perks a rolled set
+# offers is decided by the seed in the check's line for this walk
+# (inc-10v7f): a walk cannot choose a set by its perk. Every menu entry is
+# chosen by name; the attribute set is a prompt, not a menu.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Paladin"
+@choose "Erich"
+a       # Attributes: the first of the offered sets
+@choose "Lawful Good"
+@choose "Alertness"
+@choose "Athletic"
+@choose "Acrobatic"
+@while "|  *" RIGHT RIGHT RIGHT DOWN   # spend every rank
+@while "Unspent Skill Ranks" ENTER y   # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@choose "The Ambitious Conqueror"
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

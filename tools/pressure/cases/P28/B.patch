@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -4555,6 +4555,7 @@
+ #define QKY_TACTIC   3
+ #define QKY_VERB     4
+ #define QKY_SKILL    5
++#define QKY_GRWB 6
+ // end family: qky
+ // no-family
+ 

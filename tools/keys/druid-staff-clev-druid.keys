@@ -1,0 +1,4 @@
+# The druid run of tools/check_druid_staff_clev.sh: the setup the old druid .sav held (bd inc-10v7f), then
+# druid-staff-clev.keys. The --priest run keeps the plain script: the setup would change that priest.
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
+@include druid-staff-clev.keys

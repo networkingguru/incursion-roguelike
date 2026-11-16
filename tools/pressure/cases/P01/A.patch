@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -700,6 +700,7 @@
+ 
+ /* And the Numbers */
+ #define SN_MAGIC       1
++#define SN_GRWA 23
+ #define SN_EVIL        2
+ #define SN_NECRO       3
+ #define SN_PARA        4

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -177,6 +177,7 @@
+ #define UP        9
+ #define DOWN      10
+ #define LAST_DIR 7  /* alias of SOUTHWEST */
++#define DIR_GRWB 11
+ // end family: dir
+ // family: coin internal
+ 

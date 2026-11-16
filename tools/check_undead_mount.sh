@@ -8,7 +8,7 @@
 # Run: tools/check_undead_mount.sh
 # Exit 0 only when the giant spider case is unmounted or built with its template
 # and the pony case keeps and builds its template; anything else exits 1.
-# fact: character -- fixture tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav (INCURSION_LOAD)
+# fact: character -- fixture tools/fixtures/chars/xsummon-priest-seed5-opt0822.char (INCURSION_LOAD)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat (INCURSION_OPTIONS)
 # fact: map and encounter -- the fixture save pins the dungeon (INCURSION_LOAD); "Vault Monster" is a named encounter, not rolled
 # fact: rider goblin, mount giant spider, mount pony -- named resources (FIND), not drawn
@@ -25,7 +25,7 @@ status=0
 INCURSION_BIN="$ROOT/incursion-headless" \
 INCURSION_UNDEAD_MOUNT_PROBE=1 INCURSION_RUN_DIR="$RUN_DIR" \
 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav \
+INCURSION_LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char \
     tools/headless.sh tools/keys/template-alignment.keys 1 \
     > "$RUN_DIR/harness.txt" 2>&1 || status=$?
 log="$RUN_DIR/logs/undead-mount.log"

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3435,6 +3435,7 @@
+ #define   CH_DOMINATE 4   /*   Will do as you say, joins party, etc. */
+ #define   CH_COMMAND  5   /*   Command Undead / Fire Creatures / etc. */
+ #define   CH_COMPEL   6   /*   scripted actions, i.e., Insatiable Thirst */
++#define CH_GRWB 7
+ // end family: val_charmed
+ // family: stati stored ordinal u8
+ #define POSSESSED     138 /* You run the monster! (Magic Jar) */

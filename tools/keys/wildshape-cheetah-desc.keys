@@ -14,8 +14,10 @@
 #
 # Run through tools/check_wildshape_cheetah_desc.sh, or:
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char \
 #       tools/headless.sh tools/keys/wildshape-cheetah-desc.keys <seed>
+# The fixture holds only the created character; setup-druid-shoulder-metal-seed7-opt0822.keys makes the state the old save held (bd inc-10v7f).
+@include setup-druid-shoulder-metal-seed7-opt0822.keys
 @dump:arrival
 w
 @choose "Wizard Mode Switches"

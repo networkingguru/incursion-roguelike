@@ -20,6 +20,57 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
+# Refuse to compile a tree whose stored values or saved names collide (inc-cjos0
+# phase 7e, F10: a hand merge of two branches runs no hook and no gate, so this is
+# the one step every build passes). Exit 2 means "could not measure" (no master
+# ref, no python3). Inside a git checkout, meaning the tree being built is itself
+# a checkout (its git top level is $ROOT), exit 2 or a missing python3 STOPS the
+# build, because a collision could go unseen (inc-cjos0 gap 13b). Outside git it
+# warns and the build goes on: a source copy with no history, and a copy nested
+# inside another checkout's logs/, which has no history of its own, count as
+# outside git. A missing check file always warns, so an old ref still builds.
+# Any other failure stops the build before a binary is written.
+PRECHECK_START=$SECONDS
+IN_GIT=0
+if command -v git >/dev/null 2>&1; then
+    GIT_TOP="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [ -n "$GIT_TOP" ] && [ "$(cd "$GIT_TOP" && pwd -P)" = "$(pwd -P)" ]; then
+        IN_GIT=1
+    fi
+fi
+for chk in tools/check_define_dups.py tools/check_stored_values.py tools/check_save_names.py; do
+    if [ ! -f "$chk" ]; then
+        echo "build: WARNING $chk not run (missing file); the build goes on"
+        continue
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        if [ "$IN_GIT" = 1 ]; then
+            echo "build: STOPPED: python3 is missing, so $chk could not run and a collision could go unseen; no binary was built."
+            echo "    Install python3."
+            exit 1
+        fi
+        echo "build: WARNING $chk not run (missing python3); the build goes on"
+        continue
+    fi
+    rc=0
+    out="$(python3 "$chk" 2>&1)" || rc=$?
+    if [ "$rc" = 2 ] && [ "$IN_GIT" = 1 ]; then
+        echo "build: STOPPED by $chk (exit 2, could not measure); no binary was built:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -3 | sed 's/^/    /'
+        echo "    The check could not measure, so a collision could go unseen."
+        echo "    Make master resolvable (for example: git fetch origin master:master)."
+        exit 1
+    elif [ "$rc" = 2 ]; then
+        echo "build: WARNING $chk could not measure (exit 2); the build goes on:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -3 | sed 's/^/    /'
+    elif [ "$rc" != 0 ]; then
+        echo "build: STOPPED by $chk (exit $rc); no binary was built:"
+        printf '%s\n' "$out" | grep -v '^KNOWN' | tail -20 | sed 's/^/    /'
+        exit 1
+    fi
+done
+echo "build: stored values and saved names checked ($((SECONDS - PRECHECK_START))s)"
+
 # A diagnostic build gets its own binary and its own object directory, so it
 # never leaves half-instrumented objects behind for the next ordinary build:
 #     EXTRA_CXXFLAGS=-DPATH_PROBE OUT=incursion-path ./build_macos.sh
@@ -37,11 +88,11 @@ cd "$ROOT"
 # Linux wants gcc and neither. Both honour $CC/$CXX if the caller sets them.
 HOST="$(uname -s)"
 case "$HOST" in
-    Darwin) CC="${CC:-clang}"; CXX="${CXX:-clang++}"; GUI_LIBS="-framework OpenGL" ;;
-    # -ldl -lpthread: libtcod calls dlopen/dlclose and sem_*. macOS has both in
-    # libSystem; glibc before 2.34 keeps them in separate libdl and libpthread.
-    # Harmless on newer glibc, where both are stubs inside libc.
-    Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread" ;;
+    Darwin) CC="${CC:-clang}"; CXX="${CXX:-clang++}"; GUI_LIBS="-framework OpenGL"; DL_LIBS="" ;;
+    # -ldl -lpthread: libtcod calls dlopen/dlclose and sem_*; src/DrawCensus.cpp
+    # calls dladdr. macOS has all in libSystem; glibc before 2.34 keeps them in
+    # separate libdl and libpthread. Harmless on newer glibc (stubs inside libc).
+    Linux)  CC="${CC:-gcc}";   CXX="${CXX:-g++}";     GUI_LIBS="-ldl -lpthread"; DL_LIBS="-ldl" ;;
     *)      echo "Unsupported host '$HOST' (want Darwin or Linux)"; exit 1 ;;
 esac
 AR="${AR:-ar}"
@@ -213,6 +264,12 @@ elif [ "$COMPILER" = no ]; then
 else
     OBJ="$ROOT/build/obj-$OUT"
 fi
+# inc-kx693: every damage type needs exactly one row in the DTypeHP table.
+python3 "$ROOT/tools/check_dtype_hp_table.py" \
+    || { echo "BUILD STOPPED: fix the DTypeHP table in src/Tables.cpp (tools/check_dtype_hp_table.py)."; exit 1; }
+# inc-rddai: every item quality name needs exactly one row in the QualityTable.
+python3 "$ROOT/tools/check_quality_table.py" \
+    || { echo "BUILD STOPPED: fix the QualityTable in src/Tables.cpp (tools/check_quality_table.py)."; exit 1; }
 mkdir -p "$OBJ" "$ROOT/mod" "$ROOT/logs" "$ROOT/save"
 
 if [ "$COMPILER" = yes ]; then
@@ -266,7 +323,7 @@ elif [ "$BACKEND" = posix ]; then
     # ncurses ships with macOS and with every Linux distribution, so this adds
     # no dependency to install. It is used only to draw to a real terminal;
     # a headless run never calls into it.
-    LINK_LIBS="-lz -lncurses"
+    LINK_LIBS="-lz -lncurses $DL_LIBS"
 else
     SDL_CFLAGS="$(pkg-config --cflags sdl2)"
     SDL_LIBS="$(pkg-config --libs sdl2)"
@@ -275,6 +332,38 @@ else
     SKIP_BACKENDS="Wcurses Wposix"
     LINK_LIBS="-lz $GUI_LIBS"
 fi
+
+# ------------------------------------------------------- parallel compile ---
+# pjob <label> <command...> runs one compile in the background, at most
+# INCURSION_BUILD_JOBS at once (default: the core count). Each compile's output
+# goes to its own log and is printed as one block when the compile ends; a
+# failed compile prints its log under "FAILED:" and pjob_wait then stops the
+# build. No object is skipped or reordered: only the wall time changes.
+BUILD_JOBS="${INCURSION_BUILD_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}"
+case "$BUILD_JOBS" in ''|*[!0-9]*|0) BUILD_JOBS=1 ;; esac
+PJOB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/incursion-build.XXXXXX")"
+trap 'rm -rf "$PJOB_DIR"' EXIT
+pjob() {
+    local label="$1"; shift
+    while [ "$(jobs -r | wc -l)" -ge "$BUILD_JOBS" ]; do sleep 0.05; done
+    (
+        log="$PJOB_DIR/$(printf '%s' "$label" | tr '/' '_').log"
+        if "$@" > "$log" 2>&1; then
+            [ -s "$log" ] && cat "$log"
+            exit 0
+        fi
+        { echo "FAILED: $label"; cat "$log"; } >&2
+        : > "$log.failed"
+        exit 1
+    ) &
+}
+pjob_wait() {
+    wait || true
+    if ls "$PJOB_DIR"/*.failed > /dev/null 2>&1; then
+        echo "build: STOPPED, a compile failed ($(ls "$PJOB_DIR"/*.failed | wc -l | tr -d ' ') file(s)); no binary was built" >&2
+        exit 1
+    fi
+}
 
 # ---------------------------------------------------------------- libtcod ----
 # Built from the vendored copy. The bundled zlib is too old to compile against
@@ -307,11 +396,12 @@ elif [ ! -f "$TCODLIB" ]; then
         case "$f" in libtcod/src/zlib/*) continue ;; esac
         o="$TOBJ/$(echo "$f" | tr '/' '_').o"
         if [ "${f##*.}" = "c" ]; then
-            $CC $TCOD_CSTD $TFLAGS -c "$f" -o "$o"
+            pjob "$f" $CC $TCOD_CSTD $TFLAGS -c "$f" -o "$o"
         else
-            $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
+            pjob "$f" $CXX $TFLAGS -fpermissive -c "$f" -o "$o"
         fi
     done
+    pjob_wait
     $AR rcs "$TCODLIB" "$TOBJ"/*.o
 fi
 
@@ -324,6 +414,45 @@ echo "--- compiling Incursion ---"
 CXXFLAGS="-O2 $WARN_FLAGS -fpermissive -Wno-narrowing ${CXXFLAGS_EXTRA_TARGET:-} ${CXXFLAGS_EXTRA_GCC:-} $DEFINES $INCLUDES $EXTRA_CXXFLAGS"
 CFLAGS="-O2 -w -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-mismatch -Wno-return-type $DEBUG_DEFINE -Iinc -Ilib -Icompat"
 
+# Record sizes and pad tables for the save coverage check come from the
+# compiler, with THESE flags, on every build (inc-cjos0 phase 8a): a hand-written
+# number is a merge conflict nobody can resolve by hand. The header lives beside
+# this build's objects' name, so two builds with different flags never share one.
+# The generator exits 1 and names the class when it cannot measure one; it writes
+# "LAYOUT_MEASURED 0" for a compiler with no layout dump (gcc, mingw) and then the
+# coverage check reports "not measured" rather than passing. INCURSION_LAYOUT_
+# UNMEASURED=1 forces that path.
+GEN="$ROOT/build/gen/$(basename "$OBJ")"
+mkdir -p "$GEN"
+if command -v python3 >/dev/null 2>&1 && [ -f tools/gen_record_layout.py ]; then
+    GEN_START=$SECONDS
+    if ! python3 -B tools/gen_record_layout.py --cxx "$CXX" --out "$GEN/RecordLayout.h" -- $CXXFLAGS; then
+        echo "build: STOPPED by tools/gen_record_layout.py; no binary was built"
+        exit 1
+    fi
+    echo "build: record layout generated ($((SECONDS - GEN_START))s)"
+else
+    echo "build: WARNING no python3 or tools/gen_record_layout.py; record layout not measured"
+    rm -f "$GEN/RecordLayout.h"
+fi
+# The value -> name tables the field-value observer prints beside a typed number, from the family marks of
+# inc/Defines.h (inc-cjos0 phase 8, D3). Never a hand table. Without python3 the observer prints bare numbers.
+if command -v python3 >/dev/null 2>&1 && [ -f tools/gen_family_names.py ]; then
+    if ! python3 -B tools/gen_family_names.py --out "$GEN/FamilyNames.h"; then
+        echo "build: STOPPED by tools/gen_family_names.py; no binary was built"
+        exit 1
+    fi
+else
+    rm -f "$GEN/FamilyNames.h"
+fi
+CXXFLAGS="$CXXFLAGS -I$GEN"
+
+# INCURSION_MODULE_ONLY=1 (set by tools/pressure/oracle.sh only): $ROOT/$OUT is already a binary built from
+# byte-identical C++ sources (inc-cjos0 phase 8, D5). Skip the compile and the link. The data step below still
+# recompiles mod/Incursion.Mod from lib/ and runs the order guard and the schema coverage check, as a full build does.
+if [ "${INCURSION_MODULE_ONLY:-}" = 1 ] && [ -x "$ROOT/$OUT" ]; then
+echo "build: module only; reusing $OUT (INCURSION_MODULE_ONLY=1)"
+else
 for f in src/*.cpp; do
     n="$(basename "$f" .cpp)"
     # Only one backend links: each defines main(), Error() and Fatal().
@@ -334,7 +463,7 @@ for f in src/*.cpp; do
     [ -n "$skip" ] && continue
     std="c++17"
     case "$n" in Tokens|Art) std="c++14" ;; esac
-    $CXX -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
+    pjob "$f" $CXX -std=$std $CXXFLAGS -c "$f" -o "$OBJ/$n.o"
 done
 
 # src/cpp1-6.c are the DECUS preprocessor, used only by -compile, so a shipping
@@ -347,11 +476,13 @@ for f in src/*.c; do
     if [ "$COMPILER" = no ]; then
         case "$n" in cpp[1-6]) continue ;; esac
     fi
-    $CC -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
+    pjob "$f" $CC -std=gnu89 $CFLAGS -c "$f" -o "$OBJ/c_$n.o"
 done
+pjob_wait
 
 echo "--- linking ---"
 $CXX -std=c++17 $EXTRA_LDFLAGS -o "$ROOT/$OUT" "$OBJ"/*.o $TCODLIB $SDL_LIBS $LINK_LIBS
+fi
 
 # ------------------------------------------------------------- game data -----
 # A shipping binary cannot build its own data: that is the point of it. The
@@ -419,6 +550,31 @@ elif [ ! -f "$ROOT/mod/Incursion.Mod" ] || { [ -z "$EXTRA_CXXFLAGS" ] && [ "$COM
             echo "order ledger: recorded the module's new entries."
         fi
     fi
+fi
+
+# The schema coverage check, early: a member added to an archived class with no
+# FIELD_ line used to stop the build at a hand-written static_assert. The pads
+# are generated now, so the only thing that notices is the coverage check, and
+# this runs it. It needs the module compiled just above and a binary that runs
+# here, so only the ordinary headless developer build does it. The posix build
+# defines DEBUG (COMPILER=yes), which is what makes coverage run. A finding stops
+# the build; the lines name the class (Player or Monster, the objects written)
+# and the uncovered offset and length.
+if [ "$BACKEND" = posix ] && [ "$TARGET" = native ] && [ "$COMPILER" = yes ] \
+   && [ -z "$EXTRA_CXXFLAGS" ]; then
+    COV_START=$SECONDS
+    COVDIR="$(mktemp -d "${TMPDIR:-/tmp}/incursion-cov.XXXXXX")"
+    "$ROOT/$OUT" -schematest "$COVDIR" -timeout 120 < /dev/null > "$COVDIR/out.txt" 2>&1 || true
+    if grep -q "SCHEMA COVERAGE" "$COVDIR/out.txt"; then
+        echo "build: STOPPED by the schema coverage check; a saved class has bytes no FIELD_ line covers:"
+        grep "SCHEMA COVERAGE" "$COVDIR/out.txt" | sort -u | head -20 | sed 's/^/    /'
+        echo "    add the FIELD_ line (or FIELD_SKIP for a member that is deliberately not saved)"
+        rm -rf "$COVDIR"
+        exit 1
+    fi
+    { grep "^coverage: " "$COVDIR/out.txt" || true; } | sort -u
+    rm -rf "$COVDIR"
+    echo "build: schema coverage checked ($((SECONDS - COV_START))s)"
 fi
 
 echo

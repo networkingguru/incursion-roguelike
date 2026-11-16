@@ -1,0 +1,22 @@
+# Prepares the built fixture druid-shoulder-metal-seed7-opt0822 for the checks that load it (bd inc-10v7f).
+# The old fixture, a .sav, held this state: wizard mode on, and a plain iron long sword on the L. Shoulder
+# (inc-d9gk). Expertise makes a held weapon's parry value count toward Defense Class; a Wood Elf is proficient
+# with a long sword, so its parry modifier of 3 is not cut. Starting gear is nonmetal.
+# Ruling V7-1: a fixture holds only the created character, so the checks that need the state make it here.
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Item Acquisition"
+RIGHT*9
+@until "long sword" DOWN
+ENTER
+e SPACE
+b SPACE
+d
+# Drop what the swaps left in the air (the old character's quarterstaff; the built one's scythe).
+f SPACE d
+@expect "L. Shoulder  :long sword"
+@expect "R. Shoulder  :Empty"
+@expect "Weapon Hand  :elven darkwood short bow"
+ESC

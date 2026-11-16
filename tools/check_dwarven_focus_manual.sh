@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: live
 # inc-8p2j: manual Dwarven Focus reverses the worthy-foe CR comparison.
-# fact: dwarf, level/CR 1, unused focus, starting map and position -- frozen dwarf-barbarian-focus.sav
+# fact: dwarf, level/CR 1, unused focus, starting map and position -- frozen dwarf-barbarian-focus.char -- dwarf-barbarian-focus is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/dwarf-barbarian-focus.sav)
 # fact: no other living targets -- wizard Genocide Everything before summoning
 # fact: adjacent named target -- wizard Monster Summoning, one square east
 # fact: higher ogre CR 2, equal hobgoblin CR 1, lower goblin effective CR 0 -- named summons; live debug CR dumps asserted
@@ -17,7 +17,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 OPTIONS="$ROOT/tools/fixtures/options-dwarven-focus.dat"
-FIXTURE="$ROOT/tools/fixtures/chars/dwarf-barbarian-focus.sav"
+FIXTURE="$ROOT/tools/fixtures/specimens/dwarf-barbarian-focus.sav"
 [ -x ./incursion-headless ] && [ -f "$FIXTURE" ] || {
     echo 'INCONCLUSIVE: build with BACKEND=posix ./build_macos.sh; frozen dwarf required'
     exit 2

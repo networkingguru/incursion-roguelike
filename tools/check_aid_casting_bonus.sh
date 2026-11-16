@@ -28,6 +28,11 @@
 # PROVED RED by --prove-red: the mutation deletes the three added WESMAX lines
 # and rebuilds. The druid then reads +0 and this check exits 1.
 #
+# fact: characters -- orc-mage-seed4-opt0822.char (old save, control) and druid-shoulder-metal-seed7-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the druid's wizard mode and long sword -- tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+# fact: the casting term read -- the spell description's Chance line, no dice
+#
 # Usage: tools/check_aid_casting_bonus.sh [--prove-red]
 . "$(dirname "$0")/check_lib.sh"
 
@@ -35,10 +40,10 @@ CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 
 [ -x ./incursion-headless ] || _check_die 2 \
     "./incursion-headless is not built. Run: BACKEND=posix ./build_macos.sh"
-[ -f tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav ] || _check_die 2 \
-    "the frozen subject druid-shoulder-metal-seed7-opt0822.sav is missing."
-[ -f tools/fixtures/chars/orc-mage-seed4-opt0822.sav ] || _check_die 2 \
-    "the frozen subject orc-mage-seed4-opt0822.sav is missing."
+[ -f tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.char ] || _check_die 2 \
+    "the fixture druid-shoulder-metal-seed7-opt0822.char is missing."
+[ -f tools/fixtures/chars/orc-mage-seed4-opt0822.char ] || _check_die 2 \
+    "the frozen subject orc-mage-seed4-opt0822.char is missing."
 
 # Scratch module: a copy of lib/ under logs/, with the test god appended to the
 # END of main.irc (the append-only position). The tracked lib/ is never touched.
@@ -79,9 +84,9 @@ term_of() {
 }
 
 # One subject: base and aid terms must be the same kind and differ by 25.
-judge() { # <label> <fixture> <aid keys>
+judge() { # <label> <fixture> <aid keys> <base keys>
     local label="$1" sav="$2" base aid bn bk an ak
-    base="$(term_of "$sav" tools/keys/aid-casting-bonus-base.keys)"
+    base="$(term_of "$sav" "$4")"
     aid="$(term_of "$sav" "$3")"
     echo "  $label: base [${base:-<none>}]  with +5 A_AID [${aid:-<none>}]"
     if [ -z "$base" ] || [ -z "$aid" ]; then
@@ -109,8 +114,8 @@ do_check() {
     build_scratch
     mkdir -p "$CHECK_ROOT/logs/runs"
     failures=0
-    judge "orc mage (arcane, control)" tools/fixtures/chars/orc-mage-seed4-opt0822.sav tools/keys/aid-casting-bonus-aid.keys
-    judge "druid (primal)" tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav tools/keys/aid-casting-bonus-aid-wizard.keys
+    judge "orc mage (arcane, control)" tools/fixtures/chars/orc-mage-seed4-opt0822.char tools/keys/aid-casting-bonus-aid.keys tools/keys/aid-casting-bonus-base.keys
+    judge "druid (primal)" druid-shoulder-metal-seed7-opt0822 tools/keys/aid-casting-bonus-aid-wizard.keys tools/keys/aid-casting-bonus-druid-base.keys
     [ "$failures" -eq 0 ] || CHECK_FAIL=1
 }
 

@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -721,6 +721,7 @@
+ #define SN_KNOCKDOWN   20 /* ww: dwarven stability */
+ #define SN_STUN        21
+ #define SN_REST        22
++#define SN_GRWB 23
+ // end family: sn
+ // family: ai internal
+ 

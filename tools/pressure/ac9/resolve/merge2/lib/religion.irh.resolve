@@ -1,0 +1,8 @@
+            }
+          if (kind == 1)
+            {
+              MAEVE_TOUCH_PLAN
+              while (tcApp == 0 && tcCur != 0)
+                {
+                  MAEVE_TOUCH_COLLECT
+                  if (tcCount > 0)

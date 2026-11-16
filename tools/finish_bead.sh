@@ -610,6 +610,34 @@ Nothing has reached $BASE_BRANCH."
     fi
 fi
 
+# STEP 3a (inc-cjos0). Landing on anything but master (an epic): a stored value
+# this branch added may now collide with a master value that STEP 3 just brought
+# in. tools/move_branch_values.py moves the branch's own value to a free one. If
+# it moved anything the working tree changed after the commit, so the landing
+# stops and the change is committed on the bead branch first. Nobody edits the
+# number by hand. On master the tool is not run. Exit 2 (could not measure)
+# warns; STEP 3b's check_stored_values then judges.
+if [ "$BASE_BRANCH" != "master" ] && [ -f "$WORKTREE/tools/move_branch_values.py" ]; then
+    echo "=== moving colliding stored values (base $BASE_BRANCH) ==="
+    _inc_mv_out="$( cd "$WORKTREE" && python3 tools/move_branch_values.py 2>&1 )"
+    _inc_mv=$?
+    printf '%s\n' "$_inc_mv_out"
+    if [ "$_inc_mv" -eq 1 ]; then
+        die "STOPPED: tools/move_branch_values.py refused on $BEAD (see above).
+Nothing has reached $BASE_BRANCH. Fix it in $WORKTREE and run this again."
+    elif [ "$_inc_mv" -ne 0 ]; then
+        echo "=== stored-value move could not measure (exit $_inc_mv); continuing ==="
+    else
+        _inc_moved="$(printf '%s\n' "$_inc_mv_out" \
+            | sed -n 's/^move_branch_values: moved \([0-9][0-9]*\) value.*/\1/p' | tail -1)"
+        if [ "${_inc_moved:-0}" -gt 0 ]; then
+            die "STOPPED: tools/move_branch_values.py moved $_inc_moved value(s) in $WORKTREE.
+Commit the change on the $BEAD branch and run tools/finish_bead.sh $BEAD again.
+Nothing has reached $BASE_BRANCH."
+        fi
+    fi
+fi
+
 # STEP 3b. The fast set, run in the worktree, for seconds of feedback before
 # the gate. Exit 1 means a fast check failed, so the landing stops before the
 # gate, matching STEP 4's refusal. Exit 2 (could not measure) warns and goes on.
@@ -679,6 +707,16 @@ say so in your report."
     fi
 else
     echo "=== gate SKIPPED (--no-gate) ==="
+fi
+
+# STEP 4-fixtures (inc-10v7f, spec B8). Report each fixture whose built
+# character changed against the base pin record. It reports and NEVER blocks the
+# landing: a character change is often the point of the bead, and the gate has
+# already judged the checks. Its failure to run is a line, not a stop.
+if [ -x "$WORKTREE/tools/fixture_changes_report.sh" ]; then
+    echo "=== fixtures: characters changed since the recorded base ==="
+    ( cd "$WORKTREE" && tools/fixture_changes_report.sh ) ||
+        echo "finish_bead: the fixture report exited $?; continuing."
 fi
 
 # STEP 4a (inc-mhn1w). Only this script writes tools/resource_order.ledger. The

@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: none a measurement tool with no threshold, and one run takes minutes (inc-gst2)
+# fact: character and level -- tools/fixtures/specimens/lizardfolk-monk-seed1.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the sweep walks the old save's 128x128 level and its Entry Chamber
 # inc-gst2: how much wall time does one game turn cost on a level crowded with
 # creatures? This is a MEASUREMENT tool, not a gate: it sets no threshold. It
 # fails (exit 2) only when a scenario cannot prove its own crowd or its own
@@ -33,7 +34,7 @@ cd "$ROOT"
 
 RUNS=1; REST=300; SCEN="baseline hostile allies"; BIN=""; CENSUS=0; PROFILE=""
 OPTS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22-noroomdesc.dat}"
-LOAD="tools/fixtures/chars/lizardfolk-monk-seed1.sav"
+LOAD="tools/fixtures/specimens/lizardfolk-monk-seed1.sav"
 while [ $# -gt 0 ]; do
     case "$1" in
         --runs) RUNS="$2"; shift 2 ;;

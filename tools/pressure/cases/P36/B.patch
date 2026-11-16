@@ -1,0 +1,20 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2494,6 +2494,7 @@
+ #define AQ_MEDIUM_FOR    2
+ #define AQ_HEAVY_FOR     3
+ #define AQ_FIRE_RES      4
++#define AQ_GRWB 82
+ #define AQ_COLD_RES      5
+ #define AQ_ACID_RES      6
+ #define AQ_LIGHT_RES     7
+--- a/src/Tables.cpp
++++ b/src/Tables.cpp
+@@ -1289,6 +1289,7 @@
+   { IQ_BLESSED, false, false },
+   { IQ_SACRED, false, false },
+   { IQ_WROUGHT, false, false },
++  { AQ_GRWB, false, true },
+   { -1, false, false } };
+ 
+ bool QualityIsWeapon(int16 q) {

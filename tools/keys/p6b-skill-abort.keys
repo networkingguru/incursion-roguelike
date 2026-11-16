@@ -1,0 +1,36 @@
+# inc-10v7f phase 6b: make a Human Warrior (point buy) and meet the Skill
+# Manager by hand: place some ranks, abort with ESC and confirm (the pools are
+# unspent, so the manager resets), then spend every rank and confirm. This
+# walks the screen's abort prompt, its Reset loop and its confirm prompt.
+# Used by tools/compare_creation_walks.sh.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+p       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+@choose "Alertness"
+@choose "Dodge"
+@choose "Athletic"
+@choose "long sword"   # the Warrior's own focus pick
+RIGHT*2 DOWN RIGHT*2
+ESC y   # abort and discard; the pools are unspent, so the manager resets
+RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "personality archetype" a
+@until "Afoot" ESC
+
+@dump:arrival
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

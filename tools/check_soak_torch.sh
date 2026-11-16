@@ -31,7 +31,7 @@ cd "$ROOT"
 SEED=1
 KEYS=tools/keys/bane-radius.keys
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.sav
+LOAD=tools/fixtures/chars/xsummon-priest-seed5-opt0822.char
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

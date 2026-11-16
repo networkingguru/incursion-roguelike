@@ -35,6 +35,7 @@
 
 
 #include "Incursion.h"
+#include "DamageClassProbe.h" /* inc-kx693 */
 
 Annotation * Resource::cAnnot;
 Annotation * Resource::cAnnot2;
@@ -583,21 +584,17 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
 
     t = (time_t)NextSeed();
 
-    switch(T1->GetMode())
+    /* Every draw below is a creation decision while a character is made: it is
+       keyed by this granting resource, the annotation's ordinal and its kind
+       (spec A4, B18). The stream seed is not drawn when no window is open. */
+    CreationScope gearScope(CreationWindowOpen() ? NAME(xID) : NULL, 0);
+    if (CreationWindowOpen())
       {
-        case MO_CREATE:
-          seed = t % 100;
-          RInf.EquipRolls[RInf.cEquipRolls++] = (int8)seed;
+        seed = (int16)SourcedRoll(CK_GEAR_STREAM, [&]() { return (int32)(t % 100); },
+            NULL, CreationRange(0, 99));
+        /* A source that states each later draw does not re-seed (spec B1). */
+        if (CreationSourceNow()->Reseeds())
           srand(seed);
-          ASSERT(RInf.cEquipRolls < 256);
-         break;
-        case MO_RECREATE:
-          seed = RInf.EquipRolls[RInf.nEquipRolls++];
-          srand(seed);
-          ASSERT(RInf.nEquipRolls < 256);
-         break;
-        default:
-         break; 
       }
     
     Player *p;
@@ -614,6 +611,7 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
 
     
 
+    int annotOrdinal = 0;
     for(a=FAnnot2();a;a=NAnnot2())
       {
         /* Resource::Event has a FAnnot()/NAnnot() loop. We need
@@ -623,27 +621,19 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
         if (a->AnType == AN_EQUIP)
           {
             it = NULL;
+            std::string annotSub;
+            if (CreationWindowOpen())
+              annotSub = (const char*)Format("a%d", (int)annotOrdinal);
+            annotOrdinal++;
 
             if (a->u.eq.Flags & GF_ELSE)
               if (last_given)
                 continue;
 
             if (a->u.eq.Chance) {
-              int16 roll;
-              switch(T1->GetMode())
-                {
-                  case MO_CREATE:
-                    roll = random(100)+1;
-                    RInf.EquipRolls[RInf.cEquipRolls++] = (int8)roll;
-                    ASSERT(RInf.cEquipRolls < 256);
-                   break;
-                  case MO_RECREATE:
-                    roll = RInf.EquipRolls[RInf.nEquipRolls++];
-                    ASSERT(RInf.nEquipRolls < 256);
-                   break;
-                  default:
-                    roll = random(100)+1; 
-                }
+              int16 roll = (int16)SourcedRoll(CK_GEAR_CHANCE,
+                [&]() { return (int32)(random(100)+1); }, annotSub.c_str(),
+                CreationRange(1, 100));
               if (roll > a->u.eq.Chance)
                 { last_given = false; continue; }
               }
@@ -661,6 +651,13 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
               }
 
             last_given = true;
+            /* One decision per annotation: the item pick, the effect pick, the
+               item level, Item::Create or Item::GenItem, EV_GENITEM, and the
+               annotation's own plus, quantity, charges and qualities, so the
+               recorded item is the complete one (spec B2, B15). `it` NULL
+               means the annotation grants nothing. */
+            CreationItem made;
+            if (SourcedItem(CK_KIT_ITEM, made, [&](CreationItem &io) {
             if ((a->u.eq.Flags & GF_RANDOM_ITEM))
               {
                 /*maxlev = a->u.eq.eID / 256;
@@ -712,10 +709,10 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
             else
               eID = a->u.eq.eID;
             if (!iID)
-              continue;
+              return;
             if (TITEM(iID)->IType == T_BOW || TITEM(iID)->IType == T_MISSILE)
               if (!doRanged)
-                continue;
+                return;
             if (random_depth_effect) {
                 int max_lev = a->u.eq.eID / 256; 
                 int min_lev = a->u.eq.eID % 256; 
@@ -732,7 +729,7 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
                   luck = max(luck,theGame->GetPlayer(0)->GetAttr(A_LUC));
                 it = Item::GenItem(IG_MONEQUIP,iID,the_lev,luck,MonsterItems);
                 if (!it)
-                  continue;
+                  return;
                 while (!(it->IFlags & IF_CURSED) && it->ItemLevel() < min_lev &&
                         it->GetInherentPlus() < 5) 
                   it->SetInherentPlus(it->GetInherentPlus() + 1);
@@ -759,8 +756,8 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
                     case NOTHING: break;
                   }
               }
-            if (!it) 
-              continue;
+            if (!it)
+              return;
 
             plus = a->u.eq.Spec;
             it->MakeMagical(eID, it->GetInherentPlus() + plus);
@@ -781,6 +778,11 @@ void Resource::GrantGear(Creature *c, rID xID, bool doRanged)
             for (int8 q=0;q!=4;q++) 
               if (a->u.eq.Qualities[q])
                 it->AddQuality(a->u.eq.Qualities[q]);
+            CreationDescribeItem(io, it);
+            }, annotSub.c_str()))
+              it = CreationMakeItem(made);
+            if (!it) 
+              continue;
 
             if (c->isPlayer())
               it->MakeKnown(-1);
@@ -1133,6 +1135,16 @@ EvReturn Resource::Event(EventInfo &e, rID xID, int16 Event)
               ExecutionScope(rID id) : previous(executingResource) { executingResource = id; }
               ~ExecutionScope() { executingResource = previous; }
             } executionScope(xID);
+            CensusEvent censusEvent(e.Event,theGame->Modules[ModNum]->QTextSeg + Name);
+            /* Each sourced decision a creation script makes is keyed (resource,
+               event, ordinal) (inc-10v7f A2, B6). Outside the creation window
+               this pushes nothing. */
+            const bool creationEvent = CreationWindowOpen() &&
+                (e.Event == EV_BIRTH || e.Event == EV_ADVANCE ||
+                 e.Event == EV_PREREQ || e.Event == EV_ISTARGET ||
+                 e.Event == EV_STARTING_ITEM || e.Event == EV_GENITEM);
+            CreationScope creationScope(creationEvent ? NAME(xID) : NULL, e.Event, creationEvent);
+            DamageClassHandler(xID, e); /* inc-kx693 */
             res = theGame->VM.Execute(&e, xID, a->u.ev[I(i,5)].MsgOrCode);
             /*if (res == ERROR) 
               Error("Event %s returned ERROR in VCode routine "

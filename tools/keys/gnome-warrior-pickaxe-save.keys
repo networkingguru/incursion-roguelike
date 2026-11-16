@@ -1,11 +1,11 @@
 # Build and save the character tools/check_dig_zero_skill.sh loads (bd inc-inr80).
 #
-#   tools/make_char_fixture.sh gnome-warrior-wis3-pickaxe-seed1-opt0822 \
+#   the retired fixture maker gnome-warrior-wis3-pickaxe-seed1-opt0822 \
 #       tools/keys/gnome-warrior-pickaxe-save.keys 1 \
 #       tools/fixtures/options-2026-08-22.dat
 #
 # This script ends with the System Menu's [b] Save and Continue, which is the
-# one save tools/make_char_fixture.sh accepts.
+# one save the retired fixture maker accepts.
 #
 # THE BUCKLER. A generated gnome warrior starts with a buckler in the Ready
 # Hand, and the pickaxe needs both hands, so the script stows the buckler into

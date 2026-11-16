@@ -1,0 +1,190 @@
+# orc-bard-reapply-seed1: converted from tools/fixtures/chars/orc-bard-reapply-seed1.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/reapply-bard-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit 0aea5504+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 553 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/reapply-bard-save.keys 1 99 74 24:23:0
+# roll search: none: the walk recorded no roll the dump shows only through its result
+# Values set from the old dump (14), skeleton value -> old value:
+#   scalar: name: Rathak -> Shagga
+#   scalar: surname: the Breaker -> the Avenger
+#   scalar: character_name: Rathak the Breaker -> Shagga the Avenger
+#   scalar: store_seed: 24 -> 25
+#   scalar: attr_str: 11 -> 14
+#   scalar: attr_dex: 16 -> 14
+#   scalar: attr_con: 17 -> 12
+#   scalar: attr_int: 11 -> 17
+#   scalar: attr_wis: 13 -> 15
+#   feat: feat queue: Acrobatic, Alertness -> Acrobatic, Alertness
+#   skill: skill_ranks [Craft]: 0 -> 2
+#   skill: skill_ranks [Decipher Script]: 0 -> 2
+#   quantity: thrown_quantity: 6 -> 5
+#   quantity: ammo_quantity: 30 -> 40
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   feat: feat: Amplify Spell are the old character's beyond creation's 2 slots: level-up picks of the arrival replay (a leveled fixture); the replay decides them
+#   kit: set aside, made by the perk roll and the skill ranks, not by a kit ask -- old: 1 perk item (lenses) and 2 skill tools (alchemy set, alchemy 2; craftsman's tools, craft 2) | built: 1 perk item (buckler) and 1 skill tool (alchemy set, alchemy 2)
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: craft_formula: 2 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 41 kept as the walk recorded it; the old character holds this annotation's item (longspear, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Bard;a11]: 60 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Bard;a12]: 26 kept as the walk recorded it; the old character holds this annotation's item (flute, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 54 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 44 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 37 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 9 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 97 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 5 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 81 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 100 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 49 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a22]: 59 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a24]: 4 kept as the walk recorded it; the old character holds this annotation's item (studded leather, quantity 1), so its roll is within the annotation's chance
+#   pick: craft_formula [Potion]: Fury added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Valour;potion added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Neutralize Poison;potion added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Potion]: Wakefulness added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Identify;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: *Identify*;scroll added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (featherlight) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (graceful) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (life-keeping) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (fortification) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Scroll]: Enchant Armour (resistance) added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: sunrod added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: Antitoxin added: the dump does not show this decision; the build's default was taken
+#   pick: craft_formula [Alchemy]: Stimtab added: the dump does not show this decision; the build's default was taken
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Orc
+subrace: Orc
+name: Shagga
+surname: the Avenger
+class: Bard
+perk_type [0]: PERK_ITEM
+perk_item [0]: buckler;wooden, plus 3
+perk_type [1]: PERK_ABILITY
+perk_ability [1]: Plant Mastery 3
+attr_str: 14
+attr_dex: 14
+attr_con: 12
+attr_int: 17
+attr_wis: 15
+attr_cha: 13
+attr_luc: 15
+alignment: Neutral
+feat: Acrobatic
+feat: Alertness
+hp_roll [Bard]: 6
+mana_roll [Bard]: 10
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 2
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 2
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 19
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 41
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Bard]: 20
+kit_item [Bard;a0]: gold piece, quantity 1
+kit_item [Bard;a8]: short bow, quantity 1
+kit_item [Bard;a9]: noble attire, quantity 1
+kit_item [Bard;a10]: gold piece, quantity 2502
+gear_chance [Bard;a11]: 60
+gear_chance [Bard;a12]: 26
+kit_item [Bard;a12]: flute, quantity 1
+gear_stream [Universal Gear]: 21
+gear_chance [Universal Gear;a3]: 54
+gear_chance [Universal Gear;a4]: 44
+gear_chance [Universal Gear;a6]: 37
+gear_chance [Universal Gear;a7]: 9
+gear_chance [Universal Gear;a10]: 97
+gear_chance [Universal Gear;a14]: 5
+gear_chance [Universal Gear;a18]: 81
+gear_chance [Universal Gear;a19]: 100
+gear_chance [Universal Gear;a20]: 49
+gear_chance [Universal Gear;a22]: 59
+gear_chance [Universal Gear;a24]: 4
+kit_item [Universal Gear;a24]: studded leather, quantity 1
+thrown_quantity: 5
+ammo_quantity: 40
+script_yn [Orc;EV_150]: no
+personality: The Witty Thrillseeker
+spell_learn: Sleep [Bardic]
+craft_formula [Alchemy]: tanglefoot bag
+craft_formula [Alchemy]: eggshell smoke-bomb
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: Antitoxin
+craft_formula [Alchemy]: Stimtab
+craft_formula [Potion]: Fury
+craft_formula [Potion]: Valour;potion
+craft_formula [Potion]: Neutralize Poison;potion
+craft_formula [Potion]: Wakefulness
+craft_formula [Scroll]: Identify;scroll
+craft_formula [Scroll]: *Identify*;scroll
+craft_formula [Scroll]: Enchant Armour
+craft_formula [Scroll]: Enchant Armour (featherlight)
+craft_formula [Scroll]: Enchant Armour (graceful)
+craft_formula [Scroll]: Enchant Armour (life-keeping)
+craft_formula [Scroll]: Enchant Armour (fortification)
+craft_formula [Scroll]: Enchant Armour (resistance)
+store_seed: 25
+character_name: Shagga the Avenger
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 1
+rerolls: 5
+stat_method: 1

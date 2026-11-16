@@ -1,0 +1,8 @@
+# THE READ MUST NOT REST ON A DIE. Item::ReadScroll gates the whole effect on
+# SkillCheck(SK_DECIPHER, 10 + sLevel) (src/Magic.cpp:6205). Enchant Armour is
+# Level 3 and sLevel is Level*2-1, so the DC is 15, and this mage's Decipher
+# Script rating is +2. The check script sets INCURSION_RUNTO_SKILL_ROLL=20,
+# which forces the d20 of every skill check, so each read totals 22
+# (LastSkillCheckResult is rating + roll, src/Skills.cpp:1849): above the DC, and
+# not above 20 + sLevel = 25, where the scroll would be preserved on a coin toss
+# (src/Magic.cpp:6214). Both reads therefore enchant and both scrolls are spent.

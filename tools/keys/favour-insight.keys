@@ -2,7 +2,7 @@
 # Read by tools/check_favour_awards.sh, bd inc-rgzr.
 #
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.char \
 #       tools/headless.sh tools/keys/favour-insight.keys 5
 #
 # Creature::SkillCheck (src/Skills.cpp) pays 10 * (check total - 15) favour to

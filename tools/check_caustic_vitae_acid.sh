@@ -47,7 +47,7 @@ cd "$ROOT"
 
 SEED=1   # an argument only: the character is loaded and every roll below is forced
 OPTIONS=tools/fixtures/options-2026-08-22.dat
-export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-mage-seed1-opt0822.char
 export INCURSION_LOF_FORCE_ROLL=20
 
 [ -x ./incursion-headless ] || {

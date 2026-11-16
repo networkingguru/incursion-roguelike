@@ -34,7 +34,7 @@
 #
 # fact: character and level -- generated in the run by tools/keys/smoke.keys; asserted only as invariants (map shown, no death, not stuck)
 # fact: settings -- tools/fixtures/options-2026-08-22.dat (SMOKE_OPTS) for assertions 1-7; tools/gates/Options.Dat (GATE_OPTS) for 8-10
-# fact: character for assertions 8-10 -- fixture tools/fixtures/chars/engaged-hostile.sav (INCURSION_LOAD)
+# fact: character and scene for assertions 8-10 -- tools/fixtures/specimens/engaged-hostile.sav, the frozen old save (kept as a specimen; it waits for inc-9s4u0 to build its scene): the awake hostile bugbear stands beside the monk (INCURSION_LOAD)
 # fact: second seed of assertion 4 -- 99, or INCURSION_SEED_OVERRIDE set per run under tools/seed_sweep.sh
 #
 # Usage: tools/check_headless.sh              (exits 0 on pass, 1 on fail)
@@ -415,12 +415,12 @@ fi
 # steps test. See docs/specs/2026-09-18-headless-prompt-fixtures-brief.md.
 #
 # Instead: load a frozen character who is already standing next to a hostile
-# monster (tools/fixtures/chars/engaged-hostile.sav, built by
+# monster (tools/fixtures/specimens/engaged-hostile.sav, built by
 # tools/keys/engaged-hostile-save.keys -- a Lizardfolk Monk 1 one square west
 # of an awake, hostile, perceiving bugbear) and drive each ending on purpose
 # with a dedicated key script. Same fixture, same seed, three endings.
 GATE_OPTS="$ROOT/tools/gates/Options.Dat"
-CHAR_FIXTURE="$ROOT/tools/fixtures/chars/engaged-hostile.sav"
+CHAR_FIXTURE="$ROOT/tools/fixtures/specimens/engaged-hostile.sav"
 if [ ! -f "$GATE_OPTS" ]; then
     fail "the pinned gate settings are missing: $GATE_OPTS"
 elif [ ! -f "$CHAR_FIXTURE" ]; then

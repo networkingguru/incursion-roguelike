@@ -18,13 +18,11 @@
 #      outcome messages of the SellItem branch (src/Managers.cpp); the
 #      session returns to play.
 #
-# fact: character, gold, inventory -- INCURSION_LOAD=tools/fixtures/chars/
-#   orc-barbarian-seed1-opt0818-store.sav (gold is read from the "You have N gp"
-#   line, never hard-coded)
-# fact: Roark's stock (names, enchantments, order) -- the fixture was saved AFTER
-#   Roark was created and his Gear rolled (tools/keys/chargen-default-store-save.keys
-#   opens the store once before saving), so the save holds the stock and no
-#   run generates it; see the fixture's .sheet.txt (bead inc-bw1xe)
+# fact: character, gold, inventory -- INCURSION_LOAD=orc-barbarian-seed1-opt0818-store, built from its
+#   .char and served by tools/fixture_cache.sh (gold is read from the "You have N gp" line, never hard-coded)
+# fact: Roark's stock (names, enchantments, order) -- decided by the .char's store_seed (24), so a build makes
+#   the same stock every time: two runs of the built character and the old frozen save (opened at the store,
+#   dump `s`) show the same 49-line stock screen, the sidebar corpse order aside (bead inc-bw1xe, inc-10v7f)
 # fact: dagger price -- read from the "Confirm purchase" prompt
 # fact: sell outcome -- Roark's EV_WILLBUY script and the SellItem branch
 #   decide it; the check accepts every outcome message in that branch
@@ -47,7 +45,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SEED=1
-FIXTURE=tools/fixtures/chars/orc-barbarian-seed1-opt0818-store.sav
+FIXTURE=orc-barbarian-seed1-opt0818-store   # the bare name: built from tools/fixtures/chars/$FIXTURE.char
 
 [ -x ./incursion-headless ] || {
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"

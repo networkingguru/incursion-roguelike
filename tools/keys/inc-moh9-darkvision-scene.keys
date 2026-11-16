@@ -1,11 +1,11 @@
 # inc-moh9: infravision-vs-light-source reproduction scene.
 #
-# Fixture: tools/fixtures/chars/kobold-rogue-seed1.sav (Tizzit, Kobold Rogue 1).
+# Fixture: tools/fixtures/chars/kobold-rogue-seed1.char (Tizzit, Kobold Rogue 1).
 # Options: tools/fixtures/options-2026-08-22.dat (the settings this fixture
 #   was made and sheeted with; see its .sheet.txt header).
 # Run with:
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #       tools/headless.sh tools/keys/inc-moh9-darkvision-scene.keys 1
 # (or the SDL build the same way, for the real @shot capture).
 #

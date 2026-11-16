@@ -23,7 +23,7 @@
 # A control that misbehaves, or a subject that never took acid on the sword, or
 # a sword that is not flaming at 15 of 15 at the start, exits 2.
 #
-# fact: character (orc warrior) -- fixture quality-item-magic-seed5-opt0822, INCURSION_LOAD
+# fact: character (orc warrior, Monsters Maximum Hit Points DOUBLE) -- fixture quality-item-magic-seed5-opt0822 (built from its .char and the .options.dat beside it, served by tools/fixture_cache.sh), INCURSION_LOAD
 # fact: the blobs and the sword -- wizard Monster Summoning and Item Acquisition
 # fact: Freeze Monsters on -- wizard Wizard Mode Switches (tools/keys/dequ-setup-loaded.keys)
 # fact: the first blow hits the blob -- INCURSION_LOF_FORCE_ROLL=18
@@ -37,10 +37,10 @@
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # The character is loaded, so no attribute roll decides him. He was generated
-# with "Monsters Maximum Hit Points" on DOUBLE (tools/keys/quality-item-magic-save.keys):
+# with "Monsters Maximum Hit Points" on DOUBLE (tools/fixtures/chars/quality-item-magic-seed5-opt0822.char):
 # that setting belongs to the character generation block, which a loaded game
 # keeps from its save, so an options file cannot set it.
-export INCURSION_LOAD=tools/fixtures/chars/quality-item-magic-seed5-opt0822.sav
+export INCURSION_LOAD=quality-item-magic-seed5-opt0822
 # Diagnosed 2026-10-23 (Observed, seed 101): the first swing KILLED the blob
 # ("you swing, killing the acid blob. Acid splashes you!"), so the sword never
 # took acid. A blob that survives needs its hit points at the maximum

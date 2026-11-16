@@ -1,0 +1,2 @@
+# N05: the last old entry, P's own build
+attr A_CDEF 1040

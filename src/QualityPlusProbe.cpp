@@ -61,7 +61,7 @@ void QualityPlusProbe(Player *p) {
                     Counts &c = counts[category];
                     bool any = false, scaled = false;
                     String qualities;
-                    for (int q = 1; q <= WQ_TRUELAST; ++q) {
+                    for (int q = 1; q <= QualityMaxNumber(); ++q) {
                         if (!it->HasQuality(q)) continue;
                         any = true;
                         scaled |= PlusScaled(q, category < 2);

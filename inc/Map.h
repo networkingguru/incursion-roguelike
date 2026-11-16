@@ -125,6 +125,8 @@ class Overlay
 			int16 GlyphY[MAX_OVERLAY_GLYPHS];
 			Glyph GlyphImage[MAX_OVERLAY_GLYPHS];
 			int16 GlyphCount;
+			static_assert(MAX_OVERLAY_GLYPHS <= 32767,
+			  "GlyphCount is an int16 and travels as K_I16; MAX_OVERLAY_GLYPHS may not pass 32767");
 			hObj m;
 		public:
 			Overlay(hObj _m) { Active=false;m=_m; }
@@ -139,6 +141,7 @@ class Overlay
 
 			void ShowGlyphs();
 			friend class Map;
+			friend class Registry;   /* -schematest and -schemaload (src/SaveV1.cpp) read the glyph arrays */
 	};
 
 struct MTerrain 
@@ -189,6 +192,7 @@ struct EncMember
 
 class Map: public Object
   {
+   friend struct DumpPlanter;   /* src/Dump.cpp: INCURSION_PLANT sets a cell's terrain or region */
    friend class Magic;
    friend void Game::MonsterEvaluation(); 
    friend void Game::MonsterEvaluationCR(); 
@@ -599,13 +603,11 @@ class Map: public Object
          FIELD_BLOB and FIELD_OBJ take the legacy Block/Serialize branch on
          the v0 path, and reordering them would break every existing save.
          Every scalar macro is a no-op on the v0 path. */
-      static_assert(sizeof(Map) == 4344,
-                    "Map's coverage pin row pads assume this");
       static_assert(sizeof(bool) == 1, "the staged bools travel as K_U8");
       int i;
-      FIELD_I16(673, sizeX);
-      FIELD_I16(674, sizeY);
-      FIELD_I16(675, nextAvailableTerraKey);
+      FIELD_I16("sizeX", sizeX);
+      FIELD_I16("sizeY", sizeY);
+      FIELD_I16("nextAvailableTerraKey", nextAvailableTerraKey);
       /* Bools staged through uint8s, as Character::isFallenPaladin is
          (inc/Creature.h): a byte off a crafted file is any of 256 values,
          and a bool holding one of the other 254 is undefined behaviour. */
@@ -616,51 +618,51 @@ class Map: public Object
           bDaysPassed = inDaysPassed ? 1 : 0;
           bOvActive   = ov.Active ? 1 : 0;
         }
-      FIELD_U8 (676, bGenerate);    FIELD_SKIP(inGenerate);
+      FIELD_U8 ("bGenerate", bGenerate);    FIELD_SKIP(inGenerate);
       /* RegionList and TerrainList are rID arrays: per-element FIELD_RID
          inside an embed, never FIELD_ARRAY -- raw pool indices are exactly
          what the name table exists to replace. */
-      r.V1EmbedBegin(677, RegionList, sizeof(RegionList));
+      r.V1EmbedBegin("RegionList", RegionList, sizeof(RegionList));
       for (i = 0; i != 256; i++)
-        FIELD_RID((uint16)(1 + i), RegionList[i]);
+        FIELD_RID_AT("RegionList", i, RegionList[i]);
       r.V1EmbedEnd();
-      FIELD_ARRAY(678, SpecialDepths, sizeof(uint8), 16);
-      r.V1EmbedBegin(679, TerrainList, sizeof(TerrainList));
+      FIELD_ARRAY("SpecialDepths", SpecialDepths, sizeof(uint8), 16);
+      r.V1EmbedBegin("TerrainList", TerrainList, sizeof(TerrainList));
       for (i = 0; i != 256; i++)
-        FIELD_RID((uint16)(1 + i), TerrainList[i]);
+        FIELD_RID_AT("TerrainList", i, TerrainList[i]);
       r.V1EmbedEnd();
-      FIELD_I16(680, CurrThing);
-      FIELD_ARRAY(681, QueueStack, sizeof(int8), 32);
-      FIELD_I8 (682, QueueSP);
-      FIELD_RID(683, dID);
-      FIELD_I16(684, PercentSI);
-      FIELD_U8 (685, bDaysPassed);  FIELD_SKIP(inDaysPassed);
-      FIELD_I16(686, Depth);
-      FIELD_I16(687, Level);
-      FIELD_I16(688, EnterX);
-      FIELD_I16(689, EnterY);
-      FIELD_ARRAY(690, SpecialsLevels, sizeof(int8), 64);
-      FIELD_I16(691, Day);
+      FIELD_I16("CurrThing", CurrThing);
+      FIELD_ARRAY("QueueStack", QueueStack, sizeof(int8), 32);
+      FIELD_I8 ("QueueSP", QueueSP);
+      FIELD_RID("dID", dID);
+      FIELD_I16("PercentSI", PercentSI);
+      FIELD_U8 ("bDaysPassed", bDaysPassed);  FIELD_SKIP(inDaysPassed);
+      FIELD_I16("Depth", Depth);
+      FIELD_I16("Level", Level);
+      FIELD_I16("EnterX", EnterX);
+      FIELD_I16("EnterY", EnterY);
+      FIELD_ARRAY("SpecialsLevels", SpecialsLevels, sizeof(int8), 64);
+      FIELD_I16("Day", Day);
       /* The overlay carries a handle (ov.m), so it cannot travel as one raw
          blob; the embed also takes the struct's interior padding with it.
          Map is a friend of Overlay, which is why this can sit here and not
          in a FieldsV1 of Overlay's own. */
-      r.V1EmbedBegin(692, &ov, sizeof(ov));
-      FIELD_ARRAY(1, ov.GlyphX, sizeof(int16), MAX_OVERLAY_GLYPHS);
-      FIELD_ARRAY(2, ov.GlyphY, sizeof(int16), MAX_OVERLAY_GLYPHS);
-      FIELD_ARRAY(3, ov.GlyphImage, sizeof(Glyph), MAX_OVERLAY_GLYPHS);
-      FIELD_I16(4, ov.GlyphCount);
-      FIELD_H  (5, ov.m);
-      FIELD_U8 (6, bOvActive);      FIELD_SKIP(ov.Active);
+      r.V1EmbedBegin("ov", &ov, sizeof(ov));
+      FIELD_ARRAY("ov_GlyphX", ov.GlyphX, sizeof(int16), MAX_OVERLAY_GLYPHS);
+      FIELD_ARRAY("ov_GlyphY", ov.GlyphY, sizeof(int16), MAX_OVERLAY_GLYPHS);
+      FIELD_ARRAY("ov_GlyphImage", ov.GlyphImage, sizeof(Glyph), MAX_OVERLAY_GLYPHS);
+      FIELD_I16("ov_GlyphCount", ov.GlyphCount);
+      FIELD_H  ("ov_m", ov.m);
+      FIELD_U8 ("bOvActive", bOvActive);      FIELD_SKIP(ov.Active);
       r.V1EmbedEnd();
-      FIELD_I16(698, FieldCount);
-      FIELD_H  (699, pl[0]);
-      FIELD_H  (700, pl[1]);
-      FIELD_H  (701, pl[2]);
-      FIELD_H  (702, pl[3]);
-      FIELD_I16(703, PlayerCount);
-      FIELD_I16(704, BreedCount);
-      FIELD_I16(705, PreviousAuguries);
+      FIELD_I16("FieldCount", FieldCount);
+      FIELD_H  ("pl#0", pl[0]);
+      FIELD_H  ("pl#1", pl[1]);
+      FIELD_H  ("pl#2", pl[2]);
+      FIELD_H  ("pl#3", pl[3]);
+      FIELD_I16("PlayerCount", PlayerCount);
+      FIELD_I16("BreedCount", BreedCount);
+      FIELD_I16("PreviousAuguries", PreviousAuguries);
       /* Bounds before the allocation-sizing use below: both dimensions just
          came off the file, and a negative one turns the Grid size expression
          into a huge size_t (file-fed impossible value: ECORRUPT, never
@@ -680,17 +682,17 @@ class Map: public Object
          pointed-to storage travels as the K_BLOBs inside the record. */
       if (r.V1Active())
         {
-          r.V1EmbedBegin(672, &Grid, sizeof(Grid));
+          r.V1EmbedBegin("Grid", &Grid, sizeof(Grid));
           GridFieldsV1(r);
           r.V1EmbedEnd();
         }
       else
         r.Block((void**)&Grid, sizeof(LocationInfo)*sizeX*sizeY);
-      FIELD_OBJ(693, Things);
-      FIELD_OBJ(694, Fields);
-      FIELD_OBJ(695, TerraXY);
-      FIELD_OBJ(696, TerraList);
-      FIELD_OBJ(697, TorchList);
+      FIELD_OBJ("Things", Things);
+      FIELD_OBJ("Fields", Fields);
+      FIELD_OBJ("TerraXY", TerraXY);
+      FIELD_OBJ("TerraList", TerraList);
+      FIELD_OBJ("TorchList", TorchList);
       /* Load-direction fixups, below every field they read. V1Active()
          guards them because this body also runs on the v0 path, where the
          raw dump already carried the real bytes and the staging uint8s
@@ -849,11 +851,12 @@ typedef struct StatiCollection {
        Thing::_FixupStati (src/Status.cpp:304-321); S is saved already
        sorted, so no qsort is needed. Embedded tag scopes start at 1. */
     void FieldsV1(Registry &r) {
+      r.V1ProbeScope("StatiCollection");   /* inc-cjos0 tag probe */
       int32 i;
       if (r.Saving())
         ASSERT(Added == NULL);
-      FIELD_I16(1, Last);
-      FIELD_I16(2, Allocated);
+      FIELD_I16("Last", Last);
+      FIELD_I16("Allocated", Allocated);
       if (r.Loading()) {
         /* Bounds first: both counts just came off the file. The live
            invariant is Allocated <= 256 (src/Status.cpp:281). */
@@ -872,7 +875,7 @@ typedef struct StatiCollection {
       }
       for (i=0;i<Last;i++) {
         Status &st = S[i];
-        r.V1EmbedBegin((uint16)(3+i), &st, sizeof(Status));
+        r.V1EmbedBegin_AT("Status", i, &st, sizeof(Status));
         {
           uint8 nature=0, src=0, clev=0, dis=0, once=0;
           int16 val=0, mag=0, dur=0;
@@ -882,16 +885,16 @@ typedef struct StatiCollection {
             dur=(int16)st.Duration; src=(uint8)st.Source; clev=(uint8)st.CLev;
             dis=(uint8)st.Dis; once=(uint8)st.Once; sh=(hObj)st.h;
           }
-          FIELD_U8 (1, nature);
-          FIELD_I16(2, val);
-          FIELD_I16(3, mag);
-          FIELD_I16(4, dur);
-          FIELD_U8 (5, src);
-          FIELD_U8 (6, clev);
-          FIELD_U8 (7, dis);
-          FIELD_U8 (8, once);
-          r.V1RidStatus(9, st);
-          FIELD_H  (10, sh);
+          FIELD_U8 ("nature", nature);
+          FIELD_I16("val", val);
+          FIELD_I16("mag", mag);
+          FIELD_I16("dur", dur);
+          FIELD_U8 ("src", src);
+          FIELD_U8 ("clev", clev);
+          FIELD_U8 ("dis", dis);
+          FIELD_U8 ("once", once);
+          r.V1RidStatus("StatusRids", st);
+          FIELD_H  ("sh", sh);
           if (r.Loading()) {
             /* Bounds: nature came off the file, and the Idx rebuild below
                indexes Idx[S[i].Nature] into an allocation of LAST_STATI
@@ -966,17 +969,17 @@ class Thing: public Object
       if (isSave)
         hm = m ? m->myHandle : 0;
       FIELD_SKIP(m);               /* rebuilt from hm, never stored */
-      FIELD_H  (1, Next);
-      FIELD_H  (2, hm);
-      FIELD_I16(3, x);
-      FIELD_I16(4, y);
-      FIELD_U32(5, Image);
-      FIELD_I16(6, Timeout);
-      FIELD_I16(7, StoredMovementTimeout);
-      FIELD_U32(8, Flags);
-      FIELD_STR(9, Named);
-      FIELD_OBJ(10, __Stati);
-      FIELD_OBJ(11, backRefs);
+      FIELD_H  ("Next", Next);
+      FIELD_H  ("hm", hm);
+      FIELD_I16("x", x);
+      FIELD_I16("y", y);
+      FIELD_U32("Image", Image);
+      FIELD_I16("Timeout", Timeout);
+      FIELD_I16("StoredMovementTimeout", StoredMovementTimeout);
+      FIELD_U32("Flags", Flags);
+      FIELD_STR("Named", Named);
+      FIELD_OBJ("__Stati", __Stati);
+      FIELD_OBJ("backRefs", backRefs);
       if (!isSave)
         m = oMap(hm);              /* load fixup: hm has landed by here */
     END_ARCHIVE

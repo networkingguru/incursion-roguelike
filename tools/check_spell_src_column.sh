@@ -3,7 +3,8 @@
 # inc-ympc: does the Spell Manager show "inn" in its Src column for an innate
 # spell?
 #
-# THE CHARACTER is tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.sav, a
+# THE CHARACTER is tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.char (built, and cached by
+# tools/fixture_cache.sh), a
 # deep gnome whose racial spells (Cause Blindness, Passwall, Blur ...) carry
 # SP_INNATE and no source bit. tools/check_spell_tags.sh covers the dual-source
 # rows; this check covers the innate row and the box width.
@@ -12,11 +13,14 @@
 # for an innate entry, so the "inn" assertion fails.
 #
 # Usage: tools/check_spell_src_column.sh [--prove-red]
+# fact: character -- fixture underdark-deepgnome-seed3-opt0818 (built from its .char, served by tools/fixture_cache.sh), INCURSION_LOAD
+# fact: the racial innate spells (they arrive with levels) -- tools/keys/setup-underdark-deepgnome-seed3-opt0818.keys, Free Advancement to Rogue 6 (the old .sav held it; V7-1 moved it into the check)
+# fact: the text matched -- the Spell Manager header and row text, no roll
 #   0 every expectation holds   1 one fails   2 could not measure
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/underdark-deepgnome-seed3-opt0818.sav
+FIXTURE=underdark-deepgnome-seed3-opt0818
 KEYS=tools/keys/spell-src-column.keys
 SEED=4
 
@@ -24,7 +28,7 @@ check_mutation src/Managers.cpp \
 '        default:        return (flags & SP_INNATE) ? "inn" : "";' \
 '        default:        return "";'
 
-[ -f "$FIXTURE" ] || _check_die 2 "no $FIXTURE to load."
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "no tools/fixtures/chars/$FIXTURE.char to build."
 [ -f "$KEYS" ]    || _check_die 2 "no $KEYS to run."
 
 export INCURSION_LOAD="$FIXTURE"

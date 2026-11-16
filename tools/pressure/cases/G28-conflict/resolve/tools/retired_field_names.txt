@@ -1,0 +1,2 @@
+Character Ac8Retire
+rename Character RageCount RageCounter

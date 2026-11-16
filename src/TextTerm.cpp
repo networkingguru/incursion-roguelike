@@ -257,7 +257,7 @@ void TextTerm::CWrite(const char* text)
       oattr = (uint8)attr;
       Color(PINK);
       Write("[MORE]");
-      GetCharRaw();
+      { CreationAck ack("[MORE]", text); GetCharRaw(); }
       Color(oattr);
       Clear();
       GotoXY(0,0);
@@ -358,6 +358,7 @@ DoMore:
             old_attr = attr;
             Color(PINK);
             Write("-- more --");
+            CreationAck ack("-- more --", _Msg);
             do
                 ch = GetCharCmd();
             while (ch >= KY_CMD_NORTH && ch <= KY_CMD_SOUTHWEST);
@@ -533,7 +534,7 @@ FoundSpace:;
 			int16 oldMode;
 			oldMode = GetMode();
 			SetMode(MO_DIALOG);
-			in = GetCharCmd(KY_CMD_ARROW_MODE);
+			{ CreationAck ack("box", text); in = GetCharCmd(KY_CMD_ARROW_MODE); }
 			SetMode(oldMode);
 			switch (in) {
 			case KY_CMD_NORTH:

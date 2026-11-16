@@ -1,0 +1,13 @@
+diff --git a/inc/Defines.h b/inc/Defines.h
+index 22911b6..6a26f06 100644
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3564,7 +3564,7 @@ typedef signed int        hObj;
+    -1 once the buff ended and the mana was released (Mag then = released mana
+    not yet regenerated). Permanent. Generic scans by eID skip this Nature. */
+ #define HELD_MANA         250
+-#define LAST_STATI        251
++#define LAST_STATI        252
+ // end family: stati
+ // no-family
+   

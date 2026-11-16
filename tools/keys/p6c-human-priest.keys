@@ -1,0 +1,41 @@
+# inc-10v7f phase 6c: make a Human Priest of Asherath and SAVE him. Asherath
+# carries no god flag and a Human is neither good nor evil, so the Priest class's
+# EV_ADVANCE (lib/classes.irh, Class Priest) falls through to the ChoicePrompt
+# "Do you want to turn or command undead?" (P41), a script prompt in the
+# creation window. Used by tools/compare_creation_walks.sh and phase 6c's .char
+# check.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Human"
+@choose "Poison Use"
+@choose "Spot"
+@choose "Priest"
+@choose "Asherath"        # God, asked here rather than after the skill ranks,
+c                       # Attributes: the third of the five offered sets. The
+@choose "Neutral"   # Alignment. The god decides which are on offer.
+a                       # First feat. Which feats the game offers depends on
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y # Done, and confirm keeping the ranks
+y       # Do you wish to worship <god>? -- yes
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a a
+@while "Choose a Domain" a
+@while "|  *" RIGHT RIGHT RIGHT DOWN
+ENTER y
+a       # Personality archetype
+@expect "Learn Spells: Level"    # the starting-spells checklist
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN    # mark the first rows; a full level refuses the rest
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+
+@dump:chargen-done
+@while "personality archetype" a
+@until "System Menu" ESC
+@expect "System Menu"
+b                       # [b] Save and Continue
+@dump:saved

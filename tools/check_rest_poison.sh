@@ -138,7 +138,7 @@ else
 fi
 
 # A frozen character, not a generated one (tools/fixtures/README.md).
-export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed5-opt0822.char
 export INCURSION_FORCE_SAVE_ROLL=20
 
 INCURSION_RUN_DIR="$SCRATCH" check_run "$KEYS" "$SEED"

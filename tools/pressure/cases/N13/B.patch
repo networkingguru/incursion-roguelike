@@ -1,0 +1,13 @@
+diff --git a/inc/Creature.h b/inc/Creature.h
+index b27f25e..48fd29c 100644
+--- a/inc/Creature.h
++++ b/inc/Creature.h
+@@ -1182,6 +1182,8 @@ class Character: public Creature
+       r.V1EmbedBegin("Ac8Right", &ac8RightValue, sizeof(ac8RightValue));
+       FIELD_U32("value", ac8RightValue);
+       /* ac8 right tail */
++      uint32 ac8RightExtra = 31;
++      FIELD_U32("extra", ac8RightExtra);
+       r.V1EmbedEnd();
+       FIELD_I16("polyTicks", polyTicks);
+       FIELD_I16("alignGE", alignGE);

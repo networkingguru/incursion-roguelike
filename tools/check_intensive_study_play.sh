@@ -5,7 +5,7 @@
 # spellcasting chart at the new effective caster level? bd inc-ngku.
 #
 # THE ROUTE is gameplay, not a probe: tools/keys/intensive-study-caster-sheet.keys
-# loads tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav (Ferris, a
+# loads tools/fixtures/chars/prestige-geomancy-seed1-opt0822.char (Ferris, a
 # single-class Bard 7 whose Spellcasting ability sits at 3rd, well behind the
 # 4/5-of-character-level cap Character::getEligableStudies() checks, so
 # Intensive Study's caster-level study is eligible), levels him up twice
@@ -42,7 +42,9 @@ check_mutation src/Create.cpp \
 ' \
 ''
 
-export INCURSION_LOAD=tools/fixtures/chars/prestige-geomancy-seed1-opt0822.sav
+# fact: character -- fixture prestige-geomancy-seed1-opt0822 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the wizard mode, Free Advancement, Show All Combat Rolls, Bard 7 and the Craft ranks -- tools/keys/setup-prestige-geomancy-seed1-opt0822.keys (the old .sav held them; V7-1 moved them into the check)
+export INCURSION_LOAD=prestige-geomancy-seed1-opt0822
 
 check_run tools/keys/intensive-study-caster-sheet.keys 1
 

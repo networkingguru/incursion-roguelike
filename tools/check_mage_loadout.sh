@@ -1,5 +1,6 @@
 #!/bin/bash
 # gate: live
+# fact: character and level -- tools/fixtures/specimens/orc-mage-seed1-opt0822.sav, the frozen old save (kept as a specimen; its old-format bytes are the thing under test): the old IS1.3 save migrates its spell flags on load, which a fresh character does not do
 # fact: character and spells -- fixture orc-mage-seed1-opt0822
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: depth and initial hostiles -- wizard Ascend / Descend Depth and Genocide Everything
@@ -27,7 +28,7 @@
 # checklist, the message log, and the cast menu, which lists exactly the spells
 # with SP_KNOWN). It runs on the frozen Orc Mage fixture, whose save migrates on
 # load (see tools/check_spellflag_migrate.sh). The expected spell names are the
-# fixture's own (tools/fixtures/chars/orc-mage-seed1-opt0822.sheet.txt).
+# fixture's own (the sheet that tools/fixture_sheet.sh orc-mage-seed1-opt0822 prints).
 #
 # PROVED RED with --prove-red: the mutation disables the ApplySpellSelection()
 # call in Player::Rest (src/Player.cpp). The rest then applies nothing, so the
@@ -39,7 +40,7 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-mage-seed1-opt0822.sav
+FIXTURE=tools/fixtures/specimens/orc-mage-seed1-opt0822.sav
 # any seed works (seed_sweep.sh); this one is only the default
 SEED=3
 

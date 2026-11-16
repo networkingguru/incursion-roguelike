@@ -1075,7 +1075,12 @@ void VBlock::ProcessContinues()
                   }
                 size++;
                 rel_dest++;
-                memmove(&(vc[i+2]),&vc[i+1],size-i);
+                /* upstream: the count is in bytes; the old size-i was in
+                   entries, so the code after the insert was cut off. Traced;
+                   inc-b0ii; not sent. */
+                memmove(&(vc[i+2]),&vc[i+1],(size-i-2)*sizeof(VCode));
+                vc[i].P1Type = RT_CONSTANT | RT_EXTENDED;
+                vc[i].Param1 = 0;
                 *((int32*)(&(vc[i+1]))) = rel_dest;
                 goto start_again;
               }       
@@ -1087,10 +1092,34 @@ void VBlock::ProcessContinues()
               j++;
             if (vc[i].P2Type & RT_EXTENDED)
               j++;
+            /* upstream: the jump table after a JTAB holds raw data words, and
+               the scan read them as opcodes, so a case value or address whose
+               low six bits are 62 became a JUMP. Reached only now that every
+               loop scans its body. Traced; inc-b0ii; not sent. */
+            if (vc[i].Opcode == JTAB)
+              {
+                ASSERT(!(vc[i].P2Type & RT_EXTENDED));
+                j += 2 * vc[i].Param2 + 1;
+              }
             i = j;
           }
       }
   
+  }
+
+/* Wrap this loop in a break target: SBRK before it, FBRK after it. `break;`
+   (JBRK) then lands on the FBRK and the VM steps past it. */
+void VBlock::AddBreakTarget()
+  {
+    VBlock w;
+    int32 rel = size + 1;
+    if (rel > 511)
+      rel++;               /* an extended parameter takes a second word */
+    w.Generate(SBRK, RT_CONSTANT, rel);
+    w.Add(this);
+    w.Generate(FBRK);
+    free(vc);
+    vc = w.vc; size = w.size; space = w.space;
   }
 
 

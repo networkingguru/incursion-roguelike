@@ -1,0 +1,31 @@
+# C2 gate walk (tools/check_fixture_equivalence.sh, inc-10v7f): the Drow ranger
+# of tools/keys/p7a-drow-ranger-save.keys with every menu entry chosen by name,
+# SAVED at the end of creation with nothing played. The Drow reach the gear line
+# "of random 3 to 4" (lib/races.irh:61-65), and the ranger chooses a favored
+# enemy and a combat style: hits fav_enemy, ammo_quantity, gear_stream,
+# gear_chance and script_choice. Point buy keeps the rolled sets and their
+# perks out of the character.
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+@choose "Drow"
+@choose "Ranger"
+p       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+@choose "Goblinkin"
+@while "Combat style" t         # a prompt, not a menu: two-weapon
+@choose "Alertness"
+@while "Combat style" t
+@choose "Athletic"
+@while "Combat style" t
+@while "|  *" RIGHT RIGHT RIGHT DOWN   # spend every rank
+@while "Unspent Skill Ranks" ENTER y   # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@choose "The Ambitious Conqueror"
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue
+@dump:saved

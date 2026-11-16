@@ -1,0 +1,144 @@
+# dequ-save-dc-seed5-opt0822: converted from tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav by tools/char_convert.sh.
+# Skeleton: key script tools/keys/dequ-save-dc-save.keys, seed 5, settings tools/fixtures/options-2026-08-22.dat, recorded by binary commit e3af12da+uncommitted.
+# result: CONVERTED: the choices of the build equal the choices of the old .sav; 286 computed line(s) differ (diff.txt); 0 line(s) excused by KNOWN_DIFFERENCES
+# arrival: tools/keys/dequ-save-dc-save.keys 5 27 73 24:27:0
+# roll search: MATCH: script_roll [Warrior] #0, script_roll [Warrior;EV_150] #0, script_roll [Warrior;EV_150] #1 = [2, 0, 0] (recorded [3, 2, 6]); other matches [[3, 0, 0]]; 63 tries in 68.7 s (1.09 s per try); record logs/phase12c/final2/dequ-save-dc-seed5-opt0822/roll-search.txt
+# rolls: script_roll|Warrior|0|1|3
+# rolls: script_roll|Warrior;EV_150|0|0|2
+# rolls: script_roll|Warrior;EV_150|1|0|6
+# Values set from the old dump (5), skeleton value -> old value:
+#   roll: script_roll [Warrior]: 3 -> 2 (searched)
+#   roll: script_roll [Warrior;EV_150]: 2 -> 0 (searched)
+#   roll: script_roll [Warrior;EV_150]: 6 -> 0 (searched)
+#   scalar: store_seed: 28 -> 29
+#   quantity: thrown_quantity: 5 -> 4
+# Values NOT set from the old dump (the dump shows each only through a result):
+#   pick: alter_options: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: explore_continue: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   roll: gear_stream: 3 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   pick: script_yn: 1 line(s) kept as the walk recorded them; the dump does not show this decision directly
+#   perk: perk slots: 2 kept as the walk rolled them; a perk is not a choice (owner's ruling 2026-11-11)
+#   roll: gear_chance [Orc;a3]: 16 kept as the walk recorded it; the old character holds this annotation's item (longspear, quantity 1), so its roll is within the annotation's chance
+#   roll: gear_chance [Universal Gear;a3]: 93 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a4]: 7 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a6]: 79 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a7]: 16 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a10]: 58 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a14]: 39 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a18]: 88 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a19]: 44 kept as the walk recorded it; no kit_item line for this annotation: it grants nothing in the old character, so its roll is above its chance or its condition is false; any value above the chance gives the same character
+#   roll: gear_chance [Universal Gear;a20]: 13 kept as the walk recorded it; the old character holds this annotation's item (banded mail, quantity 1), so its roll is within the annotation's chance
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 5
+alter_options: no
+explore_continue: yes
+formula_seed: 6
+race: Orc
+subrace: Orc
+name: Hurk
+surname: the Anathema
+class: Warrior
+perk_type [0]: PERK_RESIST
+perk_resist [0]: save confusion
+perk_type [1]: PERK_FEAT
+perk_feat [1]: Great Fortitude
+attr_str: 16
+attr_dex: 13
+attr_con: 15
+attr_int: 14
+attr_wis: 13
+attr_cha: 10
+attr_luc: 14
+alignment: Chaotic Good
+feat: Acrobatic
+feat: Alertness
+hp_roll [Warrior]: 10
+mana_roll [Warrior]: 6
+feat_weapon: arbalest
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 0
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 2
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 1
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 0
+skill_ranks [Craft]: 0
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+gear_stream [Orc]: 23
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 16
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Warrior]: 24
+kit_item [Warrior;a0]: gold piece, quantity 312
+kit_item [Warrior;a1]: potion, effect Oil of Transformation, quantity 5
+script_roll [Warrior]: 2
+kit_item [Warrior;a3]: kite shield, quantity 1
+kit_item [Warrior;a4]: dagger, quantity 1
+kit_item [Warrior;a5]: peasant garb, quantity 1
+gear_stream [Universal Gear]: 25
+gear_chance [Universal Gear;a3]: 93
+gear_chance [Universal Gear;a4]: 7
+gear_chance [Universal Gear;a6]: 79
+gear_chance [Universal Gear;a7]: 16
+gear_chance [Universal Gear;a10]: 58
+gear_chance [Universal Gear;a14]: 39
+gear_chance [Universal Gear;a18]: 88
+gear_chance [Universal Gear;a19]: 44
+gear_chance [Universal Gear;a20]: 13
+kit_item [Universal Gear;a20]: banded mail, quantity 1
+thrown_quantity: 4
+ammo_quantity: 32
+script_yn [Orc;EV_150]: yes
+script_roll [Warrior;EV_150]: 0
+script_roll [Warrior;EV_150]: 0
+personality: The Ambitious Conqueror
+store_seed: 29
+character_name: Hurk the Anathema
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 1

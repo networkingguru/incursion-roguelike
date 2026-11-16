@@ -66,7 +66,7 @@ cd "$ROOT"
 
 OPTIONS="${INCURSION_OPTIONS:-tools/fixtures/options-2026-08-22.dat}"
 KEYS=tools/keys/holy-symbol-slot.keys
-FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.sav
+FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.char
 GOD_FIXTURE=tools/fixtures/holy-symbol-slot-helm.irh
 
 [ -x ./incursion-headless ] || {

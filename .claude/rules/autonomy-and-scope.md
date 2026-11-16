@@ -33,3 +33,13 @@ History: docs/rules-history/autonomy-and-scope.md#fix-your-own-merge-blockers.
 Before escalating a needs-Brian question, run `git log -S<term>` or `git log --format=%B` on the commit that introduced the thing in question — the answer is often already in its body. If found, act on it and note the earlier escalation was wrong.
 Why: a held question's age is not evidence it is still unanswerable.
 History: docs/rules-history/autonomy-and-scope.md#escalated-questions-check-the-commit-first.
+
+## reuse-the-existing-mechanism
+For a problem the project already solves somewhere, use the mechanism it already has. Do NOT propose a new mechanism unless the existing one is inadequate for the problem. When it is inadequate, the new mechanism MUST replace the old one everywhere it is used, and a recommendation for it MUST state that migration cost. A mechanism chosen for a class of problems MUST work for every member of the class, not only the case that triggered it; state which members it covers before you recommend it.
+Why: every extra mechanism costs Brian time to understand it, and what he does not understand causes problems later.
+History: docs/rules-history/autonomy-and-scope.md#reuse-the-existing-mechanism. Bead inc-cjos0.
+
+## search-for-prior-art-before-asking
+Before you bring Brian a question about a mechanism or a definition (what counts as an act, how a payment or charge works, which event or lever to use), search for whether the project already does it elsewhere. Search the dossier brief's `pantheon.md`, `mechanisms.md` and `patterns.md`, `docs/GOD-CONTRACT.md`, every god's handlers in `lib/religion.irh` on the epic, and the engine events in `inc/Defines.h`. When an existing solution fits, state it and its source in the question, as the low-effort answer, or apply it when an earlier ruling already covers the case. Ask about a new mechanism only after the search finds none that fits, and say what you searched.
+Why: a question that does not know what the project already does costs Brian a round trip to point at the existing solution.
+History: docs/rules-history/autonomy-and-scope.md#search-for-prior-art-before-asking. Bead inc-yn1ad.

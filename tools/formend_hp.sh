@@ -11,11 +11,12 @@ waits=${1:?waits}; shift
 mkdir -p logs/formend
 keys="logs/formend/formend-hp-$waits.keys"
 sed "s/^\.\*WAITS\$/.*$waits/" tools/keys/formend-hp.keys > "$keys"
+cp -f tools/keys/setup-druid-shoulder-metal-seed7-opt0822.keys logs/formend/   # @include resolves beside the key script
 for seed in "$@"; do
   run="logs/formend/$waits-$seed"
   rm -rf "$run"
   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
-  INCURSION_LOAD=tools/fixtures/chars/druid-shoulder-metal-seed7-opt0822.sav \
+  INCURSION_LOAD=druid-shoulder-metal-seed7-opt0822 \
   INCURSION_RUN_DIR="$run" tools/headless.sh "$keys" "$seed" > "$run.out" 2>&1
   s="$run/logs/screens"
   b=$(grep -m1 '^HP:' "$s"/*-before-end.txt | cut -d' ' -f1)

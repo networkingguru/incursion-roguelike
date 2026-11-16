@@ -3,7 +3,7 @@
 # after a long wait. Driven by tools/check_bolas_entangle_expiry.sh, which runs
 # it once per seed because the entangle needs a hit AND a failed Reflex save.
 #
-#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.sav \
+#   INCURSION_LOAD=tools/fixtures/chars/kobold-rogue-seed1.char \
 #   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #       tools/headless.sh tools/keys/bolas-entangle-expiry.keys <seed>
 #
@@ -16,6 +16,8 @@
 #
 # THE WAIT is 150 "wait one turn" keys, far past any 2d4-round duration.
 
+# The fixture holds only the created character; setup-kobold-rogue-seed1.keys makes the state the old save held (bd inc-10v7f).
+@include setup-kobold-rogue-seed1.keys
 w
 @expect "Enter wizard mode"
 y
@@ -38,7 +40,7 @@ LEFT
 @while "Abort, Flee or Disengage" f
 
 f
-a
+@choose "bolas"      # named, not [a]: the built kit lists potions first
 RIGHT
 @dump:thrown
 

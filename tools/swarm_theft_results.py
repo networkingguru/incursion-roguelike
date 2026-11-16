@@ -12,6 +12,7 @@ import collections
 import pathlib
 import re
 import statistics
+import subprocess
 import sys
 
 base = pathlib.Path(sys.argv[1])
@@ -36,8 +37,18 @@ def survived(name):
     death = base / name / 'logs/death.log'
     return bool(hp and int(hp[-1]) > 0 and not (death.exists() and death.stat().st_size))
 
-def sheet(name):
-    text = pathlib.Path(f'tools/fixtures/chars/{name}.sheet.txt').read_text()
+def sheet(name, written=None):
+    # `written`: a sheet the check's own setup run wrote (logs/charprobe.txt of base/sheet), for a character that
+    # a setup script derives and no fixture file holds. A fixture with a .char file is built into the cache and its sheet comes
+    # from tools/fixture_sheet.sh.
+    if written is not None:
+        text = pathlib.Path(written).read_text()
+    elif pathlib.Path(f'tools/fixtures/chars/{name}.char').exists():
+        path = subprocess.run(['tools/fixture_sheet.sh', name], capture_output=True,
+                              text=True, check=True).stdout.strip()
+        text = pathlib.Path(path).read_text()
+    else:
+        raise SystemExit(f'swarm_theft_results: no tools/fixtures/chars/{name}.char and no setup sheet')
     level = int(re.search(r'^Class\s+\w+ (\d+)', text, re.M)[1])
     bab = int(re.search(r'Melee\s+\+toHit.*?\(\w+ ([+-]\d+)', text)[1])
     attrs = [int(re.search(rf'^{a}:.*?\[([+-]\d+)/', text, re.M)[1]) for a in ('STR', 'DEX')]
@@ -88,9 +99,9 @@ maximum = max((counts[r['turn'], r['thief']] for r in adj), default=0)
 # Fewer than 3 eligible turns is too thin to show a per-turn cap (inc-67gh).
 result('b', 'FAIL' if maximum > 1 else 'PASS' if len(adj) >= 3 and maximum else 'INCONCLUSIVE',
        f'eligible turns={len(adj)}, maximum attempts={maximum}')
-for name, fixture in [('warrior', 'alignment-drain-warrior'), ('defense', 'skill-by-name-seed1-opt0818')]:
+for name, fixture in [('warrior', None), ('defense', 'skill-by-name-seed1-opt0818')]:
     attempts = [r for r in runs[name] if r['event'] == 'attempt' and r['swarm'] == '1' and r['player'] == '1']
-    expected = sheet(fixture)
+    expected = sheet(fixture, base / 'sheet/logs/charprobe.txt') if fixture is None else sheet(fixture)
     expected['victim_bonus'] = (expected['victim_bab'] + max(expected['victim_str'], expected['victim_dex'])
                                 + expected['victim_half_level'] + expected['victim_pick'] + expected['victim_theft'])
     expected.update(thief_hit=3, thief_dex=3, thief_bonus=6)

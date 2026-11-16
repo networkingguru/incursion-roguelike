@@ -474,7 +474,7 @@ system void   T_CHARACTER::SetInvSlot(int16 sl, hObj:T_ITEM it);
   /* CasterLev() et al. awaiting revision */
 
 system void   T_CHARACTER::UseFeat(int16 ft);
-system void   T_CHARACTER::UseSkill(uint8 sk);
+system void   T_CHARACTER::UseSkill(int16 sk);
 system void   T_CHARACTER::UseAbility(uint8 ab,int16 pa);
 
 system void   T_CHARACTER::GodMessage(rID gID, int16 msg,...);
@@ -1112,6 +1112,13 @@ system int16   ApplyDurationMetamagic(int32 dur, uint32 mm, bool mystic);
    already holds a stack it would join. True when a pack took it; the item may
    then be gone (merged), so do not use it afterwards. A non-player returns false. */
 system bool    AutoStackIntoPack(hObj:T_CREATURE who, hObj:T_ITEM it, bool wildOK = false);
+/* Does damage type dtype take hit points? One row per type in DTypeHP (inc-kx693). */
+system bool    DTypeTakesHP(int16 dtype);
+/* Can quality q sit on a weapon / on armor? One row per quality name in QualityTable (inc-rddai). */
+system bool    QualityIsWeapon(int16 q);
+system bool    QualityIsArmor(int16 q);
+/* The highest quality number in QualityTable; loops over every quality stop here (inc-mafd8). */
+system int16   QualityMaxNumber();
  
  
 /* functions with variable-type parameters handled by macro type-cast */

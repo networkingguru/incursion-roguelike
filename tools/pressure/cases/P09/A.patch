@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -3197,6 +3197,7 @@
+ // end family: stati
+ // family: val_sleep stored ordinal i16 val-of SLEEPING
+   #define SLEEP_MAGIC   1
++  #define SLEEP_GRWA 6
+   #define SLEEP_NATURAL 2
+   #define SLEEP_FATIGUE 3
+   #define SLEEP_PSYCH   4

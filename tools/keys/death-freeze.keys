@@ -1,8 +1,8 @@
-# Load tools/fixtures/chars/engaged-hostile.sav and park the session at the
+# Load tools/fixtures/specimens/engaged-hostile.sav and park the session at the
 # UNANSWERED death prompt, for tools/check_headless.sh step 8 (bd inc-gjzx).
 #
 #   INCURSION_OPTIONS=tools/gates/Options.Dat \
-#   INCURSION_LOAD=tools/fixtures/chars/engaged-hostile.sav \
+#   INCURSION_LOAD=tools/fixtures/specimens/engaged-hostile.sav \
 #       tools/headless.sh tools/keys/death-freeze.keys <seed>
 #
 # Rests in place ('.', KY_CMD_REST) until the bugbear standing beside the

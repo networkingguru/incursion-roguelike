@@ -1,0 +1,48 @@
+# inc-10v7f phase 6a: make a Human Warrior (point buy), then level up IN PLAY
+# and take the level's feat, to walk the feat menu in AdvanceLevel after the
+# creation window has closed (Create.cpp GainFeat reached from AdvanceLevel:
+# P20 outside the window must record nothing and ask exactly as before).
+# Used by tools/compare_creation_walks.sh.
+
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Your options will place the game in Explore Mode. Continue? -- yes
+
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Warrior"
+p       # Attributes: abort to Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # Are these your final stats? -- yes
+@choose "Neutral"
+@choose "Alertness"
+@choose "Dodge"
+@choose "Athletic"
+@choose "long sword"   # the Warrior's own focus pick
+RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN RIGHT*2 DOWN
+ENTER y # Done, and confirm keeping the ranks
+@while "wish to worship" y
+@while "personality archetype" a
+@until "Afoot" ESC
+
+w       # wizard mode
+y       # Enter wizard mode? -- yes
+@choose "Wizard Mode Switches"
+DOWN*2
+SPACE
+ESC
+
+d       # character sheet
+G       # gain a level
+@choose "(Show All Feats)"   # a toggle is not an answer
+@choose "(Hide Unavailable"
+@choose "Weapon Focus"       # the level's feat opens the weapon sub-menu
+@choose "bastard sword"
+@dump:levelup
+ESC     # leave the sheet
+@until "System Menu" ESC
+@expect "System Menu"
+b       # [b] Save and Continue, so the walk leaves a character to dump
+@dump:saved

@@ -1,0 +1,19 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2964,6 +2964,7 @@
+ // family: study stored ordinal u8 grows STUDY_LAST index-of Character.IntStudy
+ 
+ #define STUDY_CASTING     1
++#define STUDY_GRWA 10
+ #define STUDY_BARDIC      2
+ #define STUDY_SHAPES      3
+ #define STUDY_BAB         4
+@@ -2972,7 +2973,7 @@
+ #define STUDY_UNARMED     7
+ #define STUDY_SNEAK       8
+ #define STUDY_MOUNT       9
+-#define STUDY_LAST        10
++#define STUDY_LAST        11
+ // end family: study
+ // family: purpose internal
+ 

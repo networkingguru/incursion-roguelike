@@ -8,7 +8,7 @@
 # roll when the item is seen or picked up again. Before inc-8chz LegendIdent used
 # a fixed score with no roll, and Knowledge (Magic) got half the level.
 #
-# Both runs load the frozen orc bard tools/fixtures/chars/orc-bard-reapply-seed1.sav
+# Both runs load the frozen orc bard tools/fixtures/chars/orc-bard-reapply-seed1.char
 # (Bard 6, Legend Lore 6th, wizard mode) under tools/fixtures/options-2026-08-22.dat.
 #
 # A  tools/keys/load-char-sheet.keys with INCURSION_CHAR_PROBE=1. The save the
@@ -48,8 +48,10 @@
 . "$(dirname "$0")/check_lib.sh"
 
 CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
-FIXTURE=tools/fixtures/chars/orc-bard-reapply-seed1.sav
-[ -f "$FIXTURE" ] || _check_die 2 "the frozen subject $FIXTURE is missing."
+# fact: character -- fixture orc-bard-reapply-seed1 (built from its .char, served by tools/fixture_cache.sh) (INCURSION_LOAD)
+# fact: the bard's wizard mode and level (Bard 6, level cleared) -- tools/keys/setup-orc-bard-reapply-seed1.keys (the old .sav held them; V7-1 moved them into the check)
+FIXTURE=orc-bard-reapply-seed1
+[ -f "tools/fixtures/chars/$FIXTURE.char" ] || _check_die 2 "the frozen subject $FIXTURE is missing."
 
 case "${CHECK_LEGEND_MUTATION:-roll}" in
     roll)
@@ -69,7 +71,7 @@ export INCURSION_LOAD="$FIXTURE"
 
 # ---- A: the character sheet ----
 echo "A: skills on the sheet"
-INCURSION_CHAR_PROBE=1 check_run tools/keys/load-char-sheet.keys 1
+INCURSION_CHAR_PROBE=1 check_run tools/keys/legend-lore-char-sheet-bard.keys 1
 sheet="$CHECK_RUN/logs/charprobe.txt"
 if [ ! -s "$sheet" ]; then
     echo "FAIL: measured nothing: $sheet is missing or empty."

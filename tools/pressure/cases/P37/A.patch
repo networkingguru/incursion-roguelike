@@ -1,0 +1,10 @@
+--- a/inc/Defines.h
++++ b/inc/Defines.h
+@@ -2063,6 +2063,7 @@
+ #define SC_ABJ       0x00000001
++#define SC_GRWA 0x200
+ #define SC_ARC       0x00000002
+ #define SC_DIV       0x00000004
+ #define SC_ENC       0x00000008
+ #define SC_EVO       0x00000010
+ #define SC_ILL       0x00000020

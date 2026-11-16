@@ -79,7 +79,8 @@
 # property under test -- an invariant that MUST hold on every seed, like the
 # encounter-building checks in docs/VERIFICATION.md -- and the wander requests,
 # whose target the seed does decide, are excluded from the measurement.
-# fact: character race/class/stats/kit/name -- fixture tools/fixtures/chars/kobold-rogue-seed1.sav via INCURSION_LOAD
+# fact: character race/class/stats/kit/name -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) via INCURSION_LOAD
+# fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # fact: the scene (sealed L corridor, player at one end, creature at the far end, route squares memory-cleared) -- probe src/RouteUnseenProbe.cpp, gated by INCURSION_ROUTE_UNSEEN; builds the map, independent of the generated level
 # fact: the watched creature's mode/role (hostile/companion/neutral) -- INCURSION_ROUTE_UNSEEN
 # fact: the option under test OPT_MON_DJIKSTRA (0/1/2) -- INCURSION_ROUTE_OPT (probe sets p->Options[OPT_MON_DJIKSTRA])
@@ -245,9 +246,9 @@ SEED="${1:-3}"
     echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
 }
-CHAR=tools/fixtures/chars/kobold-rogue-seed1.sav
+CHAR=kobold-rogue-seed1
 OPTS=tools/fixtures/options-2026-08-22.dat
-[ -f "$CHAR" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
+[ -f "tools/fixtures/chars/$CHAR.char" ] && [ -f "$OPTS" ] || { echo "INCONCLUSIVE: fixture missing"; exit 2; }
 
 stamp="$$"
 mkdir -p logs/runs   # the .out redirect needs it on a fresh tree (e.g. --prove-red scratch)

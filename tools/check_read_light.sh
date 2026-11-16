@@ -1,5 +1,14 @@
 #!/bin/bash
 # gate: live
+# fact: no-infravision reader: race, class, stats, kit, scrolls -- fixture human-paladin-seed4-opt0822, built from its .char alone (INCURSION_LOAD)
+# fact: infravision reader -- fixture orc-barbarian-seed1-opt0822, built from its .char alone (INCURSION_LOAD)
+# fact: low-light reader -- fixture elf-search-seed1-opt0818, built from its .char alone (INCURSION_LOAD)
+# fact: options -- tools/fixtures/options-2026-08-22.dat, and tools/fixtures/options-2026-08-18.dat for the low-light fixture
+# fact: the reader's square light level -- terrain and light set by the wizard menu in read-light-*.keys, then measured with INCURSION_READ_LIGHT_PROBE; a case with a band that does not measure is inconclusive
+# fact: monsters near the reader -- wizard menu, Wizard Mode Switches, monsters frozen in read-light-setup.keys
+# fact: the scrolls -- wizard menu "Item Acquisition" in read-light-setup.keys
+# fact: the Decipher Script roll -- INCURSION_RUNTO_SKILL_ROLL=20, exported for every run: the check's roll is max(20, the second d20) = 20, so the total is the fixture's bonus (+1 to +7) plus 20, at most 27, under the preserve threshold 30 (20 + scroll level 9 at the dim DC), so no run preserves the scroll and every read spends it, pass or fail
+# fact: the Decipher Script DC -- the scroll level plus 10; the check compares DCs and never reads the roll's outcome
 # Reproduction for inc-caq8: reading a scroll (Item::ReadScroll, src/Magic.cpp)
 # does not read the reader's own light level. The owner's rule (light bands
 # are LightLevelAt, 0..255, thresholds inc/Light.h:99-101):
@@ -24,12 +33,12 @@
 # inc-caq8 adds the fifth case: an elf (CA_LOWLIGHT 2, no infravision,
 # lib/races.irh "elf;temp") on a dim square reads at the bright DC, because
 # low-light vision treats dim as bright. Its fixture is elf-search-seed1-
-# opt0818.sav, run with that fixture's own seed (1) and options
+# opt0818.char, run with that fixture's own seed (1) and options
 # (options-2026-08-18.dat), and its key file clears the longer elf arrival
 # greeting ("-- more --") before the shared setup.
 #
-# Measured today (seed 4, human-paladin-seed4-opt0822.sav; seed 1,
-# orc-barbarian-seed1-opt0822.sav; tools/fixtures/options-2026-08-22.dat):
+# Measured today (seed 4, human-paladin-seed4-opt0822.char; seed 1,
+# orc-barbarian-seed1-opt0822.char; tools/fixtures/options-2026-08-22.dat):
 #   dark/no-infra   level=0  infra=0  DC=19  stack 2->1  FAIL (read anyway)
 #   dim             level=50 infra=0  DC=19  stack 2->1  FAIL (no +10 yet)
 #   bright          level=96 infra=0  DC=19  stack 2->1  PASS (baseline)
@@ -43,19 +52,20 @@
 #
 # Usage: tools/check_read_light.sh   (0 pass, 1 fail, 2 inconclusive)
 set -uo pipefail
+export INCURSION_RUNTO_SKILL_ROLL=20
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
 OPTIONS="tools/fixtures/options-2026-08-22.dat"
-NOINFRA_SAV="tools/fixtures/chars/human-paladin-seed4-opt0822.sav"
+NOINFRA_SAV="tools/fixtures/chars/human-paladin-seed4-opt0822.char"
 NOINFRA_SEED=4
-INFRA_SAV="tools/fixtures/chars/orc-barbarian-seed1-opt0822.sav"
+INFRA_SAV="tools/fixtures/chars/orc-barbarian-seed1-opt0822.char"
 INFRA_SEED=1
 # inc-caq8: the low-light case is an elf (CA_LOWLIGHT 2, no infravision),
 # and the run MUST use the fixture's own seed and options file (its .sheet.txt
 # records both: seed 1, tools/fixtures/options-2026-08-18.dat).
-LOWLIGHT_SAV="tools/fixtures/chars/elf-search-seed1-opt0818.sav"
+LOWLIGHT_SAV="tools/fixtures/chars/elf-search-seed1-opt0818.char"
 LOWLIGHT_SEED=1
 LOWLIGHT_OPTIONS="tools/fixtures/options-2026-08-18.dat"
 

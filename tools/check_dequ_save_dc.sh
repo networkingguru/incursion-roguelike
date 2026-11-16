@@ -35,7 +35,7 @@ cd "$ROOT"
 OPTS=tools/fixtures/options-2026-08-22.dat
 # The character is loaded: no attribute row decides him (headless.sh copies the
 # save into each run's own sandbox).
-export INCURSION_LOAD=tools/fixtures/chars/dequ-save-dc-seed5-opt0822.sav
+export INCURSION_LOAD=tools/fixtures/chars/dequ-save-dc-seed5-opt0822.char
 # A_DEQU answers only a blow that HITS (src/Fight.cpp, `at->AType == A_DEQU && !e.isHit`),
 # so a miss rolls no save. Force the player's melee d20 to 18: an ordinary hit
 # (below the long sword's threat range of 19) that the roster's defences do not

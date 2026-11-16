@@ -20,7 +20,7 @@
      void posixTerm::CursorOn/Off()    Glyph posixTerm::AGetChar(...)
      void posixTerm::Save/Restore()    void posixTerm::Clear()
    Input Functions
-     int16 posixTerm::GetCharCmd(KeyCmdMode mode)   -- reads the key script
+     int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode)   -- reads the key script
    General Functions
      void posixTerm::Initialize()      void Fatal(...)  void Error(...)
    Screen Capture
@@ -179,7 +179,7 @@ public:
     virtual int32 ConvertChar(Glyph g, char **out) { return 0; }
 
     /* Input Functions */
-    virtual int16 GetCharRaw() {
+    virtual int16 GetCharRawImpl() {
         if (getenv("INCURSION_GLORY_PROBE")) {
             extern int GloryProbeKey();
             int key = GloryProbeKey();
@@ -197,8 +197,8 @@ public:
         }
         return TextTerm::EffectPrompt(e,f,look,prompt);
     }
-    virtual int16 GetCharCmd() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
-    virtual int16 GetCharCmd(KeyCmdMode mode);
+    virtual int16 GetCharCmdImpl() { return GetCharCmd(KY_CMD_NORMAL_MODE); }
+    virtual int16 GetCharCmdImpl(KeyCmdMode mode);
     /* inc-p0h1: the Bestow Curse probe scripts its two menus and, for the
        hesitation share, its own timed actions. Off unless the probe env var
        is set, so live play is untouched. */
@@ -248,6 +248,9 @@ public:
     void SetMaxKeys(int32 n) { maxKeys = n; }
     void UseTerminal(bool on) { useCurses = on; }
     bool HasKeyScript() { return keys != NULL; }
+    long KeyScriptPosition();
+    void SkipKeys(long n);
+    void PrependKeyScript(const char *fn);
 
     /* System-Independant File I/O */
     virtual const char* SaveSubDir()    { return "save"; }
@@ -308,6 +311,7 @@ public:
 
 private:
     ScriptKey NextKey();
+    ScriptKey BuildAck();
     void AppendKey(const ScriptKey &k);
     void OutOfKeys();
 };
@@ -498,6 +502,20 @@ extern bool RunSaveDump(const char *path);
 extern bool RunRecoverVars(const char *path);
 extern bool RunScriptVariables();
 
+/* While a fixture is being built there is no key script and nobody at the
+   keyboard. A read that finds the script empty is answered with ESC, so an
+   acknowledgment (the arrival box) does not end the run, and is logged to
+   logs/build-acks.log with whether the creation window was open. Phase 7b arms
+   the tripwire that fails a read made inside the window. */
+static bool buildAckMode = false;
+
+/* src/CharFile.cpp: the fixture builder (bead inc-10v7f). -build <file.char>
+   makes the character the file states through the File creation source, saves
+   him and writes his sheet. CharFilePrepare runs before the game exists. */
+extern bool CharFilePrepare(const char *charPath, const char *runDir);
+extern int  RunCharBuild(const char *charPath);
+extern int  RunCharPickTest(const char *charPath, int asks);
+
 /* src/SaveV1.cpp: the build-time order check's oracle. Declared locally for
    the same reason as RunSaveDump. */
 extern bool RunResourceOrder();
@@ -520,6 +538,9 @@ int main(int argc, char *argv[]) {
     const char *schemaTest = NULL;
     const char *schemaLoad = NULL;
     const char *convertSave = NULL;
+    const char *buildChar = NULL;
+    const char *pickTestChar = NULL;
+    int pickTestAsks = 0;
     int i, retval = 0;
     bool forceHeadless = false;
     unsigned timeout = DEFAULT_TIMEOUT_S;
@@ -588,6 +609,12 @@ int main(int argc, char *argv[]) {
             forceHeadless = true;
         else if (!strcmp(argv[i], "-dump") && i + 1 < argc)
             dumpSave = argv[++i];
+        else if (!strcmp(argv[i], "-build") && i + 1 < argc)
+            buildChar = argv[++i];
+        else if (!strcmp(argv[i], "-charpicktest") && i + 1 < argc)
+            pickTestChar = argv[++i];
+        else if (!strcmp(argv[i], "-charasks") && i + 1 < argc)
+            pickTestAsks = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-recovervars") && i + 1 < argc)
             recoverSave = argv[++i];
         else if (!strcmp(argv[i], "-scriptvars"))
@@ -617,6 +644,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* -build reads options: and seed: first: the settings file becomes this
+       run's Options.Dat and the seed must be in the environment before the
+       Game constructor draws from it. */
+    if (buildChar) {
+        CharFilePrepare(buildChar, executablePath);
+        buildAckMode = true;
+    }
+
     theGame = new Game();
     AT1 = new posixTerm;
     AT1->SetIncursionDirectory(executablePath);
@@ -630,8 +665,29 @@ int main(int argc, char *argv[]) {
     if (getenv("INCURSION_MAX_KEYS"))
         AT1->SetMaxKeys(atoi(getenv("INCURSION_MAX_KEYS")));
 
-    if (keyScript)
+    if (keyScript) {
         AT1->LoadKeyScript(keyScript);
+        /* INCURSION_KEYS_SKIP=<n> drops the first n script entries, so a run
+           that loads a built character plays only what the script did after
+           creation (tools/char_convert.sh; the n comes from
+           Game::NewGameTail, see KeyScriptPosition). */
+        /* fixture builder hook (inc-10v7f). */
+        if (getenv("INCURSION_KEYS_SKIP")) {
+            const char *skip = getenv("INCURSION_KEYS_SKIP");
+            char *end = NULL;
+            long n = strtol(skip, &end, 10);
+            if (!*skip || *end || end == skip) {
+                printf("INCURSION_KEYS_SKIP=%s: not a number.\n", skip);
+                exit(2);
+            }
+            AT1->SkipKeys(n);
+        }
+        /* INCURSION_KEYS_PREPEND=<file> puts that key script in front of what is left, after the
+           skip: tools/char_convert.sh absorbs the prompt a load prints with it. Fixture builder
+           hook (inc-10v7f). */
+        if (getenv("INCURSION_KEYS_PREPEND") && *getenv("INCURSION_KEYS_PREPEND"))
+            AT1->PrependKeyScript(getenv("INCURSION_KEYS_PREPEND"));
+    }
 
     /* The watchdog guards an unattended run. A person sitting at a terminal
        is allowed to think for as long as they like. */
@@ -662,6 +718,10 @@ int main(int argc, char *argv[]) {
         retval = RunSchemaLoad(schemaLoad) ? 0 : 22;
     } else if (convertSave) {
         retval = RunSaveConvert(convertSave);
+    } else if (pickTestChar) {
+        retval = RunCharPickTest(pickTestChar, pickTestAsks);
+    } else if (buildChar) {
+        retval = RunCharBuild(buildChar);
     } else if (!AT1->RunOnCommandLine(argc, argv, &retval)) {
         T1->Initialize();
         if (loadSave) {
@@ -1261,6 +1321,40 @@ void posixTerm::AppendKey(const ScriptKey &k) {
     keys[keyCount++] = k;
 }
 
+long posixTerm::KeyScriptPosition() {
+    if (!keys)
+        return -1;
+    if (keyNext < keyCount) {
+        ScriptKey *e = &keys[keyNext];
+        if ((e->ch == SK_WHILE || e->ch == SK_UNTIL || e->ch == SK_CURSOR) &&
+            e->bodyPos != 0)
+            return -2;
+    }
+    return keyNext;
+}
+
+void posixTerm::SkipKeys(long n) {
+    if (n < 0 || n > keyCount) {
+        printf("INCURSION_KEYS_SKIP=%ld: the key script has %ld entries.\n",
+            n, (long)keyCount);
+        exit(2);
+    }
+    memmove(keys, keys + n, (keyCount - n) * sizeof(ScriptKey));
+    keyCount -= (int32)n;
+}
+
+void posixTerm::PrependKeyScript(const char *fn) {
+    ScriptKey *rest = keys;
+    int32 n = keyCount, i;
+
+    keys = NULL;
+    keyCount = keyAlloc = 0;
+    LoadKeyScript(fn);
+    for (i = 0; i < n; i++)
+        AppendKey(rest[i]);
+    free(rest);
+}
+
 void posixTerm::LoadKeyScript(const char *fn) {
     static int depth = 0;
     FILE *f = fopen(fn, "r");
@@ -1591,6 +1685,32 @@ static ScriptKey KeyFromTerminal() {
     return k;
 }
 
+ScriptKey posixTerm::BuildAck() {
+    static int acks = 0;
+    ScriptKey k;
+    char path[1024];
+    FILE *f;
+
+    memset(&k, 0, sizeof(k));
+    k.ch = KY_ESC;
+    acks++;
+    snprintf(path, sizeof(path), "%slogs/build-acks.log",
+        (const char*)IncursionDirectory);
+    f = fopen(path, "a");
+    if (f) {
+        fprintf(f, "ack %d window=%d\n", acks, CreationWindowOpen() ? 1 : 0);
+        fclose(f);
+    }
+    DumpScreen("ack");
+    if (acks > 50) {
+        fprintf(stderr, "BUILD FAILED: more than 50 key reads with no key script; "
+            "see logs/build-acks.log\n");
+        _exit(10);
+    }
+    keysRead++;
+    return k;
+}
+
 ScriptKey posixTerm::NextKey() {
     ScriptKey k;
 
@@ -1612,8 +1732,11 @@ ScriptKey posixTerm::NextKey() {
     for (;;) {
         ScriptKey *e;
 
-        if (!keys || keyNext >= keyCount)
+        if (!keys || keyNext >= keyCount) {
+            if (buildAckMode)
+                return BuildAck();
             OutOfKeys();
+        }
 
         e = &keys[keyNext];
 
@@ -1718,7 +1841,7 @@ ScriptKey posixTerm::NextKey() {
     return k;
 }
 
-int16 posixTerm::GetCharCmd(KeyCmdMode mode) {
+int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode) {
     KeySetItem *keyset = theGame->Opt(OPT_ROGUELIKE) ? RoguelikeKeySet : StandardKeySet;
     int16 keyset_start = 0, keyset_delta = 0, keyset_last;
     int16 i, ox, oy, ch;
