@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <time.h>
 #include <limits.h>
+#include <vector> /* inc-az4d2: before the 'array' macro below */
+#include <algorithm>
 
 /* The C++ library headers MUST come before the macros below: this project
    defines array(), I() and random(), which break libc++ (inc/CreationSource.h). */

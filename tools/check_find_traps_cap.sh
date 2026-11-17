@@ -9,18 +9,33 @@
 # scripts the dispatch left in tools/keys/ and reads the Search rating off the
 # skill manager before and after the cast.
 #
-# The high run is a priest advanced to level 11 under wizard mode. Learn Any
-# Spell sets SP_INNATE, so CalcEffect (src/Magic.cpp) uses ChallengeRating (the
-# sum of class levels), plus the sheet's Divination +1 -- an effective Find
-# Traps caster level of 12, not 11. Before the fix that is a +12 enhance on a
-# +2 base, +14 in all; after it is a +10 enhance, +12 in all. The control run
-# is a level-1 priest, effective caster level 2, a +2 enhance either way, and
-# proves the cap did not simply switch the spell off.
+# Both runs LOAD the frozen priest orc-priest-seed1-opt0822 (inc-b4l3g.17),
+# never generate one: chargen on some seeds shows a screen the key script does
+# not expect. The high run advances it to Priest 11 under wizard Free
+# Advancement. Learn Any Spell sets SP_INNATE, so CalcEffect (src/Magic.cpp:
+# 633-641) uses ChallengeRating (the sum of class levels), plus the Fate
+# domain's Divination +1 (lib/domains.irh:296) -- an effective Find Traps
+# caster level of 12. Before the fix that is a +12 enhance; after it is +10.
+# The control run stays level 1, effective caster level 2, a +2 enhance either
+# way, and proves the cap did not simply switch the spell off.
 #
 # A run that cannot produce its Search line, or whose high sheet does not show
 # Priest 11, is a FAIL and never a pass: a green result from a session that
 # never reached the state under test is the mistake this directory guards
-# against (inc-loa.3).
+# against (inc-loa.3). A harness failure is exit 2 (could not measure).
+#
+# fact: settings -- pinned tools/fixtures/options-2026-08-22.dat
+# fact: character (race, class, god, attributes, perks, domains) -- fixture orc-priest-seed1-opt0822 via INCURSION_LOAD
+# fact: character level -- wizard Free Advancement and G in the key script
+# fact: level-up menus -- fixed by the fixture's attributes, answered by the key script's @while lines
+# fact: the school caster-level bonus -- the fixture's Fate domain, Divination +1 (lib/domains.irh:296); the check's expected control enhance (+2) includes it
+# fact: monsters -- wizard Freeze Monsters
+# fact: casting roll -- wizard Ignore Spell Failure
+# fact: mana -- wizard Infinite Mana
+# fact: hit point and mana rolls at level-up -- not read by the check; it reads the Search rating and the class line only
+# fact: arrival map -- not read by the check; it reads the sheet and skill screens only
+#
+# Usage: tools/check_find_traps_cap.sh   (0 pass, 1 fail, 2 could not measure)
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,10 +43,13 @@ cd "$ROOT"
 
 SEED=1
 OPTIONS=tools/fixtures/options-2026-08-22.dat
+FIXTURE=tools/fixtures/chars/orc-priest-seed1-opt0822.char
+
+[ -f "$FIXTURE" ] || { echo "INCONCLUSIVE: character fixture $FIXTURE is not there"; exit 2; }
 
 [ -x ./incursion-headless ] || {
-    echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
-    exit 1
+    echo "INCONCLUSIVE: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
+    exit 2
 }
 
 # Read one run's Search rating before and after the cast. Prints "<before>
@@ -51,21 +69,31 @@ _search_ratings() { # <run dir>
 _run_one() { # <keyscript> <tag>
     local keys="$1" tag="$2" out status
     local run="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-$tag"
-    out="$(INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$run" \
+    out="$(INCURSION_LOAD="$FIXTURE" INCURSION_OPTIONS="$OPTIONS" INCURSION_RUN_DIR="$run" \
         tools/headless.sh "$keys" "$SEED" 2>&1)"
     status=$?
     printf '%s\n' "$out"
     if [ "$status" -ne 0 ]; then
-        echo "FAIL: tools/headless.sh exit $status running $keys"
+        echo "INCONCLUSIVE: tools/headless.sh exit $status running $keys; nothing was measured"
         printf '%s\n' "$out" | sed -n '/^--- after the session ---/,$p' | sed 's/^/      /'
         return 1
     fi
     printf '%s\n' "$run"
 }
 
+# The four wizard switches must read YES, else the run did not measure the cast.
+_switches_on() { # <run dir>
+    local f row
+    f="$(ls "$1"/logs/screens/*-switches.txt 2>/dev/null | head -1)"
+    [ -n "$f" ] || return 1
+    for row in "Free Advancement" "Ignore Spell Failure" "Infinite Mana" "Freeze Monsters"; do
+        grep -qE "$row[[:space:]]+YES" "$f" || return 1
+    done
+}
+
 fail=0
 echo "=== high run: tools/keys/find-traps-cap.keys (priest 11, effective CL 12) ==="
-high="$(_run_one tools/keys/find-traps-cap.keys find-traps-cap-high)" || exit 1
+high="$(_run_one tools/keys/find-traps-cap.keys find-traps-cap-high)" || { printf '%s\n' "$high"; exit 2; }
 high_run="$(printf '%s\n' "$high" | tail -1)"
 printf '%s\n' "$high" | sed '$d'
 
@@ -77,11 +105,15 @@ if ! grep -qE 'Class[[:space:]]+Priest 11([[:space:]]|$)' \
     fail=1
 fi
 
+_switches_on "$high_run" || { echo "INCONCLUSIVE: the high run's wizard switches are not all YES."; exit 2; }
+
 echo
 echo "=== control run: tools/keys/find-traps-control.keys (priest 1, effective CL 2) ==="
-ctl="$(_run_one tools/keys/find-traps-control.keys find-traps-cap-control)" || exit 1
+ctl="$(_run_one tools/keys/find-traps-control.keys find-traps-cap-control)" || { printf '%s\n' "$ctl"; exit 2; }
 ctl_run="$(printf '%s\n' "$ctl" | tail -1)"
 printf '%s\n' "$ctl" | sed '$d'
+
+_switches_on "$ctl_run" || { echo "INCONCLUSIVE: the control run's wizard switches are not all YES."; exit 2; }
 
 high_ratings="$(_search_ratings "$high_run")"
 ctl_ratings="$(_search_ratings "$ctl_run")"
