@@ -65,6 +65,23 @@
 # drew against the decided landing square: a missile with no Intended
 # creature is drawn past the creature it hits.
 #
+# inc-b4l3g.21 makes this check seed-independent. On seed 101 the case
+# clean-miss-lands-on-target failed: the probe generated its character and
+# used a map the seed built, so the character's to-hit bonus and the rat's
+# sight of the shooter varied with the seed, and a forced roll calibrated
+# one way landed another. The character now comes from the fixture
+# orc-barbarian-seed1-opt0822 (INCURSION_LOAD), and the probe builds its
+# own open, lit, creature-free line (LOFProbeFindLine) instead of trusting
+# the map. See "A check must not depend on the seed" in docs/VERIFICATION.md.
+#
+# fact: character (to-hit bonus, Str, feats) -- fixture orc-barbarian-seed1-opt0822 (INCURSION_LOAD)
+# fact: an open, lit, creature-free line of 10 squares from the player -- the probe builds it (WriteTerra floor, Lit=1)
+# fact: every attack roll -- LOFForcedRoll, set by the probe per case
+# fact: every Reflex save in a band case -- LOFSetForcedSave, set by the probe per case
+# fact: the clean-miss shot's real to-hit and defense at 7 squares (victim's sight of the shooter) -- per-case calibration shot
+# fact: damage amount -- not read: a case reads only whether a rat lost hit points; the armor model floors a hit at 1 (inc-b0w2)
+# fact: vtRoll (fumble/crit confirm) -- not read: only who lost hit points is read
+#
 # Usage: tools/check_line_of_fire.sh    (exits 0 on pass, 1 on fail)
 set -uo pipefail
 
@@ -72,14 +89,15 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SEED=1
-KEYS=tools/keys/line-of-fire.keys
+KEYS=tools/keys/line-of-fire-load.keys
+LOAD=orc-barbarian-seed1-opt0822
 
 [ -x ./incursion-headless ] || {
     echo "FAIL: ./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 1
 }
 
-out="$(INCURSION_LOF_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
+out="$(INCURSION_LOF_PROBE=1 INCURSION_LOAD="$LOAD" INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat tools/headless.sh "$KEYS" "$SEED" 2>&1)"
 run="$(echo "$out" | awk '/^run:/ {print $2}')"
 
 log="$run/logs/errors.log"
