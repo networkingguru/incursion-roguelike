@@ -4,9 +4,25 @@
 */
 
 
+/* inc-az4d2: one square of a ball's fill. kind 0 is a taken (counted, drawn)
+   square, 1 a solid terrain square the fill touched, 2 a square holding a
+   solid feature (a closed door). ring is its distance band (rounded true distance from the center). */
+struct BallSquare
+  {
+    int16 x, y, ring;
+    int8 kind;
+  };
+
 class Magic
 	{
     public:
+      // inc-az4d2: the squares a ball strikes, in band order. Draws and
+      // strikes nothing. count is the volume: the most taken squares,
+      // center included.
+      static int16 BallDiscCount(int r);
+      static int16 BallVolume(EventInfo &e, int16 lval);
+      static void BallFill(Map &m, int16 cx, int16 cy, int16 count,
+          std::vector<BallSquare> &out);
       // The Area-Effect Functions
       // ww: folded into one, now ...
       /*

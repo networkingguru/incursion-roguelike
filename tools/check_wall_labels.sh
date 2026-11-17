@@ -14,8 +14,9 @@
 # fact: settings -- tools/gates/Options.Dat
 # fact: run isolation -- unique INCURSION_RUN_DIR per run
 # fact: how long a seed runs -- 60 s is a per-seed sampling budget (the summary line prints every
-#   1000 calls, so a cut run still counts); tools/run_capped.py enforces it on the whole process
-#   group, and a hang is bounded by the same limit
+#   1000 calls and at exit); tools/run_capped.py enforces it on the whole process group by
+#   SIGTERM, the self-check build writes its tally on SIGTERM, so a cut run always yields
+#   counts, and a hang is bounded by the same limit
 #
 # Usage: tools/check_wall_labels.sh [--no-build] [--prove-red]
 # --prove-red: build with -DLABEL_BREAK (labels flood 4-connected, so areas

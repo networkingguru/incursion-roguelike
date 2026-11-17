@@ -21,7 +21,7 @@
 # is refused too, because the stand-ins cannot see it.
 # THERE IS NO WALL-CLOCK LIMIT. tools/fast_watch.py watches progress. A watched
 # run (INCURSION_FAST_WATCHED=1 in the environment) appends ALERT lines to
-# logs/fast-alert.log and lets the check finish. Every other run is unwatched:
+# logs/fast-alert.log (INCURSION_FAST_ALERT_FILE names another file) and lets the check finish. Every other run is unwatched:
 # at 5x the alert limits the check stops with a HANG. Only the marker counts:
 # CLAUDECODE and NIGHTLY_BRANCH do not change the mode.
 #
@@ -107,8 +107,8 @@ MODE=unwatched
 if [ "${INCURSION_FAST_WATCHED:-}" = 1 ]; then
     MODE=watched
 fi
-ALERT="$ROOT/logs/fast-alert.log"
-mkdir -p "$ROOT/logs" || { echo "COULD NOT MEASURE: cannot create $ROOT/logs" >&2; exit 2; }
+ALERT="${INCURSION_FAST_ALERT_FILE:-$ROOT/logs/fast-alert.log}"
+mkdir -p "$(dirname "$ALERT")" || { echo "COULD NOT MEASURE: cannot create $(dirname "$ALERT")" >&2; exit 2; }
 printf 'RUN %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$MODE" "$$" >> "$ALERT"
 printf 'fast checks: %s; alerts go to %s\n' "$MODE" "$ALERT"
 

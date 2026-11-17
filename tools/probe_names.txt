@@ -13,6 +13,7 @@ INCURSION_ARMOUR_PROBE	pre-registry	-
 INCURSION_AUTOKNOCK_PROBE	pre-registry	-
 INCURSION_AUTOLOOT_PACKS_PROBE	pre-registry	-
 INCURSION_AUTOPICKUP_PACKS_PROBE	pre-registry	-
+INCURSION_BALL_PROBE	inc-az4d2	ball shape probe: disc, corridor, sight, bands, metamagic, prediction (tools/check_ball_shape.sh)
 INCURSION_BANE_PROBE	pre-registry	-
 INCURSION_BELT_POTION_PROBE	pre-registry	-
 INCURSION_BESTOW_PROBE	pre-registry	-

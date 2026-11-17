@@ -2074,7 +2074,7 @@ AI_WAND Effect "Shards" : EA_BLAST
 AI_WAND Effect "the Void" : EA_BLAST
   {   
     SC_NEC; SC_WEA; Cost: 5; Purpose: EP_ATTACK; tval: MA_LIVING;
-    qval: Q_TAR | Q_LOC | Q_DIR; aval: AR_BURST; lval: 7; cval: COL_NECRO;
+    qval: Q_TAR | Q_LOC | Q_DIR; aval: AR_BURST; lval: 3; cval: COL_NECRO;
     Flags: EF_STRIKEID, EF_NEEDS_PLUS, EF_LIM_MTYPE; sval: REF partial;
     xval: AD_COLD; pval: (PLUS_1PER1)d6; Level: PLUS_3PER1_ADD2;
     On Event MSG_BLASTNAME "ball of dark energy";    
@@ -2098,7 +2098,7 @@ and EA_BLAST
 AI_WAND Effect "Life Stealing" : EA_BLAST
   { 
     SC_NEC; Cost: 10; Purpose: EP_ATTACK; tval: MA_LIVING;
-    qval: Q_TAR | Q_LOC | Q_DIR; aval: AR_BURST; lval: 7; cval: COL_NECRO;
+    qval: Q_TAR | Q_LOC | Q_DIR; aval: AR_BURST; lval: 3; cval: COL_NECRO;
     Flags: EF_STRIKEID, EF_NEEDS_PLUS, EF_LIM_MTYPE; sval: REF partial;
     xval: AD_VAMP; pval: (PLUS_1PER1)d6; Level: PLUS_3PER1_ADD1;
     On Event MSG_BLASTNAME "ball of dark energy";
@@ -2341,7 +2341,7 @@ AI_WAND Effect "Cleansing Light" : EA_BLAST
 AI_WAND Effect "Soul Flaying" : EA_BLAST
   {
     SC_WEA; Cost: 10; Purpose: EP_ATTACK; qval: Q_TAR|Q_DIR|Q_LOC;
-    aval: AR_BALL; cval: COL_SILVERY; lval: 20;
+    aval: AR_BALL; cval: COL_SILVERY; lval: 5;
     xval: AD_DAWI; pval: (PLUS_1PER1)d4; sval: WILL partial;
     Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_BLIND_PROMPT;   
     Level: PLUS_3PER1_ADD3;
@@ -2420,7 +2420,7 @@ AI_WAND Effect "the Hellstorm" : EA_BLAST
   {
     SC_EVO; Cost: 20; Purpose: EP_ATTACK; qval: Q_TAR|Q_DIR|Q_LOC;
     aval: AR_BALL; cval: COL_FIRE; Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_EVIL;
-    sval: REF partial; xval: AD_FIRE; pval: (PLUS_1PER1)d10; lval: 40;
+    sval: REF partial; xval: AD_FIRE; pval: (PLUS_1PER1)d10; lval: 8;
     Level: PLUS_3PER1_ADD1;
     On Event
       MSG_BLASTNAME
@@ -6454,13 +6454,13 @@ AI_HORN Effect "the Tritons" : EA_SUMMON
 
 AI_HORN Effect "Panic" : EA_INFLICT
   { SC_NEC; Level: 4; sval: WILL;
-    xval: AFRAID; aval: AR_BALL; lval: 9; cval: CYAN;
+    xval: AFRAID; aval: AR_BALL; lval: 4; cval: CYAN;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE; qval: 0;
     /* upstream: base-code defect: this shared game data is read identically
        on Win32 with the original typedefs and compiler. Evidence tier:
        Observed. Tracked as inc-j4dy. NOT sent upstream. */
     Flags: EF_MENTAL , EF_CASTER_IMMUNE, EF_SOUND, EF_ACTIVATE;
-    Desc: "Causes all other creatures within 90 feet of the user
+    Desc: "Causes all other creatures within 40 feet of the user
       to become afraid, if they fail a Will saving throw.";
   }
 
