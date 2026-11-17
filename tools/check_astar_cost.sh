@@ -4,11 +4,13 @@
 # the same cost to the target as plain Dijkstra? (inc-vhkei)
 #
 # A build with -DASTAR_SELFCHECK reruns plain Dijkstra after every A* search and
-# compares Dist[target]. It prints ASTAR_MISMATCH per difference and, at exit,
-# ASTAR_SELFCHECK calls=<n> mismatches=<m> (src/AStarSelfCheck.h).
+# compares Dist[target] (and doors broken, for a DF_BASH_DOORS search, which
+# orders by (doors broken, distance); inc-34tsi). It prints ASTAR_MISMATCH per
+# difference and, at exit, ASTAR_SELFCHECK calls=<n> compared=<c> mismatches=<m>
+# (src/AStarSelfCheck.h).
 # The summary is also printed every 1000 calls, so a run the timeout kills still reports.
 # This check runs dive.keys on seeds 1 3 6 8 16 and FAILS unless every run
-# printed the summary line, the total calls exceed 1000 and mismatches are 0.
+# printed the summary line, the total compared searches exceed 1000 and mismatches are 0.
 #
 # fact: which routes are searched -- none; the self-check compares A* with Dijkstra on every call, whatever the seed plays
 # fact: settings -- tools/gates/Options.Dat
@@ -43,7 +45,7 @@ if [ $BUILD = 1 ]; then
 fi
 [ -x "./$OUT" ] || { echo "no binary ./$OUT"; exit 2; }
 BASE="logs/$OUT-runs-$$"; mkdir -p "$BASE"
-calls=0; mis=0; cut=0
+calls=0; cmp=0; mis=0; cut=0
 for seed in 1 3 6 8 16; do
   outf="$BASE/seed-$seed.out"
   INCURSION_BIN="./$OUT" INCURSION_OPTIONS=tools/gates/Options.Dat \
@@ -53,12 +55,12 @@ for seed in 1 3 6 8 16; do
   if [ "$rc" -eq 124 ]; then cut=$((cut+1)); echo "seed $seed: budget reached at 60 s (partial counts)"; fi
   line=$(grep -a '^ASTAR_SELFCHECK ' "$outf" | tail -1)
   if [ -z "$line" ]; then echo "seed $seed: no ASTAR_SELFCHECK line (see $outf)"; exit 2; fi
-  c=${line#*calls=}; c=${c%% *}; m=${line##*mismatches=}
-  echo "seed $seed: calls=$c mismatches=$m"
-  calls=$((calls+c)); mis=$((mis+m))
+  c=${line#*calls=}; c=${c%% *}; k=${line#*compared=}; k=${k%% *}; m=${line##*mismatches=}
+  echo "seed $seed: calls=$c compared=$k mismatches=$m"
+  calls=$((calls+c)); cmp=$((cmp+k)); mis=$((mis+m))
 done
-echo "total calls=$calls mismatches=$mis budget-cut seeds=$cut of 5"
-[ "$calls" -gt 1000 ] || { echo "FAIL: too few calls to judge"; exit 2; }
+echo "total calls=$calls compared=$cmp mismatches=$mis budget-cut seeds=$cut of 5"
+[ "$cmp" -gt 1000 ] || { echo "FAIL: too few compared searches to judge"; exit 2; }
 if [ $RED = 1 ]; then
   if [ "$mis" -gt 0 ]; then echo "PROVED RED"; exit 0; fi
   echo "NOT RED: inadmissible heuristic produced no mismatch"; exit 1
