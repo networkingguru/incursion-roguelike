@@ -29,18 +29,32 @@
 # which prints the hardness AFTER GearResistLevel is added to it, and the
 # hammer's own hit points.
 #
-# Measured 2026-09-11, seed 5: flag absent, 11 of 12 strike screens read
-# "vs. 12 (silver)", two report the hammer melting, and it ends at 75/65 from
-# 78/65. Flag added, the same 11 read "vs. 24 (silver)", nothing melts and the
-# hammer ends at 78/65.
+# SEED-PROOFED (inc-b4l3g.18). The character is the frozen orc warrior, the map
+# is its frozen scene, every blow is forced to hit and every acid roll is forced
+# to a fixed value (INCURSION_FORCE_DAMAGE_ROLL=5, so the acid 3d6 reads 15).
+# Unprotected, 15 beats hardness 12 by 3 on each splash, so the hammer melts;
+# with the flag, hardness 24 beats every 15 and nothing melts.
+#
+# fact: character (race, class, stats, kit) -- tools/fixtures/specimens/orc-warrior-dequ-seed5-maxhp.sav (INCURSION_LOAD), frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder
+# fact: settings -- CHECK_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat
+# fact: map and position -- the loaded save (frozen specimen, kept until inc-9s4u0), then wizard summoning
+# fact: level has no other monster -- wizard Genocide Everything
+# fact: creeper does not move -- wizard switch Freeze Monsters
+# fact: creeper hit points -- OPT_MON_MAX_HP DOUBLE in the options file, so it outlives twelve blows
+# fact: the warrior's Reflex save vs A_DEQU fails -- INCURSION_FORCE_SAVE_ROLL=1
+# fact: each blow hits -- INCURSION_LOF_FORCE_ROLL=15 (hits Def 10, below a critical threat)
+# fact: each acid roll -- INCURSION_FORCE_DAMAGE_ROLL=5 (acid 3d6 -> 15)
+# fact: amulet +3 and hammer +2 silvered -- wizard Item Acquisition and Add Quality; Dwarven Thrower has no EF_CURSED or EF_HALF_CURSED, so MakeMagical rolls no curse (src/Item.cpp:664)
+# fact: message texts -- engine strings
+#
 # Usage: tools/check_gear_item_exclusion.sh [--prove-red]
 # INVERTED, like check_dequ_owner_immunity.sh: the mutation ADDS the flag the
 # owner refused, and this check must go red because the gear stops being hurt.
 # PROVED RED: add the flag; exact failing output (outer exit 0):
 #   |   screens: 12 matching '*-excl-strike-*'
-#   |   FAIL  0/12 screens carry: vs. 12 (silver)
+#   |   FAIL  only 0 of 12 screens carry: vs. 12 (silver)
 #   |         it should prove: the amulet's resistance does not reach the hammer
-#   |   FAIL  11/12 screens still carry: vs. 24 (silver)
+#   |   FAIL  12/12 screens still carry: vs. 24 (silver)
 #   |         it should prove: no blow meets the wearer's resistance in the gear
 #   |         first: vs. 24 (silver)
 #   |   screens: 16 matching '*'
@@ -53,16 +67,22 @@
 #   |         first: It has 78 out of 65 hit
 #   |
 #   | FAIL: a wearer-only item leaves the bearer's gear exposed
-#   |       the screens are in .../20260911-145216-47402-gear-item-exclusion
+#   |       the screens are in .../20261117-072739-24037-gear-item-exclusion
 # PROVED RED: with lib/m_items.irh mutated, this check exits 1.
 . "$(dirname "$0")/check_lib.sh"
 
-CHECK_OPTIONS=tools/fixtures/options-2026-08-22.dat
+CHECK_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat
 check_mutation lib/m_items.irh \
 'AI_AMULET Effect "Bile" : EA_GRANT
   { SC_ABJ;' \
 'AI_AMULET Effect "Bile" : EA_GRANT
   { Flags: EF_PROTECTS_ITEMS; SC_ABJ;'
+
+# A frozen character, not a generated one: an rID is a POSITION (tools/fixtures/README.md).
+export INCURSION_LOAD=tools/fixtures/specimens/orc-warrior-dequ-seed5-maxhp.sav
+export INCURSION_FORCE_SAVE_ROLL=1
+export INCURSION_LOF_FORCE_ROLL=15
+export INCURSION_FORCE_DAMAGE_ROLL=5
 
 check_run tools/keys/gear-item-exclusion.keys 5
 check_screens '*-excl-sheet'
@@ -72,7 +92,7 @@ check_screens '*-excl-before'
 check_expect "Uncursed Warhammer, Dwarven" "the character wields the silvered hammer"
 check_expect "It has 78 out of 65 hit" "the hammer starts undamaged"
 check_screens '*-excl-strike-*'
-check_expect "vs. 12 (silver)" "the amulet's resistance does not reach the hammer"
+check_expect_all "vs. 12 (silver)" "the amulet's resistance does not reach the hammer"
 check_reject "vs. 24 (silver)" "no blow meets the wearer's resistance in the gear"
 check_screens
 check_expect "melts" "the unprotected hammer really is damaged by the acid"
