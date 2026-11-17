@@ -39,6 +39,7 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include <memory>
 
 #define is_elemental_dmg(i) (i == AD_FIRE || i == AD_COLD || i == AD_ELEC || \
                              i == AD_TOXI || i == AD_SONI || i == AD_ACID)  
@@ -1790,6 +1791,13 @@ EvReturn Magic::AGlobe(EventInfo &e)
     
     /* Do Highlight Effect */
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
+      /* inc-jw0hw: the globe lights its area; the light ends before any hit. */
+      EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType);
+      for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
+        for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
+          if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
+            fx.Light(x,y);
+      fx.Refresh();   /* before the highlight: ShowMap repaints every cell */
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
           if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
@@ -1802,6 +1810,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
       PossiblyPause(T1,cx,cy, e.EActor->isPlayer() ? 1500 : 500);
       T1->RefreshMap();
       T1->Update();
+      fx.Ramp(250,1,0);
+      fx.End();
       }
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
@@ -2264,6 +2274,18 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
        if (k == tc)                             \
          TargetList[tc++] = t;                  \
        }                                        
+  /* inc-jw0hw: fade the travel's light and end it. Runs before any hit. */
+  #define FINISH_TRAIL                          \
+     if (trail) {                               \
+       if (!isBall) {                           \
+         o.DeActivate();                        \
+         overlayOff = true;                     \
+         T1->ShowMap();                         \
+         trail->Ramp(isMulti ? 100 : 250, 1, 0);\
+         }                                      \
+       trail->End();                            \
+       trail.reset();                           \
+       }
   tc = 0; ti = 0; ac = 0;
 
   if (e.eID) te = TEFF(e.eID);
@@ -2305,6 +2327,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   bool AdjustDone = false;
   Fraction slope, test;
 
+  // inc-jw0hw: a beam or missile lights its path; the light ends before any hit.
+  std::unique_ptr<EffectLight> trail;
+  bool overlayOff = false;
   // do we think something happened? 
   bool vis = true; 
     if (!e.EActor->isBlind())
@@ -2506,6 +2531,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
 
   // travel! 
+  if (overlayOff) { o.Activate(); overlayOff = false; }
+  if (!hitSelf)
+    trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType));
     while(!hitSelf && m.InBounds(cx/2,cy/2)) {
 
     // are we out of range? 
@@ -2553,6 +2581,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         colour = BlastColourSets[Color * 4];
       o.AddGlyph(cx/2,cy/2, g | GLYPH_FORE(colour));
       o.ShowGlyphs();
+      if (trail) {
+        if (isMulti) trail->Light(cx/2,cy/2);
+        else trail->MoveTo(cx/2,cy/2);
+        trail->Refresh();
+        }
       PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {
         o.DeActivate();
@@ -2682,6 +2715,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     }
   OuterBreak:
 
+  /* inc-jw0hw: the travel is over; fade the light and end it before any hit. */
+  FINISH_TRAIL
+
   if (isChain)
     {
       Thing *t, *best; int16 bdist;
@@ -2751,6 +2787,8 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   
   DoneProject:
 
+  FINISH_TRAIL   /* a leave by goto from the travel loop */
+
   
 
   if (isBall) { 
@@ -2764,6 +2802,8 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
     int16 RingX[160], RingY[160], DrawX[160], DrawY[160];
     bool anyDrawn = false;
+    /* inc-jw0hw: the ball lights ring by ring and ends before any hit. */
+    EffectLight fx(&m, Color, EL_AREA, e.DType);
     if (BallRingHook) {
       int16 bcx = x, bcy = y;
       BallRingHook(-2, 1, &bcx, &bcy, 0, NULL, NULL, 0);
@@ -2794,12 +2834,14 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
           o.AddGlyph(sqx,sqy,
               GLYPH_VALUE(GLYPH_BLAST, BlastColourSets[Color * 4 + 1 + random(3)]));
           DrawX[nDraw] = sqx; DrawY[nDraw] = sqy;
+          fx.Light(sqx,sqy);
           nDraw++;
           }
         }
       first = i;
       o.ShowGlyphs();
       if (nDraw) {
+        fx.Refresh();
         T1->StopWatch(70);
         anyDrawn = true;
         }
@@ -2810,7 +2852,13 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     if (BallRingHook)
       BallRingHook(-1, 0, NULL, NULL, 0, NULL, NULL, anyDrawn ? 300 : 0);
     if (anyDrawn)
-      T1->StopWatch(300);
+      fx.Hold(300);
+    o.DeActivate();
+    if (anyDrawn) {
+      T1->ShowMap();
+      fx.Ramp(250,1,0);
+    }
+    fx.End();
     m.UnsetQueue(QUEUE_AREA_EFFECT);
     m.PrintQueue(QUEUE_AREA_EFFECT);
   } else if (!isBeam) {

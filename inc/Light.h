@@ -84,6 +84,27 @@ LightRGB LightGlow(int idx, LightRGB L);
 /* Blend a rendered colour toward fog in proportion to arriving light. */
 LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L);
 
+/* Effect light (inc-jw0hw). A flash is one lit AREA: the effect's own squares
+   plus a spill of `reach` squares. It survives LightRebuild, and spell code
+   changes its level while the animation runs. The level changes only the drawn
+   color: vision counts a live flash at full weight whatever its level. */
+// family: light-flash-style internal
+enum { LF_STEADY = 0, LF_FIRE = 1, LF_ARC = 2, LF_RAINBOW = 3 };
+// end family: light-flash-style
+LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SILVERY, or a palette index 0..15 */
+int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach); /* id >= 0, or -1 when disabled */
+void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square */
+void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
+void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
+void  LightFlashRemove(int32 id);
+void  LightFlashClearAll();
+int32 LightFlashCount();
+bool  LightFlashDisabled();                         /* INCURSION_EFFECT_LIGHT_OFF is set */
+
+/* Aura circles (inc-jw0hw): one per modifier or blocker field that gives no light. */
+int32 LightAuraCount();
+bool  LightAuraAt(int32 i, int16 &cx, int16 &cy, int16 &rad, LightRGB &c, float &noise);
+
 /* How the SDL build should draw, from OPT_ANIMATION: None = the classic
    16-colour path, Fast = steady coloured light, Normal/Player = shimmer. */
 enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };

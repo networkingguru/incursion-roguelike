@@ -553,6 +553,14 @@ void Game::Play() {
        BallShapeProbe (src/BallShapeProbe.cpp). */
     extern void BallShapeProbe(Player *pl);
     BallShapeProbe(pp);
+    /* inc-jw0hw: off unless INCURSION_EFFECT_LIGHT_PROBE is set. See
+       EffectLightProbe (src/EffectLightProbe.cpp). */
+    extern void EffectLightProbe(Player *pl);
+    EffectLightProbe(pp);
+    /* inc-jw0hw: off unless INCURSION_EFFECT_REEL is set. See
+       EffectReelProbe (src/EffectReelProbe.cpp). */
+    extern void EffectReelProbe(Player *pl);
+    EffectReelProbe(pp);
     extern void TerraformEdgeProbe(Player *pl);
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);

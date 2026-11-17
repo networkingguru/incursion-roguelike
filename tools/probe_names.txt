@@ -10,6 +10,7 @@ INCURSION_ALIGN_PROBE	pre-registry	-
 INCURSION_AOO_PROBE	pre-registry	-
 INCURSION_AREA_PROBE	pre-registry	-
 INCURSION_ARMOUR_PROBE	pre-registry	-
+INCURSION_AURA_SCENE	inc-jw0hw	with the effect-light probe, builds the aura-circle scene and waits 1000 ms (tools/check_aura_circle.sh)
 INCURSION_AUTOKNOCK_PROBE	pre-registry	-
 INCURSION_AUTOLOOT_PACKS_PROBE	pre-registry	-
 INCURSION_AUTOPICKUP_PACKS_PROBE	pre-registry	-
@@ -54,6 +55,10 @@ INCURSION_DURATION_PROBE_EFNUM	pre-registry	-
 INCURSION_DURATION_PROBE_FLAG	pre-registry	-
 INCURSION_DURATION_PROBE_HANDLER	pre-registry	-
 INCURSION_DURATION_PROBE_SAMPLES	pre-registry	-
+INCURSION_EFFECT_LIGHT_OFF	inc-jw0hw	light flashes add nothing; the reel's light-off pass and the check's baseline
+INCURSION_EFFECT_LIGHT_PROBE	inc-jw0hw	effect light probe (tools/check_effect_light.sh)
+INCURSION_EFFECT_REEL	inc-jw0hw	effect reel probe: casts every blast, globe, aura field and breath type in a dark room, one recorder clip each (tools/render_effect_reel.sh, tools/check_effect_reel_list.sh)
+INCURSION_EFFECT_REEL_ONLY	inc-jw0hw	comma-separated effect names; the reel plays only those
 INCURSION_ELEM_RESIST_PROBE	pre-registry	-
 INCURSION_ELUDE_PROBE	pre-registry	-
 INCURSION_ENCSKIP_PROBE	pre-registry	-
@@ -70,6 +75,7 @@ INCURSION_FORCE_PURSUE	inc-zm6li	forces the single RouteProbe pursuer to pursue 
 INCURSION_FORCE_SAVE_DC	pre-registry	-
 INCURSION_FORCE_SAVE_ROLL	pre-registry	-
 INCURSION_FORT_PROBE	pre-registry	-
+INCURSION_FRAMES	inc-jw0hw	names a directory; the SDL build runs windowless on a virtual clock and saves a bitmap every 33 ms to <dir>/<clip>/
 INCURSION_GENITEM_FORCE	pre-registry	-
 INCURSION_GLORY_PROBE	pre-registry	-
 INCURSION_GOWITH_PROBE	pre-registry	-

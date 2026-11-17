@@ -8,6 +8,7 @@
 /* Incursion.h defines min and max as macros, so system headers must precede
    them because libstdc++ declares std::min/std::max through <math.h>. */
 #include <math.h>
+#include <vector>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,8 +17,10 @@
 
 #define LIGHT_MAX_RADIUS 12
 
+// family: light-kind internal
 enum LightKind { LK_TORCH, LK_LANTERN, LK_GLOW, LK_FIELD, LK_MAGMA,
-                 LK_WALLTORCH, LK_REFLECT, LK_KINDS };
+                 LK_WALLTORCH, LK_REFLECT, LK_FLASH, LK_AURA, LK_KINDS };
+// end family: light-kind
 
 /* ponytail: a source's colour comes from this table, or from its own glyph
    when the table row is black. The upgrade path is a "Light Colour:" field in
@@ -35,6 +38,8 @@ static const LightKindRow KindTable[LK_KINDS] = {
   /* LK_MAGMA     */ { { 255,  80,  20 }, 0.70f, 0.35f,  0.6f, 2, 0.80f },
   /* LK_WALLTORCH */ { { 255, 160,  60 }, 1.00f, 0.30f,  9.0f, 4, 0.60f },
   /* LK_REFLECT   */ { {   0,   0,   0 }, 1.00f, 0.00f,  1.0f, 1, 1.00f },
+  /* LK_FLASH     */ { {   0,   0,   0 }, 1.00f, 0.00f,  1.0f, 1, 1.00f },
+  /* LK_AURA      */ { {   0,   0,   0 }, 0.50f, 0.30f,  1.2f, 3, 4.00f },
 };
 
 static LightRGB Palette[MAX_COLOURS] = {
@@ -55,6 +60,7 @@ struct LightSource {
   int32 first, count;          /* slice of Foot[] */
   int8 rdx, rdy;               /* reflected source only: the hemisphere it lights,
                                   toward the light that lit it; 0,0 = all round */
+  int32 fid;                   /* LK_FLASH: index into Flashes; LK_AURA: into AuraCells */
 };
 
 struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; };
@@ -71,6 +77,22 @@ static uint8 *FogCol = NULL;                     /* fog palette index plus one, 
 static LightSource *Src = NULL; static int32 nSrc = 0, capSrc = 0;
 static FootCell    *Foot = NULL; static int32 nFoot = 0, capFoot = 0;
 static bool        anyFlicker = false;
+
+/* inc-jw0hw: a flash lives outside Src so it survives LightRebuild. Its level
+   and noise are read by ComposeFrame; its footprint is rebuilt with the rest. */
+struct FlashCell { int16 x, y; };
+struct Flash {
+  bool live;
+  LightRGB c, cur;             /* base colour; colour this frame (rainbow moves it) */
+  uint8 style;
+  float gain, level, noise;
+  int16 reach;
+  uint32 seed;
+  std::vector<FlashCell> cells;
+};
+static std::vector<Flash> Flashes;
+static int32 nFlashLive = 0;
+static uint32 flashSeq = 0;
 
 static uint8 LegacyLevel(int16 x, int16 y) {
   const LocationInfo &at = lmMap->At(x, y);
@@ -508,6 +530,74 @@ static void CastFootprint(Map *m, LightSource &s) {
   s.count = nFoot - s.first;
 }
 
+/* A flash's footprint: every effect square at full gain, and every other cell
+   within `reach` of the nearest effect square at the falloff from that square.
+   A cell takes the MAX over the area (its nearest square), never a sum, so a
+   big ball keeps its color and dims with distance. inc-jw0hw */
+struct AreaSpec { const std::vector<FlashCell> &cells; int16 reach; float gain;
+                  AreaSpec(const std::vector<FlashCell> &c, int16 r, float g)
+                    : cells(c), reach(r), gain(g) {} };
+static void CastAreaFootprint(Map *m, LightSource &s, const AreaSpec &fl) {
+  s.first = nFoot;
+  if (fl.cells.empty()) { s.count = 0; return; }
+  int16 x0 = fl.cells[0].x, x1 = x0, y0 = fl.cells[0].y, y1 = y0;
+  for (size_t i = 1; i < fl.cells.size(); i++) {
+    if (fl.cells[i].x < x0) x0 = fl.cells[i].x;
+    if (fl.cells[i].x > x1) x1 = fl.cells[i].x;
+    if (fl.cells[i].y < y0) y0 = fl.cells[i].y;
+    if (fl.cells[i].y > y1) y1 = fl.cells[i].y;
+  }
+  const int16 bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  std::vector<uint8> mark((size_t)bw * bh, 0);
+  for (size_t i = 0; i < fl.cells.size(); i++)
+    mark[(size_t)(fl.cells[i].y - y0) * bw + (fl.cells[i].x - x0)] = 1;
+  const float g = fl.gain > 1.0f ? 1.0f : fl.gain;
+  for (int16 y = y0 - fl.reach; y <= y1 + fl.reach; y++)
+    for (int16 x = x0 - fl.reach; x <= x1 + fl.reach; x++) {
+      if (!m->InBounds(x, y)) continue;
+      int16 best = 0x7fff, bx = 0, by = 0;
+      for (int16 ny = y - fl.reach; ny <= y + fl.reach; ny++)
+        for (int16 nx = x - fl.reach; nx <= x + fl.reach; nx++) {
+          if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+          if (!mark[(size_t)(ny - y0) * bw + (nx - x0)]) continue;
+          int16 d = dist(x, y, nx, ny);
+          if (d < best) { best = d; bx = nx; by = ny; }
+        }
+      if (best > fl.reach) continue;
+      if (best == 0) {
+        AddFoot((int32)y * lmW + x, (uint8)(g * 255.0f + 0.5f), 255, 255, 255);
+        continue;
+      }
+      /* spill: 0.75 of the gain one square out, 0.45 two out (inc-jw0hw ruling) */
+      float w = g * 0.75f * (1.0f - 0.4f * (float)(best - 1));
+      if (w <= 0.0f) continue;
+      if (!Reaches(m, bx, by, x, y)) continue;
+      LightRGB filter;
+      if (!FilterAlong(m, bx, by, x, y, filter)) continue;
+      AddFoot((int32)y * lmW + x, (uint8)(w * 255.0f + 0.5f),
+              filter.r, filter.g, filter.b);
+    }
+  s.count = nFoot - s.first;
+}
+
+static void CastFlashFootprint(Map *m, LightSource &s) {
+  const Flash &fl = Flashes[s.fid];
+  CastAreaFootprint(m, s, AreaSpec(fl.cells, fl.reach, fl.gain));
+}
+
+static void ScanFlashes() {
+  for (size_t i = 0; i < Flashes.size(); i++) {
+    if (!Flashes[i].live) continue;
+    LightSource &s = NewSource();
+    s.kind = LK_FLASH; s.fid = (int32)i; s.c = Flashes[i].c;
+    s.gain = Flashes[i].gain; s.noise = 1.0f;
+    if (!Flashes[i].cells.empty()) {
+      s.x = Flashes[i].cells[0].x; s.y = Flashes[i].cells[0].y;
+    }
+    anyFlicker = true;
+  }
+}
+
 static void ScanCreatures(Map *m) {
   for (Thing *t = m->FirstThing(); t; t = m->NextThing()) {
     if (!t->isCreature()) continue;
@@ -525,13 +615,34 @@ static void ScanCreatures(Map *m) {
   }
 }
 
+/* inc-jw0hw: a modifier or blocker field that gives no light of its own (a
+   globe, a magic circle) glows faintly over its area plus one square. Fields
+   carry no damage type, so the color is the field's own, lightened. */
+static std::vector< std::vector<FlashCell> > AuraCells;
+
 static void ScanFields(Map *m) {
+  AuraCells.clear();
   for (int32 i = 0; i < m->Fields.Total(); i++) {
     Field *f = m->Fields[i];
-    if (!f || !(f->FType & FI_LIGHT)) continue;
-    LightRGB col = (f->Color > 0 && f->Color < MAX_COLOURS)
-      ? Palette[f->Color] : GlyphColour(f->Image);
-    AddSource(f->cx, f->cy, f->rad, LK_FIELD, col);
+    if (!f) continue;
+    const bool plain = (f->Color > 0 && f->Color < MAX_COLOURS);
+    if (f->FType & FI_LIGHT) {
+      LightRGB col = plain ? Palette[f->Color] : GlyphColour(f->Image);
+      AddSource(f->cx, f->cy, f->rad, LK_FIELD, col);
+    } else if (f->FType & (FI_MODIFIER | FI_BLOCKER)) {
+      LightRGB col = LightEffectColour(plain ? f->Color
+        : (int16)(GLYPH_FORE_VALUE(f->Image) & COLOUR_MASK));
+      AddSource(f->cx, f->cy, f->rad + 1, LK_AURA, col);
+      /* The aura lights its own area evenly, plus a one-square spill. */
+      std::vector<FlashCell> cells;
+      for (int16 y = f->cy - f->rad; y <= f->cy + f->rad; y++)
+        for (int16 x = f->cx - f->rad; x <= f->cx + f->rad; x++)
+          if (m->InBounds(x, y) && f->inArea(x, y)) {
+            FlashCell fc; fc.x = x; fc.y = y; cells.push_back(fc);
+          }
+      Src[nSrc - 1].fid = (int32)AuraCells.size();
+      AuraCells.push_back(cells);
+    }
   }
 }
 
@@ -652,7 +763,7 @@ static void SumSteady(Map *m) {
     }
   for (int32 i = 0; i < nSrc; i++) {
     const LightSource &s = Src[i];
-    if (s.amp > 0.0f) continue;
+    if (s.kind == LK_FLASH || s.amp > 0.0f) continue;
     for (int32 k = s.first; k < s.first + s.count; k++)
       AddScaledF(Steady[Foot[k].idx], s.c, Foot[k].w / 255.0f, Foot[k]);
   }
@@ -662,6 +773,13 @@ static void ComposeFrame() {
   memcpy(Frame, Steady, sizeof(LightRGB) * lmCells);
   for (int32 i = 0; i < nSrc; i++) {
     const LightSource &s = Src[i];
+    if (s.kind == LK_FLASH) {
+      const Flash &fl = Flashes[s.fid];
+      for (int32 k = s.first; k < s.first + s.count; k++)
+        AddScaledF(Frame[Foot[k].idx], fl.cur,
+                   Foot[k].w / 255.0f * fl.level * fl.noise, Foot[k]);
+      continue;
+    }
     if (s.amp <= 0.0f) continue;
     for (int32 k = s.first; k < s.first + s.count; k++)
       AddScaledF(Frame[Foot[k].idx], s.c,
@@ -683,11 +801,16 @@ void LightRebuild(Map *m, Player *p) {
   lmMap = m; nSrc = 0; nFoot = 0; anyFlicker = false;
   ScanCreatures(m);
   ScanFields(m);
+  ScanFlashes();
   ScanTerrain(m);
   ScanFog(m);
   int32 nPrimary = nSrc;
-  for (int32 i = 0; i < nSrc; i++)
-    CastFootprint(m, Src[i]);
+  for (int32 i = 0; i < nSrc; i++) {
+    if (Src[i].kind == LK_FLASH) CastFlashFootprint(m, Src[i]);
+    else if (Src[i].kind == LK_AURA)
+      CastAreaFootprint(m, Src[i], AreaSpec(AuraCells[Src[i].fid], 1, Src[i].gain));
+    else CastFootprint(m, Src[i]);
+  }
   memset(SrcLit, 0, sizeof(uint8) * lmCells);
   memset(SrcCol, 0, sizeof(LightRGB) * lmCells);
   FoldSrcLit(0, nPrimary);
@@ -739,9 +862,52 @@ static float Fbm(uint32 seed, float t, int16 octaves) {
   return norm > 0.0f ? sum / norm : 0.5f;
 }
 
+/* Pale hue at saturation 0.35, full value, for the rainbow flash. */
+static LightRGB PaleHue(float h) {
+  h -= floorf(h); h *= 6.0f;
+  int i = (int)h; float f = h - i, sat = 0.35f;
+  float p = 1.0f - sat, q = 1.0f - sat * f, tt = 1.0f - sat * (1.0f - f);
+  float r, g, b;
+  switch (i % 6) {
+    case 0: r = 1; g = tt; b = p; break;
+    case 1: r = q; g = 1; b = p; break;
+    case 2: r = p; g = 1; b = tt; break;
+    case 3: r = p; g = q; b = 1; break;
+    case 4: r = tt; g = p; b = 1; break;
+    default: r = 1; g = p; b = q; break;
+  }
+  LightRGB o = { LightChannel(r * 255.0f), LightChannel(g * 255.0f),
+                 LightChannel(b * 255.0f) };
+  return o;
+}
+
+static void TickFlashes(float t) {
+  for (size_t i = 0; i < Flashes.size(); i++) {
+    Flash &fl = Flashes[i];
+    if (!fl.live) continue;
+    fl.noise = 1.0f; fl.cur = fl.c;
+    switch (fl.style) {
+      case LF_FIRE: {
+        float n = Fbm(fl.seed, t * 11.0f, 4);
+        fl.noise = 1.0f - 0.45f + 0.45f * powf(n, 0.6f);
+        break;
+      }
+      case LF_ARC:   /* a hashed step, not smooth noise */
+        fl.noise = Hash01(fl.seed ^ ((uint32)floorf(t * 15.0f) * 2654435761u)) < 0.5f
+                   ? 1.0f : 0.5f;
+        break;
+      case LF_RAINBOW:
+        fl.cur = PaleHue(t / 2.0f);
+        break;
+      default: break;
+    }
+  }
+}
+
 void LightTick(uint32 ms) {
   if (!lmMap || !anyFlicker) return;
   float t = ms / 1000.0f;
+  TickFlashes(t);
   for (int32 i = 0; i < nSrc; i++) {
     LightSource &s = Src[i];
     if (s.amp <= 0.0f) continue;
@@ -750,6 +916,116 @@ void LightTick(uint32 ms) {
     s.noise = 1.0f - s.amp + s.amp * powf(n, s.bias);  /* 1-amp .. 1 */
   }
   ComposeFrame();
+}
+
+LightRGB LightEffectColour(int16 blastColour) {
+  /* Fire 255,140,40; Cold 170,210,255; ... Rainbow starts at hue 0. */
+  static const LightRGB T[COL_SILVERY - COL_FIRE + 1] = {
+    { 255, 140,  40 },  /* COL_FIRE    */
+    { 170, 210, 255 },  /* COL_COLD    */
+    { 210, 190, 255 },  /* COL_MAGIC   */
+    { 140, 100, 180 },  /* COL_NECRO   */
+    { 210, 225, 255 },  /* COL_ELEC    */
+    { 255, 166, 166 },  /* COL_RAINBOW */
+    { 255, 250, 235 },  /* COL_LIGHT   */
+    { 170, 210,  90 },  /* COL_POISON  */
+    { 120, 230, 100 },  /* COL_ACID    */
+    {  80, 240, 160 },  /* COL_DISINT  */
+    { 200, 180, 140 },  /* COL_PETRI   */
+    { 240, 130, 220 },  /* COL_POLY    */
+    { 200, 200, 200 },  /* COL_SONIC   */
+    { 220, 225, 240 },  /* COL_SILVERY */
+  };
+  if (blastColour >= COL_FIRE && blastColour <= COL_SILVERY)
+    return T[blastColour - COL_FIRE];
+  LightRGB p = Palette[blastColour & COLOUR_MASK], o;
+  o.r = (uint8)((p.r + 255) / 2);
+  o.g = (uint8)((p.g + 255) / 2);
+  o.b = (uint8)((p.b + 255) / 2);
+  return o;
+}
+
+/* The aura circles the SDL build draws: one per LK_AURA source. rad is the
+   field's own radius, so the circle marks the field's area. */
+int32 LightAuraCount() {
+  if (lmLegacy || !lmMap) return 0;
+  int32 n = 0;
+  for (int32 i = 0; i < nSrc; i++) if (Src[i].kind == LK_AURA) n++;
+  return n;
+}
+
+bool LightAuraAt(int32 i, int16 &cx, int16 &cy, int16 &rad, LightRGB &c, float &noise) {
+  if (lmLegacy || !lmMap) return false;
+  for (int32 k = 0; k < nSrc; k++) {
+    if (Src[k].kind != LK_AURA || i-- != 0) continue;
+    cx = Src[k].x; cy = Src[k].y; rad = Src[k].r - 1;
+    c = Src[k].c; noise = Src[k].noise;
+    return true;
+  }
+  return false;
+}
+
+bool LightFlashDisabled() {
+  return getenv("INCURSION_EFFECT_LIGHT_OFF") != NULL;
+}
+
+int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach) {
+  if (LightFlashDisabled()) return -1;
+  size_t id = 0;
+  while (id < Flashes.size() && Flashes[id].live) id++;
+  if (id == Flashes.size()) Flashes.push_back(Flash());
+  Flash &fl = Flashes[id];
+  fl.live = true; fl.c = fl.cur = c; fl.style = style; fl.gain = gain;
+  fl.level = 1.0f; fl.noise = 1.0f; fl.reach = reach < 0 ? 0 : reach;
+  fl.seed = (++flashSeq) * 2654435761u ^ (uint32)id * 40503u;
+  fl.cells.clear();
+  nFlashLive++;
+  return (int32)id;
+}
+
+static Flash *FlashById(int32 id) {
+  if (id < 0 || id >= (int32)Flashes.size() || !Flashes[id].live) return NULL;
+  return &Flashes[id];
+}
+
+void LightFlashCell(int32 id, int16 x, int16 y) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  for (size_t i = 0; i < fl->cells.size(); i++)
+    if (fl->cells[i].x == x && fl->cells[i].y == y) return;
+  FlashCell fc = { x, y };
+  fl->cells.push_back(fc);
+}
+
+void LightFlashMoveTo(int32 id, int16 x, int16 y) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  fl->cells.clear();
+  FlashCell fc = { x, y };
+  fl->cells.push_back(fc);
+}
+
+void LightFlashLevel(int32 id, float level) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  fl->level = level < 0.0f ? 0.0f : (level > 1.0f ? 1.0f : level);
+  if (lmMap && Frame) ComposeFrame();
+}
+
+void LightFlashRemove(int32 id) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  fl->live = false; fl->cells.clear();
+  nFlashLive--;
+}
+
+void LightFlashClearAll() {
+  Flashes.clear();
+  nFlashLive = 0;
+}
+
+int32 LightFlashCount() {
+  return nFlashLive;
 }
 
 bool LightAt(int16 x, int16 y, LightRGB &out) {
@@ -827,6 +1103,11 @@ static void ProbeDump(Map *m, Player *p) {
   for (int16 y = 0; y < lmH; y++)
     for (int16 x = 0; x < lmW; x++)
       { sig ^= (uint32)(uint8)FilterMark(m, x, y); sig *= 16777619u; }
+  for (size_t i = 0; i < Flashes.size(); i++)
+    if (Flashes[i].live) {
+      sig ^= (uint32)Flashes[i].cells.size() * 31u + Flashes[i].style + 7u;
+      sig *= 16777619u;
+    }
   if (m == lastMap && p->x == lastX && p->y == lastY && nSrc == lastSrc
       && sig == lastSig)
     return;
@@ -841,14 +1122,20 @@ static void ProbeDump(Map *m, Player *p) {
   fprintf(fp, "LIGHT map=%d %d player=%d %d plight=%d sources=%d\n",
     (int)lmW, (int)lmH, (int)p->x, (int)p->y, (int)p->LightRange, (int)nSrc);
   for (int32 i = 0; i < nSrc; i++)
+    if (Src[i].kind != LK_FLASH)
     fprintf(fp, "S %d %d %d %d %d %d %d %d\n", (int)Src[i].x, (int)Src[i].y,
       (int)Src[i].r, Src[i].c.r, Src[i].c.g, Src[i].c.b, (int)Src[i].kind,
       (int)Src[i].count);
+  for (size_t i = 0; i < Flashes.size(); i++)
+    if (Flashes[i].live)
+      fprintf(fp, "F %d %d %d %d %.3f\n", (int)i, (int)Flashes[i].cells.size(),
+        (int)Flashes[i].reach, (int)Flashes[i].style, Flashes[i].level);
   for (int16 y = 0; y < lmH; y++) {
     for (int16 x = 0; x < lmW; x++) {
       LightRGB v = { 0, 0, 0 };
       for (int32 i = 0; i < nSrc; i++) {
         const LightSource &s = Src[i];
+        if (s.kind == LK_FLASH) continue;
         if (dist(x, y, s.x, s.y) > s.r) continue;
         for (int32 k = s.first; k < s.first + s.count; k++)
           if (Foot[k].idx == (int32)y * lmW + x)

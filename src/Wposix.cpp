@@ -877,6 +877,9 @@ void posixTerm::Clear() {
     updated = false;
 }
 
+void FrameClip(const char *) {}   /* inc-jw0hw: no recorder in the posix backend */
+bool TermCellPixel(int16, int16, int &, int &, int &, int &) { return false; }
+
 uint32 posixTerm::GetElapsedMilli() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

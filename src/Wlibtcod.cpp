@@ -139,10 +139,41 @@ static bool g_logoLoadAttempted = false;
 static bool g_logoRendererRegistered = false;
 static bool g_wasShown = false;
 
+/* inc-jw0hw: frame recorder. With INCURSION_FRAMES=<dir> the game runs on a
+   virtual clock that advances only through RecAdvance(), so a clip renders
+   with no real waiting. NowMs() is the one clock read in this file. */
+static bool g_rec = false;
+static bool g_recInit = false;
+static uint32 g_virtMs = 0;
+static std::string g_recDir, g_recClip = "default";
+static unsigned g_recFrame = 0;
+static void RecMkdir(const std::string &d) {
+#ifdef _WIN32
+    _mkdir(d.c_str());
+#else
+    mkdir(d.c_str(), 0777);
+#endif
+}
+static bool RecOn() {
+    if (!g_recInit) {
+        const char *d = getenv("INCURSION_FRAMES");
+        g_rec = d && d[0];
+        if (g_rec) g_recDir = d;
+        g_recInit = true;
+    }
+    return g_rec;
+}
+static uint32 NowMs() {
+    return RecOn() ? g_virtMs : (uint32)TCOD_sys_elapsed_milli();
+}
+
+static void AuraDrawAll(SDL_Surface *screen);   /* defined after libtcodTerm */
+
 extern "C" {
 static void LogoRenderCB(void* vsurf) {
     SDL_Surface* screen = (SDL_Surface*)vsurf;
     g_lastFrame = screen;
+    AuraDrawAll(screen);   /* inc-jw0hw: before the logo's early return */
     if (!g_logo || !screen) return;
     bool show = g_titleLogoActive;
     if (show) {
@@ -339,8 +370,14 @@ private:
     uint32 ticks_light_last = 0;
     void LitAlloc();
     void LitPaint(int32 idx);
+public:
+    void DrawAuras(SDL_Surface *scr);
+    bool CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch);
+private:
     bool LightFrame(uint32 now);
     void SleepTicking(int16 milli);
+    void RecStep();
+    void RecAdvance(uint32 ms);
     int oldResX, oldResY;
     String debugText;
     /* File I/O Stuff */
@@ -1106,7 +1143,7 @@ void libtcodTerm::Redraw() {
 
 void libtcodTerm::CursorOn() {
     showCursor = true;
-    ticks_blink_last = TCOD_sys_elapsed_milli();
+    ticks_blink_last = NowMs();
     ocx = ocy = 0;
 }
 
@@ -1228,7 +1265,7 @@ void libtcodTerm::LitAlloc() {
 	delete[] litCells; delete[] litSaved;
 	litCells = new LitCell[(int32)sizeX * sizeY]();
 	litSaved = new LitCell[(int32)sizeX * sizeY]();
-	ticks_light_last = TCOD_sys_elapsed_milli() - LIGHT_TICK_MS;
+	ticks_light_last = NowMs() - LIGHT_TICK_MS;
 }
 
 /* One shimmer frame: advance the noise, re-shade every cell still flagged
@@ -1251,7 +1288,146 @@ bool libtcodTerm::LightFrame(uint32 now) {
 	return true;
 }
 
+/* inc-jw0hw: the aura circles. Each circle is (rad + 0.5) cells in radius,
+   centered on its cell, 2 px wide, and drawn over the finished console only on
+   cells the player sees now (drawn lit this frame AND in the map's own
+   Visibility), so a wall in view takes the circle and a cell behind it does
+   not. Nothing is cached. The covered cells are dirtied so libtcod repaints
+   them before the next draw and the circle does not smear. */
+void libtcodTerm::DrawAuras(SDL_Surface *scr) {
+	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0)
+		return;
+	const int32 nAura = LightAuraCount();
+	const int bpp = scr->format->BytesPerPixel;
+	if (!nAura || (bpp != 3 && bpp != 4))
+		return;
+	Map *m = p->m;
+	const bool lock = SDL_MUSTLOCK(scr) != 0;
+	if (lock && SDL_LockSurface(scr) != 0)
+		return;
+	for (int32 i = 0; i < nAura; i++) {
+		int16 ax, ay, rad; LightRGB c; float noise;
+		if (!LightAuraAt(i, ax, ay, rad, c, noise))
+			continue;
+		/* A true pixel circle: cells are g_fontW x g_fontH, so the radius is
+		   counted in pixels (mean cell size), not per axis. */
+		const float R = (rad + 0.5f) * (g_fontW + g_fontH) / 2.0f;
+		const int ccx = (ax - XOff + Windows[WIN_MAP].Left) * g_fontW + g_fontW / 2;
+		const int ccy = (ay - YOff + Windows[WIN_MAP].Top) * g_fontH + g_fontH / 2;
+		int x0 = (int)floorf(ccx - R - 2.0f), x1 = (int)ceilf(ccx + R + 2.0f);
+		int y0 = (int)floorf(ccy - R - 2.0f), y1 = (int)ceilf(ccy + R + 2.0f);
+		if (x0 < 0) x0 = 0;
+		if (y0 < 0) y0 = 0;
+		if (x1 > scr->w - 1) x1 = scr->w - 1;
+		if (y1 > scr->h - 1) y1 = scr->h - 1;
+		const float lineHalf = 1.0f;
+		{	/* where the circle really is, for tools/check_aura_circle.sh; one line per change */
+			static int lastX = -1, lastY = -1, lastR = -1;
+			if (ccx != lastX || ccy != lastY || (int)(R + 0.5f) != lastR) {
+				lastX = ccx; lastY = ccy; lastR = (int)(R + 0.5f);
+				if (getenv("INCURSION_AURA_SCENE"))
+					Error("AURA_DRAWN: %d %d %d", ccx, ccy, lastR);
+			}
+		}
+		const float nr = c.r * noise, ng = c.g * noise, nb = c.b * noise;
+		for (int py = y0; py <= y1; py++) {
+			const int cy = py / g_fontH;
+			if (cy >= sizeY) continue;
+			Uint8 *row = (Uint8 *)scr->pixels + py * scr->pitch;
+			for (int px = x0; px <= x1; px++) {
+				const int cx = px / g_fontW;
+				if (cx >= sizeX) continue;
+				const float dx = (float)(px - ccx), dy = (float)(py - ccy);
+				const float dn = sqrtf(dx * dx + dy * dy);
+				float a = 0.0f;
+				if (fabsf(dn - R) <= lineHalf) a = 0.9f;
+				else if (dn < R) a = 0.12f;
+				if (a == 0.0f) continue;
+				const LitCell &lc = litCells[cy * sizeX + cx];
+				if (!lc.lit || !m->InBounds(lc.mx, lc.my) ||
+				    !(m->At(lc.mx, lc.my).Visibility & VI_VISIBLE))
+					continue;
+				Uint8 *pix = row + px * bpp;
+				Uint32 v = bpp == 4 ? *(Uint32 *)pix
+				    : (SDL_BYTEORDER == SDL_BIG_ENDIAN
+				        ? (pix[0] << 16 | pix[1] << 8 | pix[2])
+				        : (pix[0] | pix[1] << 8 | pix[2] << 16));
+				Uint8 r, g, b;
+				SDL_GetRGB(v, scr->format, &r, &g, &b);
+				r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
+				g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
+				b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
+				v = SDL_MapRGB(scr->format, r, g, b);
+				if (bpp == 4) *(Uint32 *)pix = v;
+				else if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+					pix[0] = (Uint8)(v >> 16); pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)v;
+				} else {
+					pix[0] = (Uint8)v; pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)(v >> 16);
+				}
+			}
+		}
+		/* ponytail: dirties the whole bounding box each draw; a ring of cells
+		   would repaint less. Ceiling: one box per aura per frame. */
+		int cx0 = x0 / g_fontW, cy0 = y0 / g_fontH;
+		int cx1 = x1 / g_fontW, cy1 = y1 / g_fontH;
+		if (cx1 >= sizeX) cx1 = sizeX - 1;
+		if (cy1 >= sizeY) cy1 = sizeY - 1;
+		TCOD_console_set_dirty(cx0, cy0, cx1 - cx0 + 1, cy1 - cy0 + 1);
+	}
+	if (lock) SDL_UnlockSurface(scr);
+}
+
+bool libtcodTerm::CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
+	if (g_fontW <= 0 || g_fontH <= 0) return false;
+	const int sx = mx - XOff + Windows[WIN_MAP].Left, sy = my - YOff + Windows[WIN_MAP].Top;
+	if (sx < Windows[WIN_MAP].Left || sx > Windows[WIN_MAP].Right ||
+	    sy < Windows[WIN_MAP].Top || sy > Windows[WIN_MAP].Bottom)
+		return false;
+	px = sx * g_fontW; py = sy * g_fontH; cw = g_fontW; ch = g_fontH;
+	return true;
+}
+
+bool TermCellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
+	return AT1 && AT1->CellPixel(mx, my, px, py, cw, ch);
+}
+
+static void AuraDrawAll(SDL_Surface *screen) {
+	if (AT1) AT1->DrawAuras(screen);
+}
+
+/* One 33 ms virtual step: light tick, repaint, present, save the frame. It
+   saves even when LightFrame would not fire (Fast mode, no lit cell). */
+void libtcodTerm::RecStep() {
+	g_virtMs += 33;
+	if (litCells && Mode == MO_PLAY) {
+		LightTick(g_virtMs);
+		const int32 n = (int32)sizeX * sizeY;
+		for (int32 i = 0; i < n; i++)
+			if (litCells[i].lit)
+				LitPaint(i);
+		ticks_light_last = g_virtMs;
+	}
+	Update();
+	if (!g_lastFrame) return;
+	std::string dir = g_recDir + "/" + g_recClip;
+	RecMkdir(g_recDir);
+	RecMkdir(dir);
+	char name[64];
+	snprintf(name, sizeof name, "/f%05u.bmp", g_recFrame++);
+	std::string path = dir + name;
+	TCOD_sys_save_bitmap((void*)g_lastFrame, path.c_str());
+}
+
+void libtcodTerm::RecAdvance(uint32 ms) {
+	for (uint32 done = 0; done < ms; done += 33)
+		RecStep();
+}
+
 void libtcodTerm::SleepTicking(int16 milli) {
+	if (RecOn()) {
+		RecAdvance(milli > 0 ? (uint32)milli : 0u);
+		return;
+	}
 	const uint32 start = TCOD_sys_elapsed_milli();
 	const uint32 total = (milli > 0) ? (uint32)milli : 0u;
 	uint32 done = 0;
@@ -1330,7 +1506,15 @@ void libtcodTerm::StopWatch(int16 milli) {
 }
 
 uint32 libtcodTerm::GetElapsedMilli() {
-    return TCOD_sys_elapsed_milli();
+    return NowMs();
+}
+
+/* inc-jw0hw: names the clip the recorder writes to; no-op when not recording. */
+void FrameClip(const char *name) {
+    if (!RecOn() || !name || !name[0]) return;
+    g_recClip = name;
+    g_recFrame = 0;
+    RecMkdir(g_recDir);
 }
 
 int32 libtcodTerm::ConvertChar(Glyph g, char **out) {
@@ -1744,7 +1928,7 @@ void libtcodTerm::Initialize() {
     p = NULL;
     m = NULL;
     isHelp = false;
-    ticks_idle_last = TCOD_sys_elapsed_milli();
+    ticks_idle_last = NowMs();
     ActionsSinceLastAutoSave = 0;
     cx = cy = 0;
     showCursor = false;
@@ -1959,10 +2143,10 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
     Update();
     activeWin = wn;
     cx = ox; cy = oy;
-    ticks_last = TCOD_sys_elapsed_milli();
+    ticks_last = NowMs();
 
     for(;;) {
-		uint32 ticks0 = TCOD_sys_elapsed_milli(), ticks1;
+		uint32 ticks0 = NowMs(), ticks1;
         ScriptKey scriptKey;
         bool injecting = false;
         TCOD_key_t tcodKey = TCOD_key_t();
@@ -1989,13 +2173,13 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
 
         if (!keyQueue.empty() && keyIndex >= keyQueue.size() &&
                 !scriptAborted &&
-                (!pauseUntil || TCOD_sys_elapsed_milli() >= pauseUntil)) {
+                (!pauseUntil || NowMs() >= pauseUntil)) {
             this->ShutDown();
             exit(0);
         }
 
         if (Scripting()) {
-            uint32 now = TCOD_sys_elapsed_milli();
+            uint32 now = NowMs();
             if (pauseUntil && now < pauseUntil) {
                 tcodKey = TCOD_key_t();
             } else {
@@ -2029,7 +2213,7 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
                 ShowStatus();
             }
           
-        ticks1 = TCOD_sys_elapsed_milli();
+        ticks1 = NowMs();
         if (LightFrame(ticks1)) {
             ticks_idle_last = ticks1;
         } else if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
@@ -2071,8 +2255,12 @@ CtrlBreak:
             if (litCells && Mode == MO_PLAY && !showCursor && LightMode(p) == LIGHT_SHIMMER
                     && ticks_next > ticks_light_last + LIGHT_TICK_MS)
                 ticks_next = ticks_light_last + LIGHT_TICK_MS;
-            if (ticks_next > ticks1)
-                TCOD_sys_sleep_milli(ticks_next - ticks1);
+            if (ticks_next > ticks1) {
+                if (RecOn() && !keyQueue.empty())
+                    RecAdvance(ticks_next - ticks1);   // virtual idle: advances the clock, saves frames
+                else
+                    TCOD_sys_sleep_milli(ticks_next - ticks1);
+            }
 
             /* Allow clearing the message window ONLY if we aren't
                repeating keys, i.e., holding down arrow to run. In
@@ -2109,7 +2297,7 @@ CtrlBreak:
             ClearMsgOK = false;
         }
         
-        ticks_blink_last = TCOD_sys_elapsed_milli();
+        ticks_blink_last = NowMs();
         /* A key repaints the screen anyway, so restart the idle tick from
            here rather than firing a redundant repaint straight after it. */
         ticks_idle_last = ticks_blink_last;
