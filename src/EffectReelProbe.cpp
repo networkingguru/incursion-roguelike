@@ -233,6 +233,8 @@ void EffectReelProbe(Player *pl) {
         /* The effect code sets e.vRange = 5 + caster level / 2 itself; Extend doubles it, so the
            first level-1 cast reaches 10 squares and the targets stand 9 away. */
         xe.MM |= MM_EXTEND;
+        /* inc-jw0hw: Magic.cpp:932 runs an EF_ACTIVATE segment only when isActivation is set. */
+        xe.isActivation = te->HasFlag(EF_ACTIVATE);
         /* A long message makes the text terminal wait for a key; the reel prints none. */
         Silence = 1;
         ReThrow(EV_EFFECT, xe);
