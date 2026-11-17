@@ -1,0 +1,15 @@
+# Minimal session for INCURSION_LOF_PROBE (inc-30ps phase 2,
+# Creature::LineOfFireProbe, src/Fight.cpp). The probe runs once,
+# synchronously, at the very top of Game::Play().
+#
+# Read by tools/check_line_of_fire.sh, which loads a frozen character
+# fixture with INCURSION_LOAD=orc-barbarian-seed1-opt0822 instead of
+# generating a character from chargen.keys, then sets INCURSION_LOF_PROBE=1
+# and reads the probe's own PASS/FAIL lines out of logs/errors.log. The
+# probe builds its own open line (LOFProbeFindLine, src/Fight.cpp), so
+# nothing left in this script decides a probe outcome.
+
+SPACE*80
+ESC*20
+
+@quit

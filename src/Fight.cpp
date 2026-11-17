@@ -356,6 +356,7 @@ static void BlindFightProbeNote(EventInfo &e, bool vicUnseen, bool feat,
    check. */
 static int8 LOFForcedRoll = 0;
 static int8 LOFLastVHit = 0;
+static int8 LOFLastVDef = 0;
 static void LOFInitForcedRoll()
 {
     static bool done = false;
@@ -1934,6 +1935,7 @@ hitNow:
        and the rest) -- the same total the hit test itself compared against
        e.vDef. Stashed after the call, not before, for exactly that reason. */
     LOFLastVHit = e.vHit;
+    LOFLastVDef = e.vDef;
 
     if (e.isHit) {
       lx = tX * 2;
@@ -2087,6 +2089,7 @@ hitNow:
     if (strikeRes == ABORT)
       goto SkipAttack;
     LOFLastVHit = e.vHit;
+    LOFLastVDef = e.vDef;
 
     if (e.isHit) {
       lx = tX0 * 2;
@@ -2287,17 +2290,57 @@ void SaveChanceProbe(Player *pl) {
    open line of fire the whole way, so LineOfFireProbe (below) has
    somewhere safe to place its four rats. Follows TrueSightProbeLine
    (src/Vision.cpp) rather than inventing a second way of doing this. */
+/* inc-b4l3g.21: the probe builds its own line instead of depending on the
+   map the seed generated. Choose the first cardinal direction whose squares
+   1..10 from the player are all in bounds (mp->InBounds). Then, for the
+   player's own square and every square 1..10, force plain floor and turn
+   the square lit -- Lit=1 keeps the wild-miss "can't see you" branch in
+   Creature::Strike out of the probe's way, the same reason TrueSightProbe
+   (Vision.cpp) forces Lit on its own test squares. On squares 1..10 any
+   creature (except the player) and any feature is removed, so neither can
+   block the line; the player's own square (d == 0) is left alone. GetAt
+   walks a chain with hidden iterator state and Remove changes that chain,
+   so each removal restarts the walk from the chain head. Squares beyond 10
+   are never touched. LineOfFire is still checked after the line is built;
+   if it refuses an otherwise valid line the caller reports INCONCLUSIVE. */
 static bool LOFProbeFindLine(Map *mp, Creature *shooter, int16 px, int16 py,
         int16 *dx, int16 *dy) {
     static const int16 DX[4] = {1,-1,0,0}, DY[4] = {0,0,1,-1};
+    const rID floorID = FIND("floor");
     for (int8 dir = 0; dir < 4; dir++) {
         bool ok = true;
-        for (int16 d = 1; d <= 4; d++) {
+        for (int16 d = 1; d <= 10; d++) {
             const int16 tx = px + DX[dir]*d, ty = py + DY[dir]*d;
-            if (!mp->InBounds(tx,ty) || mp->SolidAt(tx,ty)) { ok = false; break; }
-            if (mp->FCreatureAt(tx,ty)) { ok = false; break; }
+            if (!mp->InBounds(tx,ty)) { ok = false; break; }
         }
-        if (ok && mp->LineOfFire(px, py, px+DX[dir]*4, py+DY[dir]*4, shooter)) {
+        if (!ok)
+            continue;
+        if (floorID) {
+            for (int16 d = 0; d <= 10; d++) {
+                const int16 tx = px + DX[dir]*d, ty = py + DY[dir]*d;
+                mp->WriteTerra(tx, ty, floorID);
+                mp->At(tx,ty).Lit = 1;
+                if (d == 0)
+                    continue;
+                for (;;) {
+                    Creature *c = mp->FCreatureAt(tx,ty);
+                    if (!c || c == shooter)
+                        break;
+                    c->Remove(true);
+                    if (mp->FCreatureAt(tx,ty) == c)
+                        break;
+                }
+                for (;;) {
+                    Feature *f = mp->FFeatureAt(tx,ty);
+                    if (!f)
+                        break;
+                    f->Remove(true);
+                    if (mp->FFeatureAt(tx,ty) == f)
+                        break;
+                }
+            }
+        }
+        if (mp->LineOfFire(px, py, px+DX[dir]*10, py+DY[dir]*10, shooter)) {
             *dx = DX[dir]; *dy = DY[dir];
             return true;
         }
@@ -2355,7 +2398,7 @@ void LineOfFireProbe(Player *shooter) {
     const int16 px = shooter->x, py = shooter->y;
     int16 dx, dy;
     if (!LOFProbeFindLine(mp, shooter, px, py, &dx, &dy)) {
-        Error("LOF_PROBE: INCONCLUSIVE -- no open line of 4 clear squares "
+        Error("LOF_PROBE: INCONCLUSIVE -- no in-bounds line of 10 squares "
             "from the player");
         return;
     }
@@ -2875,9 +2918,11 @@ void LineOfFireProbe(Player *shooter) {
     }
 
     /* case=clean-miss-lands-on-target (+ adjacent-target variant): a lone
-       target, forced roll below D (no band possible: lineCount is 0), is a
-       clean miss -- item 3 must land the dagger on the target's own
-       square, not the shooter's. */
+       target, forced roll one below its (calibrated) defence -- no band
+       possible: lineCount is 0 -- is a clean miss, and item 3 must land
+       the dagger on the target's own square, not the shooter's. The
+       forced roll is calibrated at this distance (inc-b4l3g.21): see the
+       calibration throw inside the case. */
     /* No adjacent-target (distance 1) variant: that range is inside the
        shooter's own melee reach, and something specific to that range
        (independent of items 1-4; still true with FT_DEFENSIVE_SHOT
@@ -2894,8 +2939,32 @@ void LineOfFireProbe(Player *shooter) {
         }
         Monster *wTarget = freshRat(tx,ty);
         wTarget->Attr[A_DEF] = D;
+        /* inc-b4l3g.21: calibrate at THIS distance. At 7 squares the victim
+           may not see the shooter, so the strike adds actUnseen and the
+           forced roll calibrated at 4 squares now hits. Fire one ungraded
+           throw, read back the real vHit/vDef it computed, then aim the
+           graded roll exactly one below vDef (a clean miss: lineCount is 0,
+           so no band). The calibration dagger lands too, so beforeGuard is
+           read AFTER it, not before. */
+        {
+            LOFForcedRoll = 10;
+            Item *cal = new Weapon(dagID, TITEM(dagID)->IType);
+            Throw(EV_RATTACK, shooter, wTarget, NULL, cal);
+        }
+        const int8 cv = LOFLastVHit, cd = LOFLastVDef;
+        wTarget->mHP = wTarget->cHP = 10000;
+        wTarget->Attr[A_DEF] = D;
+        const int16 wantRoll = (int16)((cd-1) - cv);
+        if (wantRoll < 2 || wantRoll > 19) {
+            Error("LOF_PROBE: case=%s INCONCLUSIVE -- calibrated roll %d is "
+                "outside 2-19 (vHit=%d vDef=%d)", caseName, (int)wantRoll,
+                (int)cv, (int)cd);
+            fail++;
+            wTarget->Remove(true);
+            return;
+        }
         const uint32 beforeGuard = dagQtyAt(1,1);
-        LOFForcedRoll = (int8)((D-1) - vHit);
+        LOFForcedRoll = (int8)wantRoll;
         Item *dag = new Weapon(dagID, TITEM(dagID)->IType);
         Throw(EV_RATTACK, shooter, wTarget, NULL, dag);
         const uint32 afterGuard = dagQtyAt(1,1);
