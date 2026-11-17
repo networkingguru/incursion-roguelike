@@ -480,36 +480,45 @@ bool Map::ShortestPath(uint8 sx, uint8 sy, uint8 tx, uint8 ty,
                   nbr, ppCall.lastPops, ppCall.lastT, tx, ty, myHandle); }
 #endif
 #ifdef ASTAR_SELFCHECK
-    { /* rerun as plain Dijkstra (weight = Dist) and compare to the A* result */
+    { /* rerun as plain Dijkstra (no heuristic) and compare to the A* result.
+         With bash the order is (doors broken, distance), as in the search
+         above (inc-34tsi). */
       int16 lx = min((int16)256, sizeX), ly = min((int16)256, sizeY);
       for (int16 ax = 0; ax != lx; ax++)
-        for (int16 ay = 0; ay != ly; ay++) AS_D[ax][ay] = 30000;
+        for (int16 ay = 0; ay != ly; ay++) { AS_D[ax][ay] = 30000; AS_B[ax][ay] = bash ? 30000 : 0; }
       PQHeapN = 0; PQSeq = 0;
-      AS_D[sx][sy] = 0; PQInsert(sx+sy*256,0);
+      AS_D[sx][sy] = 0; AS_B[sx][sy] = 0; PQInsert(sx+sy*256,0,0);
       while ((xy = PQPeekMin()) != -1)
         {
-          int16 pw = PQHeap[0].Weight; PQPopMin();
+          int16 pw = PQHeap[0].Weight; int16 pb = PQHeap[0].Breaks; PQPopMin();
           int16 ax = xy % 256, ay = xy / 256;
-          if (pw > AS_D[ax][ay]) continue;
+          if (pb > AS_B[ax][ay] || (pb == AS_B[ax][ay] && pw > AS_D[ax][ay])) continue;
           if (ax == (int16)tx && ay == (int16)ty) break;
           for (int k=0;k!=8;k++)
             {
               int16 bx = ax + DirX[k], by = ay + DirY[k];
               if ((bx == 0 && by == 0) || !InBounds(bx,by)) continue;
+              bool isBrk = false;
               int bc = RunOver(bx&0xFF,by&0xFF,memonly,runner,dangerFactor,Incor,Meld,
-                               (bx == (int16)tx && by == (int16)ty));
+                               (bx == (int16)tx && by == (int16)ty),&isBrk);
               if (!bc) continue;
               if (DirX[k] && DirY[k]) bc = (bc * 3) / 2;
-              if (AS_D[ax][ay] + bc < AS_D[bx][by])
+              int16 nb = bash ? (int16)(AS_B[ax][ay] + (isBrk ? 1 : 0)) : 0;
+              if (bash ? (nb < AS_B[bx][by] ||
+                          (nb == AS_B[bx][by] && AS_D[ax][ay] + bc < AS_D[bx][by]))
+                       : (AS_D[ax][ay] + bc < AS_D[bx][by]))
                 { AS_D[bx][by] = min(30000,AS_D[ax][ay] + bc);
-                  PQInsert(bx+by*256,AS_D[bx][by]); }
+                  AS_B[bx][by] = nb;
+                  PQInsert(bx+by*256,AS_D[bx][by],nb); }
             }
         }
+      AS_Compared++;
       if (++AS_Calls % 1000 == 0) AS_Report(); /* a timed-out run never reaches atexit */
-      if (!bash && AS_D[tx][ty] != Dist[tx][ty])
+      if (AS_D[tx][ty] != Dist[tx][ty] || (bash && AS_B[tx][ty] != Brk[tx][ty]))
         { AS_Mismatch++;
-          fprintf(stderr, "ASTAR_MISMATCH %d,%d %d,%d astar=%d dijkstra=%d\n",
-                  (int)sx,(int)sy,(int)tx,(int)ty,(int)Dist[tx][ty],(int)AS_D[tx][ty]); }
+          fprintf(stderr, "ASTAR_MISMATCH %d,%d %d,%d astar=%d/%d dijkstra=%d/%d (dist/breaks)\n",
+                  (int)sx,(int)sy,(int)tx,(int)ty,(int)Dist[tx][ty],(int)(bash ? Brk[tx][ty] : 0),
+                  (int)AS_D[tx][ty],(int)AS_B[tx][ty]); }
       PQHeapN = 0;
     }
 #endif
