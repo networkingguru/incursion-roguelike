@@ -4,6 +4,27 @@
 #
 # Usage: tools/soak.sh [sessions] [first-seed] [keyscript]
 #        tools/soak.sh 40 1 tools/keys/explore.keys
+#        SOAK_CHAR=orc-barbarian-seed1-opt0822 tools/soak.sh 40 1 tools/keys/explore-play.keys
+#
+# Settings: INCURSION_OPTIONS (required, as for tools/headless.sh), SOAK_JOBS
+# (sessions at a time, default 4), SOAK_DIR (where the report goes) and
+# SOAK_CHAR (below).
+#
+# SOAK_CHAR=<fixture name | path to a .char> (bead inc-nch.1). Without it, each
+# session makes its character by keystrokes (tools/keys/chargen.keys), and on
+# some seeds an extra prompt appears there and the session dies in creation
+# (measured: seeds 68 and 79 of explore.keys). With it, each session builds its
+# character from the .char file instead and runs NO creation keys, so the key
+# script MUST start in play (tools/keys/explore-play.keys, dive-play.keys); the
+# soak refuses, exit 2, a script that includes chargen.keys.
+# A fixture builds ONE level: the one its own `seed:` line names, so the same
+# .char under every session seed would give every session the same level-1 map.
+# The soak therefore writes a per-seed copy of the .char, <name>-s<seed>.char in
+# the soak directory, with its `seed:` line set to the session seed, builds that
+# copy once per session into a cache inside the soak directory (the shared
+# logs/fixture-cache is never touched), and loads the result. Only the `seed:`
+# line changes, so the character is the same in every session; the dungeon is
+# not.
 #
 # Why this exists. logs/errors.log is the best defect finder this project has,
 # and it fills up in proportion to how many different game states somebody
@@ -30,6 +51,40 @@ KEYS="${3:-tools/keys/explore.keys}"
 JOBS="${SOAK_JOBS:-4}"
 
 [ -f "$KEYS" ] || { echo "no such key script: $KEYS"; exit 2; }
+
+# includes_chargen <script>: does this script, or a script it @includes (named
+# next to the file that names it, as the key reader resolves it), include
+# chargen.keys? A fixture session that ran creation keys would drive the
+# character-creation screens on top of an already-created character.
+includes_chargen() {
+    local f="$1" inc
+    [ -f "$f" ] || return 1
+    while read -r inc; do
+        [ "$(basename "$inc")" = "chargen.keys" ] && return 0
+        includes_chargen "$(dirname "$f")/$inc" && return 0
+    done < <(sed -n 's/^[[:space:]]*@include[[:space:]][[:space:]]*\([^[:space:]]*\).*/\1/p' "$f")
+    return 1
+}
+
+CHARSRC=""
+CHARNAME=""
+if [ -n "${SOAK_CHAR:-}" ]; then
+    case "$SOAK_CHAR" in
+        */*|*.char) CHARSRC="$SOAK_CHAR" ;;
+        *)          CHARSRC="tools/fixtures/chars/$SOAK_CHAR.char" ;;
+    esac
+    [ -f "$CHARSRC" ] || { echo "SOAK_CHAR: no such fixture: $SOAK_CHAR (looked for $CHARSRC)"; exit 2; }
+    CHARNAME="$(basename "$CHARSRC" .char)"
+    [ "$(grep -c '^seed:' "$CHARSRC")" -eq 1 ] || {
+        echo "SOAK_CHAR: $CHARSRC must hold exactly one 'seed:' line; the per-session seed replaces it"
+        exit 2
+    }
+    if includes_chargen "$KEYS"; then
+        echo "SOAK_CHAR: $KEYS includes chargen.keys. A fixture session must not run"
+        echo "creation keys; use a script that starts in play, such as tools/keys/explore-play.keys."
+        exit 2
+    fi
+fi
 [ -x ./incursion-headless ] || {
     echo "./incursion-headless not built. Run: BACKEND=posix ./build_macos.sh"
     exit 2
@@ -51,6 +106,7 @@ mkdir -p "$SOAK"
 echo "sessions:  $SESSIONS  (seeds $FIRST..$((FIRST + SESSIONS - 1)))"
 echo "script:    $KEYS"
 echo "at a time: $JOBS"
+[ -n "$CHARSRC" ] && echo "character: fixture $CHARNAME, rebuilt per session with the session seed"
 echo "into:      $SOAK"
 echo
 
@@ -62,10 +118,26 @@ live_count() {
 }
 
 run_one() {
-    local seed="$1"
-    INCURSION_RUN_DIR="$SOAK/seed-$seed" \
-        ./tools/headless.sh "$KEYS" "$seed" > "$SOAK/seed-$seed.out" 2>&1
-    echo "$seed $?" >> "$SOAK/exits"
+    local seed="$1" cf sav rc
+    if [ -n "$CHARSRC" ]; then
+        # Exit 9 is this script's own: the fixture would not build, so the
+        # session never started. seed-N.out holds the build's complaint.
+        cf="$SOAK/$CHARNAME-s$seed.char"
+        sed "s/^seed:.*/seed: $seed/" "$CHARSRC" > "$cf"
+        if ! sav="$(INCURSION_FIXTURE_CACHE="$SOAK/fixture-cache" \
+                ./tools/fixture_cache.sh "$cf" 2> "$SOAK/seed-$seed.out")"; then
+            echo "$seed 9" >> "$SOAK/exits"
+            return
+        fi
+        INCURSION_LOAD="$sav" INCURSION_RUN_DIR="$SOAK/seed-$seed" \
+            ./tools/headless.sh "$KEYS" "$seed" >> "$SOAK/seed-$seed.out" 2>&1
+        rc=$?
+    else
+        INCURSION_RUN_DIR="$SOAK/seed-$seed" \
+            ./tools/headless.sh "$KEYS" "$seed" > "$SOAK/seed-$seed.out" 2>&1
+        rc=$?
+    fi
+    echo "$seed $rc" >> "$SOAK/exits"
 }
 
 # bash 3.2 (macOS /bin/bash) has no `wait -n`, so poll the pids instead.
@@ -89,6 +161,8 @@ sort -n "$SOAK/exits" | awk '{print $2}' | sort | uniq -c | while read -r n code
         4) what="WATCHDOG -- the game stopped asking for keystrokes" ;;
         5) what="NO GAMEPLAY -- never entered a map, measured nothing" ;;
         7) what="ASSERT -- an assertion not in tools/known_asserts.txt" ;;
+        8) what="FIXTURE LOAD FAILED -- the cached character did not load" ;;
+        9) what="FIXTURE BUILD FAILED -- the character could not be built" ;;
         *) what="exit $code" ;;
     esac
     printf '  %4d  %s\n' "$n" "$what"
@@ -106,6 +180,30 @@ if [ "$VOID" -gt 0 ]; then
     echo "  before drawing any conclusion from it -- and check that Options.Dat"
     echo "  in this tree is the one you meant to test with."
 fi
+
+# What the sessions did, counted from each session's own report (seed-N.out)
+# and its logs/session.log, which the game writes on the first completed turn
+# and so exists if and only if the session reached play (tools/headless.sh).
+# Exit 5 is only one way to miss play: a session that died in character
+# creation with exit 6 never played either.
+NOPLAY=0
+DIED=0
+DEATHS=0
+DSTUCK=0
+TSTUCK=0
+for seed in $(seq "$FIRST" $((FIRST + SESSIONS - 1))); do
+    [ -f "$SOAK/seed-$seed/logs/session.log" ] || NOPLAY=$((NOPLAY + 1))
+    d="$(sed -n 's/^death: *\([0-9][0-9]*\) confirmed.*/\1/p' "$SOAK/seed-$seed.out" 2>/dev/null | head -1)"
+    if [ -n "$d" ]; then DIED=$((DIED + 1)); DEATHS=$((DEATHS + d)); fi
+    grep -q '^death: *STUCK' "$SOAK/seed-$seed.out" 2>/dev/null && DSTUCK=$((DSTUCK + 1))
+    grep -q '^stuck-prompt: *threat-disengage' "$SOAK/seed-$seed.out" 2>/dev/null && TSTUCK=$((TSTUCK + 1))
+done
+echo
+echo "--- what the sessions did (of $SESSIONS) ---"
+printf '  %4d  never reached play (no turn completed; includes NO GAMEPLAY and creation failures)\n' "$NOPLAY"
+printf '  %4d  died (confirmed deaths, %d in all)\n' "$DIED" "$DEATHS"
+printf '  %4d  stalled at the death prompt (Die? [yn] left unanswered)\n' "$DSTUCK"
+printf '  %4d  stalled at the threat prompt (Abort, Flee or Disengage? left unanswered)\n' "$TSTUCK"
 
 echo
 echo "--- prompt stops (inc-tre9h: the session ended at the first prompt, unanswered) ---"
