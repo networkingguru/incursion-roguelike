@@ -148,7 +148,7 @@ AI_POTION Effect "water" : EA_BLAST {
   qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BALL; lval: 1; 
   sval: NOSAVE; 
   Flags: EF_ACTIVATE, EF_ATTACK, EF_MUNDANE, EF_BLIND_PROMPT, 
-         EF_NAMEONLY, EF_NO_BONUS_DMG; 
+         EF_NAMEONLY, EF_NO_BONUS_DMG, EF_NO_GLOW; 
   Purpose: EP_ATTACK (VS_UNDEAD); 
   cval: WHITE; On Event MSG_BLASTNAME "splash of holy water"; 
   Level: 1; 
@@ -888,7 +888,7 @@ AI_ALCHEMY Effect "eggshell flash-bomb" : EA_INFLICT
       herself, being prepared for the flash, is immune. The blinding
       lasts for 1d4 rounds.";
     aval: AR_GLOBE; xval: BLIND; cval: WHITE; lval: 3; qval: Q_LOC; 
-    Flags: EF_ACTIVATE, EF_MUNDANE, EF_DSHORT, EF_NAMEONLY; sval: REF;
+    Flags: EF_ACTIVATE, EF_MUNDANE, EF_DSHORT, EF_NAMEONLY, EF_GLOW; sval: REF;
     On Event EV_CALC_EFFECT {
       e.vCasterLev = max(10,e.vAlchemy);
       e.saveDC = 10 + e.vAlchemy / 2 + EActor->Mod(A_DEX);

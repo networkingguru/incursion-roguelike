@@ -1410,7 +1410,7 @@ AI_TRAP Effect "deathblade scythe trap" : EA_BLAST
   }
 
 AI_TRAP Effect "harm trap" : EA_BLAST
-  { 
+  { Flags: EF_GLOW; 
     cval: NECRO_C; Level: 8;
     On Event EV_MAGIC_HIT {
       RedirectEff(e,$"harm",EV_EFFECT);

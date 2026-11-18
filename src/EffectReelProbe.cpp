@@ -96,6 +96,19 @@ bool IsReelKind(const EffectValues &ef, const char **kind) {
     return false;
 }
 
+/* inc-jw0hw: the class name the light-table check compares: a COL_* row by its
+   short name, a plain palette color as cval:<NAME>, "random" for none. */
+const char *LightClass(int16 colour, char *buf, size_t n) {
+    static const char *rows[] = { "fire", "cold", "magic", "necro", "elec", "rainbow", "light",
+        "poison", "acid", "disint", "petri", "poly", "sonic", "silvery", "crimson", "darkred",
+        "sunyellow" };
+    static const char *pal[] = { "BLACK", "BLUE", "GREEN", "CYAN", "RED", "PURPLE", "BROWN", "GREY",
+        "SHADOW", "AZURE", "EMERALD", "SKYBLUE", "PINK", "MAGENTA", "YELLOW", "WHITE" };
+    if (colour >= COL_FIRE && colour <= COL_SUNYELLOW) return rows[colour - COL_FIRE];
+    if (colour > 0 && colour < 16) { snprintf(buf, n, "cval:%s", pal[colour]); return buf; }
+    return "random";
+}
+
 bool WantedByFilter(const char *only, const char *name) {
     if (!only || !*only) return true;
     const char *p = only;
@@ -112,7 +125,8 @@ bool WantedByFilter(const char *only, const char *name) {
 } /* namespace */
 
 void EffectReelProbe(Player *pl) {
-    if (!getenv("INCURSION_EFFECT_REEL"))
+    const bool tableMode = getenv("INCURSION_EFFECT_LIGHT_TABLE") != NULL;
+    if (!getenv("INCURSION_EFFECT_REEL") && !tableMode)
         return;
     if (!pl || !pl->m) {
         Error("REEL_ERROR no live player and map");
@@ -155,6 +169,32 @@ void EffectReelProbe(Player *pl) {
     for (size_t k = 0; k < dts.size(); ++k) {
         Entry e = { breath, "breath", dts[k] };
         list.push_back(e);
+    }
+
+    if (tableMode) {
+        /* inc-jw0hw: list the glow decision of every reel effect; cast nothing. */
+        int shown = 0;
+        for (size_t n = 0; n < list.size(); ++n) {
+            const Entry &en = list[n];
+            char nm[160];
+            if (en.dtype >= 0)
+                snprintf(nm, sizeof nm, "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
+            else   /* the declared name keeps its ;tag, which keys a repeated name */
+                snprintf(nm, sizeof nm, "%s", mod->GetText(TEFF(en.id)->Name));
+            TEffect *te = TEFF(en.id);
+            bool skip = (te->ef.qval & (Q_INV | Q_EQU | Q_ITM | Q_LOOK)) != 0;
+            for (size_t k = 0; k < sizeof kSkip / sizeof kSkip[0]; ++k)
+                if (en.dtype < 0 && strcmp(kSkip[k].name, NAME(en.id)) == 0) skip = true;
+            if (skip) continue;
+            const int dt = en.dtype >= 0 ? en.dtype : (te->ef.eval == EA_BLAST ? te->ef.xval : 0);
+            const EffectLightDecision d = EffectLightDecide(te, (int16)dt);
+            char buf[40];
+            Error("LIGHT %s\t%s\t%s", nm, d.lit ? "LIT" : "UNLIT",
+                  d.lit ? LightClass(d.colour, buf, sizeof buf) : "-");
+            ++shown;
+        }
+        Error("LIGHT_DONE %d", shown);
+        return;
     }
 
     const bool wasPlay = theGame->PlayMode;

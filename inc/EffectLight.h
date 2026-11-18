@@ -20,10 +20,17 @@ enum { EL_AREA = 0, EL_BEAM = 1, EL_MISSILE = 2 };
    at EL_HOLD before the hold, and at EL_END after the flash is removed. */
 extern void (*EffectLightHook)(int phase);
 
+/* inc-jw0hw: whether an effect glows, and the light color row (COL_* or a
+   plain palette color, 0 for none). te NULL: lit, no color. */
+struct EffectLightDecision { bool lit; int16 colour; };
+EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype);
+
 struct EffectLight {
-  /* dtype: the effect's damage type (AD_*), or 0. Light color follows it when
-     it names one; else the blast color. Glyph colors are the caller's. */
-  EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype = 0);
+  /* dtype: the effect's damage type (AD_*), or 0. With te, EffectLightDecide
+     decides whether the effect glows and its color; the blast color is the
+     fallback. Without te, the type's color wins. Glyph colors are the caller's. */
+  EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype = 0,
+              TEffect *te = NULL);
   ~EffectLight();
   void Light(int16 x, int16 y);   /* only if the player has line of sight to it */
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
@@ -41,6 +48,7 @@ private:
   Map *map;
   int32 id;
   bool ended;
+  bool lit;
 };
 
 #endif

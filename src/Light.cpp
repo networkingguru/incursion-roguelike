@@ -920,7 +920,7 @@ void LightTick(uint32 ms) {
 
 LightRGB LightEffectColour(int16 blastColour) {
   /* Fire 255,140,40; Cold 170,210,255; ... Rainbow starts at hue 0. */
-  static const LightRGB T[COL_SILVERY - COL_FIRE + 1] = {
+  static const LightRGB T[COL_SUNYELLOW - COL_FIRE + 1] = {
     { 255, 140,  40 },  /* COL_FIRE    */
     { 170, 210, 255 },  /* COL_COLD    */
     { 210, 190, 255 },  /* COL_MAGIC   */
@@ -935,8 +935,11 @@ LightRGB LightEffectColour(int16 blastColour) {
     { 240, 130, 220 },  /* COL_POLY    */
     { 200, 200, 200 },  /* COL_SONIC   */
     { 220, 225, 240 },  /* COL_SILVERY */
+    { 220,  40,  60 },  /* COL_CRIMSON */
+    { 170,  30,  30 },  /* COL_DARKRED */
+    { 255, 215, 110 },  /* COL_SUNYELLOW */
   };
-  if (blastColour >= COL_FIRE && blastColour <= COL_SILVERY)
+  if (blastColour >= COL_FIRE && blastColour <= COL_SUNYELLOW)
     return T[blastColour - COL_FIRE];
   LightRGB p = Palette[blastColour & COLOUR_MASK], o;
   o.r = (uint8)((p.r + 255) / 2);

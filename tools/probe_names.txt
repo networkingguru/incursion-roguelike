@@ -57,6 +57,7 @@ INCURSION_DURATION_PROBE_HANDLER	pre-registry	-
 INCURSION_DURATION_PROBE_SAMPLES	pre-registry	-
 INCURSION_EFFECT_LIGHT_OFF	inc-jw0hw	light flashes add nothing; the reel's light-off pass and the check's baseline
 INCURSION_EFFECT_LIGHT_PROBE	inc-jw0hw	effect light probe (tools/check_effect_light.sh)
+INCURSION_EFFECT_LIGHT_TABLE	inc-jw0hw	effect reel probe logs each reel effect's glow decision and light color without casting (tools/check_effect_light_table.sh)
 INCURSION_EFFECT_REEL	inc-jw0hw	effect reel probe: casts every blast, globe, aura field and breath type in a dark room, one recorder clip each (tools/render_effect_reel.sh, tools/check_effect_reel_list.sh)
 INCURSION_EFFECT_REEL_ONLY	inc-jw0hw	comma-separated effect names; the reel plays only those
 INCURSION_ELEM_RESIST_PROBE	pre-registry	-

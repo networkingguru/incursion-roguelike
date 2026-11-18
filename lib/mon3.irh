@@ -3438,7 +3438,7 @@ Monster "bodak" : MA_OUTSIDER
 Effect "Bodak Death Gaze" : EA_BLAST
   { SC_NEC; Base: 90; Cost: 10; qval: Q_TAR; 
     Purpose: EP_ATTACK | AIM_AT_ENEMY; 
-    Flags: EF_GAZE, EF_DEATH, EF_LIM_MTYPE, EF_SHOWNAME, EF_SPECABIL;
+    Flags: EF_GAZE, EF_DEATH, EF_LIM_MTYPE, EF_SHOWNAME, EF_SPECABIL, EF_NO_GLOW;
     tval: MA_LIVING; aval: AR_BOLT; 
     cval: SHADOW;
     xval: AD_NECR; pval: 0;  

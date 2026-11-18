@@ -3736,7 +3736,9 @@ typedef signed int        hObj;
 #define EF_DMIN       111  /* 5 * casterlevel units */
 #define EF_D10MIN     112  /* 50 * casterlevel units */
 #define EF_DHOUR      113  /* 300 * casterlevel units */
-#define EF_LAST       114
+#define EF_GLOW       114  /* inc-jw0hw: the effect glows although its damage type does not */
+#define EF_NO_GLOW    115  /* inc-jw0hw: the effect does not glow although its damage type does */
+#define EF_LAST       116
 // end family: ef
 // family: ea internal
 
@@ -3923,6 +3925,9 @@ typedef signed int        hObj;
 #define COL_POLY     27
 #define COL_SONIC    28
 #define COL_SILVERY  29
+#define COL_CRIMSON  30 /* inc-jw0hw: Sanguine Touch */
+#define COL_DARKRED  31 /* inc-jw0hw: Dance of Ruin */
+#define COL_SUNYELLOW 32 /* inc-jw0hw: Circlet of Blasting, warm sunlight */
 // end family: col
 // family: fi stored bits u32 field-of Map.Fields.Element.FType
 

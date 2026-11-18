@@ -50,7 +50,7 @@ Priest Spell "Pain Touch" : EA_INFLICT
 // druids have quite a bit of trouble dealing with "Flame Hobgoblins" and
 // whatnot ...
 Druid Spell "Ice Dagger" : EA_BLAST
-  { SC_EVO|SC_COLD; Base: SP_HARD; Cost: 1; Level: 1; xval: AD_COLD; 
+  { Flags: EF_NO_GLOW; SC_EVO|SC_COLD; Base: SP_HARD; Cost: 1; Level: 1; xval: AD_COLD; 
     Purpose: EP_ATTACK (VS_GENERAL); cval: SKYBLUE;
     pval: (LEVEL_MAX5)d4; sval: REF PARTIAL; lval: 2; 
     qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BALL; 
@@ -1071,7 +1071,7 @@ Druid  Spell "Faerie Fire" : EA_INFLICT
                "The <EVictim> is limned in flickering <hText> light.", str);
       return NOTHING;
       };
-    Flags: EF_SHOWNAME, EF_DMIN;
+    Flags: EF_SHOWNAME, EF_DMIN, EF_GLOW;
   }
 
 Wizard / Druid  Spell "Obscurement" : EA_INFLICT 
@@ -1543,9 +1543,9 @@ Druid Spell "Detect Elementals" : EA_INFLICT
 // WW: ok, let's make an evil touch attack for the Blood guys
 Effect "Sanguine Touch" : EA_BLAST
   { SC_THA; SC_NEC; Base: SP_TRIVIAL; Cost: 2; Level: 2; aval: AR_TOUCH;
-    Purpose: EP_ATTACK (VS_GENERAL); cval: RED; lval: LEVEL_MIN10;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: COL_CRIMSON; lval: LEVEL_MIN10;
     sval: NOSAVE; xval: AD_NORM; pval: (LEVEL_SCALED)d6; tval: MA_HAS_BLOOD; 
-    Flags: EF_NOTBAD, EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_CANCEL;  }
+    Flags: EF_NOTBAD, EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_GLOW;  }
   and EA_BLAST
   { aval: AR_TOUCH; xval: AD_DRCO; pval: (LEVEL_SCALED)d2; 
     sval: FORT PARTIAL; tval: MA_HAS_BLOOD; }
@@ -1573,7 +1573,7 @@ Effect "Sanguine Touch" : EA_BLAST
    3d6 force damage -- the note above is superseded. */
 Druid Spell "Alicorn Lance" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_MEDIUM; Cost: 5; Level: 2; xval: AD_MAGC;
-    Purpose: EP_ATTACK (VS_GENERAL); cval: WHITE; Flags: EF_ATTACK;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: COL_SILVERY; Flags: EF_ATTACK;
     pval: 3d6; qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT;
     Desc: "This spell creates a silver-hued, partially ethereal lance
     shaped in the form of an alicorn (a unicorn horn).  The spellcaster
@@ -1626,7 +1626,7 @@ Druid Spell "Snowstrike" : EA_BLAST
        creature reliably inside the 1-square blast could not be staged for a
        clean before/after cold reading. Tracking inc-tek.8.7 (PA-07-F7). Not
        sent. */
-    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE;
+    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE, EF_NO_GLOW;
     Desc: "Creates an explosive blast of snow that deals (caster level / 2)d4
     points of cold damage to all creatures within a 10 foot (1 square)
     radius. The caster and her allies are immune to the effect."; 
@@ -3382,7 +3382,7 @@ Priest Spell "Ring of Blades" : EA_INFLICT
 Druid Spell "Blight Plants" : EA_BLAST
   { SC_NEC; Base: SP_EASY; Cost: 5; Level: 3; aval: AR_GLOBE; lval: 6;
     xval: AD_NECR; pval: (LEVEL_2PER1)d8; tval: MA_PLANT;
-    Purpose: EP_ATTACK; Flags: EF_LIM_MTYPE;
+    Purpose: EP_ATTACK; Flags: EF_LIM_MTYPE, EF_NO_GLOW;
     Desc: "Withers and destroys plant creatures within 60 feet
       (6 squares) of the caster, inflicting 2d8 points of necromantic
       damage per caster level (no die cap).";
@@ -5878,8 +5878,8 @@ Priest / Scroll Spell "Heal;spell" : EA_HEALING
   and EA_HEALING { xval: HEAL_MALADY; yval: PARALYSIS; }
 
 Priest / Scroll Spell "Harm" : EA_BLAST
-  { SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;
-    Flags: EF_CANCEL; Purpose: EP_ATTACK; lval: 1;
+  { cval: COL_NECRO; SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;
+    Flags: EF_CANCEL, EF_GLOW; Purpose: EP_ATTACK; lval: 1;
     On Event EV_CAST
       "Your hands glow with a black aura." /
       "The <EActor>'s hands glow with a black aura.",

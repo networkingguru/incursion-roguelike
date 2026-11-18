@@ -349,6 +349,9 @@ uint8 BlastColourSets[] = {
  /* COL_POLY */    PINK, PINK, RED, MAGENTA,
  /* COL_SONIC */   GREY, WHITE, WHITE, BROWN,
  /* COL_SILVERY */ WHITE, GREY, WHITE, SKYBLUE, 
+ /* COL_CRIMSON */ PINK, RED, PINK, RED,
+ /* COL_DARKRED */ RED, RED, RED, SHADOW,
+ /* COL_SUNYELLOW */ YELLOW, YELLOW, WHITE, YELLOW,
                    0,0,0,0,
                    0,0,0,0 };
 
@@ -1613,6 +1616,7 @@ EvReturn Magic::MagicHit(EventInfo &e) {
 
 /* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
 void (*AreaProbeXYHook)(int16,int16) = NULL;
+void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph) = NULL;
 /* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
    opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
    ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
@@ -1792,7 +1796,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
     /* Do Highlight Effect */
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
       /* inc-jw0hw: the globe lights its area; the light ends before any hit. */
-      EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType);
+      EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType, te);
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
           if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
@@ -1803,8 +1807,14 @@ EvReturn Magic::AGlobe(EventInfo &e)
           if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
             {
               g = T1->GetGlyph(x,y);
-              g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
+              /* upstream: a foreground has COLOUR_BITS (4); a color set (cval >= 16)
+                 spills into the background, on the original glyph layout too.
+                 Observed (Fire Lotus). inc-6dd41; not sent. */
+              Glyph was = g;
+              g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval >= 16 ?
+                    BlastColourSets[e.EMagic->cval * 4] : e.EMagic->cval);
               T1->PutGlyph(x,y,g);
+              if (GlobeGlyphHook) GlobeGlyphHook(x,y,was,T1->GetGlyph(x,y));
             }
       T1->Update();
       PossiblyPause(T1,cx,cy, e.EActor->isPlayer() ? 1500 : 500);
@@ -2073,7 +2083,9 @@ EvReturn Magic::AField(EventInfo &e)
     else
       g = GLYPH_FLOOR2;
 
-    g |= GLYPH_FORE(e.EMagic->cval);
+    /* upstream: same 4-bit foreground spill as AGlobe (COL_LIGHT, COL_RAINBOW
+       fields). Traced. inc-6dd41; not sent. */
+    g |= GLYPH_FORE(e.EMagic->cval >= 16 ? BlastColourSets[e.EMagic->cval * 4] : e.EMagic->cval);
 
     tx = e.EXVal ? e.EXVal : e.ETarget ? e.ETarget->x : e.EActor->x;
     ty = e.EYVal ? e.EYVal : e.ETarget ? e.ETarget->y : e.EActor->y;
@@ -2533,7 +2545,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   // travel! 
   if (overlayOff) { o.Activate(); overlayOff = false; }
   if (!hitSelf)
-    trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType));
+    trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType, TEFF(e.eID)));
     while(!hitSelf && m.InBounds(cx/2,cy/2)) {
 
     // are we out of range? 
@@ -2803,7 +2815,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     int16 RingX[160], RingY[160], DrawX[160], DrawY[160];
     bool anyDrawn = false;
     /* inc-jw0hw: the ball lights ring by ring and ends before any hit. */
-    EffectLight fx(&m, Color, EL_AREA, e.DType);
+    EffectLight fx(&m, Color, EL_AREA, e.DType, TEFF(e.eID));
     if (BallRingHook) {
       int16 bcx = x, bcy = y;
       BallRingHook(-2, 1, &bcx, &bcy, 0, NULL, NULL, 0);

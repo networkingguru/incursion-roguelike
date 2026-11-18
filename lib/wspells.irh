@@ -2327,7 +2327,7 @@ and EA_BLAST
     
 0 Effect "Pyrotechnics;flash" : EA_BLAST
   { cval: COL_RAINBOW; lval: 4; aval: AR_GLOBE;
-    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE;
+    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE, EF_GLOW;
     On Event PRE(EV_MAGIC_HIT) {
       if (EVictim->HasMFlag(M_LIGHT_AVERSE))
         if (!EVictim->SavingThrow(WILL,e.saveDC, 
@@ -2962,8 +2962,8 @@ Wizard / Scroll Spell "Mirror Image" : EA_INFLICT
 
 Wizard / Scroll Spell "Hypnotic Pattern" : EA_INFLICT
   { SC_ILL; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_LOC;
-    aval: AR_GLOBE; cval: YELLOW; lval: 2; sval: WILL;
-    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL;
+    aval: AR_GLOBE; cval: COL_RAINBOW; lval: 2; sval: WILL;
+    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL, EF_GLOW;
     Purpose: EP_CURSE (VS_MENTAL);
     On Event EV_ISTARGET {
       if (!EVictim->isCreature())
@@ -3130,7 +3130,7 @@ Wizard Spell "Aura of Death" : EA_INFLICT
    other mind-control spells. */
 Wizard Spell "Scare" : EA_BLAST
   { SC_NEC; SC_COLD; SC_ILL; Base: SP_EASY; Cost: 4; Level: 2; sval: WILL;
-    aval: AR_CHAIN; lval: 12; cval: CYAN; tval: MA_ENEMIES;
+    aval: AR_CHAIN; lval: 12; cval: COL_NECRO; tval: MA_ENEMIES;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE; qval: Q_TAR;
     xval: AD_COLD; pval: 2d4;
     Flags: EF_MENTAL, EF_LIM_MTYPE, EF_BLIND_PROMPT, EF_FEAR; 
@@ -3612,11 +3612,11 @@ Wizard Spell "Transposition" : EA_GENERIC
   }      
   
  Wizard Spell "Mana Theft" : EA_BLAST
-  { 
+  { cval: COL_MAGIC; 
     SC_WEA; Base: SP_HARD; Cost: 5; Level: 2; 
     aval: AR_TOUCH; lval: LEVEL_2PER1; Purpose: EP_CURSE; 
     xval: AD_SPE1; pval: (LEVEL_1PER1)d8; sval: WILL;
-    Flags: EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_PARTIAL;
+    Flags: EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_PARTIAL, EF_GLOW;
     Desc: "By casting this spell, you turn your body into a natural
       conduit for magical energies, allowing you to steal the mana
       of other creatures with a successful touch attack. Your touch
@@ -4624,7 +4624,7 @@ Effect "Flame Arrow;augment" : EA_GENERIC
 
 Wizard  Spell "Icelance" : EA_BLAST
   { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 6; Level: 3; sval: NOSAVE;
-    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK; Flags: EF_ATTACK;
+    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK; Flags: EF_ATTACK, EF_NO_GLOW;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: COL_COLD; 
     Desc: "This spell fires a magical lance of ice at a target of the caster's
     choosing.  A successful ranged touch attack inflicts 5-30 points of
@@ -5201,7 +5201,7 @@ Wizard Spell "Skull Trap" : EA_GENERIC
 AI_TRAP Effect "skull trap;trap" : EA_BLAST
   {
     Desc: "A grinning human skull lies on the ground here.";
-    Flags: EF_NOGEN, EF_EVIL; SC_NEC;
+    Flags: EF_NOGEN, EF_EVIL, EF_GLOW; SC_NEC;
     On Event PRE(EV_EFFECT) {
       hObj hCaster;
       
@@ -7872,7 +7872,7 @@ Wizard / Scroll Spell "Cone of Cold" : EA_BLAST
   { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 10; Level: 5; aval: AR_BEAM; qval: Q_DIR;
     xval: AD_COLD; lval: 7; sval: REF partial; pval: (LEVEL_SCALED)d8;
     Purpose: EP_ATTACK (VS_COLD); cval: AZURE; 
-		On Event MSG_BLASTNAME "cone of cold"; Flags: EF_COMMON;
+		On Event MSG_BLASTNAME "cone of cold"; Flags: EF_COMMON, EF_NO_GLOW;
     Desc: "Projects a cone of numbing frost out in a direction you
 		  select, inflicting 1d8 points of damage per caster level, scaled
 			after 9th level."; }

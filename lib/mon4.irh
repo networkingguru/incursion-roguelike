@@ -625,7 +625,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
       "The <EActor> screeches!"; }
       
 0 Effect "Dance of Ruin" : EA_BLAST
-  { xval: AD_MAGC; pval: 20d6; lval: 12; aval: AR_GLOBE;
+  { cval: COL_DARKRED; xval: AD_MAGC; pval: 20d6; lval: 12; aval: AR_GLOBE;
     xval: REF; Flags: EF_SPECABIL, EF_PARTIAL, EF_EVIL;
     Purpose: EP_ATTACK; 
     Desc: "When three or more vrocks fight together, once every
@@ -1202,7 +1202,7 @@ Effect "Nightmare Smite" : EA_INFLICT
   }
 
 Effect "Nightmare smite;actual blast" : EA_BLAST
-  { aval: AR_GLOBE; cval: COL_RAINBOW; lval: 8;
+  { Flags: EF_GLOW; aval: AR_GLOBE; cval: COL_RAINBOW; lval: 8;
     xval: AD_EVIL; pval: 10d6; sval: WILL partial; }
 and EA_BLAST
   { aval: AR_GLOBE; cval: COL_RAINBOW; lval: 8;

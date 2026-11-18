@@ -17,6 +17,7 @@
 #include "EffectLight.h"
 
 extern void (*AreaProbeXYHook)(int16,int16);
+extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
 
@@ -168,6 +169,20 @@ void CHook(int) {
     if (ViewHash(gCMap) != gCViewHash) gCDiffer = true;
 }
 
+/* Case N: an effect the decision rules UNLIT must add no flash and light no square. */
+int gNegCalls, gNegMaxFlashes, gNegMaxLit;
+Map *gNegMap;
+void NegHook(int) {
+    ++gNegCalls;
+    const int f = (int)LightFlashCount();
+    if (f > gNegMaxFlashes) gNegMaxFlashes = f;
+    int lit = 0;
+    for (int y = 0; y < gNegMap->SizeY(); ++y)
+        for (int x = 0; x < gNegMap->SizeX(); ++x)
+            if (LightLitAt((int16)x, (int16)y)) ++lit;
+    if (lit > gNegMaxLit) gNegMaxLit = lit;
+}
+
 void FlashHook(int phase) {
     if (gLine) {
         if (phase == EL_LIT) {
@@ -216,6 +231,21 @@ void FlashHook(int phase) {
         ++gEnds;
         if (!gS[1].taken) Sample(gS[1]);
     }
+}
+
+/* Case G3 (inc-6dd41): the glyph a globe's highlight leaves on a square. */
+int gGlyphN, gGlyphBad, gGlyphCval;
+void GlyphHook(int16, int16, Glyph was, Glyph now) {
+    ++gGlyphN;
+    bool ok = GLYPH_BACK_VALUE(now) == GLYPH_BACK_VALUE(was);
+    if (gGlyphCval >= 16) {
+        bool inSet = false;
+        for (int i = 0; i < 4; ++i)
+            if ((int)GLYPH_FORE_VALUE(now) == BlastColourSets[gGlyphCval * 4 + i]) inSet = true;
+        ok = ok && inSet;
+    } else
+        ok = ok && (int)GLYPH_FORE_VALUE(now) == gGlyphCval;
+    if (!ok) ++gGlyphBad;
 }
 
 /* An open room that is dark: legacy Lit and Bright are cleared on every cell. */
@@ -404,7 +434,7 @@ void EffectLightProbe(Player *pl) {
     /* ---- Cases B (Fireball), B2 (a globe), H (Hellstorm timing). ---- */
     {
         const rID fire = FIND("Fireball"), hell = FIND("the Hellstorm"),
-            sleepE = FIND("Sleep"), kobold = FIND("kobold");
+            sleepE = FIND("Pyrotechnics;blast"), kobold = FIND("kobold");
         if (!fire || !hell || !sleepE || !kobold ||
             TEFF(sleepE)->ef.aval != AR_GLOBE || !TEFF(sleepE)->ef.cval) {
             inconclusive("B", "Fireball, the Hellstorm, Sleep (a globe with a color) or kobold is missing");
@@ -535,7 +565,7 @@ void EffectLightProbe(Player *pl) {
                         "boxed in: hooks=%d most flashes=%d flashes at end=%d view changed=%d",
                         gCHooks, gCFlashMax, endF, (int)gCDiffer);
             }
-            /* B2: a globe flash (Sleep). */
+            /* B2: a globe flash (Pyrotechnics;blast, a lit globe; Sleep no longer glows, inc-jw0hw). */
             cast(sleepE, true, true, false, false, pre, post, postR, endF);  /* learns the struck squares */
             if (!off) cast(sleepE, true, true, false, true, pre, post, postR, endF);
             if (off) {
@@ -556,6 +586,28 @@ void EffectLightProbe(Player *pl) {
                     "globe gone: end hook same=%d flashes=%d; after return same=%d; after refresh same=%d",
                     (int)(e.snap == pre), e.flashes, (int)(post == pre), (int)(postR == pre));
             }
+            /* G3: a globe's highlight keeps the background and takes a valid foreground. */
+            if (!off) {
+                const rID lotus = FIND("Fire Lotus");
+                const rID gl[2] = { lotus, sleepE };
+                int n[2] = { -1, -1 }, bad[2] = { 0, 0 };
+                for (int i = 0; i < 2 && gl[i]; ++i) {
+                    gGlyphN = gGlyphBad = 0;
+                    gGlyphCval = TEFF(gl[i])->ef.cval;
+                    GlobeGlyphHook = GlyphHook;
+                    cast(gl[i], true, false, false, false, pre, post, postR, endF);
+                    GlobeGlyphHook = NULL;
+                    n[i] = gGlyphN; bad[i] = gGlyphBad;
+                }
+                if (!lotus || TEFF(lotus)->ef.cval < 16 || TEFF(sleepE)->ef.cval >= 16)
+                    inconclusive("G3", "Fire Lotus is missing or has no color set, or the plain globe has one");
+                else if (n[0] <= 0 || n[1] <= 0)
+                    inconclusive("G3", "a globe's highlight never ran");
+                else
+                    verdict("G3", bad[0] == 0 && bad[1] == 0,
+                        "globe glyph: Fire Lotus (color set) %d squares, %d bad; plain globe %d squares, %d bad",
+                        n[0], bad[0], n[1], bad[1]);
+            }
             /* H: Hellstorm cost, informational (the check does not grade it). */
             if (!off) {
                 const clock_t t0 = clock();
@@ -565,7 +617,7 @@ void EffectLightProbe(Player *pl) {
                     gS[0].nStruck, gShowMs, total);
             }
             /* Cases D, E, F, I: beams and missiles (Task 5). */
-            const rID lightning = FIND("Lightning Bolt"), acid = FIND("Acid Arrow"),
+            const rID lightning = FIND("Lightning Bolt"), acid = FIND("Magic Missile"),
                 flame = FIND("tongue of flame"), missile = FIND("Magic Missile");
             auto shoot = [&](rID eid, bool withKob, bool self, bool engulf,
                     uint32 &pre, uint32 &postLight, int &endFlashes) {
@@ -667,7 +719,7 @@ void EffectLightProbe(Player *pl) {
                         "fire ray ends clean: end=%d flashes=%d same=%d", gEnds, endF,
                         (int)(post == pre));
                 }
-                /* E: Acid Arrow flies at a kobold: one point of light, no trail. */
+                /* E: a bolt (Magic Missile; Acid Arrow no longer glows) flies at a kobold: one point of light, no trail. */
                 shoot(acid, true, false, false, pre, post, endF);
                 if (gPreDirty) {
                     inconclusive("E", "a square is lit before the cast");
@@ -695,6 +747,40 @@ void EffectLightProbe(Player *pl) {
                     verdict("K2", gFill && gFlashAtFill == 0 && gFlightLit >= 2,
                         "flight light gone when the fill starts: fill=%d lit cells then=%d", (int)gFill, gFlashAtFill);
                 }
+                /* N: the decision rules Acid Arrow (a bolt) and Sleep (a globe) UNLIT, so a cast adds no
+                   flash and lights no square, though the effect does reach its light code. A
+                   lit effect in the same scene (cases B and E) does the opposite. */
+                if (!off) {
+                    const rID negAcid = FIND("Acid Arrow"), negSleep = FIND("Sleep");
+                    if (!negAcid || !negSleep) {
+                        inconclusive("N", "Acid Arrow or Sleep is missing");
+                    } else {
+                        for (int which = 0; which < 2; ++which) {
+                            const rID eid = which ? negSleep : negAcid;
+                            BuildDark(mp, pl, floor, wall);
+                            LightFlashClearAll();
+                            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                            Monster *mn = new Monster(kobold);
+                            mn->PlaceAt(mp, which ? aimX + 1 : PX + 4, which ? PY + 1 : PY, true);
+                            mn->Initialize(true);
+                            Refresh(pl);
+                            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                            gNegMap = mp; gNegCalls = gNegMaxFlashes = gNegMaxLit = 0;
+                            term->MsgHistory[0] = 0;
+                            EffectLightHook = NegHook;
+                            EventInfo xe; xe.Clear();
+                            xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = true;
+                            xe.isLoc = true; xe.EXVal = which ? aimX : PX + 4; xe.EYVal = PY;
+                            if (!which) xe.EVictim = mn;
+                            ReThrow(EV_EFFECT, xe);
+                            EffectLightHook = NULL;
+                            verdict(which ? "N2" : "N1", gNegCalls > 0 && gNegMaxFlashes == 0 && gNegMaxLit == 0,
+                                "%s: light code reached %d times, most flashes %d, most lit squares %d (need >0, 0, 0)",
+                                which ? "Sleep globe" : "Acid Arrow bolt", gNegCalls, gNegMaxFlashes, gNegMaxLit);
+                        }
+                    }
+                }
+
                 /* F: no flash survives an early exit. */
                 shoot(acid, false, false, false, pre, post, endF);   /* no victim */
                 verdict("F1", gLit == 0 && endF == 0 && post == pre,

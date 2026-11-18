@@ -91,7 +91,7 @@ LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L);
 // family: light-flash-style internal
 enum { LF_STEADY = 0, LF_FIRE = 1, LF_ARC = 2, LF_RAINBOW = 3 };
 // end family: light-flash-style
-LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SILVERY, or a palette index 0..15 */
+LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SUNYELLOW, or a palette index 0..15 */
 int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach); /* id >= 0, or -1 when disabled */
 void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square */
 void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */

@@ -23,9 +23,64 @@ static int16 DTypeLightColour(int16 dtype) {
   return 0;
 }
 
-EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype)
-    : map(m), id(-1), ended(false) {
-  if (const int16 dc = DTypeLightColour(dtype))
+/* True for a damage type that is visible energy: fire, cold, electricity,
+   light, magic, necromantic, disintegration, holy, law, chaos. Material,
+   force, sonic, wind, mental, drain and evil types do not glow. */
+static bool TypeGlows(int16 dtype) {
+  switch (dtype) {
+    case AD_FIRE: case AD_COLD: case AD_ELEC: case AD_SUNL: case AD_MAGC:
+    case AD_NECR: case AD_DREX: case AD_DISN:
+    case AD_HOLY: case AD_LAWF: case AD_CHAO:
+      return true;
+  }
+  return false;
+}
+
+/* inc-jw0hw: the one place that decides whether an effect glows and in what
+   color. The damage type decides by default; EF_GLOW and EF_NO_GLOW override
+   it in data. A COL_* set in cval beats the type's row. Otherwise the type's
+   row gives the color; an EF_GLOW effect whose own type is not energy takes
+   the row of the first energy type among its later components; else the plain
+   cval, lightened, is the color. */
+EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
+  EffectLightDecision d;
+  d.lit = true;
+  d.colour = 0;
+  if (!te)
+    return d;
+  if (te->HasFlag(EF_GLOW)) d.lit = true;
+  else if (te->HasFlag(EF_NO_GLOW)) d.lit = false;
+  else d.lit = TypeGlows(dtype);
+  const int16 cv = te->ef.cval;
+  if (cv >= COL_FIRE && cv <= COL_SUNYELLOW) {
+    d.colour = cv;
+    return d;
+  }
+  int16 row = DTypeLightColour(dtype);
+  if (te->HasFlag(EF_GLOW) && !TypeGlows(dtype))
+    for (int8 n = 1; te->Vals(n); n++) {
+      const EffectValues *ev = te->Vals(n);
+      if (ev->eval == EA_BLAST && TypeGlows(ev->xval)) {
+        row = DTypeLightColour(ev->xval);
+        break;
+      }
+    }
+  d.colour = row ? row : cv;
+  /* A plain SHADOW cval is the negative-energy color (NECRO_C, lib/threats.irh). */
+  if (te->HasFlag(EF_GLOW) && !row && cv == SHADOW)
+    d.colour = COL_NECRO;
+  return d;
+}
+
+EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
+                         TEffect *te)
+    : map(m), id(-1), ended(false), lit(true) {
+  if (te) {
+    const EffectLightDecision d = EffectLightDecide(te, dtype);
+    lit = d.lit;
+    if (d.colour)
+      blastColour = d.colour;
+  } else if (const int16 dc = DTypeLightColour(dtype))
     blastColour = dc;
   style = LF_STEADY;
   reach = 1;
@@ -37,7 +92,8 @@ EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype)
   if (blastColour == COL_RAINBOW) style = LF_RAINBOW;
   gain = blastColour == COL_SONIC ? 0.6f : 1.0f;
   colour = LightEffectColour(blastColour);
-  id = LightFlashAdd(colour, style, gain, reach);
+  if (lit)
+    id = LightFlashAdd(colour, style, gain, reach);
 }
 
 EffectLight::~EffectLight() {
@@ -59,7 +115,7 @@ void EffectLight::Light(int16 x, int16 y) {
 }
 
 void EffectLight::MoveTo(int16 x, int16 y) {
-  if (ended || LightFlashDisabled())
+  if (ended || !lit || LightFlashDisabled())
     return;
   /* An unseen square empties the area; a seen one refills it. */
   if (id >= 0)

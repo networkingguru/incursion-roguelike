@@ -473,6 +473,8 @@ TextVal EF_CONSTNAMES[] = {
 { EF_DMIN, "EF_DMIN" },
 { EF_D10MIN, "EF_D10MIN" },
 { EF_DHOUR, "EF_DHOUR" },
+{ EF_GLOW, "EF_GLOW" },
+{ EF_NO_GLOW, "EF_NO_GLOW" },
 { EF_LAST, "EF_LAST" },
  { NULL, 0 } };
 
