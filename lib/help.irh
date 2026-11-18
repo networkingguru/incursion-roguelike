@@ -1703,40 +1703,113 @@ Text "help::adventuring"
         __A wide variety of physical and mental conditions can bedevil an adventurer
         while exploring the dungeon. Here is a list of some of the most common,
         along with their game-mechanical effects:\n
-        __<9>Blind:<1> A blind adventurer can't see. When the character is blind, all
-        movable objects are removed from the map, and only the glyph of the player's
-        character and her memory of wall and floor squares remain shown -- if you are 
-        blind (either naturally or by some effect), your Light, Shadow, Sight and 
-        Darkvision ranges are all 0. All monsters
-        are described as 'something', and no warnings will be given for attacking
-        friendly or neutral creatures, walking over traps or hazardous terrain and so
-        forth. Blindness negates normal sight and darkvision, but not tremorsense,
-        blindsight, telepathy, scent or detection magics.\n
-        __Blindness can last for a relatively short duration measured in turns, or can
-        be a much more serious affliction that can only be cured magically. Fortunately,
-        the latter is rare. The Healing skill can be used to treat blindness. Blind
-        characters also obviously always suffer the combat penalties for attacking
-        unseen creatures, and being attacked by unseen creatures.\n
-        __<9>Stunned:<1> Stunned characters suffer a -6 status penalty to Dexterity and
-        a -50~ status penalty to attack speed and movement rate. Their spellcasting 
-        success chance has a -50~ penalty.\n
-        __<9>Confused:<1> Confused characters suffer a -4 status penalty to Intelligence
-        and Wisdom, as well as a -75~ modifier to spell success chance. When they try to
-        move, they must make a Balance check (DC 18) or move in a randomly selected
-        direction instead of their intended one, possibly placing them over dangerous
-        terrain.\n
-        __<9>Nauseated:<1> A nauseated character suffers the same penalties as a stunned
-        one (-6 Dexterity, -50~ Mov/Spd, -50~ spell success) and is additionally unable
-        to make attacks until the nausea passes, barring an exceptional Concentration
-        score allowing this to be bypassed.\n
-        __<9>Fatigued:<1> A fatigued character has spent or lost all their Fatigue 
-        Points. Such a character suffers a -2 Fatigue penalty to Strength, Dexterity
-        and Charisma, as well as a -10~ penalty to attack speed and movement rate.\n
-        __<9>Exhausted:<1> Exhausted is the next stage beyond fatigued; an exhausted
-        character has reached a negative total of current Fatigue Points equal to or
-        exceeding their normal positive maximum. Such a character suffers a -6 Fatigue
-        penalty to Strength, Dexterity and Charisma, as well as a -25~ penalty to
-        attack speed and movement rate.\n 
+        __<9>Blind:<1> A blind character cannot see. While the character is blind, creatures and
+        items vanish from the map, and only the character's own glyph and her
+        memory of walls, floors and features such as stairs and doors remain
+        shown. Her Sight, Shadow and Darkvision ranges are all 0. Creatures
+        are described as 'something', and bumping into an unseen creature asks
+        whether to attack it without saying what it is. Blindness negates
+        normal sight and darkvision, but not tremorsense, blindsight,
+        telepathy, scent or detection magic.\n
+        __Blindness can last a short time measured in turns, or it can be a lasting
+        affliction. Fortunately, the latter is rare. The Heal skill can treat
+        blindness, even the permanent kind (DC 30). Half of a blind
+        character's attacks against creatures she cannot sense miss wildly, or
+        a quarter with the Blind Fight feat. Without that feat, she loses her
+        Dexterity bonus to defense class, cannot make attacks of opportunity,
+        and creatures she cannot sense gain +2 to hit her.\n
+        __<9>Stunned:<1> Stunned characters suffer a -6 status penalty to Dexterity, a -50~ penalty to
+        attack speed and up to a -50~ penalty to spell success chance. Half of
+        their attacks miss wildly. They lose their Dexterity bonus to defense
+        class, and cannot make attacks of opportunity, sprint or use precision
+        strikes.\n
+        __<9>Confused:<1> Confused characters suffer a -4 status penalty to Intelligence and Wisdom, as
+        well as up to a -75~ penalty to spell success chance. They cannot make
+        special attacks, attacks of opportunity or coups de grace, and cannot
+        sprint or spring attack. When they try to move, they must make a
+        Balance check (DC 18) or move in a randomly selected direction instead
+        of their intended one, possibly placing them over dangerous terrain.\n
+        __<9>Nauseated:<1> A nauseated character suffers a -6 status penalty to Dexterity, a -50~ penalty
+        to attack speed and up to a -50~ penalty to spell success chance. She
+        cannot attack or use innate abilities. With a Concentration skill of
+        10 or more, she may try to attack anyway with a Concentration check
+        (DC 20). On a failure she retches, provokes attacks of opportunity and
+        loses time. She loses her Dexterity bonus to defense class and cannot
+        make attacks of opportunity.\n
+        __<9>Paralyzed:<1> A paralyzed character cannot act, except to pray, cast a still, vocalized
+        spell, or wait. Attackers treat her as helpless and can strike a coup
+        de grace on a living victim. She loses her Dexterity bonus to defense
+        class and cannot make attacks of opportunity. A climbing character who
+        is paralyzed falls. Each turn, a character with a Concentration or
+        Escape Artist skill of 15 or more can make a Fortitude save (DC 18) to
+        break free.\n
+        __<9>Bloated:<1> A bloated character has eaten far too much. She suffers a -10~ penalty to
+        attack speed, and the excess weakens her Constitution over time.\n
+        __<9>Satiated:<1> A satiated character is full. She suffers no penalty, but the excess slowly
+        weakens her Constitution.\n
+        __<9>Content:<1> A content character is well fed and suffers no penalty. Staying content slowly
+        trains her Constitution.\n
+        __<9>Peckish:<1> A peckish character could eat, but suffers no penalty. Staying peckish slowly
+        trains her Constitution.\n
+        __<9>Hungry:<1> A hungry character suffers a -1 penalty to Strength and Constitution, and her
+        maximum Fatigue Points drop by 1. Hunger weakens her Constitution over
+        time, unless she has the Fasting ability, which trains it instead.\n
+        __<9>Starving:<1> A starving character suffers a -2 penalty to Strength and Constitution, up to
+        a -15~ penalty to spell success chance, and her maximum Fatigue Points
+        drop by 2. She cannot rest, spend hours on a task, or continue any
+        long action except eating. Starvation weakens her Constitution over
+        time.\n
+        __<9>Weak:<1> As Starving, but the penalties are -4 to Strength and Constitution and up to
+        -30~ to spell success chance.\n
+        __<9>Fainting:<1> As Weak. She is close to death, and she starves to death if she does not eat
+        soon.\n
+        __<9>Fatigued:<1> A fatigued character has spent or lost all their Fatigue Points. Such a
+        character suffers a -2 Fatigue penalty to Strength, Dexterity and
+        Charisma, as well as a -10~ penalty to attack speed and movement rate.
+        A raging character ignores these penalties while the rage lasts.\n
+        __<9>Exhausted:<1> Exhausted is the next stage beyond fatigued; an exhausted character has
+        reached a negative total of current Fatigue Points equal to or
+        exceeding their normal positive maximum. Such a character suffers a -6
+        Fatigue penalty to Strength, Dexterity and Charisma, as well as a -25~
+        penalty to attack speed and movement rate. Each further Fatigue Point
+        she spends requires a Fortitude save, or she passes out for several
+        turns. Rage hides the penalties but not this risk.\n
+        __<9>Levitating:<1> A levitating character floats above the ground. She moves at half speed and
+        suffers a -2 penalty to attack rolls and up to a -15~ penalty to spell
+        success chance. She avoids traps triggered by weight and slick
+        surfaces, cannot be sensed by tremorsense, and can cross pits and
+        chasms safely. She cannot sprint, needs a Balance check to cast a
+        spell with somatic components, and can be knocked back when struck. A
+        mounted character who begins to levitate dismounts.\n
+        __<9>Flying:<1> A flying character flies above the ground. She gains a +2 bonus to attack
+        rolls and defense class. She avoids traps triggered by weight and
+        slick surfaces, cannot be sensed by tremorsense, and can cross pits
+        and chasms safely. She cannot sprint, needs a Balance check to cast a
+        spell with somatic components, and can be knocked back when struck.
+        She cannot fly while mounted.\n
+        __<9>Climbing:<1> A climbing character is in a tree or on a ceiling. She gains a bonus of 2 plus
+        one sixth of her Climb skill to attack rolls and defense class, and
+        she avoids traps triggered by weight. In a tree she moves at half
+        speed unless she has Brachiation, and a quarter of attacks against her
+        miss wildly. On a ceiling she moves at 30~ of her speed, faster with a
+        Climb skill above 20. She also loses her Dexterity bonus to defense
+        class there, and her spells take longer to cast. Each move requires a
+        Climb check (DC 13), except in a tree with Brachiation. Each spell
+        without the still modifier, and each wound, also requires a Climb
+        check. On a failure she falls and takes 2d6 damage. Being pushed,
+        paralyzed, grappled, engulfed, polymorphed or knocked prone also makes
+        her fall.\n
+        __<9>Mounted:<1> A mounted character rides an allied creature and moves at its speed, faster
+        with her Ride skill. She gains a bonus of 2 plus one sixth of her Ride
+        skill to defense class, 1 plus one fifth to melee attack rolls, and
+        one fifth to melee damage. She suffers a -4 penalty to ranged attacks
+        (-2 with Mounted Archery), doubled while charging. A spell without the
+        still modifier takes longer to cast unless her Balance skill is 20 or
+        more or her Ride skill is 10 or more. While an enemy threatens her,
+        she suffers up to a -40~ penalty to spell success chance; her Ride
+        skill reduces it and removes it at 20. If she would be knocked prone,
+        she must make a Ride check (DC 20) or fall off. A frightened mount can
+        throw her.\n
         __<9>Prone:<1> A prone character has been knocked from his feet. He suffers a
         -4 status penalty to his attack rolls and Defense Class, and he must stand up
         before he is able to move; standing up takes about as much time as making an
@@ -3149,7 +3222,7 @@ Text "help::combat"
       __This strain is represented by Fatigue Points. A number of different actions
       cost Fatigue, as shown on the table below. If a character drops below 0
       Fatigue Points, they are considered to be fatigued, and will suffer a
-      reduction in effective Strength and Constitution. If they continue to
+      reduction in effective Strength, Dexterity and Charisma. If they continue to
       expend Fatigue until they reach negative Fatigue Points equal to their
       normal positive maximum, they are considered to be exhausted. Spending
       any further Fatigue Points when exhausted entails a risk of passing out
@@ -3162,8 +3235,8 @@ Text "help::combat"
       Fatigue Points immediately. A character who is fatigued recovers all
       of their Fatigue Points only if the night passes uneventfully; in the
       case of an encounter, only a portion of the Fatigue Points lost will
-      be recovered. An exhausted character recovers only one Fatigue point
-      when resting, requiring several nights to fully recover from the
+      be recovered. An exhausted character recovers Fatigue Points equal to
+      her Constitution modifier (minimum 1) per rest, requiring several nights to fully recover from the
       effects.\n
       __<11>Fatigue Costs:<3> The following actions all cause a character to
       expend Fatigue. Actions marked with an asterisk are not currently

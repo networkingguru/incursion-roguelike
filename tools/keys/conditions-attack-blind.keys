@@ -1,0 +1,19 @@
+# inc-9m0e: load orc-barbarian-seed1-opt0822 via the check script.
+# One malady per session: the health display is an else-if chain.
+w
+@while "Enter wizard mode" y
+@choose "Genocide Everything"
+s
+w
+@choose "Become Divine Champion"
+"Conditions Blind Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+@dump:status
+d
+@expect "Gender"
+C
+@dump:conditions
+ESC
+ESC
+@quit
