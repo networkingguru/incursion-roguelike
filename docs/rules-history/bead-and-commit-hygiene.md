@@ -118,3 +118,13 @@ data about the load and time involved so we can intelligently reenable it",
 then "y" to keeping the memory-pressure refusal. The gate and load refusals
 were removed, and every gate and fast check run now logs its load and time to
 logs/check-timing.tsv.
+
+## check-bead-status-before-suggesting-or-starting
+
+2026-11-18, bead inc-me78f. The rule (bead inc-u1mt) told a session to report a
+bead's holder to Brian and stop, and to take over only when Brian said the
+holder was gone. A session asked Brian about inc-jw0hw, held by claude-60914,
+after it had already seen that process 60914 was not running. Brian: "you can
+check this yourself. From now on, do so before you come to me with this q".
+The rule now takes over a bead whose holder process is not running, and asks
+only about a live holder.
