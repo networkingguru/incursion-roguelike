@@ -33,7 +33,8 @@
 #        (vetted) are ok; a fake naming /bin/sleep by full path is EXPENSIVE; the
 #        advice offers marker removal for `# gate: cheap` and not for `# gate: none`
 #   AC2  one ok, one EXPENSIVE and one FAIL, run normally and under
-#        `taskpolicy -c background` -> identical verdicts (seconds stripped)
+#        `taskpolicy -c background` -> identical verdicts (seconds stripped); the
+#        background half starts at the top of the run and overlaps the other cases
 #   AC3  a real fast check copied unchanged -> ok; the same copy with one line
 #        calling headless.sh added -> EXPENSIVE game
 #   AC4  a check blocked on a fifo: watched -> an ALERT line while the runner still
@@ -192,6 +193,21 @@ fi
 
 DIR="$TMP/checks"
 mkdir -p "$DIR"
+
+# AC2's background half starts here and overlaps the other cases: under
+# `taskpolicy -c background` it waits for busy efficiency cores (inc-m1mwv). It gets
+# its own alert file and timing log, so it cannot touch what cases j2 and AC4 read.
+D2="$TMP/d_ac2"
+plant "$D2" check_s_ok.sh cheap "fake" 'exit 0'
+plant "$D2" check_s_exp.sh cheap "fake" 'sleep 0.2; exit 0'
+plant "$D2" check_s_fail.sh cheap "fake" 'echo "s failed"; exit 1'
+rm -f "$TMP/ac2bg.out" "$TMP/ac2bg.rc"
+(
+    ALERT_FILE="$TMP/ac2bg-alert.log" INCURSION_CHECK_TIMING_LOG="$TMP/ac2bg-timing.tsv" \
+        PFX="taskpolicy -c background" runner unwatched "$D2" > "$TMP/ac2bg.out"
+    echo $? > "$TMP/ac2bg.rc"
+) &
+AC2_BG_PID=$!
 
 # ---- a. one passing fast check -> exit 0
 plant "$DIR" check_pass.sh cheap "static test" 'exit 0'
@@ -412,17 +428,17 @@ else
 fi
 
 # ---- AC2. the same set normally and under taskpolicy -c background
-D2="$TMP/d_ac2"
-plant "$D2" check_s_ok.sh cheap "fake" 'exit 0'
-plant "$D2" check_s_exp.sh cheap "fake" 'sleep 0.2; exit 0'
-plant "$D2" check_s_fail.sh cheap "fake" 'echo "s failed"; exit 1'
-norm="$(runner unwatched "$D2" | strip_secs)"; rc1=$?
-bg="$(PFX="taskpolicy -c background" runner unwatched "$D2" | strip_secs)"; rc2=$?
+# the header line names the alert file, which differs by design; compare without it
+norm="$(runner unwatched "$D2" | strip_secs | sed 's/alerts go to .*/alerts go to F/')"
+bg=""; bg_ok=0
+if wait "$AC2_BG_PID" && [ -f "$TMP/ac2bg.out" ] && [ -f "$TMP/ac2bg.rc" ]; then
+    bg="$(strip_secs < "$TMP/ac2bg.out" | sed 's/alerts go to .*/alerts go to F/')"; bg_ok=1
+fi
 case "$norm" in *"EXPENSIVE check_s_exp.sh"*"FAIL check_s_fail.sh"*"ok   check_s_ok.sh"*) shaped=1 ;; *) shaped=0 ;; esac
-if [ "$norm" = "$bg" ] && [ "$shaped" -eq 1 ]; then
+if [ "$bg_ok" -eq 1 ] && [ "$norm" = "$bg" ] && [ "$shaped" -eq 1 ]; then
     report ok "AC2: verdicts are identical normally and under taskpolicy -c background"
 else
-    report FAIL "AC2: verdicts differ or are malformed (shaped=$shaped)"
+    report FAIL "AC2: verdicts differ or are malformed (shaped=$shaped, background result present=$bg_ok)"
     diff <(printf '%s\n' "$norm") <(printf '%s\n' "$bg")
 fi
 

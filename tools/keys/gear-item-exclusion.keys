@@ -1,6 +1,8 @@
 # An item the owner ruled wearer-only leaves the gear exposed (bd inc-w26h).
 #
-#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22-maxhp.dat \
+#   INCURSION_LOAD=tools/fixtures/specimens/orc-warrior-dequ-seed5-maxhp.sav \
+#   INCURSION_FORCE_SAVE_ROLL=1 INCURSION_LOF_FORCE_ROLL=15 INCURSION_FORCE_DAMAGE_ROLL=5 \
 #       tools/headless.sh tools/keys/gear-item-exclusion.keys 5
 #
 # WHAT IS BEING MEASURED. The Amulet of Bile (lib/m_items.irh:516) grants
@@ -18,9 +20,11 @@
 # WHY A SILVERED MAGIC WARHAMMER AND A MAGMA CREEPER. Both are chosen in
 # tools/keys/gear-spell-protection.keys, for reasons set out in its header: the
 # weapon is silvered so that its acid hardness is a measurable 12, and the
-# creeper's 3d6 AD_ACID A_DEQU carries no save DC, so no Reflex roll stands
-# between the acid and the hammer. The creeper rolls up to 18, so an unprotected
-# hammer takes damage; add the flag and 12 + 12 = 24 puts it beyond every roll.
+# creeper's 3d6 AD_ACID A_DEQU carries a save DC, so the warrior's Reflex save
+# stands between the acid and the hammer; the check forces that save to fail
+# (INCURSION_FORCE_SAVE_ROLL=1) and the acid roll to 15, so every blow splashes
+# the hammer. Unprotected it takes 15 - 12 = 3; flag the amulet and 12 + 12 = 24
+# puts it beyond the forced roll.
 # Since inc-kapn the bypass at src/Item.cpp:1468 zeroes only what Hardness()
 # returned, so the magic is no longer what makes the grant measurable.
 #
@@ -30,7 +34,29 @@
 # 12 is the hardness alone. The amulet's 12 does not appear in it, and the
 # hammer melts. Flag the amulet and the same line reads "vs. 24 (silver)".
 
-@include dequ-setup.keys
+# The character is LOADED (see tools/check_gear_item_exclusion.sh), so this does
+# what dequ-setup.keys does after chargen, as tools/keys/dequ-reach.keys does:
+# wizard mode on, the level cleared, Freeze Monsters on, the shield stowed.
+@until "Things in View" ESC
+
+@until "Wizard Mode Options" w y
+@choose "Genocide Everything"
+SPACE*40
+
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+@expect "Freeze Monsters"
+DOWN*10
+@expect "all monsters are denied their"
+SPACE
+@expect "Wizard Mode Options"
+ESC
+@until "Things in View" ESC
+
+@until "SPACE:Swap" i
+@until ">>a)Ready" a
+s
+@until "Things in View" ESC
 
 # --- the amulet that must protect its wearer and nothing else ---
 w
@@ -96,6 +122,8 @@ w
 @choose "magma creeper"
 RIGHT*4 ENTER
 
+RIGHT                   # the walk step to the creeper: not a blow, not dumped
+@while "Attack the" y
 RIGHT
 @while "Attack the" y
 @while "more --" SPACE

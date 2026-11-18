@@ -1,23 +1,32 @@
 # Reproduction only for inc-8mg9; no game-code or data changes.
-# Run from repository root, with a fresh INCURSION_RUN_DIR under logs/:
-# INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+# Read by tools/check_find_traps_cap.sh (bead inc-b4l3g.17). Run from the repo root:
+# INCURSION_LOAD=tools/fixtures/chars/orc-priest-seed1-opt0822.char \
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
 #   INCURSION_RUN_DIR="$PWD/logs/inc-8mg9/cap-fresh" \
 #   tools/headless.sh tools/keys/find-traps-cap.keys 1
-# Route: chargen-priest, wizard Free Advancement, Priest 11.
-# Learn Any Spell sets SP_INNATE. CalcEffect (src/Magic.cpp) therefore uses
-# ChallengeRating (sum of character class levels), then adds the sheet's
-# Divination +1: effective Find Traps caster level 12, not 11.
-# Observed Search: +2 before, +14 after, delta +12.
+# Route: the priest is LOADED from the frozen fixture orc-priest-seed1-opt0822
+# (Priest 1, god Aiswin, domains Fate/Knowledge/Night), never generated: chargen
+# offers a different screen on some seeds. A loaded game opens no prompt, so the
+# first key is 'w'. The wizard Free Advancement G loop below takes it to Priest 11.
+# Learn Any Spell sets SP_INNATE. CalcEffect (src/Magic.cpp:633-641) therefore
+# uses ChallengeRating (sum of class levels), then adds BONUS_SCHOOL_CASTING_LEVEL
+# for Divination: the Fate domain grants +1 (lib/domains.irh:296), so
+# effective Find Traps caster level is 12 (11 + 1), above the +10 cap.
+# Observed Search: +0 before, +10 after, delta +10 (uncapped it would be +12).
+# Wizard Mode Switches rows have no menu letters, so @cursorto cannot find them:
+# DOWN counts from the top row (Cheat Death), and the check greps the switches
+# dump for YES on all four rows. Free Advancement is row 3, Ignore Spell Failure
+# row 6, Infinite Mana row 8, Freeze Monsters row 11.
 # W writes full sheets beneath the run's logs/; @dump captures skill totals.
 # Search has zero ranks and is omitted from the full sheet before the cast.
 # ESC y aborts the skill manager without allocating any ranks.
-@include chargen-priest.keys
-ESC
 w y
 @choose "Wizard Mode Switches"
 DOWN*2 SPACE # Free Advancement
-DOWN*5 SPACE # Infinite Mana
+DOWN*3 SPACE # Ignore Spell Failure
+DOWN*2 SPACE # Infinite Mana
 DOWN*3 SPACE # Freeze Monsters
+@dump:switches
 ESC
 d
 G

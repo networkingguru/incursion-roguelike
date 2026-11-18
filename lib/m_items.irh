@@ -3965,7 +3965,7 @@ AI_BOOTS Effect "Thunder" : EA_INFLICT
       Prone."; }
 
 AI_BOOTS Effect "Levitation;boots" : EA_GRANT
-  { SC_ARC; xval: LEVITATION; yval: 2; pval: 2; 
+  { SC_ARC; xval: LEVITATION; pval: 2; 
     Flags: EF_AUTOID; Level: 3; }
 and EA_GRANT
   { xval: ADJUST_CIRC; yval: A_HIT; pval: -2; }

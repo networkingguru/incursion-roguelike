@@ -1,0 +1,21 @@
+# inc-9m0e: load orc-barbarian-seed1-opt0822 via the check script.
+# A paralyzed player can press d at the prompt to open the sheet, then C for
+# Conditions, and ESC back (inc-sg8d4). 0001 status at the prompt, 0002 Conditions.
+# One malady per session: the health display is an else-if chain.
+w
+@while "Enter wizard mode" y
+@choose "Genocide Everything"
+s
+w
+@choose "Become Divine Champion"
+"Conditions Paralyzed Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+@expect "ray, magic"
+@dump:status
+d
+C
+@dump:conditions
+ESC
+ESC
+@quit
