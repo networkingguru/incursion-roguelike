@@ -1,0 +1,75 @@
+/* inc-9m0e: appended only to a scratch module under logs/.
+   Wizard Become Divine Champion triggers the first blessing once.
+   GainTempStati signature: inc/Api.h:243; no spell, save or attack roll. */
+
+God "Conditions Stunned Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Stunned Test God") == 1)
+        EActor->GainTempStati(STUNNED,NULL,100,SS_ATTK,0,0);
+      return NOTHING;
+      };
+  }
+
+God "Conditions Blind Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Blind Test God") == 1)
+        EActor->GainTempStati(BLIND,NULL,100,SS_ATTK,0,0);
+      return NOTHING;
+      };
+  }
+
+God "Conditions Confused Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Confused Test God") == 1)
+        EActor->GainTempStati(CONFUSED,NULL,100,SS_ATTK,0,0);
+      return NOTHING;
+      };
+  }
+
+God "Conditions Paralyzed Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Paralyzed Test God") == 1)
+        EActor->GainTempStati(PARALYSIS,NULL,100,SS_ATTK,0,0);
+      return NOTHING;
+      };
+  }
+
+God "Conditions Nauseated Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Nauseated Test God") == 1)
+        EActor->GainTempStati(NAUSEA,NULL,100,SS_ATTK,0,0);
+      return NOTHING;
+      };
+  }
+
+God "Conditions Hungry Test God"
+  {
+    Lists:
+      * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+          100000 110000 120000 130000;
+    On Event EV_BLESSING {
+      if (EActor->getGodLevel($"Conditions Hungry Test God") == 1)
+        EActor->SetStatiDur(HUNGER,-1,NULL,2000);
+      return NOTHING;
+      };
+  }

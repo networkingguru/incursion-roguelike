@@ -42,6 +42,93 @@ static const char *SpellSrcColumnName(uint16 kind, uint32 flags) {
     }
 }
 
+/* Conditions screen: descriptions of conditions that are not spell effects
+   (inc-9m0e). A percent sign is a plain '%' here; Box() prints it as given. */
+struct ConditionText { const char *name; const char *text; };
+static const ConditionText CondParalyzed = { "Paralyzed",
+    "A paralyzed character cannot act, except to pray, cast a still, vocalized spell, or wait. Attackers treat {him} as helpless and can strike a coup de grace on a living victim. {He} loses {his} Dexterity bonus to defense class and cannot make attacks of opportunity. A climbing character who is paralyzed falls. Each turn, a character with a Concentration or Escape Artist skill of 15 or more can make a Fortitude save (DC 18) to break free." };
+static const ConditionText CondStunned = { "Stunned",
+    "Stunned characters suffer a -6 status penalty to Dexterity, a -50% penalty to attack speed and up to a -50% penalty to spell success chance. Half of their attacks miss wildly. They lose their Dexterity bonus to defense class, and cannot make attacks of opportunity, sprint or use precision strikes." };
+static const ConditionText CondNauseated = { "Nauseated",
+    "A nauseated character suffers a -6 status penalty to Dexterity, a -50% penalty to attack speed and up to a -50% penalty to spell success chance. {He} cannot attack or use innate abilities. With a Concentration skill of 10 or more, {he} may try to attack anyway with a Concentration check (DC 20). On a failure {he} retches, provokes attacks of opportunity and loses time. {He} loses {his} Dexterity bonus to defense class and cannot make attacks of opportunity." };
+static const ConditionText CondConfused = { "Confused",
+    "Confused characters suffer a -4 status penalty to Intelligence and Wisdom, as well as up to a -75% penalty to spell success chance. They cannot make special attacks, attacks of opportunity or coups de grace, and cannot sprint or spring attack. When they try to move, they must make a Balance check (DC 18) or move in a randomly selected direction instead of their intended one, possibly placing them over dangerous terrain." };
+static const ConditionText CondBlind = { "Blind",
+    "A blind character cannot see. While the character is blind, creatures and items vanish from the map, and only the character's own glyph and {his} memory of walls, floors and features such as stairs and doors remain shown. {His} Sight, Shadow and Darkvision ranges are all 0. Creatures are described as 'something', and bumping into an unseen creature asks whether to attack it without saying what it is. Blindness negates normal sight and darkvision, but not tremorsense, blindsight, telepathy, scent or detection magic.\n\n  Blindness can last a short time measured in turns, or it can be a lasting affliction. Fortunately, the latter is rare. The Heal skill can treat blindness, even the permanent kind (DC 30). Half of a blind character's attacks against creatures {he} cannot sense miss wildly, or a quarter with the Blind Fight feat. Without that feat, {he} loses {his} Dexterity bonus to defense class, cannot make attacks of opportunity, and creatures {he} cannot sense gain +2 to hit {him}." };
+/* Hunger states in the order BLOATED .. FAINTING; STARVED has no entry. */
+static const ConditionText CondHunger[8] = {
+  { "Bloated", "A bloated character has eaten far too much. {He} suffers a -10% penalty to attack speed, and the excess weakens {his} Constitution over time." },
+  { "Satiated", "A satiated character is full. {He} suffers no penalty, but the excess slowly weakens {his} Constitution." },
+  { "Content", "A content character is well fed and suffers no penalty. Staying content slowly trains {his} Constitution." },
+  { "Peckish", "A peckish character could eat, but suffers no penalty. Staying peckish slowly trains {his} Constitution." },
+  { "Hungry", "A hungry character suffers a -1 penalty to Strength and Constitution, and {his} maximum Fatigue Points drop by 1. Hunger weakens {his} Constitution over time, unless {he} has the Fasting ability, which trains it instead." },
+  { "Starving", "A starving character suffers a -2 penalty to Strength and Constitution, up to a -15% penalty to spell success chance, and {his} maximum Fatigue Points drop by 2. {He} cannot rest, spend hours on a task, or continue any long action except eating. Starvation weakens {his} Constitution over time." },
+  { "Weak", "As Starving, but the penalties are -4 to Strength and Constitution and up to -30% to spell success chance." },
+  { "Fainting", "As Weak. {He} is close to death, and {he} starves to death if {he} does not eat soon." } };
+static const ConditionText CondFatigued = { "Fatigued",
+    "A fatigued character has spent or lost all their Fatigue Points. Such a character suffers a -2 Fatigue penalty to Strength, Dexterity and Charisma, as well as a -10% penalty to attack speed and movement rate. A raging character ignores these penalties while the rage lasts." };
+static const ConditionText CondExhausted = { "Exhausted",
+    "Exhausted is the next stage beyond fatigued; an exhausted character has reached a negative total of current Fatigue Points equal to or exceeding their normal positive maximum. Such a character suffers a -6 Fatigue penalty to Strength, Dexterity and Charisma, as well as a -25% penalty to attack speed and movement rate. Each further Fatigue Point {he} spends requires a Fortitude save, or {he} passes out for several turns. Rage hides the penalties but not this risk." };
+static const ConditionText CondLevitating = { "Levitating",
+    "A levitating character floats above the ground. {He} moves at half speed and suffers a -2 penalty to attack rolls and up to a -15% penalty to spell success chance. {He} avoids traps triggered by weight and slick surfaces, cannot be sensed by tremorsense, and can cross pits and chasms safely. {He} cannot sprint, needs a Balance check to cast a spell with somatic components, and can be knocked back when struck. A mounted character who begins to levitate dismounts." };
+static const ConditionText CondFlying = { "Flying",
+    "A flying character flies above the ground. {He} gains a +2 bonus to attack rolls and defense class. {He} avoids traps triggered by weight and slick surfaces, cannot be sensed by tremorsense, and can cross pits and chasms safely. {He} cannot sprint, needs a Balance check to cast a spell with somatic components, and can be knocked back when struck. {He} cannot fly while mounted." };
+static const ConditionText CondClimbing = { "Climbing",
+    "A climbing character is in a tree or on a ceiling. {He} gains a bonus of 2 plus one sixth of {his} Climb skill to attack rolls and defense class, and {he} avoids traps triggered by weight. In a tree {he} moves at half speed unless {he} has Brachiation, and a quarter of attacks against {him} miss wildly. On a ceiling {he} moves at 30% of {his} speed, faster with a Climb skill above 20. {He} also loses {his} Dexterity bonus to defense class there, and {his} spells take longer to cast. Each move requires a Climb check (DC 13), except in a tree with Brachiation. Each spell without the still modifier, and each wound, also requires a Climb check. On a failure {he} falls and takes 2d6 damage. Being pushed, paralyzed, grappled, engulfed, polymorphed or knocked prone also makes {him} fall." };
+static const ConditionText CondMounted = { "Mounted",
+    "A mounted character rides an allied creature and moves at its speed, faster with {his} Ride skill. {He} gains a bonus of 2 plus one sixth of {his} Ride skill to defense class, 1 plus one fifth to melee attack rolls, and one fifth to melee damage. {He} suffers a -4 penalty to ranged attacks (-2 with Mounted Archery), doubled while charging. A spell without the still modifier takes longer to cast unless {his} Balance skill is 20 or more or {his} Ride skill is 10 or more. While an enemy threatens {him}, {he} suffers up to a -40% penalty to spell success chance; {his} Ride skill reduces it and removes it at 20. If {he} would be knocked prone, {he} must make a Ride check (DC 20) or fall off. A frightened mount can throw {him}." };
+
+/* Replace the pronoun tokens in a Conditions text with the player's own. */
+static String ConditionPronouns(Player *p, const char *text) {
+    static const char *tok[] = { "{he}", "{He}", "{his}", "{His}", "{him}", "{Him}" };
+    String out = text;
+    for (int i = 0; i < 6; i++) {
+        const char *w = i == 0 ? p->he() : i == 1 ? p->He() : i == 2 ? p->his()
+                      : i == 3 ? p->His() : i == 4 ? p->him() : p->Him();
+        out = out.Replace(tok[i], w);
+    }
+    return out;
+}
+
+/* One Conditions entry. useDetail: add "(from <source>, duration N)" built
+   from the instance of stati `nature` with the longest remaining duration
+   (permanent beats any timed one). timedOnly: show the detail only when that
+   instance is timed. */
+static String ConditionEntry(Player *p, int nature, const ConditionText &c,
+                             bool useDetail, bool timedOnly) {
+    String detail = "";
+    if (useDetail) {
+        Status *best = NULL;
+        StatiIter(p)
+            if (S->Nature == nature) {
+                bool perm = S->Duration <= 0;
+                bool bperm = best && best->Duration <= 0;
+                if (!best || (perm && !bperm) ||
+                    (!perm && !bperm && S->Duration > best->Duration))
+                    best = S;
+            }
+        StatiIterEnd(p)
+        if (best && (!timedOnly || best->Duration > 0)) {
+            String src = "";
+            if (best->h == p->myHandle)
+                src = "yourself";
+            else if (best->h) {
+                Object *o = theRegistry->GetQuiet(best->h);
+                if (o && (o->isCreature() || o->isItem() || o->isFeature()))
+                    src = o->Name(0);
+            }
+            const char *dur = best->Duration > 0
+                ? (const char*)Format("duration %d", best->Duration)
+                : (best->Duration == -2 ? "persistant" : "permanent");
+            detail = src.GetLength()
+                ? Format(" (from %s, %s)", (const char*)src, dur)
+                : Format(" (%s)", dur);
+        }
+    }
+    return Format("%cCondition: %c%s%s\n%c  %s\n\n", -SKYBLUE, -SKYBLUE,
+                  c.name, (const char*)detail, -GREY, (const char*)ConditionPronouns(p, c.text));
+}
+
 /* Spell Manager row order: level 9 down to 0, then name A-Z (case-insensitive,
    the name the row prints), then spell index. */
 static int SpellManagerRowCmp(const void *a, const void *b) {
@@ -2923,6 +3010,38 @@ void TextTerm::DisplayCharSheet() {
                 s += Format("%cCurse: %c%s\n%c  %s\n\n", -SKYBLUE, -SKYBLUE, NAME(S->eID), -GREY, (const char*)XPrint(DESC(S->eID)));
             }
             StatiIterEnd(p)
+
+            /* Conditions that are not spell effects (inc-9m0e). */
+            if (p->HasStati(PARALYSIS))
+                s += ConditionEntry(p, PARALYSIS, CondParalyzed, true, false);
+            if (p->HasStati(STUNNED))
+                s += ConditionEntry(p, STUNNED, CondStunned, true, false);
+            if (p->HasStati(NAUSEA))
+                s += ConditionEntry(p, NAUSEA, CondNauseated, true, false);
+            if (p->HasStati(CONFUSED))
+                s += ConditionEntry(p, CONFUSED, CondConfused, true, false);
+            if (p->HasStati(BLINDNESS))
+                s += ConditionEntry(p, BLINDNESS, CondBlind, true, false);
+            {
+                int16 hs = p->HungerState();
+                static const int16 hsOrder[8] = { BLOATED, SATIATED, CONTENT,
+                    PECKISH, HUNGRY, STARVING, WEAK, FAINTING };
+                for (i = 0; i < 8; i++)
+                    if (hs == hsOrder[i])
+                        s += ConditionEntry(p, 0, CondHunger[i], false, false);
+            }
+            if (p->cFP < 0 && p->cFP >= -p->Attr[A_FAT])
+                s += ConditionEntry(p, 0, CondFatigued, false, false);
+            else if (p->cFP < 0)
+                s += ConditionEntry(p, 0, CondExhausted, false, false);
+            if (p->HasStati(LEVITATION))
+                s += ConditionEntry(p, LEVITATION,
+                    p->GetStatiVal(LEVITATION) ? CondFlying : CondLevitating,
+                    true, true);
+            if (p->HasStati(ELEVATED))
+                s += ConditionEntry(p, 0, CondClimbing, false, false);
+            if (p->HasStati(MOUNTED))
+                s += ConditionEntry(p, 0, CondMounted, false, false);
 
             if (!s.GetLength())
                 s = "You have no special conditions at present.";

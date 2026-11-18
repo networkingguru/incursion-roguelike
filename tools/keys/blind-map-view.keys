@@ -1,0 +1,57 @@
+# inc-9m0e: seed 1; frozen orc barbarian and options-2026-08-22.dat.
+# Run with tools/repro_blind_map_view.sh; scratch module adds the existing
+# conditions-attack gods. Blindness is SS_ATTK, duration 100, not a spell.
+w
+@while "Enter wizard mode" y
+@choose "Genocide Everything"
+s
+w
+@choose "Wizard Mode Switches"
+DOWN*10 SPACE
+ESC
+# A wall in the explored patch, north of the player.
+w
+@choose "Change terrain type"
+UP*2 ENTER
+@choose "Dungeon Wall"
+# Equip a brass lantern through the ordinary inventory light slot.
+w
+@choose "Item Acquisition"
+RIGHT*37
+ENTER
+c SPACE
+ESC
+# Drop the starting belt gold, then step off it so its glyph is visible.
+i
+t SPACE d
+ESC
+LEFT
+w
+@choose "Monster Summoning"
+@choose "Kobolds"
+@choose "kobold"
+LEFT ENTER
+@dump:before
+d
+@until "Light Range" DOWN
+@dump:light-before
+ESC
+w
+@choose "Become Divine Champion"
+"Conditions Blind Test God" ENTER
+@while "more --" SPACE
+@while "ESC:Done" ESC
+@dump:blind
+.
+@dump:blind-wait-one
+.
+@dump:blind-wait-two
+d
+@until "Light Range" DOWN
+@dump:light-blind
+ESC
+LEFT
+@expect "You bump into something you cannot see! Attack?"
+@dump:blind-bump
+n
+@quit
