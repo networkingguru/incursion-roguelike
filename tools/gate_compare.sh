@@ -136,11 +136,21 @@ for BASE in "${BASELINES[@]}"; do
     SESSIONS="$(gate_field "$BASE" sessions)"
     [ -f "$KEYS" ] || { echo "$BASE names a key script that is gone: $KEYS"; exit 2; }
 
+    # inc-nch.5: a baseline recorded from a fixture names it; the run must use it.
+    CHAR="$(gate_field "$BASE" char)"
+    if [ -n "$CHAR" ]; then
+        case "$CHAR" in
+            */*|*.char) CHARSRC="$CHAR" ;;
+            *)          CHARSRC="tools/fixtures/chars/$CHAR.char" ;;
+        esac
+        [ -f "$CHARSRC" ] || { echo "$BASE names a character fixture that is gone: $CHAR ($CHARSRC)"; exit 2; }
+    fi
+
     NAME="$(basename "$BASE" .baseline)"
     SOAK="$ROOT/logs/gate/compare-$NAME-$$"
     mkdir -p "$(dirname "$SOAK")"
 
-    echo "=== $NAME: $SESSIONS sessions of $KEYS, seeds $FIRST..$((FIRST + SESSIONS - 1))"
+    echo "=== $NAME: $SESSIONS sessions of $KEYS${CHAR:+ (character fixture $CHAR)}, seeds $FIRST..$((FIRST + SESSIONS - 1))"
     echo "    baseline: $BASE"
     if [ -n "$FROM" ]; then
         SOAK="$FROM"
@@ -157,7 +167,7 @@ for BASE in "${BASELINES[@]}"; do
             exit 2
         fi
         echo "    options:  $GATE_OPTIONS"
-        SOAK_DIR="$SOAK" INCURSION_OPTIONS="$GATE_OPTIONS" \
+        SOAK_DIR="$SOAK" INCURSION_OPTIONS="$GATE_OPTIONS" SOAK_CHAR="$CHAR" \
             ./tools/soak.sh "$SESSIONS" "$FIRST" "$KEYS" > "$SOAK.log" 2>&1
     fi
     gate_collect "$SOAK" > "$WORK/new" || exit 2
