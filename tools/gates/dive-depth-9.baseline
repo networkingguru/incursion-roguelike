@@ -1,8 +1,55 @@
 # Incursion regression baseline -- see tools/gate_compare.sh.
-# Recorded 2026-11-03 13:18 from 0d299d88.
+# Recorded 2026-11-18 13:21 from 902a8862.
 # Metric: error volume and message-set membership. A message that is
 # not in this file is a regression; a message that has left it is a fix.
-keys	tools/keys/dive-depth-9.keys
+# Replaces a baseline recorded with keys tools/keys/dive-depth-9.keys, char chargen.keys.
+# summary played: old 40 new 40
+# summary died: old 15 new 17
+# summary lines: old 0 new 0
+# summary findings: old 0 new 0
+# summary turns_median: old 356 new 356
+# seed-1: turns old 236 new 415; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [depth=9 prompt=Do you want to stop searching (piercing damage: a kocrachon)? [y]
+# seed-2: turns old 113 new 23; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [depth=9 prompt=You die... Die? [yn]]
+# seed-3: turns old 367 new 82; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-4: turns old 1840 new 373; prompt_stop old [none] new [none]
+# seed-5: turns old 1841 new 356; prompt_stop old [none] new [none]
+# seed-6: turns old 356 new 641; prompt_stop old [none] new [none]
+# seed-7: turns old 356 new 54; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-8: turns old 1355 new 13; prompt_stop old [depth=9 prompt=Do you want to stop searching (pure magic: a sylph)? [yn]] new [depth=9 prompt=You die... Die? [yn]]
+# seed-9: turns old 180 new 356; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-10: turns old 286 new 372; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-11: turns old 1840 new 316; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-12: turns old 121 new 455; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-13: turns old 356 new 1840; prompt_stop old [none] new [none]
+# seed-14: turns old 1797 new 1840; prompt_stop old [none] new [none]
+# seed-15: turns old 1834 new 1676; prompt_stop old [none] new [none]
+# seed-16: turns old 356 new 372; prompt_stop old [none] new [none]
+# seed-17: turns old 363 new 322; prompt_stop old [depth=9 prompt=Do you want to stop searching (blunt damage: an ethereal hippogr] new [depth=10 prompt=Do you want to stop searching (piercing damage: an elf ranger)?]
+# seed-18: turns old 1840 new 211; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-19: turns old 356 new 240; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-20: turns old 348 new 372; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-21: turns old 134 new 1840; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-22: turns old 329 new 1840; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-23: turns old 372 new 356; prompt_stop old [none] new [none]
+# seed-24: turns old 1840 new 112; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-25: turns old 106 new 356; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-26: turns old 117 new 32; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [depth=10 prompt=You die... Die? [yn]]
+# seed-27: turns old 356 new 281; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-28: turns old 1840 new 210; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-29: turns old 85 new 818; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-30: turns old 160 new 54; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [depth=9 prompt=You die... Die? [yn]]
+# seed-31: turns old 111 new 1840; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-32: turns old 1842 new 17; prompt_stop old [none] new [depth=10 prompt=You die... Die? [yn]]
+# seed-33: turns old 356 new 75; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-34: turns old 1840 new 356; prompt_stop old [none] new [none]
+# seed-35: turns old 264 new 1840; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [none]
+# seed-36: turns old 1840 new 403; prompt_stop old [none] new [depth=9 prompt=Do you want to stop searching (blunt damage: a human)? [yn]]
+# seed-37: turns old 356 new 337; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-38: turns old 632 new 43; prompt_stop old [none] new [depth=9 prompt=You die... Die? [yn]]
+# seed-39: turns old 150 new 268; prompt_stop old [depth=9 prompt=You die... Die? [yn]] new [depth=9 prompt=You die... Die? [yn]]
+# seed-40: turns old 1840 new 372; prompt_stop old [none] new [none]
+keys	tools/keys/dive-depth-9-play.keys
+char	orc-barbarian-seed1-gate
 first	1
 options	4f62631ed578169cb1a2ea3ed1f0b62628dae3098fe400457b980fdf684d671c
 sessions	40
@@ -10,66 +57,69 @@ played	40
 exits	0=40
 lines	0
 findings	0
-died	15
+died	17
 threat_frozen	0
-prompt_stop_seed	seed-1	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-10	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-12	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-17	depth=9 prompt=Do you want to stop searching (blunt damage: an ethereal hippogr
+prompt_stop_seed	seed-1	depth=9 prompt=Do you want to stop searching (piercing damage: a kocrachon)? [y
+prompt_stop_seed	seed-11	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-17	depth=10 prompt=Do you want to stop searching (piercing damage: an elf ranger)?
+prompt_stop_seed	seed-18	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-19	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-2	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-20	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-21	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-22	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-25	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-26	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-29	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-24	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-26	depth=10 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-27	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-28	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-3	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-30	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-31	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-35	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-32	depth=10 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-33	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-36	depth=9 prompt=Do you want to stop searching (blunt damage: a human)? [yn]
+prompt_stop_seed	seed-37	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-38	depth=9 prompt=You die... Die? [yn]
 prompt_stop_seed	seed-39	depth=9 prompt=You die... Die? [yn]
-prompt_stop_seed	seed-8	depth=9 prompt=Do you want to stop searching (pure magic: a sylph)? [yn]
-prompt_stop_seed	seed-9	depth=9 prompt=You die... Die? [yn]
-prompt_stop	17
-prompt_stop_other	2
+prompt_stop_seed	seed-7	depth=9 prompt=You die... Die? [yn]
+prompt_stop_seed	seed-8	depth=9 prompt=You die... Die? [yn]
+prompt_stop	20
+prompt_stop_other	3
 turns_sessions	40
 turns_median	356
-turns_seed	seed-1	236
-turns_seed	seed-10	286
-turns_seed	seed-11	1840
-turns_seed	seed-12	121
-turns_seed	seed-13	356
-turns_seed	seed-14	1797
-turns_seed	seed-15	1834
-turns_seed	seed-16	356
-turns_seed	seed-17	363
-turns_seed	seed-18	1840
-turns_seed	seed-19	356
-turns_seed	seed-2	113
-turns_seed	seed-20	348
-turns_seed	seed-21	134
-turns_seed	seed-22	329
-turns_seed	seed-23	372
-turns_seed	seed-24	1840
-turns_seed	seed-25	106
-turns_seed	seed-26	117
-turns_seed	seed-27	356
-turns_seed	seed-28	1840
-turns_seed	seed-29	85
-turns_seed	seed-3	367
-turns_seed	seed-30	160
-turns_seed	seed-31	111
-turns_seed	seed-32	1842
-turns_seed	seed-33	356
-turns_seed	seed-34	1840
-turns_seed	seed-35	264
-turns_seed	seed-36	1840
-turns_seed	seed-37	356
-turns_seed	seed-38	632
-turns_seed	seed-39	150
-turns_seed	seed-4	1840
-turns_seed	seed-40	1840
-turns_seed	seed-5	1841
-turns_seed	seed-6	356
-turns_seed	seed-7	356
-turns_seed	seed-8	1355
-turns_seed	seed-9	180
+turns_seed	seed-1	415
+turns_seed	seed-10	372
+turns_seed	seed-11	316
+turns_seed	seed-12	455
+turns_seed	seed-13	1840
+turns_seed	seed-14	1840
+turns_seed	seed-15	1676
+turns_seed	seed-16	372
+turns_seed	seed-17	322
+turns_seed	seed-18	211
+turns_seed	seed-19	240
+turns_seed	seed-2	23
+turns_seed	seed-20	372
+turns_seed	seed-21	1840
+turns_seed	seed-22	1840
+turns_seed	seed-23	356
+turns_seed	seed-24	112
+turns_seed	seed-25	356
+turns_seed	seed-26	32
+turns_seed	seed-27	281
+turns_seed	seed-28	210
+turns_seed	seed-29	818
+turns_seed	seed-3	82
+turns_seed	seed-30	54
+turns_seed	seed-31	1840
+turns_seed	seed-32	17
+turns_seed	seed-33	75
+turns_seed	seed-34	356
+turns_seed	seed-35	1840
+turns_seed	seed-36	403
+turns_seed	seed-37	337
+turns_seed	seed-38	43
+turns_seed	seed-39	268
+turns_seed	seed-4	373
+turns_seed	seed-40	372
+turns_seed	seed-5	356
+turns_seed	seed-6	641
+turns_seed	seed-7	54
+turns_seed	seed-8	13
+turns_seed	seed-9	356

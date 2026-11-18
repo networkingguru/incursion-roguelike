@@ -35,6 +35,9 @@ FIRST="${3:-1}"
 export INCURSION_OPTIONS="$GATE_OPTIONS"
 
 NAME="$(basename "$KEYS" .keys)"
+# inc-nch.5: with SOAK_CHAR the key script starts in play (dive-depth-<d>-play.keys)
+# but the committed baseline keeps the name dive-depth-<d>.baseline.
+[ -n "${SOAK_CHAR:-}" ] && NAME="${NAME%-play}"
 OUT="$ROOT/tools/gates/$NAME.baseline"
 SOAK="$ROOT/logs/gate/record-$NAME-$$"
 
@@ -45,9 +48,10 @@ echo "  keys:     $KEYS"
 echo "  seeds:    $FIRST..$((FIRST + SESSIONS - 1))"
 echo "  options:  $GATE_OPTIONS"
 echo "  into:     $OUT"
+[ -n "${SOAK_CHAR:-}" ] && echo "  char:     $SOAK_CHAR"
 echo
 
-SOAK_DIR="$SOAK" ./tools/soak.sh "$SESSIONS" "$FIRST" "$KEYS" > "$SOAK.log" 2>&1
+SOAK_DIR="$SOAK" SOAK_CHAR="${SOAK_CHAR:-}" ./tools/soak.sh "$SESSIONS" "$FIRST" "$KEYS" > "$SOAK.log" 2>&1
 tail -5 "$SOAK.log"
 
 BODY="$(gate_collect "$SOAK")" || exit 2
@@ -70,17 +74,48 @@ if [ "$PLAYED" -lt $((SESSIONS * 3 / 4)) ]; then
     [ "${GATE_ALLOW_VOID:-0}" = "1" ] || exit 1
 fi
 
+# inc-nch.5: when a baseline is about to be replaced, say in the new header how
+# the new run differs per seed. Comment lines start with "#", and gate_field
+# matches a first field exactly, so none of them reads as a field.
+gate_old_new_comment() { # <old baseline> <new body file>
+    local old="$1" new="$2" f
+    echo "# Replaces a baseline recorded with keys $(gate_field "$old" keys), char $(gate_field "$old" char | grep . || echo chargen.keys)."
+    for f in played died lines findings turns_median; do
+        echo "# summary $f: old $(gate_field "$old" $f | grep . || echo absent) new $(gate_field "$new" $f | grep . || echo absent)"
+    done
+    awk -F'\t' '
+        FNR==NR { if ($1=="turns_seed") ot[$2]=$3; if ($1=="prompt_stop_seed") op[$2]=$3; if ($1=="turns_seed" || $1=="prompt_stop_seed") seen[$2]=1; next }
+        { if ($1=="turns_seed") nt[$2]=$3; if ($1=="prompt_stop_seed") np[$2]=$3; if ($1=="turns_seed" || $1=="prompt_stop_seed") seen[$2]=1 }
+        END {
+            for (s in seen) {
+                o = (s in ot) ? ot[s] : "absent"; n = (s in nt) ? nt[s] : "absent"
+                po = (s in op) ? op[s] : "none"; pn = (s in np) ? np[s] : "none"
+                printf "# %s: turns old %s new %s; prompt_stop old [%s] new [%s]\n", s, o, n, po, pn
+            }
+        }' "$old" "$new" | sort -t- -k2,2n
+}
+
+OLDCOPY=""
+if [ -f "$OUT" ]; then
+    OLDCOPY="$(mktemp "${TMPDIR:-/tmp}/gate-old.XXXXXX")"
+    cp -f "$OUT" "$OLDCOPY"
+    printf '%s\n' "$BODY" > "$OLDCOPY.new"
+fi
+
 {
     echo "# Incursion regression baseline -- see tools/gate_compare.sh."
     echo "# Recorded $(date '+%Y-%m-%d %H:%M') from $(git rev-parse --short HEAD 2>/dev/null || echo 'no git')."
     echo "# Metric: error volume and message-set membership. A message that is"
     echo "# not in this file is a regression; a message that has left it is a fix."
+    if [ -n "$OLDCOPY" ]; then gate_old_new_comment "$OLDCOPY" "$OLDCOPY.new"; fi
     printf 'keys\t%s\n' "$KEYS"
+    [ -n "${SOAK_CHAR:-}" ] && printf 'char\t%s\n' "$SOAK_CHAR"
     printf 'first\t%s\n' "$FIRST"
     printf 'options\t%s\n' "$(gate_options_sum "$GATE_OPTIONS")"
     printf '%s\n' "$BODY"
 } > "$OUT"
 
+[ -n "$OLDCOPY" ] && rm -f "$OLDCOPY" "$OLDCOPY.new"
 echo
 echo "wrote $OUT"
 grep -v '^#' "$OUT" | head -12
