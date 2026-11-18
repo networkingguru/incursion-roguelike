@@ -1,0 +1,4 @@
+# inc-rk030: the probe feeds the character itself; these keys only cover normal play.
+SPACE*80
+ESC*20
+@quit

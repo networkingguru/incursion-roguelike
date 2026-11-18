@@ -617,6 +617,10 @@ void Game::Play() {
     extern void BlasphemyProbe(Player *caster);
     BlasphemyProbe(pp);
 
+    /* inc-rk030: opt-in eating-restores-fatigue oracle; see EatFatigueProbe. */
+    extern void EatFatigueProbe(Player *pl);
+    EatFatigueProbe(pp);
+
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
     GloryProbe(pp);

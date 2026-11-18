@@ -3455,6 +3455,11 @@ bool TextTerm::yn(const char*msg) {
         int key = BlasphemyProbeKey();
         if (key) return key == 'y';
     }
+    {   /* inc-rk030: the eating probe answers the full-stomach prompts. */
+        extern int EatFatigueProbeKey(const char *msg);
+        int key = EatFatigueProbeKey(msg);
+        if (key) return key == 'y';
+    }
     if (Mode == MO_RECREATE)
       {
         ASSERT(strncmp(RInf.Rsp[RInf.cRsp].Question,msg,31) == 0);
