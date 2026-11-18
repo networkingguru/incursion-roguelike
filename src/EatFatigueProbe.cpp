@@ -42,6 +42,7 @@ static void efReport(const char *name, int before, int after, int expect) {
 }
 
 void EatFatigueProbe(Player *pl) {
+    /* inc-rk030: armed only by INCURSION_EAT_FATIGUE_PROBE. */
     if (!getenv("INCURSION_EAT_FATIGUE_PROBE")) return;
     if (!pl || !pl->m || !FIND("food ration") || !FIND("apple")
         || !FIND("pile of fresh food")) {
