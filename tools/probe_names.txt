@@ -54,6 +54,7 @@ INCURSION_DURATION_PROBE_EFNUM	pre-registry	-
 INCURSION_DURATION_PROBE_FLAG	pre-registry	-
 INCURSION_DURATION_PROBE_HANDLER	pre-registry	-
 INCURSION_DURATION_PROBE_SAMPLES	pre-registry	-
+INCURSION_EAT_FATIGUE_PROBE	inc-rk030	eating restores fatigue oracle (tools/check_eat_fatigue.sh)
 INCURSION_ELEM_RESIST_PROBE	pre-registry	-
 INCURSION_ELUDE_PROBE	pre-registry	-
 INCURSION_ENCSKIP_PROBE	pre-registry	-

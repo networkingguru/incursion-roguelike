@@ -1135,7 +1135,9 @@ Text "help::commands"
      \n__This command allows you to eat any object in your inventory that
      is edible to you in your current form, as chosen from the menu it
      presents listing such items. Note that eating takes time, and thus
-     it isn't wise to do during combat.\n\n     
+     it isn't wise to do during combat. Finishing a food item restores
+     some fatigue, unless you started it while satiated. Vomiting costs
+     one fatigue.\n\n     
 
      <15>Fire Ranged Weapon ('<13>f<15>')<6> {F}
      \n__Uses the most easily accessible ranged weapon that you have

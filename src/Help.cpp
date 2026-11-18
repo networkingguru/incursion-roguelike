@@ -4871,6 +4871,7 @@ String & Food::Describe(Player *p) {
             "Wilderness Lore skill check (<11>DC %d<7>).\n", DC);
     } else {
         Desc += Format(" It provides <11>%d<7> units of nutrition when consumed.\n", ti->Nutrition - Eaten);
+        Desc += Format(" It restores <11>%d<7> fatigue when finished, unless eaten while satiated.\n", max(1, ti->Nutrition / 10));
     }
 
     Desc += Item::Describe(p);
