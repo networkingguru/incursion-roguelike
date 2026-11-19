@@ -112,6 +112,7 @@ static void frAutoRest(Player *pl, const char *name, int rank, int start, int ex
 }
 
 void FatigueRestProbe(Player *pl) {
+    /* inc-jahch: armed only by INCURSION_FATIGUE_REST_PROBE. */
     if (!getenv("INCURSION_FATIGUE_REST_PROBE")) return;
     if (!pl || !pl->m || !FIND("AutoRest")) {
         Error("FATREST_PROBE: setup INCONCLUSIVE missing player/map/resources");
