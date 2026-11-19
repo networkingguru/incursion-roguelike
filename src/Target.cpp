@@ -1857,7 +1857,14 @@ void TargetSystem::ItHitMe(Creature *me, Creature *t, int16 damage) {
                     msg = Format("%s becomes angry at %s!",(const char*)cr->Name(NA_THE), (const char*)t->Name(NA_THE));
                 if (!cr->isDead())
                     cr->IDPrint(msg,msg);
-                cr->GainPermStati(WAS_FRIENDLY,t,SS_MONI, h.quality == Ally);
+                /* upstream: a creature holds at most one WAS_FRIENDLY per
+                   attacker. Unguarded, a full target table (addTarget fails)
+                   grants one per hit until Status.cpp:228 asserts. Upstream's:
+                   the code is unchanged from the base game and addTarget's
+                   priority rule has no platform dependence. Observed
+                   (INCURSION_WAS_FRIENDLY_PROBE). inc-n3eni. Not sent. */
+                if (!cr->HasStati(WAS_FRIENDLY,-1,t))
+                    cr->GainPermStati(WAS_FRIENDLY,t,SS_MONI, h.quality == Ally);
             }
 
 HorseCheck:
