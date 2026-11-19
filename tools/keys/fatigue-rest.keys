@@ -1,0 +1,4 @@
+# inc-jahch: the probe rests, waits and AutoRests the character itself; these keys only cover normal play.
+SPACE*80
+ESC*20
+@quit

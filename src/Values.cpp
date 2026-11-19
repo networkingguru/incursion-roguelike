@@ -1713,6 +1713,11 @@ Restart:
             InfraRange = max(6,InfraRange);
     }
 
+    {   /* inc-jahch: probe-only maximum (src/FatigueRestProbe.cpp), 0 in play */
+        extern int FatigueRestProbeMax;
+        if (FatigueRestProbeMax > 0 && isPlayer())
+            Attr[A_FAT] = FatigueRestProbeMax;
+    }
     if (Attr[A_FAT] != oFP) {
         if (restart_count++ < 10) 
             goto Restart;

@@ -2418,6 +2418,16 @@ static void RestProbeFinal(Player *p, int16 &Roll, int16 Chance) {
         (int)Roll, (int)RestProbeRawVal, (int)Chance, p->HasAbility(CA_REVERIE) ? 1 : 0);
 }
 
+/* inc-jahch: INCURSION_FATIGUE_REST_PROBE. FatigueRestProbeArm (called from
+   src/FatigueRestProbe.cpp) turns the rest hooks on, forces the encounter roll
+   and, when percent > 0, the share of the rest slept. */
+static int16 RestProbePercentVal = 0;
+void FatigueRestProbeArm(bool on, int16 roll, int16 percent) {
+    RestProbeArmed = on;
+    RestProbeRollVal = roll;
+    RestProbePercentVal = percent;
+}
+
 EvReturn Player::Rest(EventInfo &e) {
     int16 i, j, pc, Roll, Chance, Percent;
     Creature *in_sight = NULL; const char* wakeSafely;
@@ -2551,6 +2561,8 @@ EvReturn Player::Rest(EventInfo &e) {
         Percent = 10 + random(81);
     else
         Percent = 100;
+    if (RestProbeArmed && RestProbePercentVal > 0)
+        Percent = RestProbePercentVal;
 
     Thing *th;
     int32 ii, di;
@@ -2702,7 +2714,11 @@ EvReturn Player::Rest(EventInfo &e) {
 
                         if (e.EParam & REST_RESTLESS && t != this)
                             ;
-                        else if (t->cFP >= 0)              /* Vigorous */
+                        else if (Percent < 100) {          /* inc-jahch: interrupted rest, every level */
+                            int32 missing = (int32)t->Attr[A_FAT] - t->cFP;
+                            if (missing > 0)
+                                t->cFP += (max(25, (int)Percent) * missing) / 100;
+                        } else if (t->cFP >= 0)            /* Vigorous */
                             t->cFP = t->Attr[A_FAT];
                         else if (t->cFP >= -t->Attr[A_FAT]) { /* Fatigued */
                             if (Percent == 100)
