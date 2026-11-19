@@ -3,6 +3,7 @@
 #include "Incursion.h"
 
 void (*EffectLightHook)(int phase) = NULL;
+void (*TargetFlashHook)(int phase) = NULL;
 
 /* The light color row for a damage type, or 0 when the type has none. */
 static int16 DTypeLightColour(int16 dtype) {
@@ -73,9 +74,9 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 }
 
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
-                         TEffect *te)
-    : map(m), id(-1), ended(false), lit(true), clockMs(0.0f), life(900.0f),
-      glyphsOn(false) {
+                         TEffect *te, bool targetFlash)
+    : map(m), id(-1), ended(false), lit(true), target(targetFlash),
+      clockMs(0.0f), life(900.0f), glyphsOn(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
     lit = d.lit;
@@ -86,7 +87,7 @@ EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
   style = LF_STEADY;
   reach = 1;
   if (shape == EL_AREA) {
-    reach = 2;
+    reach = targetFlash ? 1 : 2;
     if (blastColour == COL_FIRE) style = LF_FIRE;
     else if (blastColour == COL_ELEC) style = LF_ARC;
   }
@@ -180,11 +181,11 @@ void EffectLight::SetGlyphTime(int16 glyphMs) {
 }
 
 /* The glyphs are gone: let each square finish cooling, 33 ms at a time. */
-void EffectLight::Tail() {
-  glyphsOn = false;
+void EffectLight::Tail(bool keepGlyphs) {
+  glyphsOn = keepGlyphs;
   if (id < 0 || ended)
     return;
-  LightFlashGlyphs(id, false);
+  LightFlashGlyphs(id, keepGlyphs);
   Player *p = theGame->GetPlayer(0);
   if (p && p->Opt(OPT_ANIMATION) == 2)   /* None: no animation to finish */
     return;
@@ -207,5 +208,36 @@ void EffectLight::End() {
     id = -1;
     Show();
   }
-  if (EffectLightHook) EffectLightHook(EL_END);
+  if (target) {
+    if (TargetFlashHook) TargetFlashHook(TF_END);
+  } else if (EffectLightHook)
+    EffectLightHook(EL_END);
+}
+
+void EffectLight::FlashStruck(Map *m, int16 blastColour, uint8 shape,
+                              int16 dtype, TEffect *te, Thing *const *list,
+                              int n) {
+  Player *p = theGame->GetPlayer(0);
+  if (!m || !list || n <= 0 || !p || p->Opt(OPT_ANIMATION) == 2)
+    return;
+  EffectLight fx(m, blastColour, shape, dtype, te, true);
+  if (!fx.lit || fx.id < 0)
+    return;
+  int shown = 0;
+  for (int i = 0; i < n; i++) {
+    Thing *t = list[i];
+    if (!t || !t->isCreature() || t->m != m || !fx.Sees(t->x, t->y))
+      continue;
+    fx.Light(t->x, t->y);
+    shown++;
+  }
+  if (!shown)
+    return;
+  /* the struck creatures' glyphs follow the ramp for the whole flash */
+  fx.glyphsOn = true;
+  LightFlashGlyphs(fx.id, true);
+  fx.Show();
+  if (TargetFlashHook) TargetFlashHook(TF_LIT);
+  fx.Tail(true);
+  fx.End();
 }

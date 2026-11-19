@@ -7476,6 +7476,13 @@ AfterEffects:
 #ifdef DISPEL_EVIL_PROBE
     DispelEvilProbeNote(e, "before");
 #endif
+    /* inc-jw0hw: a landed touch flashes its target, before the strike. */
+    {
+      const EffectValues *tv = TEFF(e.eID)->Vals(ii);
+      Thing *hitTarget = e.EVictim;
+      EffectLight::FlashStruck(e.EVictim->m, tv->cval, EL_MISSILE,
+          tv->eval == EA_BLAST ? tv->xval : 0, TEFF(e.eID), &hitTarget, 1);
+    }
     ReThrow(EV_MAGIC_STRIKE,e);
 #ifdef DISPEL_EVIL_PROBE
     /* Read before Fight.cpp's own decrement below, which would remove

@@ -17,6 +17,7 @@
 #include "EffectLight.h"
 
 extern void (*AreaProbeXYHook)(int16,int16);
+extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
@@ -200,6 +201,36 @@ void NegHook(int) {
         for (int x = 0; x < gNegMap->SizeX(); ++x)
             if (LightLitAt((int16)x, (int16)y)) ++lit;
     if (lit > gNegMaxLit) gNegMaxLit = lit;
+}
+
+/* Cases T1-T3: the target flash. The hook samples the struck squares at age 0 and
+   again when the flash ends. */
+int gTfN, gTfLineTo, gTfLitCalls, gTfEndCalls, gTfFlashesLit, gTfFlashesEnd, gTfEnds, gTfLineLit;
+int gTfX[2], gTfY[2];
+bool gTfLitSq[2];
+LightRGB gTfC[2], gTfG[2];
+bool gTfGlyph[2];
+void TFHook(int phase) {
+    if (phase == TF_LIT) {
+        ++gTfLitCalls;
+        gTfFlashesLit = (int)LightFlashCount();
+        gTfEnds = gEnds;
+        for (int i = 0; i < gTfN; ++i) {
+            gTfLitSq[i] = LightLitAt((int16)gTfX[i], (int16)gTfY[i]);
+            LightRGB c = { 0, 0, 0 };
+            LightAt((int16)gTfX[i], (int16)gTfY[i], c);
+            gTfC[i] = c;
+            LightRGB gc = { 0, 0, 0 };
+            gTfGlyph[i] = LightEffectGlyphAt((int16)gTfX[i], (int16)gTfY[i], gc);
+            gTfG[i] = gc;
+        }
+        gTfLineLit = 0;
+        for (int x = PX + 1; x <= gTfLineTo; ++x)
+            if (LightLitAt((int16)x, PY)) ++gTfLineLit;
+    } else {
+        ++gTfEndCalls;
+        gTfFlashesEnd = (int)LightFlashCount();
+    }
 }
 
 void FlashHook(int phase) {
@@ -863,6 +894,156 @@ void EffectLightProbe(Player *pl) {
                 shoot(acid, false, false, true, pre, post, endF);    /* engulfed */
                 verdict("F3", gLit == 0 && endF == 0 && post == pre,
                     "engulfed cast: frames=%d flashes after=%d light same=%d", gLit, endF, (int)(post == pre));
+
+                /* T: the target flash. Each case builds a dark room, places kobolds at fixed offsets and
+                   samples the light map from TargetFlashHook. */
+                {
+                    const rID chill = FIND("Chill Touch"), callL = FIND("Call Lightning");
+                    auto tprep = [&](int nk, const int *kx, const int *ky, Monster **kobs) {
+                        BuildDark(mp, pl, floor, wall);
+                        LightFlashClearAll();
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        for (int i = 0; i < nk; ++i) {
+                            kobs[i] = new Monster(kobold);
+                            kobs[i]->PlaceAt(mp, kx[i], ky[i], true);
+                            kobs[i]->Initialize(true);
+                            gTfX[i] = kx[i]; gTfY[i] = ky[i];
+                        }
+                        gTfN = nk; gTfLineTo = PX;
+                        gTfLitCalls = gTfEndCalls = gTfFlashesLit = gTfFlashesEnd = gTfEnds = gTfLineLit = 0;
+                        gTfLitSq[0] = gTfLitSq[1] = false; gTfGlyph[0] = gTfGlyph[1] = false;
+        for (int i = 0; i < 2; ++i) { gTfC[i].r = gTfC[i].g = gTfC[i].b = 0; gTfG[i] = gTfC[i]; }
+                        gStruckGrid.assign((size_t)mp->SizeX() * mp->SizeY(), 0);
+                        gSx.clear(); gSy.clear();
+                        gS[0].taken = gS[1].taken = false;
+                        gLit = gHolds = gEnds = 0;
+                        gGlobe = false; gOpen = false; gTimeShow = false; gLine = false; gFill = false;
+                        Refresh(pl);
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        term->MsgHistory[0] = 0;
+                    };
+                    auto hue = [](const LightRGB &c, float &g_over_r, float &b_over_r) {
+                        g_over_r = c.r ? (float)c.g / c.r : 0.0f;
+                        b_over_r = c.r ? (float)c.b / c.r : 0.0f;
+                    };
+                    auto glyphOff = [&](int n) {   /* after the flash ends, no struck square carries a glyph color */
+                        for (int i = 0; i < n; ++i) {
+                            LightRGB gc = { 0, 0, 0 };
+                            if (LightEffectGlyphAt((int16)gTfX[i], (int16)gTfY[i], gc)) return false;
+                        }
+                        return true;
+                    };
+                    /* T1: a Fireball with two kobolds inside the area. */
+                    {
+                        const int tAim = PX + 5;   /* inside the fireball's own range, so it bursts on the aim square */
+                        const int kx[2] = { tAim, tAim }, ky[2] = { PY - 2, PY + 2 };
+                        Monster *kobs[2];
+                        tprep(2, kx, ky, kobs);
+                        AreaProbeXYHook = NoteXY; BallRingHook = NoteRing;
+                        EffectLightHook = FlashHook; TargetFlashHook = TFHook;
+                        EventInfo xe; xe.Clear();
+                        xe.EActor = pl; xe.EMap = mp; xe.eID = fire; xe.isSpell = true;
+                        xe.isLoc = true; xe.EXVal = tAim; xe.EYVal = PY;
+                        ReThrow(EV_EFFECT, xe);
+                        AreaProbeXYHook = NULL; BallRingHook = NULL; EffectLightHook = NULL; TargetFlashHook = NULL;
+                        const int endT = (int)LightFlashCount();
+                        const bool struck = gStruckGrid[ky[0] * mp->SizeX() + kx[0]] &&
+                            gStruckGrid[ky[1] * mp->SizeX() + kx[1]];
+                                                float g0, b0, g1, b1;
+                        hue(gTfC[0], g0, b0); hue(gTfC[1], g1, b1);
+                        float gg0, gb0, gg1, gb1;
+                        hue(gTfG[0], gg0, gb0); hue(gTfG[1], gg1, gb1);
+                        const bool glyphsOk = gTfGlyph[0] && gTfGlyph[1] && gg0 >= 0.9f && gb0 >= 0.7f &&
+                            gg1 >= 0.9f && gb1 >= 0.7f && glyphOff(2);
+                        if (!struck || LightMode(pl) == LIGHT_LEGACY)
+                            inconclusive("T1", "a kobold square is outside the fireball's area, or the light map is legacy");
+                        else
+                            verdict("T1", gTfLitCalls == 1 && gTfEndCalls == 1 && gTfEnds == 1 &&
+                                gTfFlashesLit == 1 && gTfFlashesEnd == 0 && endT == 0 &&
+                                gTfLitSq[0] && gTfLitSq[1] &&
+                                g0 >= 0.9f && b0 >= 0.7f && g1 >= 0.9f && b1 >= 0.7f && glyphsOk,
+                                "fireball: target flashes=%d (need 1), ball light ended first=%d, kobold squares lit %d,%d, "
+                                "fire age-0 color %d,%d,%d and %d,%d,%d (near white: green/red>=0.9, blue/red>=0.7), glyph colors %d,%d,%d and %d,%d,%d on=%d, flashes at end=%d after=%d",
+                                gTfLitCalls, gTfEnds, (int)gTfLitSq[0], (int)gTfLitSq[1],
+                                gTfC[0].r, gTfC[0].g, gTfC[0].b, gTfC[1].r, gTfC[1].g, gTfC[1].b,
+                                gTfG[0].r, gTfG[0].g, gTfG[0].b, gTfG[1].r, gTfG[1].g, gTfG[1].b, (int)glyphsOk,
+                                gTfFlashesEnd, endT);
+                    }
+                    /* T2: a landed Chill Touch flashes in the necromantic color with no white stage; a miss flashes nothing. */
+                    if (!chill) {
+                        inconclusive("T2", "Chill Touch is missing");
+                    } else {
+                        for (int miss = 0; miss < 2; ++miss) {
+                            const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                            Monster *kobs[1];
+                            tprep(1, kx, ky, kobs);
+                            pl->GainTempStati(TOUCH_ATTACK, pl, 50, SS_ENCH, 0, 3, chill);
+                            TargetFlashHook = TFHook;
+                            LOFSetForcedRoll(miss ? 1 : 20);
+                            Throw(EV_NATTACK, pl, kobs[0]);
+                            LOFSetForcedRoll(0);
+                            TargetFlashHook = NULL;
+                                                        const bool charged = pl->GetStatiMag(TOUCH_ATTACK) == 3;   /* a landed touch uses one of the three */
+                            pl->RemoveStati(TOUCH_ATTACK);
+                            float g0, b0;
+                            hue(gTfC[0], g0, b0);
+                            const int hi = gTfC[0].r > gTfC[0].g ? (gTfC[0].r > gTfC[0].b ? gTfC[0].r : gTfC[0].b)
+                                : (gTfC[0].g > gTfC[0].b ? gTfC[0].g : gTfC[0].b);
+                            const int lo = gTfC[0].r < gTfC[0].g ? (gTfC[0].r < gTfC[0].b ? gTfC[0].r : gTfC[0].b)
+                                : (gTfC[0].g < gTfC[0].b ? gTfC[0].g : gTfC[0].b);
+                            const float whiteness = hi ? (float)lo / hi : 1.0f;
+                            const int ghi = gTfG[0].r > gTfG[0].g ? (gTfG[0].r > gTfG[0].b ? gTfG[0].r : gTfG[0].b)
+                                : (gTfG[0].g > gTfG[0].b ? gTfG[0].g : gTfG[0].b);
+                            const int glo = gTfG[0].r < gTfG[0].g ? (gTfG[0].r < gTfG[0].b ? gTfG[0].r : gTfG[0].b)
+                                : (gTfG[0].g < gTfG[0].b ? gTfG[0].g : gTfG[0].b);
+                            const float gwhite = ghi ? (float)glo / ghi : 1.0f;
+                            const bool glyphOk = gTfGlyph[0] && ghi > 0 && gwhite < 0.75f && glyphOff(1);
+                            if (LightMode(pl) == LIGHT_LEGACY)
+                                inconclusive(miss ? "T2b" : "T2", "the light map is legacy");
+                            else if (miss)
+                                verdict("T2b", charged && gTfLitCalls == 0 && LightFlashCount() == 0,
+                                    "missed touch: hand still charged=%d, target flashes=%d (need 1, 0)",
+                                    (int)charged, gTfLitCalls);
+                            else
+                                verdict("T2", !charged && gTfLitCalls == 1 && gTfEndCalls == 1 &&
+                                    gTfFlashesLit == 1 && gTfFlashesEnd == 0 && gTfLitSq[0] &&
+                                    hi > 0 && whiteness < 0.75f && glyphOk && LightFlashCount() == 0,
+                                    "landed touch: one charge used=%d, target flashes=%d, square lit=%d, necromantic color %d,%d,%d at age 0 whiteness %.2f (need < 0.75, fire is 0.86), glyph color %d,%d,%d whiteness %.2f on=%d, flashes after=%d",
+                                    (int)!charged, gTfLitCalls, (int)gTfLitSq[0],
+                                    gTfC[0].r, gTfC[0].g, gTfC[0].b, whiteness,
+                                    gTfG[0].r, gTfG[0].g, gTfG[0].b, gwhite, (int)glyphOk, (int)LightFlashCount());
+                        }
+                    }
+                    /* T3: Call Lightning shows no stroke: only the target flash, in the electric color. */
+                    if (!callL) {
+                        inconclusive("T3", "Call Lightning is missing");
+                    } else {
+                        const int kx[1] = { PX + 6 }, ky[1] = { PY };
+                        Monster *kobs[1];
+                        tprep(1, kx, ky, kobs);
+                        gTfLineTo = PX + 3;   /* every square from the caster to two short of the target */
+                        gNegMap = mp; gNegCalls = gNegMaxFlashes = gNegMaxLit = 0;
+                        EffectLightHook = NegHook; TargetFlashHook = TFHook;
+                        EventInfo xe; xe.Clear();
+                        xe.EActor = pl; xe.EMap = mp; xe.eID = callL; xe.isSpell = true;
+                        xe.isLoc = true; xe.EXVal = kx[0]; xe.EYVal = ky[0];
+                        xe.EVictim = kobs[0];
+                        ReThrow(EV_EFFECT, xe);
+                        EffectLightHook = NULL; TargetFlashHook = NULL;
+                        if (LightMode(pl) == LIGHT_LEGACY)
+                            inconclusive("T3", "the light map is legacy");
+                        else
+                            verdict("T3", gTfLitCalls == 1 && gTfEndCalls == 1 && gNegCalls == 0 &&
+                                gTfLitSq[0] && gTfLineLit == 0 && gTfC[0].b >= gTfC[0].r &&
+                                gTfGlyph[0] && gTfG[0].b >= gTfG[0].r && glyphOff(1) &&
+                                gTfFlashesEnd == 0 && LightFlashCount() == 0,
+                                "call lightning: target flashes=%d, stroke light calls=%d (need 1, 0), target lit=%d, "
+                                "lit squares on the line=%d (need 0), electric color %d,%d,%d (blue >= red), glyph on=%d color %d,%d,%d, flashes after=%d",
+                                gTfLitCalls, gNegCalls, (int)gTfLitSq[0], gTfLineLit,
+                                gTfC[0].r, gTfC[0].g, gTfC[0].b, (int)gTfGlyph[0], gTfG[0].r, gTfG[0].g, gTfG[0].b,
+                                (int)LightFlashCount());
+                    }
+                }
             }
 
             /* J: aura fields (Task 6). A modifier or blocker field that gives no light

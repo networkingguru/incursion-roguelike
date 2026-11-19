@@ -1055,6 +1055,12 @@ Nothing:
               /* Globes don't *inherently* give away your pos. */
               r = AGlobe(e); break;
           case AR_NONE:
+              /* inc-jw0hw: a targeted blast with no stroke shows only the target flash. */
+              if (e.EMagic->eval == EA_BLAST && e.EVictim && e.EVictim->isCreature()) {
+                  Thing *stroke = e.EVictim;
+                  EffectLight::FlashStruck(e.EMap, e.EMagic->cval, EL_MISSILE,
+                      e.DType, te, &stroke, 1);
+              }
               r = ReThrow(EV_MAGIC_STRIKE,e); 
               break;
           case AR_POISON:
@@ -1825,6 +1831,16 @@ EvReturn Magic::AGlobe(EventInfo &e)
       T1->Update();
       fx.Tail();
       fx.End();
+      /* inc-jw0hw: the globe's last stage flashes every creature it strikes,
+         before any hit. */
+      Thing *struck[128]; int16 nStruck = 0;
+      MapIterate(m,t,i)
+        if (t->isCreature() && nStruck < 128 &&
+            dist(t->x,t->y,cx,cy) <= (int16)e.vRadius &&
+            !(t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE)))
+          struck[nStruck++] = t;
+      EffectLight::FlashStruck(m, e.EMagic->cval, EL_AREA, e.DType, te,
+          struck, nStruck);
       }
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
@@ -2887,6 +2903,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     eCopy.EYVal = cy / 2; 
     MagicXY(eCopy,eCopy.EXVal,eCopy.EYVal);
     } 
+
+  /* inc-jw0hw: the animation's last stage flashes every creature struck; the
+     light ends before any hit below. */
+  EffectLight::FlashStruck(&m, Color, isBall ? EL_AREA : (isMulti ? EL_BEAM : EL_MISSILE),
+      e.DType, TEFF(e.eID), TargetList, tc);
 
   DoHits:
   for (j=0;j!=tc;j++)

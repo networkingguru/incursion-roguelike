@@ -16,6 +16,12 @@
 # fact: a square's age -- the flash's own clock, set by the probe (LightFlashSetClock) or the sum of the ball's ring waits; never the wall clock
 # fact: the ruled fire ramp -- the probe's own table (FireRampAt), from logs/ramp-mock/mock.py
 # fact: messages a cast prints -- the same seeded run twice, flash on and flash off; the probe records MsgHistory
+# fact: T1 kobold squares -- fixed offsets (0,-2) and (0,+2) from the aim square (PX+5, inside the fireball's own range); the probe verifies both are struck
+# fact: T2 the touch lands or misses -- the probe forces the attack roll (LOFSetForcedRoll 20 for a hit, 1 for a miss)
+# fact: T2 the touch spell and its hand charge -- the probe gives the player the TOUCH_ATTACK status for Chill Touch
+# fact: T3 target square -- a kobold at (PX+6, PY), a fixed offset from the player's fixed square
+# fact: T cases' light -- no light but the flash: the probe zeroes the player's light, infravision and shadow ranges
+# Cases T1-T3 add: the target flash (Fireball with two kobolds, a landed and a missed Chill Touch, Call Lightning).
 # Cases R1-R3 add: a square's light cools by its own age (fire, then no white stage for dark energy), and a Fireball
 # under OPT_ANIMATION None ends with no flash left.
 # Cases B (Fireball) and B2 (a globe, Sleep) add: the effect lights while it shows, is gone at its

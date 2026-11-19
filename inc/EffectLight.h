@@ -21,6 +21,14 @@ enum { EL_AREA = 0, EL_BEAM = 1, EL_MISSILE = 2 };
    at EL_HOLD before the hold, and at EL_END after the flash is removed. */
 extern void (*EffectLightHook)(int phase);
 
+/* inc-jw0hw: test hook for the target flash (FlashStruck). Called at TF_LIT
+   once the struck squares show at age 0, and at TF_END after the flash is
+   removed. The target flash never calls EffectLightHook. */
+// family: target-flash-phase internal
+enum { TF_LIT = 0, TF_END = 1 };
+// end family: target-flash-phase
+extern void (*TargetFlashHook)(int phase);
+
 /* inc-jw0hw: whether an effect glows, and the light color row (COL_* or a
    plain palette color, 0 for none). te NULL: lit, no color. */
 struct EffectLightDecision { bool lit; int16 colour; };
@@ -31,7 +39,7 @@ struct EffectLight {
      decides whether the effect glows and its color; the blast color is the
      fallback. Without te, the type's color wins. Glyph colors are the caller's. */
   EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype = 0,
-              TEffect *te = NULL);
+              TEffect *te = NULL, bool targetFlash = false);
   ~EffectLight();
   void Light(int16 x, int16 y);   /* only if the player has line of sight to it */
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
@@ -39,8 +47,14 @@ struct EffectLight {
   void Hold(int16 ms);
   void Wait(int16 ms);            /* a wait that advances the effect clock */
   void SetGlyphTime(int16 glyphMs); /* a globe: its light outlives its glyphs */
-  void Tail();                    /* glyphs gone: cool every square, then call End() */
+  void Tail(bool keepGlyphs = false);                    /* glyphs gone: cool every square, then call End() */
   void End();
+  /* inc-jw0hw: the last stage of a glowing effect: light the square of every
+     creature in list (a reach of 1 square), cool it on the effect's own clock
+     and end it. Call it before any hit resolves. Lights nothing for an unlit
+     effect, under OPT_ANIMATION None, or for a square the player cannot see. */
+  static void FlashStruck(Map *m, int16 blastColour, uint8 shape, int16 dtype,
+                          TEffect *te, Thing *const *list, int n);
 private:
   bool Sees(int16 x, int16 y);
   void Show();
@@ -52,6 +66,7 @@ private:
   int32 id;
   bool ended;
   bool lit;
+  bool target;   /* a target flash: it calls TargetFlashHook, not EffectLightHook */
   uint8 ramp;
   float clockMs, life;   /* the effect clock and a square's light life, ms */
   bool glyphsOn;
