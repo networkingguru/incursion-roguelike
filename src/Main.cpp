@@ -625,6 +625,10 @@ void Game::Play() {
     extern void FatigueRestProbe(Player *pl);
     FatigueRestProbe(pp);
 
+    /* inc-n3eni: opt-in WAS_FRIENDLY-once oracle; see WasFriendlyProbe. */
+    extern void WasFriendlyProbe(Player *pl);
+    WasFriendlyProbe(pp);
+
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
     GloryProbe(pp);
