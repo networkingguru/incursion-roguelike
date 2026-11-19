@@ -20,6 +20,7 @@ extern void (*AreaProbeXYHook)(int16,int16);
 extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
 extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g);
+extern void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
 
@@ -302,6 +303,16 @@ void FwHook(int16 x, int16 y, int stage, float clk, Glyph g) {
         for (int xx = gFwCx - 8; xx <= gFwCx + 8; ++xx)
             if (dist(gFwCx, gFwCy, xx, yy) >= r + 4 && dist(gFwCx, gFwCy, xx, yy) <= gFwR && LightLitAt((int16)xx, (int16)yy)) ++ev.litBeyond;
     gFw.push_back(ev);
+}
+
+/* Cases LM1-LM5 (inc-jw0hw): the lightning meander. One record per drawn square; an arc ends at lx < 0. */
+struct MeanderRec { int lx, ly, dx, dy; Glyph g; };
+std::vector<std::vector<MeanderRec> > gArcs;
+std::vector<MeanderRec> gArcCur;
+void MeanderRecHook(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g) {
+    if (lx < 0) { gArcs.push_back(gArcCur); gArcCur.clear(); return; }
+    MeanderRec r; r.lx = lx; r.ly = ly; r.dx = dx; r.dy = dy; r.g = g;
+    gArcCur.push_back(r);
 }
 
 /* Case G3 (inc-6dd41): the glyph a globe's highlight leaves on a square. */
@@ -1128,6 +1139,192 @@ void EffectLightProbe(Player *pl) {
                                 gTfLitCalls, gNegCalls, (int)gTfLitSq[0], gTfLineLit,
                                 gTfC[0].r, gTfC[0].g, gTfC[0].b, (int)gTfGlyph[0], gTfG[0].r, gTfG[0].g, gTfG[0].b,
                                 (int)LightFlashCount());
+                    }
+                }
+
+                /* LM: a lit lightning stroke meanders (inc-jw0hw). Every path keeps the rules of Magic.cpp's
+                   MeanderPlanBuild; the straight line the spell walks does not change. */
+                {
+                    const rID chainL = FIND("Chain Lightning"), fireBreath = FIND("Fire Breath"),
+                        acidArrow = FIND("Acid Arrow");
+                    const int KHP = 500;
+                    struct LmRun { std::vector<std::vector<MeanderRec> > arcs; int hits[3]; int ks; };
+                    /* One cast in a dark room (or a one-square corridor). Kobolds sit at the given x on
+                       the cast row; victim -1 aims at (aimX, PY) with no chosen creature. */
+                    auto lmCast = [&](rID eid, bool corridor, int nk, const int *kx, int victim, int aimX,
+                            LmRun &run) {
+                        BuildDark(mp, pl, floor, wall);
+                        if (corridor) {
+                            const rID region = mp->RegionAt(pl->x, pl->y);
+                            Rect rect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
+                            for (int y = 0; y < mp->SizeY(); ++y)
+                                for (int x = 0; x < mp->SizeX(); ++x)
+                                    if (InBlock(x, y) && y != PY)
+                                        mp->WriteAt(rect, x, y, wall, region, PRIO_MAX, true);
+                            pl->CalcVision();
+                        }
+                        LightFlashClearAll();
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        Monster *kobs[3] = { NULL, NULL, NULL };
+                        for (int i = 0; i < nk; ++i) {
+                            kobs[i] = new Monster(kobold);
+                            kobs[i]->PlaceAt(mp, kx[i], PY, true);
+                            kobs[i]->Initialize(true);
+                            kobs[i]->mHP = kobs[i]->cHP = KHP;
+                        }
+                        gStruckGrid.assign((size_t)mp->SizeX() * mp->SizeY(), 0);
+                        gSx.clear(); gSy.clear();
+                        gS[0].taken = gS[1].taken = false;
+                        gLit = gHolds = gEnds = 0;
+                        gGlobe = false; gOpen = true; gTimeShow = false; gLine = true; gFill = false;
+                        gLitMaxCount = gLitMaxSpan = 0; gLitMinCount = 1000000; gFlightLit = 0;
+                        gArcs.clear(); gArcCur.clear();
+                        Refresh(pl);
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        term->MsgHistory[0] = 0;
+                        AreaProbeXYHook = NoteXY; EffectLightHook = FlashHook; MeanderHook = MeanderRecHook;
+                        EventInfo xe; xe.Clear();
+                        xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = true;
+                        xe.isLoc = true; xe.EXVal = aimX; xe.EYVal = PY;
+                        if (victim >= 0) xe.EVictim = kobs[victim];
+                        /* range is 5 + caster level / 2: +30 levels to every school gives 20 squares */
+                        pl->GainTempStati(BONUS_SCHOOL_CASTING_LEVEL, pl, 100, SS_ENCH, 0x7FFF, 30, 0);
+                        ReThrow(EV_EFFECT, xe);
+                        pl->RemoveStati(BONUS_SCHOOL_CASTING_LEVEL);
+                        AreaProbeXYHook = NULL; EffectLightHook = NULL; MeanderHook = NULL; gLine = false;
+                        run.arcs = gArcs;
+                        run.ks = nk;
+                        for (int i = 0; i < nk; ++i) run.hits[i] = kobs[i]->cHP < KHP;
+                    };
+                    /* The rules of rule 3, counted: how many squares break them, and how many leave the line. */
+                    auto lmArc = [&](const std::vector<MeanderRec> &a, int &offLine, int &offGap) {
+                        int bad = 0;
+                        offLine = offGap = 0;
+                        for (size_t i = 0; i < a.size(); ++i) {
+                            const MeanderRec &r = a[i];
+                            const bool onLine = r.dx == r.lx && r.dy == r.ly;
+                            if (dist(r.dx, r.dy, r.lx, r.ly) > 1) ++bad;
+                            if (!onLine) {
+                                ++offLine;
+                                if (r.lx >= PX + 4 && r.lx <= PX + 7) ++offGap;
+                            }
+                            if ((i == 0 || i + 1 == a.size() || mp->FCreatureAt((int16)r.lx, (int16)r.ly)) && !onLine) ++bad;
+                            if (!mp->InBounds((int16)r.dx, (int16)r.dy) || mp->At(r.dx, r.dy).Solid) ++bad;
+                            if (i > 0 && r.dx == PX && r.dy == PY) ++bad;
+                            if (i > 0 && dist(r.dx, r.dy, a[i - 1].dx, a[i - 1].dy) != 1) ++bad;
+                            if (a.size() > 1) {   /* the stroke is the step into the square */
+                                const size_t p = i ? i - 1 : 0, n = i ? i : 1;   /* the step into the square; the first takes the step out */
+                                const int sx = a[n].dx - a[p].dx, sy = a[n].dy - a[p].dy;
+                                const int want = sy == 0 ? '-' : (sx == 0 ? '|' : ((sx > 0) == (sy > 0) ? '\\' : '/'));
+                                if ((int)r.g != want) ++bad;
+                            }
+                        }
+                        return bad;
+                    };
+                    if (!lightning || !chainL || !fireBreath || !acidArrow || !kobold) {
+                        inconclusive("LM", "Lightning Bolt, Chain Lightning, Fire Breath, Acid Arrow or kobold is missing");
+                    } else if (LightMode(pl) == LIGHT_LEGACY) {
+                        inconclusive("LM", "the light map is legacy");
+                    } else {
+                        /* LM1: open room, kobolds at line squares 2, 3 and 8, aimed past the last. */
+                        const int kx1[3] = { PX + 2, PX + 3, PX + 8 };
+                        const int CASTS = 20;
+                        int bad = 0, arcsOk = 0, allHit = 0, gapCasts = 0, offTotal = 0;
+                        std::vector<std::vector<int> > paths;
+                        for (int c = 0; c < CASTS; ++c) {
+                            LmRun run;
+                            lmCast(lightning, false, 3, kx1, -1, PX + 10, run);
+                            if (run.arcs.size() == 1 && run.arcs[0].size() > 8) ++arcsOk;
+                            if (run.hits[0] && run.hits[1] && run.hits[2]) ++allHit;
+                            int offLine = 0, offGap = 0;
+                            std::vector<int> path;
+                            for (size_t a = 0; a < run.arcs.size(); ++a) {
+                                int ol = 0, og = 0;
+                                bad += lmArc(run.arcs[a], ol, og);
+                                offLine += ol; offGap += og;
+                                for (size_t i = 0; i < run.arcs[a].size(); ++i)
+                                    path.push_back(run.arcs[a][i].dy);
+                            }
+                            offTotal += offLine;
+                            if (offGap > 0) ++gapCasts;
+                            paths.push_back(path);
+                        }
+                        int differ = 0;
+                        for (int c = 1; c < CASTS; ++c) if (paths[c] != paths[0]) ++differ;
+                        verdict("LM1", bad == 0 && arcsOk == CASTS && allHit == CASTS && gapCasts >= 1 && differ >= 1,
+                            "%d lightning casts: %d rule breaks (need 0); %d/%d casts drew one arc of 9+ squares; "
+                            "%d/%d casts struck all three kobolds; %d casts left the line in the gap, %d squares off the line in all; "
+                            "%d casts differ from the first",
+                            CASTS, bad, arcsOk, CASTS, allHit, CASTS, gapCasts, offTotal, differ);
+
+                        /* LM2: a one-square corridor with rock on both sides: the path is the line. */
+                        {
+                            int bad2 = 0, longArcs = 0, offAny = 0;
+                            for (int c = 0; c < 10; ++c) {
+                                LmRun run;
+                                lmCast(lightning, true, 0, NULL, -1, PX + 3, run);
+                                for (size_t a = 0; a < run.arcs.size(); ++a) {
+                                    int ol = 0, og = 0;
+                                    bad2 += lmArc(run.arcs[a], ol, og);
+                                    offAny += ol;
+                                    if (run.arcs[a].size() > 8) ++longArcs;
+                                }
+                            }
+                            verdict("LM2", bad2 == 0 && offAny == 0 && longArcs == 10,
+                                "corridor, 10 casts: %d rule breaks, %d squares off the line (need 0, 0); %d/10 casts drew an arc of 9+ squares",
+                                bad2, offAny, longArcs);
+                        }
+
+                        /* LM3: Chain Lightning at one kobold: the arc keeps the rules and its last square is on the line beside the target. */
+                        {
+                            const int kx3[1] = { PX + 6 };
+                            int bad3 = 0, nArcs = 0, endNear = 0, hit3 = 0;
+                            for (int c = 0; c < 5; ++c) {
+                                LmRun run;
+                                lmCast(chainL, false, 1, kx3, 0, PX + 6, run);
+                                nArcs += (int)run.arcs.size();
+                                hit3 += run.hits[0];
+                                for (size_t a = 0; a < run.arcs.size(); ++a) {
+                                    int ol = 0, og = 0;
+                                    bad3 += lmArc(run.arcs[a], ol, og);
+                                    if (run.arcs[a].empty()) continue;
+                                    const MeanderRec &last = run.arcs[a].back();
+                                    if (last.dx == last.lx && last.dy == last.ly &&
+                                        dist(last.dx, last.dy, kx3[0], PY) <= 1) ++endNear;
+                                }
+                            }
+                            verdict("LM3", bad3 == 0 && nArcs >= 5 && endNear == nArcs && hit3 == 5,
+                                "chain lightning, 5 casts: %d rule breaks (need 0); %d arcs, %d end on the line within 1 of the target; %d/5 hit the kobold",
+                                bad3, nArcs, endNear, hit3);
+                        }
+
+                        /* LM4: a stroke that is not lit electricity never meanders. */
+                        {
+                            const int kx4[1] = { PX + 6 };
+                            int events = 0, drew = 0;
+                            for (int w = 0; w < 3; ++w) {
+                                LmRun run;
+                                lmCast(w == 0 ? fireBreath : (w == 1 ? acidArrow : missile), false, 1, kx4, w == 0 ? -1 : 0, PX + 6, run);
+                                events += (int)run.arcs.size();
+                                if (w != 1) drew += gLit > 0;   /* Acid Arrow does not glow */
+                            }
+                            verdict("LM4", events == 0 && drew == 2,
+                                "fire breath, acid arrow, magic missile: %d meander arcs (need 0); %d of the two glowing casts drew their light (need 2)",
+                                events, drew);
+                        }
+
+                        /* LM5: gameplay unchanged: the squares the spell resolves are the straight line. */
+                        {
+                            LmRun run;
+                            lmCast(lightning, false, 0, NULL, -1, PX + 3, run);
+                            bool straight = !gSx.empty() && run.arcs.size() == 1 && gSx.size() == run.arcs[0].size();
+                            for (size_t i = 0; straight && i < gSx.size(); ++i)
+                                straight = gSx[i] == PX + (int)i && gSy[i] == PY &&
+                                    run.arcs[0][i].lx == gSx[i] && run.arcs[0][i].ly == gSy[i];
+                            verdict("LM5", straight,
+                                "lightning: %d spell squares, all on row %d from x=%d in order, matching the drawn path's line squares=%d",
+                                (int)gSx.size(), PY, PX, (int)straight);
+                        }
                     }
                 }
             }

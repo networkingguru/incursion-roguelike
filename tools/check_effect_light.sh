@@ -26,6 +26,16 @@
 # fact: FW1 a ring's start and stage clock -- the effect's own clock, the sum of the animation's waits (stage length from the radius); never the wall clock
 # fact: FW1 each square's shape and glyph -- computed from the square's offset from the center and its stage; no roll decides them
 # fact: FW1 each square's light -- born when its ring starts; the probe reads LightLevelAt and LightLitAt after the frame's refresh
+# fact: LM lightning range -- the probe grants +30 caster levels to every school (BONUS_SCHOOL_CASTING_LEVEL), so the range is 5 + level/2 squares whatever the fixture's level
+# fact: LM1 kobold squares and hit points -- kobolds placed at (PX+2, PY), (PX+3, PY), (PX+8, PY), fresh each cast, hit points set to 500 so none dies; the probe aims at (PX+10, PY)
+# fact: LM1 which squares the stroke leaves the line -- cosmetic_random() picks them; the check reads only invariants every path keeps (distance, on-line at creatures and ends, adjacency, no solid, stroke glyph)
+# fact: LM1 the stroke leaves the line in the gap (PX+4..PX+7) in at least 1 of 20 casts -- each of 4 gap squares stays on the line with chance at most 1/2 given any history (3 or 5 open candidates, at least 2), so a cast stays on the line with chance at most 1/16 and 20 casts all do with chance at most 1e-24
+# fact: LM1 two casts draw different paths -- a cast repeats a given path with chance at most 1/16 (the 4 gap squares alone), so all 19 later casts repeat the first with chance at most 1e-22
+# fact: LM2 corridor -- the probe walls every square of the room off the cast row; the path is the line by rule, no roll decides it
+# fact: LM3 chain target -- one kobold at (PX+6, PY) as the chosen victim; the arc ends within 1 square of it, no roll decides that
+# fact: LM4 non-meandering casts -- fire breath, Acid Arrow and Magic Missile are not lit electricity, so no hook fires whatever the roll
+# fact: LM5 the spell's own squares -- no roll decides them: the spell walks a straight row from the player
+# Cases LM1-LM5 add: a lit lightning stroke is drawn as a jagged path that keeps its rules and never changes the squares the spell walks.
 # Case FW1 adds: the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone, ring by ring, pointing away from the center.
 # Cases T1-T3 add: the target flash (Fireball with two kobolds, a landed and a missed Chill Touch, Call Lightning).
 # Cases R1-R3 add: a square's light cools by its own age (fire, then no white stage for dark energy), and a Fireball

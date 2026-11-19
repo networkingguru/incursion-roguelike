@@ -2335,6 +2335,101 @@ void Magic::BallFill(Map &m, int16 cx, int16 cy, int16 count,
         [](const BallSquare &a, const BallSquare &b) { return a.ring < b.ring; });
   }
 
+/* inc-jw0hw: a lit lightning stroke is drawn as a jagged path. The line walk of
+   ABallBeamBolt is replayed here; the plan only moves the glyph and the light. A
+   drawn square D stays within 1 of its line square L, is exactly 1 from the
+   previous D, sits on L at a creature, at both ends and where no open square is
+   beside the line, and is never solid or the caster's square. Test hook: NULL
+   unless a probe sets it; (-1,-1,-1,-1,0) ends an arc. */
+void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g) = NULL;
+
+// no-family
+static const int MEANDER_MAX = 160;
+// end no-family
+struct MeanderPlan { int n; int16 lx[MEANDER_MAX], ly[MEANDER_MAX], dx[MEANDER_MAX], dy[MEANDER_MAX]; Glyph g[MEANDER_MAX]; };
+
+static Glyph MeanderStroke(int dx, int dy)
+  {
+    if (dy == 0) return '-';
+    if (dx == 0) return '|';
+    return ((dx > 0) == (dy > 0)) ? '\\' : '/';   /* screen y grows downward */
+  }
+
+static bool MeanderOpen(Map &m, int x, int y)
+  {
+    Feature *ft;
+    if (!m.InBounds(x,y) || m.At(x,y).Solid)
+      return false;
+    for (ft = m.FFeatureAt(x,y); ft; ft = m.NFeatureAt(x,y))
+      if (ft->Flags & F_SOLID)
+        return false;
+    return true;
+  }
+
+static void MeanderPlanBuild(MeanderPlan &p, Map &m, Creature *actor, Creature *victim,
+    bool isChain, bool isDir, int dir, int8 dirX, int8 dirY, const Fraction &slope,
+    int16 sx, int16 sy, int16 cx, int16 cy, int distSoFar, int range, int warp)
+  {
+    Feature *ft; Fraction test; int i, n = 0;
+    p.n = 0;
+    /* the same stops and the same step as the walk in ABallBeamBolt */
+    while (n < MEANDER_MAX && m.InBounds(cx/2,cy/2)) {
+      if (distSoFar++ >= range)
+        break;
+      bool stop = false;
+      for (ft = m.FFeatureAt(cx/2,cy/2); ft && !stop; ft = m.NFeatureAt(cx/2,cy/2))
+        if (ft->Flags & F_SOLID) {
+          if (warp) warp--; else stop = true;
+          }
+      if (stop)
+        break;
+      if (m.At(cx/2,cy/2).Solid) {
+        if (warp) warp--; else break;
+        }
+      p.lx[n] = cx/2; p.ly[n] = cy/2; n++;
+      if (isDir) {
+        cx += DirX[dir]*2; cy += DirY[dir]*2;
+        }
+      else {
+        test.Set(abs((cy + dirY)-sy), abs((cx + dirX)-sx));
+        if (test > slope) cx += 2 * dirX;
+        else if (test < slope) cy += 2 * dirY;
+        else { cx += 2 * dirX; cy += 2 * dirY; }
+        }
+      if (!m.InBounds(cx/2,cy/2))
+        break;
+      if (isChain && victim && victim->x == cx/2 && victim->y == cy/2)
+        break;
+      }
+    p.n = n;
+    for (i = 0; i < n; i++) {
+      int16 cxs[9], cys[9]; int nc = 0, ox, oy;
+      p.dx[i] = p.lx[i]; p.dy[i] = p.ly[i];
+      if (i == 0 || i == n-1 || m.FCreatureAt(p.lx[i],p.ly[i]))
+        continue;
+      for (oy = -1; oy <= 1; oy++)
+        for (ox = -1; ox <= 1; ox++) {
+          const int x = p.lx[i] + ox, y = p.ly[i] + oy;
+          if (dist(x,y,p.dx[i-1],p.dy[i-1]) != 1)
+            continue;
+          if (dist(x,y,p.lx[i+1],p.ly[i+1]) > 1 || (x == p.lx[i+1] && y == p.ly[i+1]))
+            continue;
+          if ((ox || oy) && (!MeanderOpen(m,x,y) || (actor && x == actor->x && y == actor->y)))
+            continue;
+          cxs[nc] = x; cys[nc] = y; nc++;
+          }
+      if (nc) {
+        const int pick = cosmetic_random(nc);
+        p.dx[i] = cxs[pick]; p.dy[i] = cys[pick];
+        }
+      }
+    for (i = 0; i < n; i++) {
+      if (n < 2) { p.g[i] = 0; continue; }
+      const int a = (i == 0) ? 0 : i-1, b = (i == 0) ? 1 : i;   /* the step into square i; square 0 takes the step out */
+      p.g[i] = MeanderStroke(p.dx[b] - p.dx[a], p.dy[b] - p.dy[a]);
+      }
+  }
+
 EvReturn Magic::ABallBeamBolt(EventInfo &e)
 {
   EventInfo eCopy; Feature *ft; Creature *cr;
@@ -2449,6 +2544,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   // inc-jw0hw: a beam or missile lights its path; the light ends before any hit.
   std::unique_ptr<EffectLight> trail;
   bool overlayOff = false;
+  MeanderPlan meander; int meanderAt = 0; bool meanders = false;
   // do we think something happened? 
   bool vis = true; 
     if (!e.EActor->isBlind())
@@ -2653,6 +2749,12 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   if (overlayOff) { o.Activate(); overlayOff = false; }
   if (!hitSelf)
     trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType, TEFF(e.eID)));
+  meanders = false; meanderAt = 0;
+  if (!hitSelf && isMulti && e.DType == AD_ELEC && EffectLightDecide(TEFF(e.eID), e.DType).lit) {
+    MeanderPlanBuild(meander, m, e.EActor, e.EVictim, isChain, e.isDir, e.EDir, dirX, dirY, slope,
+        sx, sy, cx, cy, distSoFar, e.vRange, WarpCount);
+    meanders = meander.n > 0;
+    }
     while(!hitSelf && m.InBounds(cx/2,cy/2)) {
 
     // are we out of range? 
@@ -2692,16 +2794,25 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       vis = true;
 
 
+    int16 drawX = cx/2, drawY = cy/2; Glyph drawG = g;
+    if (meanders && meanderAt < meander.n && meander.lx[meanderAt] == cx/2 &&
+        meander.ly[meanderAt] == cy/2) {
+      drawX = meander.dx[meanderAt]; drawY = meander.dy[meanderAt];
+      if (meander.g[meanderAt]) drawG = meander.g[meanderAt];
+      }
+    meanderAt++;
+
     if (vis) {
       uint16 colour; 
       if (isBeam) 
         colour = BlastColourSets[(Color * 4)+random(4)];
       else 
         colour = BlastColourSets[Color * 4];
-      o.AddGlyph(cx/2,cy/2, g | GLYPH_FORE(colour));
+      o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
+      if (meanders && MeanderHook) MeanderHook(cx/2,cy/2,drawX,drawY,drawG);
       o.ShowGlyphs();
       if (trail) {
-        if (isMulti) trail->Light(cx/2,cy/2);
+        if (isMulti) trail->Light(drawX,drawY);
         else trail->MoveTo(cx/2,cy/2);
         trail->Refresh();
         }
@@ -2838,6 +2949,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     }
   OuterBreak:
 
+  if (meanders && MeanderHook) MeanderHook(-1,-1,-1,-1,0);
   /* inc-jw0hw: the travel is over; fade the light and end it before any hit. */
   FINISH_TRAIL
 
