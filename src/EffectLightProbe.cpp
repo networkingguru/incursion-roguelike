@@ -19,6 +19,7 @@
 extern void (*AreaProbeXYHook)(int16,int16);
 extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
+extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
 
@@ -281,6 +282,26 @@ void FlashHook(int phase) {
         ++gEnds;
         if (!gS[1].taken) Sample(gS[1]);
     }
+}
+
+
+/* Case FW1 (inc-jw0hw): the fireworks globe. One record per shape change. */
+struct FwEv { int x, y, stage; float clk; Glyph g; int lvl, litBeyond; };
+std::vector<FwEv> gFw;
+int gFwCx = -1, gFwCy = -1, gFwR = 0;
+void FwHook(int16 x, int16 y, int stage, float clk, Glyph g) {
+    FwEv ev;
+    ev.x = x; ev.y = y; ev.stage = stage; ev.clk = clk; ev.g = g;
+    ev.lvl = (int)LightLevelAt(x, y);
+    if (gFw.empty()) { gFwCx = x; gFwCy = y; }   /* the first event is the center's dot */
+    /* a cell's light spills 2 squares (Chebyshev), up to 3 rings out in dist() units, so at a ring's start a square 4 rings out must be dark */
+    const int r = dist(gFwCx, gFwCy, x, y);
+    ev.litBeyond = 0;
+    if (stage == 0)   /* only a ring's start says what the later rings have not begun */
+    for (int yy = gFwCy - 8; yy <= gFwCy + 8; ++yy)
+        for (int xx = gFwCx - 8; xx <= gFwCx + 8; ++xx)
+            if (dist(gFwCx, gFwCy, xx, yy) >= r + 4 && dist(gFwCx, gFwCy, xx, yy) <= gFwR && LightLitAt((int16)xx, (int16)yy)) ++ev.litBeyond;
+    gFw.push_back(ev);
 }
 
 /* Case G3 (inc-6dd41): the glyph a globe's highlight leaves on a square. */
@@ -710,6 +731,71 @@ void EffectLightProbe(Player *pl) {
                     verdict("G3", bad[0] == 0 && bad[1] == 0,
                         "globe glyph: Fire Lotus (color set) %d squares, %d bad; plain globe %d squares, %d bad",
                         n[0], bad[0], n[1], bad[1]);
+            }
+            /* FW1 (F1 in the brief; F1 is taken by the bolt case): the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone,
+               ring by ring, each ring pointing away from the center, light born with its ring. */
+            if (!off) {
+                const rID fw = FIND("Pyrotechnics;flash");
+                if (!fw || !TEFF(fw)->HasFlag(EF_FIREWORKS) || TEFF(fw)->ef.aval != AR_GLOBE)
+                    inconclusive("FW1", "Pyrotechnics;flash is missing, not a globe, or lacks EF_FIREWORKS");
+                else {
+                    gFw.clear(); gFwCx = gFwCy = -1; gFwR = TEFF(fw)->ef.lval;
+                    FireworksHook = FwHook;
+                    cast(fw, true, false, false, false, pre, post, postR, endF);
+                    FireworksHook = NULL;
+                    int R = 0;
+                    for (size_t i = 0; i < gFw.size(); ++i) {
+                        const int r = dist(gFwCx, gFwCy, gFw[i].x, gFw[i].y);
+                        if (r > R) R = r;
+                    }
+                    std::vector<int> seq((size_t)mp->SizeX() * mp->SizeY(), 0);   /* next stage each square expects */
+                    bool order = !gFw.empty(), light0 = true, dark = true;
+                    int nSq = 0;
+                    for (size_t i = 0; i < gFw.size(); ++i) {
+                        int &nx = seq[(size_t)gFw[i].y * mp->SizeX() + gFw[i].x];
+                        if (gFw[i].stage != nx) order = false;
+                        ++nx;
+                        if (gFw[i].stage == 0) { ++nSq; if (gFw[i].lvl <= 0) light0 = false; }
+                        if (gFw[i].litBeyond) dark = false;
+                    }
+                    int wantSq = 0, allFour = 0;
+                    for (int y = 0; y < mp->SizeY(); ++y)
+                        for (int x = 0; x < mp->SizeX(); ++x) {
+                            const bool want = gFw.empty() ? false : dist(gFwCx, gFwCy, x, y) <= R &&
+                                !mp->At(x, y).Solid && mp->LineOfSight(PX, PY, x, y, pl);
+                            wantSq += want;
+                            if (want && seq[(size_t)y * mp->SizeX() + x] == 4) ++allFour;
+                        }
+                    float first[2][16];
+                    for (int a = 0; a < 2; ++a) for (int r = 0; r < 16; ++r) first[a][r] = -1.0f;
+                    for (size_t i = 0; i < gFw.size(); ++i) {
+                        const int r = dist(gFwCx, gFwCy, gFw[i].x, gFw[i].y);
+                        if (gFw[i].stage < 2 && r < 16 && first[gFw[i].stage][r] < 0.0f)
+                            first[gFw[i].stage][r] = gFw[i].clk;
+                    }
+                    bool rings = R >= 2;
+                    for (int r = 1; r <= R && r < 16; ++r)
+                        if (first[0][r] < 0.0f || first[0][r] != first[1][r - 1]) rings = false;
+                    auto glyphAt = [&](int x, int y, int stage) {
+                        for (size_t i = 0; i < gFw.size(); ++i)
+                            if (gFw[i].x == x && gFw[i].y == y && gFw[i].stage == stage) return (int)gFw[i].g;
+                        return -1;
+                    };
+                    const int c0 = glyphAt(gFwCx, gFwCy, 0), c1 = glyphAt(gFwCx, gFwCy, 1), c2 = glyphAt(gFwCx, gFwCy, 2);
+                    const int ge = glyphAt(gFwCx + 2, gFwCy, 1), gn = glyphAt(gFwCx, gFwCy - 2, 1),
+                        gne = glyphAt(gFwCx + 2, gFwCy - 2, 1);
+                    verdict("FW1a", nSq > 0 && nSq == wantSq && allFour == wantSq && order,
+                        "radius %d: %d squares shown, %d expected in view; %d passed stages 0,1,2,3 once each in order=%d",
+                        R, nSq, wantSq, allFour, (int)order);
+                    verdict("FW1b", rings, "each ring starts at the clock ring-1 reaches its star (radius %d)", R);
+                    verdict("FW1c", c0 > 0 && c1 > 0 && c2 > 0 && c0 != c1 && c1 != c2 && c0 != c2,
+                        "center glyphs: dot %d, star %d, flower %d (all different)", c0, c1, c2);
+                    verdict("FW1d", ge > 0 && gn > 0 && gne > 0 && ge != gn && ge != gne && gn != gne,
+                        "full shapes: east %d, north %d, northeast %d (all different)", ge, gn, gne);
+                    verdict("FW1e", light0 && dark,
+                        "each square lit right after its ring starts=%d; no square of a later ring lit early=%d",
+                        (int)light0, (int)dark);
+                }
             }
             /* H: Hellstorm cost, informational (the check does not grade it). */
             if (!off) {

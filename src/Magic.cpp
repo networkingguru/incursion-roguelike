@@ -1623,6 +1623,90 @@ EvReturn Magic::MagicHit(EventInfo &e) {
 /* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
 void (*AreaProbeXYHook)(int16,int16) = NULL;
 void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph) = NULL;
+
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called each time a fireworks
+   square changes shape: stage 0 small, 1 full, 2 burst, 3 gone; g is the glyph
+   drawn (0 for gone). */
+void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g) = NULL;
+
+/* The fireworks of a globe flagged EF_FIREWORKS: the center grows from a dot to
+   a star to a flower and goes; ring r starts when ring r-1 reaches its star, and
+   its squares point away from the center. A square's light is born with its ring. */
+static Glyph FireworksShape(int16 dx, int16 dy, int stage)
+  {
+    int16 id;
+    if (stage == 0)
+      id = 250;                                   /* CP437 middle dot */
+    else if (!dx && !dy)
+      id = stage == 1 ? '*' : 15;                 /* star, then the CP437 sun */
+    else if (stage == 2)
+      id = '*';                                   /* a spark */
+    else {
+      const int16 ax = abs(dx), ay = abs(dy);
+      if (ay * 2 <= ax)      id = '-';
+      else if (ax * 2 <= ay) id = '|';
+      else if ((dx > 0) == (dy > 0)) id = '\\';   /* screen y grows downward */
+      else                   id = '/';
+    }
+    return (Glyph)id;
+  }
+
+static void GlobeFireworks(EventInfo &e, EffectLight &fx, int16 cx, int16 cy)
+  {
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    const int16 R = (int16)e.vRadius;
+    const int16 stageMs = (int16)max(40, 900 / (R + 3));  /* ~900 ms, first dot to last gone */
+    const int cv = e.EMagic->cval;
+    int16 x, y;
+    bool seen[33][33];
+    memset(seen, 0, sizeof(seen));
+    if (R > 16)
+      return;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y))
+          seen[x-(cx-R)][y-(cy-R)] = PossiblyPause(T1,x,y,0);
+    o.Activate();
+    float clk = 0.0f;
+    for (int k = 0; k <= R + 3; k++) {
+      o.DeActivate();
+      o.Activate();
+      for (x = cx-R; x <= cx+R; x++)
+        for (y = cy-R; y <= cy+R; y++) {
+          const int16 r = dist(cx,cy,x,y);
+          if (r > R || !m->InBounds(x,y) || !seen[x-(cx-R)][y-(cy-R)])
+            continue;
+          const int stage = k - r;
+          if (stage == 0)
+            fx.Light(x,y);
+          if (stage < 0 || stage > 2)
+            continue;
+          const int16 col = cv >= 16 ?
+              BlastColourSets[cv * 4 + 1 + (x + y + stage) % 3] : cv;
+          o.AddGlyph(x,y, GLYPH_VALUE(FireworksShape(x-cx,y-cy,stage), col));
+          }
+      o.ShowGlyphs();
+      fx.Refresh();
+      if (FireworksHook)
+        for (x = cx-R; x <= cx+R; x++)
+          for (y = cy-R; y <= cy+R; y++) {
+            const int16 r = dist(cx,cy,x,y);
+            const int stage = k - r;
+            if (r > R || !m->InBounds(x,y) || !seen[x-(cx-R)][y-(cy-R)] ||
+                stage < 0 || stage > 3)
+              continue;
+            FireworksHook(x,y,stage,clk, stage == 3 ? 0 : FireworksShape(x-cx,y-cy,stage));
+            }
+      if (k <= R + 2) {
+        fx.Wait(stageMs);
+        clk += stageMs;
+        }
+      }
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
 /* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
    opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
    ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
@@ -1803,6 +1887,9 @@ EvReturn Magic::AGlobe(EventInfo &e)
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
       /* inc-jw0hw: the globe lights its area; the light ends before any hit. */
       EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType, te);
+      if (te && te->HasFlag(EF_FIREWORKS))
+        GlobeFireworks(e, fx, cx, cy);
+      else {
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
           if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
@@ -1829,6 +1916,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
         fx.Wait(globeHold);
       T1->RefreshMap();
       T1->Update();
+      }
       fx.Tail();
       fx.End();
       /* inc-jw0hw: the globe's last stage flashes every creature it strikes,

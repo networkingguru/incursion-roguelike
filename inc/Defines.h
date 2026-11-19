@@ -3738,7 +3738,8 @@ typedef signed int        hObj;
 #define EF_DHOUR      113  /* 300 * casterlevel units */
 #define EF_GLOW       114  /* inc-jw0hw: the effect glows although its damage type does not */
 #define EF_NO_GLOW    115  /* inc-jw0hw: the effect does not glow although its damage type does */
-#define EF_LAST       116
+#define EF_FIREWORKS  116  /* inc-jw0hw: a globe plays the fireworks animation, not a recolor */
+#define EF_LAST       117
 // end family: ef
 // family: ea internal
 

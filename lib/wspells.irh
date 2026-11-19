@@ -2327,7 +2327,7 @@ and EA_BLAST
     
 0 Effect "Pyrotechnics;flash" : EA_BLAST
   { cval: COL_RAINBOW; lval: 4; aval: AR_GLOBE;
-    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE, EF_GLOW;
+    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE, EF_GLOW, EF_FIREWORKS;
     On Event PRE(EV_MAGIC_HIT) {
       if (EVictim->HasMFlag(M_LIGHT_AVERSE))
         if (!EVictim->SavingThrow(WILL,e.saveDC, 

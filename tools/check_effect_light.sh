@@ -21,6 +21,12 @@
 # fact: T2 the touch spell and its hand charge -- the probe gives the player the TOUCH_ATTACK status for Chill Touch
 # fact: T3 target square -- a kobold at (PX+6, PY), a fixed offset from the player's fixed square
 # fact: T cases' light -- no light but the flash: the probe zeroes the player's light, infravision and shadow ranges
+# fact: FW1 the fireworks cast square and radius -- the probe aims Pyrotechnics;flash at (PX+8, PY); the radius is the data's lval, read back from the hook's rings
+# fact: FW1 which squares the player sees -- an open dark room, no wall inside the radius; the probe computes the expected set from its own LineOfSight call
+# fact: FW1 a ring's start and stage clock -- the effect's own clock, the sum of the animation's waits (stage length from the radius); never the wall clock
+# fact: FW1 each square's shape and glyph -- computed from the square's offset from the center and its stage; no roll decides them
+# fact: FW1 each square's light -- born when its ring starts; the probe reads LightLevelAt and LightLitAt after the frame's refresh
+# Case FW1 adds: the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone, ring by ring, pointing away from the center.
 # Cases T1-T3 add: the target flash (Fireball with two kobolds, a landed and a missed Chill Touch, Call Lightning).
 # Cases R1-R3 add: a square's light cools by its own age (fire, then no white stage for dark energy), and a Fireball
 # under OPT_ANIMATION None ends with no flash left.
