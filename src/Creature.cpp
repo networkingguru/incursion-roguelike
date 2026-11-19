@@ -96,6 +96,7 @@ Creature::Creature(rID _mID, int16 _Type):
       StateFlags |= MS_FEMALE;
   cFP = Attr[A_FAT] = 0;
   ManaPulse = 0;
+  QuietTurns = 0;
   LightAverseWasBright = false;
   /* inc-30ps: no in-class initialiser gives TouchDef (field 286) a value,
      so a creature loaded from a save written before that field existed
@@ -1764,11 +1765,28 @@ NoIntervention:;
         }
     }
 
+    /* inc-jahch: waiting restores fatigue only up to a ceiling of
+       (50 + 5 * Fatigue Regeneration rank)% of the maximum, never below 1,
+       rank 10 reaching full. FFCount is int8 and resets to 30 once past 50, so QuietTurns counts
+       the quiet turns: -20 while FFCount <= 30 (a fight), so it is 1 on the
+       first quiet turn (FFCount 51) and 250 on the 250th. Without the ability, 1 point per 250 quiet turns. */
+    int fatRegen = AbilityLevel(CA_FATIGUE_REGEN);
+    int fatCeil = max(1, min((int)Attr[A_FAT], (Attr[A_FAT] * (50 + 5 * fatRegen)) / 100));
+    if (FFCount <= 30)
+        QuietTurns = -20;
+    else if (cFP >= fatCeil)
+        QuietTurns = min((int)QuietTurns, 0);
+    else if (QuietTurns < 250)
+        QuietTurns++;
+    if (!fatRegen && QuietTurns >= 250) {
+        cFP++;
+        QuietTurns = 0;
+    }
+
     if (FFCount > 50) {
-        int fatRegen = AbilityLevel(CA_FATIGUE_REGEN);
         if (fatRegen) {
             if (FFCount > 50 + (50 / fatRegen)) {
-                if (cFP < Attr[A_FAT]) 
+                if (cFP < fatCeil)
                     cFP++;
                 FFCount = 50; 
             } 

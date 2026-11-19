@@ -621,6 +621,10 @@ void Game::Play() {
     extern void EatFatigueProbe(Player *pl);
     EatFatigueProbe(pp);
 
+    /* inc-jahch: opt-in interrupted-rest, waiting and AutoRest fatigue oracle. */
+    extern void FatigueRestProbe(Player *pl);
+    FatigueRestProbe(pp);
+
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
     GloryProbe(pp);
