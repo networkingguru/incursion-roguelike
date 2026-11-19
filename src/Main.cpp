@@ -628,6 +628,9 @@ void Game::Play() {
     /* inc-n3eni: opt-in WAS_FRIENDLY-once oracle; see WasFriendlyProbe. */
     extern void WasFriendlyProbe(Player *pl);
     WasFriendlyProbe(pp);
+    /* inc-h5v6o: opt-in mount field-event oracle; see MountFieldProbe. */
+    extern void MountFieldProbe(Player *pl);
+    MountFieldProbe(pp);
 
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
