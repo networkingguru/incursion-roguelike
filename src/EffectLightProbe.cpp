@@ -55,14 +55,33 @@ bool gFill;            /* case K: the ball's fill has started */
 int gFlightLit, gFlashAtFill;
 LightRGB gHue;     /* light color on an early struck square, at the last frame */
 
+/* The ruled fire ramp (logs/ramp-mock/mock.py), as light on a full-weight square:
+   color times level at `age` ms. An oracle written apart from src/Light.cpp. */
+void FireRampAt(float age, int &r, int &g, int &b) {
+    static const float T[6][5] = {
+        {   0, 255, 250, 220, 1.0f }, { 120, 255, 220,  80, 1.0f },
+        { 300, 255, 140,  30, 0.8f }, { 550, 200,  40,  10, 0.5f },
+        { 800,   0,   0,   0, 0.0f }, { 900,   0,   0,   0, 0.0f } };
+    int i = 0;
+    while (i < 4 && age >= T[i + 1][0]) ++i;
+    const float f = age >= T[5][0] ? 1.0f : (age - T[i][0]) / (T[i + 1][0] - T[i][0]);
+    float c[4];
+    for (int k = 0; k < 4; ++k) c[k] = T[i][k + 1] + (T[i + 1][k + 1] - T[i][k + 1]) * f;
+    r = (int)(c[0] * c[3]); g = (int)(c[1] * c[3]); b = (int)(c[2] * c[3]);
+}
+bool Near(int a, int b) { return abs(a - b) <= 3; }
+int gWaitMs;   /* the ring waits so far in the current ball: the effect clock at the hold */
+
 void NoteXY(int16 x, int16 y) {
     if (!gOpen || !gMap->InBounds(x, y) || gMap->At(x, y).Solid) return;
     char &c = gStruckGrid[y * gMap->SizeX() + x];
     if (!c) { c = 1; gSx.push_back(x); gSy.push_back(y); }
 }
 void NoteRing(int ring, int, const int16 *tx, const int16 *ty, int,
-    const int16 *, const int16 *, int) {
+    const int16 *, const int16 *, int waitMs) {
+    if (ring >= 0 && gOpen) gWaitMs += waitMs;
     if (ring == -2) {
+        gWaitMs = 0;
         gOpen = true; gCx = tx[0]; gCy = ty[0];
         gFill = true; gFlashAtFill = 0;
         for (int y = 0; y < gMap->SizeY(); ++y)
@@ -405,8 +424,9 @@ void EffectLightProbe(Player *pl) {
     } else if (LightFlashDisabled()) {
         inconclusive("A", "INCURSION_EFFECT_LIGHT_OFF is set");
     } else {
-        const int32 id = LightFlashAdd(LightEffectColour(COL_FIRE), LF_FIRE, 1.0f, 2);
+        const int32 id = LightFlashAdd(LightEffectColour(COL_FIRE), LF_FIRE, 1.0f, 2, LR_FIRE);
         LightFlashCell(id, (int16)fx, (int16)fy);
+        LightFlashSetClock(id, 300.0f);   /* A3 reads the fire ramp's 300 ms stage, (255,140,30) */
         Refresh(pl);
         LightRGB c = { 0, 0, 0 };
         LightAt((int16)fx, (int16)fy, c);
@@ -429,6 +449,50 @@ void EffectLightProbe(Player *pl) {
         verdict("A5", LightFlashCount() == 0 && !LightLitAt((int16)fx, (int16)fy),
             "count=%d lit=%d", (int)LightFlashCount(),
             (int)LightLitAt((int16)fx, (int16)fy));
+    }
+
+    /* ---- Case R: the cooling ramp. A square's light follows its own age on the
+       flash clock. R1: a fire square cools, its light level falling and its color
+       moving to the next ramp stage (blue falls 0 to 200 ms, green 200 to 600 ms).
+       R2: dark energy has no white stage, so age 0 is not whiter than age 200. ---- */
+    if (!LightFlashDisabled() && LightMode(pl) != LIGHT_LEGACY) {
+        BuildDark(mp, pl, floor, wall);
+        LightFlashClearAll();
+        int nr = pl->LightRange;
+        if (pl->InfraRange > nr) nr = pl->InfraRange;
+        if (pl->ShadowRange > nr) nr = pl->ShadowRange;
+        const int rx = PX + nr + 4, ry = PY;
+        Refresh(pl);
+        auto at = [&](int32 rid, float ms, LightRGB &c) {
+            LightFlashSetClock(rid, ms);
+            c.r = c.g = c.b = 0;
+            LightAt((int16)rx, (int16)ry, c);
+            return (int)(c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b));
+        };
+        const int32 fid = LightFlashAdd(LightEffectColour(COL_FIRE), LF_STEADY, 1.0f, 2, LR_FIRE);
+        LightFlashCell(fid, (int16)rx, (int16)ry);
+        Refresh(pl);
+        LightRGB f0, f200, f600;
+        const int p0 = at(fid, 0.0f, f0), p200 = at(fid, 200.0f, f200), p600 = at(fid, 600.0f, f600);
+        verdict("R1", p0 > p200 && p200 > p600 && p600 > 0 && f200.b < f0.b && f600.g < f200.g,
+            "fire square: peak %d,%d,%d at 0,200,600 ms; blue %d->%d; green %d->%d",
+            p0, p200, p600, f0.b, f200.b, f200.g, f600.g);
+        LightFlashRemove(fid);
+        const int32 did = LightFlashAdd(LightEffectColour(COL_NECRO), LF_STEADY, 1.0f, 2, LR_DARK);
+        LightFlashCell(did, (int16)rx, (int16)ry);
+        Refresh(pl);
+        LightRGB d0, d200;
+        const int dp0 = at(did, 0.0f, d0), dp200 = at(did, 200.0f, d200);
+        auto white = [](const LightRGB &c) {
+            const int hi = c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b);
+            const int lo = c.r < c.g ? (c.r < c.b ? c.r : c.b) : (c.g < c.b ? c.g : c.b);
+            return hi ? (float)lo / hi : 0.0f;
+        };
+        verdict("R2", dp0 > 0 && dp200 > 0 && white(d0) <= white(d200) + 0.03f,
+            "dark energy: color %d,%d,%d at 0 ms, %d,%d,%d at 200 ms; whiteness %.3f then %.3f (age 0 must not be whiter)",
+            d0.r, d0.g, d0.b, d200.r, d200.g, d200.b, white(d0), white(d200));
+        LightFlashRemove(did);
+        Refresh(pl);
     }
 
     /* ---- Cases B (Fireball), B2 (a globe), H (Hellstorm timing). ---- */
@@ -517,11 +581,11 @@ void EffectLightProbe(Player *pl) {
                     "at hold: struck lit %d/%d seen %d/%d; spill lit %d/%d seen %d/%d",
                     h.nStruckLit, h.nStruck, h.nStruckSeen, h.nStruck,
                     h.nSpillLit, h.nSpill, h.nSpillSeen, h.nSpill);
-                const float ratio = h.cc.r ? (float)h.cc.g / h.cc.r : 0.0f;
-                verdict("B2", h.cc.r >= h.cc.g && h.cc.g >= h.cc.b &&
-                    fabsf(ratio - 140.0f / 255.0f) <= 0.15f,
-                    "center color=%d,%d,%d green/red=%.3f need 0.549+-0.15",
-                    h.cc.r, h.cc.g, h.cc.b, ratio);
+                int er, eg, eb;
+                FireRampAt((float)gWaitMs, er, eg, eb);
+                verdict("B2", gWaitMs > 0 && Near(h.cc.r, er) && Near(h.cc.g, eg) && Near(h.cc.b, eb),
+                    "center color=%d,%d,%d need the fire ramp at the center's age %d ms: %d,%d,%d (+-3)",
+                    h.cc.r, h.cc.g, h.cc.b, gWaitMs, er, eg, eb);
                 gFireLevel = h.centerLevel;
                 verdict("B3", h.edgePeak > 0 && h.edgePeak < h.centerPeak,
                     "reach edge peak %d, center peak %d", h.edgePeak, h.centerPeak);
@@ -531,6 +595,14 @@ void EffectLightProbe(Player *pl) {
                 verdict("B5", post == pre && postR == pre && endF == 0,
                     "after the cast returns: same=%d after a refresh same=%d flashes=%d",
                     (int)(post == pre), (int)(postR == pre), endF);
+            }
+            /* R3: OPT_ANIMATION None. A Fireball draws no tail, leaves no flash, and the cast returns. */
+            if (!off) {
+                pl->Options[OPT_ANIMATION] = 2;
+                cast(fire, false, false, false, false, pre, post, postR, endF);
+                pl->Options[OPT_ANIMATION] = 0;
+                verdict("R3", gEnds == 1 && endF == 0 && LightFlashCount() == 0,
+                    "animation None: end hooks=%d flashes after the cast=%d", gEnds, endF);
             }
             /* C: Fireball with the player boxed in by eight opaque neighbors, as
                check_ball_shape.sh case C: the area is out of sight, so no flash
@@ -710,11 +782,11 @@ void EffectLightProbe(Player *pl) {
                 } else if (gCells[0].empty()) {
                     verdict("I1", 0, "the ray lit no frame");
                 } else {
-                    verdict("I1", gHue.r > 0 && gHue.r >= gHue.g && gHue.g >= gHue.b &&
-                        gHue.b * 10 < gHue.r * 3 &&
-                        fabsf((float)gHue.g / gHue.r - 140.0f / 255.0f) <= 0.15f,
-                        "plain glyph color, fire damage: light %d,%d,%d need Fire (blue under 0.3 of red, green/red 0.549+-0.15)",
-                        gHue.r, gHue.g, gHue.b);
+                    int er, eg, eb;
+                    FireRampAt(0.0f, er, eg, eb);   /* the brightest square of the last frame was just lit */
+                    verdict("I1", Near(gHue.r, er) && Near(gHue.g, eg) && Near(gHue.b, eb),
+                        "plain glyph color, fire damage: light %d,%d,%d need the fire ramp at age 0: %d,%d,%d (+-3)",
+                        gHue.r, gHue.g, gHue.b, er, eg, eb);
                     verdict("I2", gEnds == 1 && endF == 0 && post == pre,
                         "fire ray ends clean: end=%d flashes=%d same=%d", gEnds, endF,
                         (int)(post == pre));

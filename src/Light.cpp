@@ -63,7 +63,7 @@ struct LightSource {
   int32 fid;                   /* LK_FLASH: index into Flashes; LK_AURA: into AuraCells */
 };
 
-struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; };
+struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; int16 ci; }; /* ci: a flash footprint's nearest effect square (index into Flash::cells), else -1 */
 
 static Map    *lmMap = NULL;
 static bool    lmLegacy = false;    /* the option turned the lighting off */
@@ -80,12 +80,14 @@ static bool        anyFlicker = false;
 
 /* inc-jw0hw: a flash lives outside Src so it survives LightRebuild. Its level
    and noise are read by ComposeFrame; its footprint is rebuilt with the rest. */
-struct FlashCell { int16 x, y; };
+struct FlashCell { int16 x, y; float birth; };  /* birth: the flash clock when the square lit, ms */
 struct Flash {
   bool live;
-  LightRGB c, cur;             /* base colour; colour this frame (rainbow moves it) */
-  uint8 style;
+  LightRGB c;                  /* base colour; the ramp is built from it */
+  uint8 style, ramp;
   float gain, level, noise;
+  float clock, life;           /* the flash's own clock and a square's light life, ms */
+  bool glyphs;                 /* the effect's glyphs are on screen */
   int16 reach;
   uint32 seed;
   std::vector<FlashCell> cells;
@@ -344,7 +346,7 @@ static LightSource &NewSource() {
   return Src[nSrc++];
 }
 
-static void AddFoot(int32 idx, uint8 w, uint8 fr, uint8 fg, uint8 fb) {
+static void AddFoot(int32 idx, uint8 w, uint8 fr, uint8 fg, uint8 fb, int16 ci = -1) {
   if (nFoot == capFoot) {
     capFoot = capFoot ? capFoot * 2 : 1024;
     FootCell *n = new FootCell[capFoot];
@@ -352,7 +354,8 @@ static void AddFoot(int32 idx, uint8 w, uint8 fr, uint8 fg, uint8 fb) {
     delete[] Foot; Foot = n;
   }
   Foot[nFoot].idx = idx; Foot[nFoot].w = w;
-  Foot[nFoot].fr = fr; Foot[nFoot].fg = fg; Foot[nFoot].fb = fb; nFoot++;
+  Foot[nFoot].fr = fr; Foot[nFoot].fg = fg; Foot[nFoot].fb = fb;
+  Foot[nFoot].ci = ci; nFoot++;
 }
 
 static inline void AddScaled(LightRGB &d, LightRGB c, float k) {
@@ -548,24 +551,24 @@ static void CastAreaFootprint(Map *m, LightSource &s, const AreaSpec &fl) {
     if (fl.cells[i].y > y1) y1 = fl.cells[i].y;
   }
   const int16 bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-  std::vector<uint8> mark((size_t)bw * bh, 0);
+  std::vector<int32> mark((size_t)bw * bh, 0);   /* effect square index + 1 */
   for (size_t i = 0; i < fl.cells.size(); i++)
-    mark[(size_t)(fl.cells[i].y - y0) * bw + (fl.cells[i].x - x0)] = 1;
+    mark[(size_t)(fl.cells[i].y - y0) * bw + (fl.cells[i].x - x0)] = (int32)i + 1;
   const float g = fl.gain > 1.0f ? 1.0f : fl.gain;
   for (int16 y = y0 - fl.reach; y <= y1 + fl.reach; y++)
     for (int16 x = x0 - fl.reach; x <= x1 + fl.reach; x++) {
       if (!m->InBounds(x, y)) continue;
-      int16 best = 0x7fff, bx = 0, by = 0;
+      int16 best = 0x7fff, bx = 0, by = 0, bi = -1;
       for (int16 ny = y - fl.reach; ny <= y + fl.reach; ny++)
         for (int16 nx = x - fl.reach; nx <= x + fl.reach; nx++) {
           if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
           if (!mark[(size_t)(ny - y0) * bw + (nx - x0)]) continue;
           int16 d = dist(x, y, nx, ny);
-          if (d < best) { best = d; bx = nx; by = ny; }
+          if (d < best) { best = d; bx = nx; by = ny; bi = (int16)(mark[(size_t)(ny - y0) * bw + (nx - x0)] - 1); }
         }
       if (best > fl.reach) continue;
       if (best == 0) {
-        AddFoot((int32)y * lmW + x, (uint8)(g * 255.0f + 0.5f), 255, 255, 255);
+        AddFoot((int32)y * lmW + x, (uint8)(g * 255.0f + 0.5f), 255, 255, 255, bi);
         continue;
       }
       /* spill: 0.75 of the gain one square out, 0.45 two out (inc-jw0hw ruling) */
@@ -575,7 +578,7 @@ static void CastAreaFootprint(Map *m, LightSource &s, const AreaSpec &fl) {
       LightRGB filter;
       if (!FilterAlong(m, bx, by, x, y, filter)) continue;
       AddFoot((int32)y * lmW + x, (uint8)(w * 255.0f + 0.5f),
-              filter.r, filter.g, filter.b);
+              filter.r, filter.g, filter.b, bi);
     }
   s.count = nFoot - s.first;
 }
@@ -638,7 +641,7 @@ static void ScanFields(Map *m) {
       for (int16 y = f->cy - f->rad; y <= f->cy + f->rad; y++)
         for (int16 x = f->cx - f->rad; x <= f->cx + f->rad; x++)
           if (m->InBounds(x, y) && f->inArea(x, y)) {
-            FlashCell fc; fc.x = x; fc.y = y; cells.push_back(fc);
+            FlashCell fc; fc.x = x; fc.y = y; fc.birth = 0.0f; cells.push_back(fc);
           }
       Src[nSrc - 1].fid = (int32)AuraCells.size();
       AuraCells.push_back(cells);
@@ -769,15 +772,101 @@ static void SumSteady(Map *m) {
   }
 }
 
+/* inc-jw0hw: the cooling ramp. A square's light follows (age ms, color, level)
+   stops, linear between them, by that square's own age. The stops are written
+   for a 900 ms life; a flash's life L scales every stop time by L/900. */
+struct RampStop { float t; float r, g, b; float lv; };
+struct RampSet { RampStop s[6]; int n; };
+static inline float Hash01(uint32 h);
+static LightRGB HueSat(float h, float sat);
+
+static void RampPut(RampSet &rs, float t, float r, float g, float b, float lv) {
+  RampStop &st = rs.s[rs.n++];
+  st.t = t; st.r = r; st.g = g; st.b = b; st.lv = lv;
+}
+static void RampMix(RampSet &rs, float t, LightRGB c, float white, float lv) {
+  RampPut(rs, t, c.r + (255.0f - c.r) * white, c.g + (255.0f - c.g) * white,
+          c.b + (255.0f - c.b) * white, lv);
+}
+static void RampDarken(RampSet &rs, float t, LightRGB c, float k, float lv) {
+  RampPut(rs, t, c.r * k, c.g * k, c.b * k, lv);
+}
+static void BuildRamp(uint8 kind, LightRGB c, RampSet &rs) {
+  rs.n = 0;
+  if (kind == LR_FIRE) {
+    RampPut(rs,   0.0f, 255, 250, 220, 1.0f);
+    RampPut(rs, 120.0f, 255, 220,  80, 1.0f);
+    RampPut(rs, 300.0f, 255, 140,  30, 0.8f);
+    RampPut(rs, 550.0f, 200,  40,  10, 0.5f);
+    RampPut(rs, 800.0f,   0,   0,   0, 0.0f);
+    RampPut(rs, 900.0f,   0,   0,   0, 0.0f);
+  } else if (kind == LR_DARK) {
+    RampDarken(rs,   0.0f, c, 1.0f, 1.0f);
+    RampDarken(rs, 300.0f, c, 1.0f, 0.8f);
+    RampDarken(rs, 550.0f, c, 0.6f, 0.5f);
+    RampDarken(rs, 800.0f, c, 0.0f, 0.0f);
+    RampDarken(rs, 900.0f, c, 0.0f, 0.0f);
+  } else {
+    RampMix(rs,   0.0f, c, 0.85f, 1.0f);
+    RampMix(rs, 120.0f, c, 0.40f, 1.0f);
+    RampMix(rs, 300.0f, c, 0.00f, 0.8f);
+    RampDarken(rs, 550.0f, c, 0.6f, 0.5f);
+    RampDarken(rs, 800.0f, c, 0.0f, 0.0f);
+    RampDarken(rs, 900.0f, c, 0.0f, 0.0f);
+  }
+}
+static void RampAtAge(const RampSet &rs, float age, LightRGB &rgb, float &lv) {
+  int i = 0;
+  while (i + 1 < rs.n && age >= rs.s[i + 1].t) i++;
+  const RampStop &a = rs.s[i];
+  float r = a.r, g = a.g, b = a.b, l = a.lv;
+  if (i + 1 < rs.n) {
+    const RampStop &z = rs.s[i + 1];
+    const float f = (age - a.t) / (z.t - a.t);
+    r += (z.r - a.r) * f; g += (z.g - a.g) * f; b += (z.b - a.b) * f;
+    l += (z.lv - a.lv) * f;
+  }
+  rgb.r = LightChannel(r); rgb.g = LightChannel(g); rgb.b = LightChannel(b);
+  lv = l;
+}
+
+/* One effect square's ramp color and level. A spill square passes its nearest
+   effect square's index. A stale index (the flash's squares were replaced since
+   the footprint was cast) reads as a square born now. `pre` is the flash's ramp
+   when it does not depend on the square (every ramp but the rainbow's). */
+static void FlashStage(const Flash &fl, const RampSet *pre, int ci,
+                       LightRGB &rgb, float &lv) {
+  float birth = fl.clock;
+  int16 cx = 0, cy = 0;
+  if (ci >= 0 && ci < (int)fl.cells.size()) {
+    birth = fl.cells[ci].birth; cx = fl.cells[ci].x; cy = fl.cells[ci].y;
+  }
+  float age = fl.clock - birth;
+  if (age < 0.0f) age = 0.0f;
+  age *= 900.0f / (fl.life > 0.0f ? fl.life : 900.0f);
+  RampSet own;
+  if (!pre) {   /* the rainbow: each square keeps its own hue for the effect's life */
+    const float h = Hash01((uint32)cx * 73856093u ^ (uint32)cy * 19349663u ^ fl.seed);
+    BuildRamp(LR_GENERIC, HueSat(h, 0.8f), own);
+    pre = &own;
+  }
+  RampAtAge(*pre, age, rgb, lv);
+}
+
 static void ComposeFrame() {
   memcpy(Frame, Steady, sizeof(LightRGB) * lmCells);
   for (int32 i = 0; i < nSrc; i++) {
     const LightSource &s = Src[i];
     if (s.kind == LK_FLASH) {
       const Flash &fl = Flashes[s.fid];
-      for (int32 k = s.first; k < s.first + s.count; k++)
-        AddScaledF(Frame[Foot[k].idx], fl.cur,
-                   Foot[k].w / 255.0f * fl.level * fl.noise, Foot[k]);
+      RampSet set;
+      if (fl.ramp != LR_RAINBOW) BuildRamp(fl.ramp, fl.c, set);
+      for (int32 k = s.first; k < s.first + s.count; k++) {
+        LightRGB rgb; float lv;
+        FlashStage(fl, fl.ramp != LR_RAINBOW ? &set : NULL, Foot[k].ci, rgb, lv);
+        AddScaledF(Frame[Foot[k].idx], rgb,
+                   Foot[k].w / 255.0f * lv * fl.level * fl.noise, Foot[k]);
+      }
       continue;
     }
     if (s.amp <= 0.0f) continue;
@@ -862,10 +951,10 @@ static float Fbm(uint32 seed, float t, int16 octaves) {
   return norm > 0.0f ? sum / norm : 0.5f;
 }
 
-/* Pale hue at saturation 0.35, full value, for the rainbow flash. */
-static LightRGB PaleHue(float h) {
+/* A hue (0..1) at saturation `sat`, full value, for the rainbow flash. */
+static LightRGB HueSat(float h, float sat) {
   h -= floorf(h); h *= 6.0f;
-  int i = (int)h; float f = h - i, sat = 0.35f;
+  int i = (int)h; float f = h - i;
   float p = 1.0f - sat, q = 1.0f - sat * f, tt = 1.0f - sat * (1.0f - f);
   float r, g, b;
   switch (i % 6) {
@@ -885,7 +974,7 @@ static void TickFlashes(float t) {
   for (size_t i = 0; i < Flashes.size(); i++) {
     Flash &fl = Flashes[i];
     if (!fl.live) continue;
-    fl.noise = 1.0f; fl.cur = fl.c;
+    fl.noise = 1.0f;
     switch (fl.style) {
       case LF_FIRE: {
         float n = Fbm(fl.seed, t * 11.0f, 4);
@@ -895,9 +984,6 @@ static void TickFlashes(float t) {
       case LF_ARC:   /* a hashed step, not smooth noise */
         fl.noise = Hash01(fl.seed ^ ((uint32)floorf(t * 15.0f) * 2654435761u)) < 0.5f
                    ? 1.0f : 0.5f;
-        break;
-      case LF_RAINBOW:
-        fl.cur = PaleHue(t / 2.0f);
         break;
       default: break;
     }
@@ -972,13 +1058,23 @@ bool LightFlashDisabled() {
   return getenv("INCURSION_EFFECT_LIGHT_OFF") != NULL;
 }
 
-int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach) {
+uint8 LightFlashRampFor(int16 blastColour) {
+  switch (blastColour) {
+    case COL_FIRE: return LR_FIRE;
+    case COL_NECRO: case COL_DARKRED: return LR_DARK;
+    case COL_RAINBOW: return LR_RAINBOW;
+  }
+  return LR_GENERIC;
+}
+
+int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach, uint8 ramp) {
   if (LightFlashDisabled()) return -1;
   size_t id = 0;
   while (id < Flashes.size() && Flashes[id].live) id++;
   if (id == Flashes.size()) Flashes.push_back(Flash());
   Flash &fl = Flashes[id];
-  fl.live = true; fl.c = fl.cur = c; fl.style = style; fl.gain = gain;
+  fl.live = true; fl.c = c; fl.style = style; fl.ramp = ramp; fl.gain = gain;
+  fl.clock = 0.0f; fl.life = 900.0f; fl.glyphs = false;
   fl.level = 1.0f; fl.noise = 1.0f; fl.reach = reach < 0 ? 0 : reach;
   fl.seed = (++flashSeq) * 2654435761u ^ (uint32)id * 40503u;
   fl.cells.clear();
@@ -996,7 +1092,7 @@ void LightFlashCell(int32 id, int16 x, int16 y) {
   if (!fl) return;
   for (size_t i = 0; i < fl->cells.size(); i++)
     if (fl->cells[i].x == x && fl->cells[i].y == y) return;
-  FlashCell fc = { x, y };
+  FlashCell fc = { x, y, fl->clock };
   fl->cells.push_back(fc);
 }
 
@@ -1004,7 +1100,7 @@ void LightFlashMoveTo(int32 id, int16 x, int16 y) {
   Flash *fl = FlashById(id);
   if (!fl) return;
   fl->cells.clear();
-  FlashCell fc = { x, y };
+  FlashCell fc = { x, y, fl->clock };
   fl->cells.push_back(fc);
 }
 
@@ -1013,6 +1109,50 @@ void LightFlashLevel(int32 id, float level) {
   if (!fl) return;
   fl->level = level < 0.0f ? 0.0f : (level > 1.0f ? 1.0f : level);
   if (lmMap && Frame) ComposeFrame();
+}
+
+void LightFlashSetClock(int32 id, float ms) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  fl->clock = ms < 0.0f ? 0.0f : ms;
+  if (lmMap && Frame) ComposeFrame();
+}
+
+void LightFlashSetLife(int32 id, float ms) {
+  Flash *fl = FlashById(id);
+  if (fl && ms > 0.0f) fl->life = ms;
+}
+
+void LightFlashGlyphs(int32 id, bool shown) {
+  Flash *fl = FlashById(id);
+  if (fl) fl->glyphs = shown;
+}
+
+bool LightFlashSpent(int32 id) {
+  const Flash *fl = FlashById(id);
+  if (!fl) return true;
+  for (size_t i = 0; i < fl->cells.size(); i++)
+    if (fl->clock - fl->cells[i].birth < fl->life) return false;
+  return true;
+}
+
+bool LightEffectGlyphAt(int16 x, int16 y, LightRGB &rgb) {
+  if (lmLegacy || !lmMap) return false;
+  for (size_t i = 0; i < Flashes.size(); i++) {
+    const Flash &fl = Flashes[i];
+    if (!fl.live || !fl.glyphs) continue;
+    for (size_t k = 0; k < fl.cells.size(); k++) {
+      if (fl.cells[k].x != x || fl.cells[k].y != y) continue;
+      RampSet set;
+      BuildRamp(fl.ramp, fl.c, set);
+      LightRGB c; float lv;
+      FlashStage(fl, fl.ramp != LR_RAINBOW ? &set : NULL, (int)k, c, lv);
+      if (lv <= 0.0f) return false;
+      rgb = c;
+      return true;
+    }
+  }
+  return false;
 }
 
 void LightFlashRemove(int32 id) {

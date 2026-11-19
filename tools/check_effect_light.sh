@@ -13,7 +13,11 @@
 # fact: player's sight in case C -- the probe makes the player's eight neighbors opaque
 # fact: aim square -- the probe aims every cast at (PX+8, PY), a fixed offset from the player's fixed square
 # fact: kobold squares -- the probe places each kobold at a fixed offset from the aim square or the player
+# fact: a square's age -- the flash's own clock, set by the probe (LightFlashSetClock) or the sum of the ball's ring waits; never the wall clock
+# fact: the ruled fire ramp -- the probe's own table (FireRampAt), from logs/ramp-mock/mock.py
 # fact: messages a cast prints -- the same seeded run twice, flash on and flash off; the probe records MsgHistory
+# Cases R1-R3 add: a square's light cools by its own age (fire, then no white stage for dark energy), and a Fireball
+# under OPT_ANIMATION None ends with no flash left.
 # Cases B (Fireball) and B2 (a globe, Sleep) add: the effect lights while it shows, is gone at its
 # end hook and after the cast returns, and a flash on and a flash off print the same set of messages.
 # Exit 0 on PASS, 1 on FAIL, 2 on INCONCLUSIVE or no EFFECT_LIGHT line.

@@ -1817,10 +1817,13 @@ EvReturn Magic::AGlobe(EventInfo &e)
               if (GlobeGlyphHook) GlobeGlyphHook(x,y,was,T1->GetGlyph(x,y));
             }
       T1->Update();
-      PossiblyPause(T1,cx,cy, e.EActor->isPlayer() ? 1500 : 500);
+      const int16 globeHold = e.EActor->isPlayer() ? 1500 : 500;
+      fx.SetGlyphTime(globeHold);
+      if (PossiblyPause(T1,cx,cy,0))
+        fx.Wait(globeHold);
       T1->RefreshMap();
       T1->Update();
-      fx.Ramp(250,1,0);
+      fx.Tail();
       fx.End();
       }
     
@@ -2293,7 +2296,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
          o.DeActivate();                        \
          overlayOff = true;                     \
          T1->ShowMap();                         \
-         trail->Ramp(isMulti ? 100 : 250, 1, 0);\
+         trail->Tail();                         \
          }                                      \
        trail->End();                            \
        trail.reset();                           \
@@ -2598,7 +2601,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         else trail->MoveTo(cx/2,cy/2);
         trail->Refresh();
         }
-      PossiblyPause(T1,cx/2,cy/2,35);
+      if (trail) {
+        if (PossiblyPause(T1,cx/2,cy/2,0))
+          trail->Wait(35);
+      } else
+        PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {
         o.DeActivate();
         o.Activate();
@@ -2854,7 +2861,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       o.ShowGlyphs();
       if (nDraw) {
         fx.Refresh();
-        T1->StopWatch(70);
+        fx.Wait(70);
         anyDrawn = true;
         }
       if (BallRingHook)
@@ -2868,7 +2875,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     o.DeActivate();
     if (anyDrawn) {
       T1->ShowMap();
-      fx.Ramp(250,1,0);
+      fx.Tail();
     }
     fx.End();
     m.UnsetQueue(QUEUE_AREA_EFFECT);

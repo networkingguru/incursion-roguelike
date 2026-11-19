@@ -1,5 +1,6 @@
 /* EFFECTLIGHT.H -- inc-jw0hw. One animated effect's light: a flash in the light
-   map (inc/Light.h) that spell code lights, holds, fades and ends. The light
+   map (inc/Light.h) that spell code lights, holds, cools and ends. The effect
+   keeps its own clock: every wait it issues advances the clock by that wait. The light
    MUST end (End()) before any hit of the effect is resolved: vision and hiding
    read the light map. The destructor only covers early exits. */
 
@@ -36,7 +37,9 @@ struct EffectLight {
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
   void Refresh();                 /* light, vision, memory and overlay */
   void Hold(int16 ms);
-  void Ramp(int16 ms, float from, float to);
+  void Wait(int16 ms);            /* a wait that advances the effect clock */
+  void SetGlyphTime(int16 glyphMs); /* a globe: its light outlives its glyphs */
+  void Tail();                    /* glyphs gone: cool every square, then call End() */
   void End();
 private:
   bool Sees(int16 x, int16 y);
@@ -49,6 +52,9 @@ private:
   int32 id;
   bool ended;
   bool lit;
+  uint8 ramp;
+  float clockMs, life;   /* the effect clock and a square's light life, ms */
+  bool glyphsOn;
 };
 
 #endif

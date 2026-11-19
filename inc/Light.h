@@ -85,21 +85,37 @@ LightRGB LightGlow(int idx, LightRGB L);
 LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L);
 
 /* Effect light (inc-jw0hw). A flash is one lit AREA: the effect's own squares
-   plus a spill of `reach` squares. It survives LightRebuild, and spell code
-   changes its level while the animation runs. The level changes only the drawn
-   color: vision counts a live flash at full weight whatever its level. */
+   plus a spill of `reach` squares. It survives LightRebuild. Each flash keeps
+   its own clock in milliseconds, set by spell code, never read from the wall
+   clock. Every effect square stores the clock at which it lit; its color and
+   level follow the flash's cooling ramp by that square's own age, and a spill
+   square takes the age of its nearest effect square. The level scales only the
+   drawn color: vision counts a live flash at full weight whatever its level. */
 // family: light-flash-style internal
 enum { LF_STEADY = 0, LF_FIRE = 1, LF_ARC = 2, LF_RAINBOW = 3 };
 // end family: light-flash-style
+// family: light-flash-ramp internal
+enum { LR_GENERIC = 0, LR_FIRE = 1, LR_DARK = 2, LR_RAINBOW = 3 };
+// end family: light-flash-ramp
 LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SUNYELLOW, or a palette index 0..15 */
-int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach); /* id >= 0, or -1 when disabled */
-void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square */
+uint8 LightFlashRampFor(int16 blastColour);     /* the LR_* ramp a light color takes */
+int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach,
+                    uint8 ramp = LR_GENERIC);  /* id >= 0, or -1 when disabled */
+void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square, born at the flash clock */
 void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
 void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
+void  LightFlashSetClock(int32 id, float ms);       /* the flash clock; recomposes the frame */
+void  LightFlashSetLife(int32 id, float ms);        /* how long a square's light lives (default 900) */
+void  LightFlashGlyphs(int32 id, bool shown);       /* the effect's glyphs are on screen */
+bool  LightFlashSpent(int32 id);                    /* every square's age has passed the life */
 void  LightFlashRemove(int32 id);
 void  LightFlashClearAll();
 int32 LightFlashCount();
 bool  LightFlashDisabled();                         /* INCURSION_EFFECT_LIGHT_OFF is set */
+/* The SDL glyph ramp: true when a live flash whose glyphs are shown has an
+   effect square at x,y with level above zero; rgb is that square's ramp color
+   at full value. */
+bool  LightEffectGlyphAt(int16 x, int16 y, LightRGB &rgb);
 
 /* Aura circles (inc-jw0hw): one per modifier or blocker field that gives no light. */
 int32 LightAuraCount();

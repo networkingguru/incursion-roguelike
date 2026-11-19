@@ -74,7 +74,8 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
                          TEffect *te)
-    : map(m), id(-1), ended(false), lit(true) {
+    : map(m), id(-1), ended(false), lit(true), clockMs(0.0f), life(900.0f),
+      glyphsOn(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
     lit = d.lit;
@@ -92,8 +93,12 @@ EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
   if (blastColour == COL_RAINBOW) style = LF_RAINBOW;
   gain = blastColour == COL_SONIC ? 0.6f : 1.0f;
   colour = LightEffectColour(blastColour);
-  if (lit)
-    id = LightFlashAdd(colour, style, gain, reach);
+  ramp = LightFlashRampFor(blastColour);
+  if (shape == EL_BEAM) life = 300.0f;   /* beams rise fast and fade just as fast */
+  if (lit) {
+    id = LightFlashAdd(colour, style, gain, reach, ramp);
+    LightFlashSetLife(id, life);
+  }
 }
 
 EffectLight::~EffectLight() {
@@ -120,9 +125,13 @@ void EffectLight::MoveTo(int16 x, int16 y) {
   /* An unseen square empties the area; a seen one refills it. */
   if (id >= 0)
     LightFlashRemove(id);
-  id = Sees(x, y) ? LightFlashAdd(colour, style, gain, reach) : -1;
-  if (id >= 0)
+  id = Sees(x, y) ? LightFlashAdd(colour, style, gain, reach, ramp) : -1;
+  if (id >= 0) {
+    LightFlashSetLife(id, life);
+    LightFlashSetClock(id, clockMs);   /* the new square is born now */
+    LightFlashGlyphs(id, glyphsOn);
     LightFlashCell(id, x, y);
+  }
 }
 
 void EffectLight::Show() {
@@ -132,24 +141,60 @@ void EffectLight::Show() {
 }
 
 void EffectLight::Refresh() {
+  glyphsOn = true;   /* the caller's glyphs are on screen from here until Tail() */
+  if (id >= 0) LightFlashGlyphs(id, true);
   Show();
   if (EffectLightHook) EffectLightHook(EL_LIT);
 }
 
 void EffectLight::Hold(int16 ms) {
   if (EffectLightHook) EffectLightHook(EL_HOLD);
-  T1->StopWatch(ms);
+  Wait(ms);
 }
 
-void EffectLight::Ramp(int16 ms, float from, float to) {
-  if (id < 0)
+/* A wait of `ms` in steps of about 33 ms. Each step advances the effect clock by
+   exactly its own length, so the ramp animates through the wait and the total is
+   exactly `ms`. With no flash the wait is one StopWatch, as before. */
+void EffectLight::Wait(int16 ms) {
+  if (ms <= 0)
     return;
-  const int steps = ms / 33 > 0 ? ms / 33 : 1;
-  for (int i = 1; i < steps; i++) {
-    LightFlashLevel(id, from + (to - from) * (float)i / (float)steps);
+  const int steps = id < 0 ? 1 : (ms + 32) / 33;
+  int done = 0;
+  for (int i = 1; i <= steps; i++) {
+    const int upto = ms * i / steps;
+    clockMs += (float)(upto - done);
+    if (id >= 0)
+      LightFlashSetClock(id, clockMs);
+    T1->StopWatch((int16)(upto - done));
+    done = upto;
+  }
+}
+
+/* A globe's glyphs stay up for `glyphMs`; its light lives 1.25 times as long, so
+   a long hold never shows black glyphs. */
+void EffectLight::SetGlyphTime(int16 glyphMs) {
+  const float want = 1.25f * (float)glyphMs;
+  life = want > 900.0f ? want : 900.0f;
+  if (id >= 0)
+    LightFlashSetLife(id, life);
+}
+
+/* The glyphs are gone: let each square finish cooling, 33 ms at a time. */
+void EffectLight::Tail() {
+  glyphsOn = false;
+  if (id < 0 || ended)
+    return;
+  LightFlashGlyphs(id, false);
+  Player *p = theGame->GetPlayer(0);
+  if (p && p->Opt(OPT_ANIMATION) == 2)   /* None: no animation to finish */
+    return;
+  const int most = (int)(life / 33.0f) + 3;
+  for (int i = 0; i < most && !LightFlashSpent(id); i++) {
+    clockMs += 33.0f;
+    LightFlashSetClock(id, clockMs);
+    Show();
     T1->StopWatch(33);
   }
-  LightFlashLevel(id, to);
 }
 
 void EffectLight::End() {

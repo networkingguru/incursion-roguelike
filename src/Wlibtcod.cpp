@@ -1248,6 +1248,11 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB base = lc.ice ? LIGHT_ICE_BASE : LightPaletteRGB(lc.fi);
 	LightRGB fg = lc.remembered ? LightMemoryBase(base, lc.floor, explored)
 	                            : LightShadeBase(base, L, lc.floor);
+	/* inc-jw0hw: an effect glyph on a square its flash lights takes that
+	   square's ramp color at full value. */
+	LightRGB eg;
+	if (!lc.remembered && LightEffectGlyphAt(lc.mx, lc.my, eg))
+		fg = eg;
 	LightRGB bg = LightGlow(lc.bi, L);
 	LightRGB fogc;
 	if (LightFogAt(lc.mx, lc.my, fogc))
