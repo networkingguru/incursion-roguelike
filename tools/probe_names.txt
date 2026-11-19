@@ -122,6 +122,7 @@ INCURSION_MAX_KEYS	pre-registry	-
 INCURSION_MONINIT_PROBE	pre-registry	-
 INCURSION_MONSTER_FEAT_PROBE	pre-registry	-
 INCURSION_MONWIELD_PROBE	pre-registry	-
+INCURSION_MOUNT_FIELD_PROBE	inc-h5v6o	ridden mount gets rider field events oracle (tools/check_mount_field.sh)
 INCURSION_MOUNT_SIZE_PROBE	pre-registry	-
 INCURSION_MULTIPLY_NOROOM	pre-registry	-
 INCURSION_MULTIPLY_STAGE	pre-registry	-

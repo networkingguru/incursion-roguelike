@@ -1446,6 +1446,21 @@ StartAgain:
         }
 }
 
+/* upstream: a ridden mount must receive every field event its rider receives.
+   Mount takes it off the map list, so MapIterate misses it; only Thing::Move
+   notified it. Plain control flow, same on Win32 with the original typedefs.
+   Observed (MoveField, seed 143), Traced (NewField, RemoveField); inc-h5v6o;
+   not sent. */
+static void ThrowFieldWithMount(int16 Ev, Field *f, Thing *t) {
+    ThrowField(Ev,f,t);
+    if (!t->isCreature() || !t->HasStati(MOUNTED))
+        return;
+    Thing *mount = t->GetStatiObj(MOUNTED);
+    if (mount && theRegistry->Exists(mount->myHandle) &&
+            mount->myHandle != f->Creator)
+        ThrowField(Ev,f,mount);
+}
+
 void Map::RemoveField(Field *f) {
     Thing *t;
     Field cf = *f;
@@ -1469,7 +1484,7 @@ void Map::RemoveField(Field *f) {
             VUpdate(cf.cx,cf.cy);
             MapIterate(this,t,j)
                 if (cf.inArea(t->x,t->y)) {
-                    ThrowField(EV_FIELDOFF,&cf,t);
+                    ThrowFieldWithMount(EV_FIELDOFF,&cf,t);
                 }
             return;
         }
@@ -1540,7 +1555,7 @@ void Map::NewField(int32 FType, int16 x, int16 y, uint8 rad,Glyph Img, int16 Dur
 
     MapIterate(this,t,i)
         if (f->inArea(t->x,t->y))
-            ThrowField(EV_FIELDON,f,t);
+            ThrowFieldWithMount(EV_FIELDON,f,t);
 }
 
 uint8 Field::FieldDC()
@@ -1730,9 +1745,9 @@ Restart:
 
     /* Let everybody know what happened */
     for(i=0;i!=lc;i++)
-        ThrowField(EV_FIELDOFF,f,Leaving[i]);
+        ThrowFieldWithMount(EV_FIELDOFF,f,Leaving[i]);
     for(i=0;i!=ec;i++)
-        ThrowField(EV_FIELDON,f,Entering[i]);
+        ThrowFieldWithMount(EV_FIELDON,f,Entering[i]);
 
     return DONE;
 }
