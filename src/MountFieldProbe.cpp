@@ -43,6 +43,7 @@ static Field *mfLast(Map *m) {
 }
 
 void MountFieldProbe(Player *pl) {
+    /* inc-h5v6o: off unless INCURSION_MOUNT_FIELD_PROBE is set. */
     if (!getenv("INCURSION_MOUNT_FIELD_PROBE")) return;
     rID kob = FIND("kobold"), pony = FIND("pony"), globe = FIND("Globe of Shadow");
     if (!pl || !pl->m || !kob || !pony || !globe) {
