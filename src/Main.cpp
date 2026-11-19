@@ -621,6 +621,10 @@ void Game::Play() {
     extern void EatFatigueProbe(Player *pl);
     EatFatigueProbe(pp);
 
+    /* inc-jahch: opt-in interrupted-rest, waiting and AutoRest fatigue oracle. */
+    extern void FatigueRestProbe(Player *pl);
+    FatigueRestProbe(pp);
+
     /* inc-n3eni: opt-in WAS_FRIENDLY-once oracle; see WasFriendlyProbe. */
     extern void WasFriendlyProbe(Player *pl);
     WasFriendlyProbe(pp);
