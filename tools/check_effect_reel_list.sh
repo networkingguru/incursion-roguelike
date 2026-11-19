@@ -3,7 +3,8 @@
 # inc-jw0hw (Review Focus 5): the effect reel misses no effect kind. The probe
 # (INCURSION_EFFECT_REEL, src/EffectReelProbe.cpp) lists, from the loaded
 # module, every effect whose first component is EA_BLAST, or AR_GLOBE, or an
-# AR_FIELD/AR_MFIELD with FI_MODIFIER or FI_BLOCKER, and one Breath Weapon per
+# AR_FIELD/AR_MFIELD with FI_MODIFIER or FI_BLOCKER, or that carries EF_COLOR_PATTERN
+# (a beam or bolt that draws the color pattern), and one Breath Weapon per
 # damage type a monster breathes. This check counts the same things in
 # lib/program.i by text, independently of the engine, and compares the two
 # counts per kind. The probe logs one REEL line or one REEL_SKIP line per effect
@@ -90,6 +91,10 @@ while i < len(lines):
         text = "\n".join(comp)
         a = re.search(r'\baval: (\d+);', text)
         aval = int(a.group(1)) if a else 0
+        flags = set()
+        f = re.search(r'\bFlags: ([0-9, ]+);', text)
+        if f:
+            flags = set(int(v) for v in f.group(1).split(",") if v.strip())
         rval = 0
         r = re.search(r'\brval: ([^;]*);', text)
         if r and re.fullmatch(r'[0-9a-fx| ]+', r.group(1).strip()):
@@ -102,6 +107,8 @@ while i < len(lines):
                 kinds["globe"] += 1
             elif aval in (7, 9) and (rval & 0x24):
                 kinds["aura"] += 1
+            elif 117 in flags:   # EF_COLOR_PATTERN (inc/Defines.h): a beam or bolt that draws the color pattern
+                kinds["pattern"] += 1
     if section == "Monster":
         mon_lines.append(ln)
     elif mon_lines:
@@ -112,7 +119,7 @@ kinds["breath"] = len(breath)
 
 probe = collections.Counter()
 for ln in open(log, encoding="latin-1"):
-    m = re.search(r'  REEL \d+ .* (blast|globe|aura|breath)$', ln)
+    m = re.search(r'  REEL \d+ .* (blast|globe|aura|breath|pattern)$', ln)
     if m:
         probe[m.group(1)] += 1
         continue
@@ -122,10 +129,10 @@ for ln in open(log, encoding="latin-1"):
         # kind the text count gives it, so count it under "skipped" and add it below
         probe["skipped"] += 1
 
-total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "breath"))
-total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "breath")) + probe["skipped"]
+total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "breath", "pattern"))
+total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "breath", "pattern")) + probe["skipped"]
 print("kind    text-count  probe-reels")
-for k in ("blast", "globe", "aura", "breath"):
+for k in ("blast", "globe", "aura", "breath", "pattern"):
     print("%-7s %10d  %11d" % (k, kinds[k], probe[k]))
 print("skipped %10s  %11d" % ("-", probe["skipped"]))
 print("total   %10d  %11d" % (total_text, total_probe))
@@ -133,7 +140,7 @@ bad = []
 if kinds["breath"] != probe["breath"]:
     bad.append("breath")
 deficit = 0
-for k in ("blast", "globe", "aura"):
+for k in ("blast", "globe", "aura", "pattern"):
     if probe[k] > kinds[k]:
         bad.append(k + " (probe lists more than the text)")
     else:
@@ -145,6 +152,6 @@ if total_text != total_probe:
 if bad:
     print("FAIL: the probe's list differs from the text count in: " + ", ".join(bad))
     sys.exit(1)
-print("PASS: the reel lists every blast, globe, aura field and breath type in lib/program.i.")
+print("PASS: the reel lists every blast, globe, aura field, color pattern and breath type in lib/program.i.")
 PY
 exit $?

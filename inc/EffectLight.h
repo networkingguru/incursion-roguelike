@@ -43,6 +43,11 @@ struct EffectLight {
   ~EffectLight();
   void Light(int16 x, int16 y);   /* only if the player has line of sight to it */
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
+  float Clock() const { return clockMs; }   /* the effect clock, ms */
+  /* inc-jw0hw: a lit square takes the light color of palette color `glyphColour`;
+     its age on the ramp keeps running. A square not lit by Light() is ignored. */
+  void SetCellColour(int16 x, int16 y, int16 glyphColour);
+  void Redraw();                  /* repaint the map without a hook call */
   void Refresh();                 /* light, vision, memory and overlay */
   void Hold(int16 ms);
   void Wait(int16 ms);            /* a wait that advances the effect clock */

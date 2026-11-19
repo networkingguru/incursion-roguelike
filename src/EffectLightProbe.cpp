@@ -21,6 +21,7 @@ extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
 extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g);
 extern void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g);
+extern void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
 
@@ -314,6 +315,25 @@ void MeanderRecHook(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g) {
     MeanderRec r; r.lx = lx; r.ly = ly; r.dx = dx; r.dy = dy; r.g = g;
     gArcCur.push_back(r);
 }
+
+/* Cases CP1-CP6 (inc-jw0hw): the color pattern. One record per pick: the glyph and palette color, the
+   effect clock, and whether the square's light base color equals LightEffectColour of that glyph color. */
+struct CpPick { int x, y; int g, col; float clk; bool pair; };
+std::vector<CpPick> gCp;
+int gCpLit;
+void CpHook(int16 x, int16 y, Glyph g, int16 col, float clk) {
+    CpPick p;
+    p.x = x; p.y = y; p.g = (int)g; p.col = col; p.clk = clk;
+    LightRGB t = { 0, 0, 0 };
+    const bool have = LightFlashTintAt(x, y, t);
+    const LightRGB w = LightEffectColour(col);
+    p.pair = have && t.r == w.r && t.g == w.g && t.b == w.b;
+    gCp.push_back(p);
+}
+void CpElHook(int phase) { if (phase == EL_LIT) ++gCpLit; }
+/* A pattern glyph is a symbol (never a letter, digit or @); a pattern color is a saturated palette color. */
+bool CpGlyphOk(int g) { return g > 0 && g < 256 && g != ' ' && !isalnum(g) && g != '@'; }
+bool CpColourOk(int c) { return c > BLACK && c < WHITE && c != GREY && c != SHADOW; }
 
 /* Case G3 (inc-6dd41): the glyph a globe's highlight leaves on a square. */
 int gGlyphN, gGlyphBad, gGlyphCval;
@@ -1325,6 +1345,203 @@ void EffectLightProbe(Player *pl) {
                                 "lightning: %d spell squares, all on row %d from x=%d in order, matching the drawn path's line squares=%d",
                                 (int)gSx.size(), PY, PX, (int)straight);
                         }
+                    }
+                }
+            }
+
+            /* CP: the color pattern (inc-jw0hw). Hypnotic Pattern, Colour Spray and Chromatic Orb draw a
+               random symbol in a random color on every square they show; the square's light follows the color. */
+            if (!off) {
+                const rID hypno = FIND("Hypnotic Pattern"), spray = FIND("Colour Spray"),
+                    orb = FIND("Chromatic Orb"), nightmare = FIND("Nightmare smite;actual blast");
+                if (!hypno || !spray || !orb || !nightmare || !fire || !kobold ||
+                    !TEFF(hypno)->HasFlag(EF_COLOR_PATTERN) || !TEFF(spray)->HasFlag(EF_COLOR_PATTERN) ||
+                    !TEFF(orb)->HasFlag(EF_COLOR_PATTERN) || TEFF(nightmare)->HasFlag(EF_COLOR_PATTERN)) {
+                    inconclusive("CP", "a color-pattern spell is missing or lacks EF_COLOR_PATTERN, or Nightmare smite carries it");
+                } else if (LightMode(pl) == LIGHT_LEGACY) {
+                    inconclusive("CP", "the light map is legacy");
+                } else {
+                    const int KHP = 500;
+                    /* One cast in a dark room. Kobolds stand at the given x on the cast row; victim -1 aims at
+                       (tx, PY) with no chosen creature. */
+                    auto cpCast = [&](rID eid, int nk, const int *kx, int victim, int tx, bool extend, int anim) {
+                        BuildDark(mp, pl, floor, wall);
+                        LightFlashClearAll();
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        Monster *kobs[3] = { NULL, NULL, NULL };
+                        for (int i = 0; i < nk; ++i) {
+                            kobs[i] = new Monster(kobold);
+                            kobs[i]->PlaceAt(mp, kx[i], PY, true);
+                            kobs[i]->Initialize(true);
+                            kobs[i]->mHP = kobs[i]->cHP = KHP;
+                        }
+                        gStruckGrid.assign((size_t)mp->SizeX() * mp->SizeY(), 0);
+                        gSx.clear(); gSy.clear();
+                        gOpen = true; gCp.clear(); gCpLit = 0;
+                        Refresh(pl);
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        term->MsgHistory[0] = 0;
+                        AreaProbeXYHook = NoteXY; EffectLightHook = CpElHook; PatternHook = CpHook;
+                        pl->Options[OPT_ANIMATION] = (int8)anim;
+                        EventInfo xe; xe.Clear();
+                        xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = true;
+                        xe.isLoc = true; xe.EXVal = tx; xe.EYVal = PY;
+                        if (victim >= 0) xe.EVictim = kobs[victim];
+                        if (extend) xe.MM |= MM_EXTEND;   /* as the effect reel: the range doubles */
+                        ReThrow(EV_EFFECT, xe);
+                        pl->Options[OPT_ANIMATION] = 0;
+                        AreaProbeXYHook = NULL; EffectLightHook = NULL; PatternHook = NULL;
+                    };
+                    /* What every pick must keep: its glyph and color in range, its light base color the glyph's
+                       color, and the picks of one square 80 to 150 ms apart on the effect clock. */
+                    struct CpStat { int picks, squares, badGlyph, badColour, badPair, badGap, minPer, maxPer, diffPairs, colours, glyphs, firstBad; };
+                    auto cpStat = [&](CpStat &st) {
+                        st.picks = (int)gCp.size();
+                        st.squares = st.badGlyph = st.badColour = st.badPair = st.badGap = st.diffPairs = st.firstBad = 0;
+                        st.minPer = 1000000; st.maxPer = 0;
+                        int colMask = 0; std::vector<int> glyphSeen;
+                        std::vector<std::vector<int> > per((size_t)mp->SizeX() * mp->SizeY());
+                        for (size_t i = 0; i < gCp.size(); ++i) {
+                            const CpPick &p = gCp[i];
+                            if (!CpGlyphOk(p.g)) ++st.badGlyph;
+                            if (!CpColourOk(p.col)) ++st.badColour;
+                            if (!p.pair) ++st.badPair;
+                            if (p.col >= 0 && p.col < 16) colMask |= 1 << p.col;
+                            bool known = false;
+                            for (size_t k = 0; k < glyphSeen.size(); ++k) known = known || glyphSeen[k] == p.g;
+                            if (!known) glyphSeen.push_back(p.g);
+                            per[(size_t)p.y * mp->SizeX() + p.x].push_back((int)i);
+                        }
+                        for (size_t q = 0; q < per.size(); ++q) {
+                            const std::vector<int> &v = per[q];
+                            if (v.empty()) continue;
+                            ++st.squares;
+                            if ((int)v.size() < st.minPer) st.minPer = (int)v.size();
+                            if ((int)v.size() > st.maxPer) st.maxPer = (int)v.size();
+                            for (size_t k = 1; k < v.size(); ++k) {
+                                const float gap = gCp[v[k]].clk - gCp[v[k - 1]].clk;
+                                if (gap < 80.0f || gap > 150.0f) ++st.badGap;
+                                if (gCp[v[k]].col != gCp[v[k - 1]].col) ++st.diffPairs;
+                            }
+                        }
+                        st.colours = 0;
+                        for (int c = 0; c < 16; ++c) st.colours += (colMask >> c) & 1;
+                        st.glyphs = (int)glyphSeen.size();
+                    };
+                    /* CP1: Hypnotic Pattern on a kobold. Every square of the globe that the player sees gets at least
+                       10 picks through the 1500 ms hold; no square outside it gets one. */
+                    {
+                        const int kx[1] = { aimX };
+                        cpCast(hypno, 1, kx, -1, aimX, false, 0);
+                        CpStat st; cpStat(st);
+                        const int R = TEFF(hypno)->ef.lval;
+                        int nExp = 0, nGot = 0, outside = 0;
+                        std::vector<char> got((size_t)mp->SizeX() * mp->SizeY(), 0);
+                        for (size_t i = 0; i < gCp.size(); ++i) got[(size_t)gCp[i].y * mp->SizeX() + gCp[i].x] = 1;
+                        for (int y = 0; y < mp->SizeY(); ++y)
+                            for (int x = 0; x < mp->SizeX(); ++x) {
+                                const bool want = dist(aimX, PY, x, y) <= R && !mp->At(x, y).Solid &&
+                                    mp->LineOfSight(PX, PY, x, y, pl);
+                                const bool has = got[(size_t)y * mp->SizeX() + x] != 0;
+                                nExp += want;
+                                if (want && has) ++nGot;
+                                if (!want && has) ++outside;
+                            }
+                        float firstMax = 0.0f;
+                        for (size_t i = 0; i < gCp.size(); ++i) if (gCp[i].clk > firstMax && gCp[i].clk < 1.0f) firstMax = gCp[i].clk;
+                        verdict("CP1", nExp > 0 && nGot == nExp && outside == 0 && st.minPer >= 10 && st.badGap == 0 &&
+                            st.colours >= 4 && st.glyphs >= 4 && st.badGlyph == 0 && st.badColour == 0 && st.badPair == 0 &&
+                            st.diffPairs >= 1 && gCpLit >= 1,
+                            "radius %d: %d squares expected, %d picked, %d picked outside; picks per square %d..%d (need 10+); "
+                            "%d gaps outside 80..150 ms; %d colors, %d glyphs (need 4+ each); %d bad glyphs, %d bad colors; "
+                            "%d picks whose light base color is not LightEffectColour of the glyph color; %d re-picks changed the color; %d light frames",
+                            R, nExp, nGot, outside, st.minPer, st.maxPer, st.badGap, st.colours, st.glyphs, st.badGlyph, st.badColour,
+                            st.badPair, st.diffPairs, gCpLit);
+                    }
+                    /* CP2: Colour Spray east through two kobolds: a pick on every square the beam draws and no other,
+                       the pairing holds, the spell's own squares are the straight line, and both kobolds are struck. */
+                    {
+                        const int kx[2] = { PX + 3, PX + 6 };
+                        cpCast(spray, 2, kx, -1, PX + 10, true, 0);
+                        CpStat st; cpStat(st);
+                        bool line = gSx.size() >= 6;
+                        for (size_t i = 0; line && i < gSx.size(); ++i)
+                            line = gSy[i] == PY && gSx[i] == gSx[0] + (int)i && (gSx[0] == PX || gSx[0] == PX + 1);
+                        bool same = !gCp.empty(), k1 = false, k2 = false;
+                        for (size_t i = 0; i < gCp.size(); ++i) {
+                            bool in = false;
+                            for (size_t k = 0; k < gSx.size(); ++k) in = in || (gSx[k] == gCp[i].x && gSy[k] == gCp[i].y);
+                            same = same && in;
+                        }
+                        for (size_t k = 0; k < gSx.size(); ++k) {
+                            bool drew = false;
+                            for (size_t i = 0; i < gCp.size(); ++i) drew = drew || (gCp[i].x == gSx[k] && gCp[i].y == gSy[k]);
+                            same = same && drew;
+                            k1 = k1 || gSx[k] == kx[0];
+                            k2 = k2 || gSx[k] == kx[1];
+                        }
+                        int struck = 0;
+                        for (const char *q = term->MsgHistory; (q = strstr(q, "spray of colours strikes")); ++q) ++struck;
+                        verdict("CP2", line && same && k1 && k2 && struck == 2 && st.badGlyph == 0 && st.badColour == 0 &&
+                            st.badPair == 0 && st.badGap == 0 && st.maxPer >= 2 && gCpLit >= 1,
+                            "%d spell squares in a straight line=%d; picks only on those squares, one square at least=%d; %d picks, %d..%d per square (a drawn beam re-picks, need max 2+); "
+                            "%d bad pairings, %d bad glyphs/colors, %d bad gaps; kobolds on the spell's squares=%d,%d; %d strike messages (need 2); %d light frames",
+                            (int)gSx.size(), (int)line, (int)same, st.picks, st.minPer, st.maxPer, st.badPair, st.badGlyph + st.badColour,
+                            st.badGap, (int)k1, (int)k2, struck, gCpLit);
+                    }
+                    /* CP3: Chromatic Orb at one kobold, cast as the reel casts it (no prompt): a pick on every square of the bolt. */
+                    {
+                        const int kx[1] = { PX + 6 };
+                        const int mana0 = pl->cMana();
+                        cpCast(orb, 1, kx, 0, PX + 6, true, 0);
+                        const int manaLost = mana0 - pl->cMana();
+                        CpStat st; cpStat(st);
+                        bool same = !gCp.empty() && !gSx.empty();
+                        for (size_t i = 0; i < gCp.size(); ++i) {
+                            bool in = false;
+                            for (size_t k = 0; k < gSx.size(); ++k) in = in || (gSx[k] == gCp[i].x && gSy[k] == gCp[i].y);
+                            same = same && in && gCp[i].y == PY;
+                        }
+                        verdict("CP3", manaLost == 4 && same && st.squares >= 4 && st.badGlyph == 0 && st.badColour == 0 && st.badPair == 0 &&
+                            st.badGap == 0 && gCpLit >= 1,
+                            "chromatic orb: %d picks on %d squares of the bolt's %d spell squares, all on row %d=%d; %d bad pairings, %d bad glyphs/colors; %d light frames; mana lost %d (4 is the unprompted clear orb)",
+                            st.picks, st.squares, (int)gSx.size(), PY, (int)same, st.badPair, st.badGlyph + st.badColour, gCpLit, manaLost);
+                    }
+                    /* CP4: an effect without the flag never fires the hook: a COL_RAINBOW globe and a Fireball. */
+                    {
+                        int fired = 0, drew = 0;
+                        cpCast(nightmare, 0, NULL, -1, aimX, false, 0);
+                        fired += (int)gCp.size(); drew += gCpLit > 0;
+                        cpCast(fire, 0, NULL, -1, aimX, false, 0);
+                        fired += (int)gCp.size(); drew += gCpLit > 0;
+                        verdict("CP4", fired == 0 && drew == 2,
+                            "Nightmare smite blast (rainbow, no flag) and Fireball: %d pattern picks (need 0); %d of the two casts drew light (need 2)",
+                            fired, drew);
+                    }
+                    /* CP5: animation None: no pick, no flash left, and the cast returns. */
+                    {
+                        const int kx[1] = { aimX };
+                        cpCast(hypno, 1, kx, -1, aimX, false, 2);
+                        verdict("CP5", gCp.empty() && LightFlashCount() == 0,
+                            "Hypnotic Pattern under animation None: %d picks, %d flashes after the cast (need 0, 0)",
+                            (int)gCp.size(), (int)LightFlashCount());
+                    }
+                    /* CP6: the cast draws nothing the gameplay stream feels. From one seeded state, a cast with
+                       animation Normal and one with animation None leave the same next random() values. */
+                    {
+                        const int kx[1] = { aimX };
+                        long draws[2][4];
+                        for (int a = 0; a < 2; ++a) {
+                            init_genrand(7770001UL);
+                            cpCast(hypno, 1, kx, -1, aimX, false, a == 0 ? 0 : 2);
+                            for (int k = 0; k < 4; ++k) draws[a][k] = random(30000);
+                        }
+                        bool same = true;
+                        for (int k = 0; k < 4; ++k) same = same && draws[0][k] == draws[1][k];
+                        verdict("CP6", same,
+                            "next four random(30000) after Hypnotic Pattern: animation Normal %ld %ld %ld %ld, animation None %ld %ld %ld %ld (need equal)",
+                            draws[0][0], draws[0][1], draws[0][2], draws[0][3],
+                            draws[1][0], draws[1][1], draws[1][2], draws[1][3]);
                     }
                 }
             }

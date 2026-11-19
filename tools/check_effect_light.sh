@@ -35,6 +35,20 @@
 # fact: LM3 chain target -- one kobold at (PX+6, PY) as the chosen victim; the arc ends within 1 square of it, no roll decides that
 # fact: LM4 non-meandering casts -- fire breath, Acid Arrow and Magic Missile are not lit electricity, so no hook fires whatever the roll
 # fact: LM5 the spell's own squares -- no roll decides them: the spell walks a straight row from the player
+# fact: CP1 cast square, radius and kobold -- the probe aims Hypnotic Pattern at (PX+8, PY) with one kobold on that square; the radius is the data's lval (2), the expected squares are those within it that the probe's own LineOfSight call says the player sees
+# fact: CP1 picks per square and the gap between picks -- the effect's own clock: the 1500 ms hold runs in steps of 33 ms and a square picks again at the first step 100 ms after its last pick, so 12 picks 132 ms apart; no roll and no wall clock decide them
+# fact: CP1 the glyph and color of each pick -- cosmetic_random() picks them; the check reads only invariants every pick keeps (a symbol that is not a letter, digit or @; a palette color that is not black, shadow, grey or white; the light base color equals LightEffectColour of the glyph color)
+# fact: CP1 at least 4 distinct colors and 4 distinct glyphs -- 252 picks (21 squares, 12 each) draw each from 8 values, so fewer than 4 distinct of either happen with chance below 1e-90
+# fact: CP1 a re-pick changes a square's color -- 231 consecutive pairs of picks each repeat the color with chance 1/8, so none changing it has chance below 1e-200
+# fact: CP2 aim, kobolds and range -- the probe aims Colour Spray at (PX+10, PY), kobolds at (PX+3, PY) and (PX+6, PY), 500 hit points each, MM_EXTEND set as the effect reel sets it; the beam walks a straight row, so no roll decides its squares
+# fact: CP2 both kobolds are struck -- a beam strikes every creature on its line by design (isMulti); the probe counts the data's strike message "spray of colours strikes" twice, so no saving throw or attack roll decides it
+# fact: CP2 a drawn beam picks again -- the first square of a 10-square beam stays up about 315 ms of effect clock at 35 ms a square, so it picks again at least twice; no roll decides it
+# fact: CP3 the orb's square list -- Chromatic Orb aimed at a kobold at (PX+6, PY) walks the straight row to it; a hit or a miss roll does not change the walk
+# fact: CP3 the orb is the unprompted clear orb -- the probe casts with no caster level bonus, so the fixture's own caster level (below 3) takes the lowest branch and loses 4 mana; the probe grades the 4, so a higher level that would open the color prompt fails the check
+# fact: CP4 non-pattern effects -- Nightmare smite;actual blast (a COL_RAINBOW globe without the flag) and Fireball carry no EF_COLOR_PATTERN, so no roll lets the hook fire
+# fact: CP5 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that no pick fires
+# fact: CP6 the gameplay random stream -- the probe re-initializes it with init_genrand just before each of two casts, so both casts start from one state; the check compares the next four draws, whatever the values are
+# Cases CP1-CP6 add: Hypnotic Pattern, Colour Spray and Chromatic Orb draw random symbols in random colors that re-pick each 100 ms of the effect clock, the light follows each glyph's color, and no gameplay roll moves.
 # Cases LM1-LM5 add: a lit lightning stroke is drawn as a jagged path that keeps its rules and never changes the squares the spell walks.
 # Case FW1 adds: the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone, ring by ring, pointing away from the center.
 # Cases T1-T3 add: the target flash (Fireball with two kobolds, a landed and a missed Chill Touch, Call Lightning).

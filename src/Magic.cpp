@@ -1707,6 +1707,97 @@ static void GlobeFireworks(EventInfo &e, EffectLight &fx, int16 cx, int16 cy)
     T1->RefreshMap();
     T1->Update();
   }
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called once per pick: the
+   square, the glyph and its palette color, and the effect clock in ms. */
+void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs) = NULL;
+
+/* The color pattern of an effect flagged EF_COLOR_PATTERN (Hypnotic Pattern, Colour
+   Spray, Chromatic Orb): every square it draws shows a random symbol in a random
+   color and picks again each 100 ms of the effect's own clock. The square's light
+   takes the color of its glyph; its age on the cooling ramp does not restart. Only
+   cosmetic_random() chooses, so no gameplay roll moves. */
+static const Glyph PatternGlyphs[] = { '~', '*', '+', '=', '%', '&', '^', 15 };
+static const int16 PatternColours[] = { RED, GREEN, AZURE, SKYBLUE, PINK, MAGENTA, YELLOW, PURPLE };
+// no-family
+static const float PATTERN_REPICK_MS = 100.0f;
+// end no-family
+
+static bool PatternOn(TEffect *te)
+  {
+    Player *p = theGame->GetPlayer(0);
+    return te && te->HasFlag(EF_COLOR_PATTERN) && p && p->Opt(OPT_ANIMATION) != 2;
+  }
+
+struct ColorPattern
+  {
+    struct Sq { int16 x, y; float last; Glyph g; int16 col; };
+    EffectLight &fx; Overlay &o; std::vector<Sq> sq;
+    ColorPattern(EffectLight &f, Overlay &ov) : fx(f), o(ov) {}
+    void Add(int16 x, int16 y)
+      {
+        Sq s; s.x = x; s.y = y; s.last = 0.0f; s.g = 0; s.col = 0;
+        sq.push_back(s);
+        Pick(sq.back());
+      }
+    void Pick(Sq &s)
+      {
+        s.g = PatternGlyphs[cosmetic_random(sizeof(PatternGlyphs)/sizeof(PatternGlyphs[0]))];
+        s.col = PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
+        s.last = fx.Clock();
+        fx.SetCellColour(s.x, s.y, s.col);
+        if (PatternHook) PatternHook(s.x, s.y, s.g, s.col, s.last);
+      }
+    void Draw()
+      {
+        o.DeActivate();
+        o.Activate();
+        for (size_t i = 0; i < sq.size(); i++)
+          o.AddGlyph(sq[i].x, sq[i].y, GLYPH_VALUE(sq[i].g, sq[i].col));
+        o.ShowGlyphs();
+      }
+    /* A bolt shows one square at a time; a beam keeps the squares it has drawn. */
+    void Square(int16 x, int16 y, bool replace)
+      {
+        if (replace) sq.clear();
+        Add(x, y);
+        Draw();
+      }
+    void Wait(int16 ms)
+      {
+        while (ms > 0) {
+          const int16 step = ms > 33 ? 33 : ms;
+          fx.Wait(step);
+          ms -= step;
+          bool again = false;
+          for (size_t i = 0; i < sq.size(); i++)
+            if (fx.Clock() - sq[i].last >= PATTERN_REPICK_MS) { Pick(sq[i]); again = true; }
+          if (again) { Draw(); fx.Redraw(); }
+          }
+      }
+  };
+
+static void GlobePattern(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int16 hold)
+  {
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    ColorPattern pat(fx, o);
+    int16 x, y;
+    for (x = cx-e.vRadius; x <= cx+e.vRadius; x++)
+      for (y = cy-e.vRadius; y <= cy+e.vRadius; y++)
+        if (dist(cx,cy,x,y) <= e.vRadius && m->InBounds(x,y) && PossiblyPause(T1,x,y,0)) {
+          fx.Light(x,y);
+          pat.Add(x,y);
+          }
+    o.Activate();
+    pat.Draw();
+    fx.Refresh();
+    fx.SetGlyphTime(hold);
+    pat.Wait(hold);
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
+
 /* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
    opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
    ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
@@ -1889,6 +1980,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
       EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType, te);
       if (te && te->HasFlag(EF_FIREWORKS))
         GlobeFireworks(e, fx, cx, cy);
+      else if (PatternOn(te))
+        GlobePattern(e, fx, cx, cy, e.EActor->isPlayer() ? 1500 : 500);
       else {
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
@@ -2491,6 +2584,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   /* inc-jw0hw: fade the travel's light and end it. Runs before any hit. */
   #define FINISH_TRAIL                          \
      if (trail) {                               \
+       pat.reset();                             \
        if (!isBall) {                           \
          o.DeActivate();                        \
          overlayOff = true;                     \
@@ -2543,6 +2637,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
   // inc-jw0hw: a beam or missile lights its path; the light ends before any hit.
   std::unique_ptr<EffectLight> trail;
+  std::unique_ptr<ColorPattern> pat;   /* inc-jw0hw: set while an EF_COLOR_PATTERN effect travels */
   bool overlayOff = false;
   MeanderPlan meander; int meanderAt = 0; bool meanders = false;
   // do we think something happened? 
@@ -2749,6 +2844,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   if (overlayOff) { o.Activate(); overlayOff = false; }
   if (!hitSelf)
     trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType, TEFF(e.eID)));
+  pat.reset();
+  if (trail && !isBall && PatternOn(te))
+    pat.reset(new ColorPattern(*trail, o));
   meanders = false; meanderAt = 0;
   if (!hitSelf && isMulti && e.DType == AD_ELEC && EffectLightDecide(TEFF(e.eID), e.DType).lit) {
     MeanderPlanBuild(meander, m, e.EActor, e.EVictim, isChain, e.isDir, e.EDir, dirX, dirY, slope,
@@ -2808,17 +2906,20 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         colour = BlastColourSets[(Color * 4)+random(4)];
       else 
         colour = BlastColourSets[Color * 4];
-      o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
+      if (!pat) o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
       if (meanders && MeanderHook) MeanderHook(cx/2,cy/2,drawX,drawY,drawG);
-      o.ShowGlyphs();
+      if (!pat) o.ShowGlyphs();
       if (trail) {
         if (isMulti) trail->Light(drawX,drawY);
         else trail->MoveTo(cx/2,cy/2);
+        if (pat) pat->Square(drawX,drawY,!isBeam);
         trail->Refresh();
         }
       if (trail) {
-        if (PossiblyPause(T1,cx/2,cy/2,0))
-          trail->Wait(35);
+        if (PossiblyPause(T1,cx/2,cy/2,0)) {
+          if (pat) pat->Wait(35);
+          else trail->Wait(35);
+          }
       } else
         PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {

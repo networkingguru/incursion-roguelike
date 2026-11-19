@@ -3739,7 +3739,8 @@ typedef signed int        hObj;
 #define EF_GLOW       114  /* inc-jw0hw: the effect glows although its damage type does not */
 #define EF_NO_GLOW    115  /* inc-jw0hw: the effect does not glow although its damage type does */
 #define EF_FIREWORKS  116  /* inc-jw0hw: a globe plays the fireworks animation, not a recolor */
-#define EF_LAST       117
+#define EF_COLOR_PATTERN 117 /* inc-jw0hw: the effect draws random glyphs in random colors, not a recolor */
+#define EF_LAST       118
 // end family: ef
 // family: ea internal
 

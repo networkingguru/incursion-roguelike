@@ -1,7 +1,8 @@
 /* inc-jw0hw: opt-in effect reel. Off unless INCURSION_EFFECT_REEL is set.
    Called from Game::Play (src/Main.cpp); driven by tools/render_effect_reel.sh,
    counted by tools/check_effect_reel_list.sh. For every effect that is EA_BLAST,
-   AR_GLOBE, or an AR_FIELD/AR_MFIELD with FI_MODIFIER or FI_BLOCKER, plus
+   AR_GLOBE, an AR_FIELD/AR_MFIELD with FI_MODIFIER or FI_BLOCKER, or flagged
+   EF_COLOR_PATTERN, plus
    "Breath Weapon" once per damage type a monster breathes, it rebuilds one dark
    room, names a recorder clip, casts the effect, and lets virtual time pass.
    errors.log gets "REEL <n> <name> <kind>", "REEL_SKIP <name> <reason>" and
@@ -88,11 +89,14 @@ std::string Sanitize(const char *s) {
     return r.empty() ? std::string("x") : r;
 }
 
-bool IsReelKind(const EffectValues &ef, const char **kind) {
+bool IsReelKind(TEffect &te, const char **kind) {
+    const EffectValues &ef = te.ef;
     if (ef.eval == EA_BLAST) { *kind = "blast"; return true; }
     if (ef.aval == AR_GLOBE) { *kind = "globe"; return true; }
     if ((ef.aval == AR_FIELD || ef.aval == AR_MFIELD) &&
         ((uint32)ef.rval & (FI_MODIFIER | FI_BLOCKER))) { *kind = "aura"; return true; }
+    /* inc-jw0hw: a beam or bolt that draws the color pattern. */
+    if (te.HasFlag(EF_COLOR_PATTERN)) { *kind = "pattern"; return true; }
     return false;
 }
 
@@ -152,7 +156,7 @@ void EffectReelProbe(Player *pl) {
         const rID id = mod->EffectID(i);
         const char *kind;
         if (id == breath) continue;   /* once per damage type, below */
-        if (IsReelKind(mod->QEff[i].ef, &kind)) {
+        if (IsReelKind(mod->QEff[i], &kind)) {
             Entry e = { id, kind, -1 };
             list.push_back(e);
         }

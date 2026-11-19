@@ -1161,7 +1161,7 @@ Wizard / Scroll Spell "Floating Disc" : EA_INFLICT
 Wizard / Scroll Spell "Chromatic Orb" : EA_GENERIC
   { SC_ILL | SC_ARC | SC_LIGHT; Base: SP_MEDIUM; Cost: 0; Level: 1; qval: Q_TAR | Q_DIR;
     Purpose: /* EP_ATTACK (VS_GENERAL) | */ EP_PLAYER_ONLY; // ww: can be removed when julian fixes the 'default' bug
-    cval: COL_RAINBOW; Flags: EF_ATTACK, EF_VARMANA; aval: AR_BOLT;
+    cval: COL_RAINBOW; Flags: EF_ATTACK, EF_VARMANA, EF_GLOW, EF_COLOR_PATTERN; aval: AR_BOLT;
     int32 ch, i;
     On Event EV_EFFECT {
       i = e.vCasterLev;
@@ -1302,7 +1302,7 @@ Wizard Spell "Colour Spray" : EA_GENERIC
   {
     SC_ILL|SC_EVO|SC_LIGHT; Base: SP_MEDIUM; Cost: 3; Level: 1; 
     qval: Q_DIR | Q_TAR;
-    Purpose: EP_ATTACK (VS_GENERAL); Flags: EF_HARDSAVE4; 
+    Purpose: EP_ATTACK (VS_GENERAL); Flags: EF_HARDSAVE4, EF_GLOW, EF_COLOR_PATTERN; 
     cval: COL_RAINBOW; aval: AR_BEAM; sval: REF;
     On Event EV_ISTARGET {
 	  if (!ETarget->isCreature())
@@ -2963,7 +2963,7 @@ Wizard / Scroll Spell "Mirror Image" : EA_INFLICT
 Wizard / Scroll Spell "Hypnotic Pattern" : EA_INFLICT
   { SC_ILL; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_LOC;
     aval: AR_GLOBE; cval: COL_RAINBOW; lval: 2; sval: WILL;
-    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL, EF_GLOW;
+    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL, EF_GLOW, EF_COLOR_PATTERN;
     Purpose: EP_CURSE (VS_MENTAL);
     On Event EV_ISTARGET {
       if (!EVictim->isCreature())

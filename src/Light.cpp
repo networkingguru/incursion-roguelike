@@ -80,7 +80,7 @@ static bool        anyFlicker = false;
 
 /* inc-jw0hw: a flash lives outside Src so it survives LightRebuild. Its level
    and noise are read by ComposeFrame; its footprint is rebuilt with the rest. */
-struct FlashCell { int16 x, y; float birth; };  /* birth: the flash clock when the square lit, ms */
+struct FlashCell { int16 x, y; float birth; bool tinted; LightRGB tint; };  /* birth: the flash clock when the square lit, ms; tint: its own base color, when set */
 struct Flash {
   bool live;
   LightRGB c;                  /* base colour; the ramp is built from it */
@@ -641,7 +641,7 @@ static void ScanFields(Map *m) {
       for (int16 y = f->cy - f->rad; y <= f->cy + f->rad; y++)
         for (int16 x = f->cx - f->rad; x <= f->cx + f->rad; x++)
           if (m->InBounds(x, y) && f->inArea(x, y)) {
-            FlashCell fc; fc.x = x; fc.y = y; fc.birth = 0.0f; cells.push_back(fc);
+            FlashCell fc; fc.x = x; fc.y = y; fc.birth = 0.0f; fc.tinted = false; cells.push_back(fc);
           }
       Src[nSrc - 1].fid = (int32)AuraCells.size();
       AuraCells.push_back(cells);
@@ -838,14 +838,19 @@ static void FlashStage(const Flash &fl, const RampSet *pre, int ci,
                        LightRGB &rgb, float &lv) {
   float birth = fl.clock;
   int16 cx = 0, cy = 0;
+  bool tinted = false; LightRGB tint = { 0, 0, 0 };
   if (ci >= 0 && ci < (int)fl.cells.size()) {
     birth = fl.cells[ci].birth; cx = fl.cells[ci].x; cy = fl.cells[ci].y;
+    tinted = fl.cells[ci].tinted; tint = fl.cells[ci].tint;
   }
   float age = fl.clock - birth;
   if (age < 0.0f) age = 0.0f;
   age *= 900.0f / (fl.life > 0.0f ? fl.life : 900.0f);
   RampSet own;
-  if (!pre) {   /* the rainbow: each square keeps its own hue for the effect's life */
+  if (tinted) {   /* inc-jw0hw: a square with its own base color (a color pattern) */
+    BuildRamp(LR_GENERIC, tint, own);
+    pre = &own;
+  } else if (!pre) {   /* the rainbow: each square keeps its own hue for the effect's life */
     const float h = Hash01((uint32)cx * 73856093u ^ (uint32)cy * 19349663u ^ fl.seed);
     BuildRamp(LR_GENERIC, HueSat(h, 0.8f), own);
     pre = &own;
@@ -1094,6 +1099,28 @@ void LightFlashCell(int32 id, int16 x, int16 y) {
     if (fl->cells[i].x == x && fl->cells[i].y == y) return;
   FlashCell fc = { x, y, fl->clock };
   fl->cells.push_back(fc);
+}
+
+void LightFlashCellColour(int32 id, int16 x, int16 y, LightRGB c) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  for (size_t i = 0; i < fl->cells.size(); i++)
+    if (fl->cells[i].x == x && fl->cells[i].y == y) {
+      fl->cells[i].tinted = true; fl->cells[i].tint = c;   /* the square's birth is untouched */
+      if (lmMap && Frame) ComposeFrame();
+      return;
+    }
+}
+
+bool LightFlashTintAt(int16 x, int16 y, LightRGB &c) {
+  for (size_t i = 0; i < Flashes.size(); i++) {
+    if (!Flashes[i].live) continue;
+    for (size_t k = 0; k < Flashes[i].cells.size(); k++) {
+      const FlashCell &fc = Flashes[i].cells[k];
+      if (fc.x == x && fc.y == y && fc.tinted) { c = fc.tint; return true; }
+    }
+  }
+  return false;
 }
 
 void LightFlashMoveTo(int32 id, int16 x, int16 y) {

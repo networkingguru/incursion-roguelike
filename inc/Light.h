@@ -102,6 +102,8 @@ uint8 LightFlashRampFor(int16 blastColour);     /* the LR_* ramp a light color t
 int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach,
                     uint8 ramp = LR_GENERIC);  /* id >= 0, or -1 when disabled */
 void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square, born at the flash clock */
+void  LightFlashCellColour(int32 id, int16 x, int16 y, LightRGB c); /* inc-jw0hw: this square takes its own base color; its age keeps running */
+bool  LightFlashTintAt(int16 x, int16 y, LightRGB &c);   /* the base color a square was given, or false */
 void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
 void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
 void  LightFlashSetClock(int32 id, float ms);       /* the flash clock; recomposes the frame */

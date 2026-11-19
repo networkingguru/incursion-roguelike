@@ -135,6 +135,15 @@ void EffectLight::MoveTo(int16 x, int16 y) {
   }
 }
 
+void EffectLight::SetCellColour(int16 x, int16 y, int16 glyphColour) {
+  if (id >= 0 && !ended)
+    LightFlashCellColour(id, x, y, LightEffectColour(glyphColour));
+}
+
+void EffectLight::Redraw() {
+  Show();
+}
+
 void EffectLight::Show() {
   Player *p = theGame->GetPlayer(0);
   if (p) p->UpdateMap = 1;
