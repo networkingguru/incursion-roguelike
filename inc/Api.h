@@ -696,6 +696,11 @@ system int32   T_GAME::GetTurn();
  *****************************************************************************/
 
 system void    T_EVENTINFO::SetParam(int16 i,hObj:T_THING t);
+system void    T_EVENTINFO::LightBegin();
+system void    T_EVENTINFO::LightSquare(int16 x,int16 y,GlyphType g);
+system void    T_EVENTINFO::LightHold(int16 ms);
+system void    T_EVENTINFO::LightStruck(hObj:T_THING t);
+system void    T_EVENTINFO::LightEnd();
 
 system int16   T_EVENTINFO::Event;
 system int16   T_EVENTINFO::EXVal;

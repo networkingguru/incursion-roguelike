@@ -29,6 +29,12 @@ enum { TF_LIT = 0, TF_END = 1 };
 // end family: target-flash-phase
 extern void (*TargetFlashHook)(int phase);
 
+/* inc-jw0hw: test hook for the script light (EventInfo::Light*). Called with
+   the effect clock after each step of its hold. */
+extern void (*ScriptLightTickHook)(float clockMs);
+/* Called when EventInfo::LightEnd returns, whether or not a light ran. */
+extern void (*ScriptLightEndHook)();
+
 /* inc-jw0hw: whether an effect glows, and the light color row (COL_* or a
    plain palette color, 0 for none). te NULL: lit, no color. */
 struct EffectLightDecision { bool lit; int16 colour; };
@@ -41,7 +47,7 @@ struct EffectLight {
   EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype = 0,
               TEffect *te = NULL, bool targetFlash = false);
   ~EffectLight();
-  void Light(int16 x, int16 y);   /* only if the player has line of sight to it */
+  bool Light(int16 x, int16 y);   /* only if the player has line of sight to it; true when lit */
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
   float Clock() const { return clockMs; }   /* the effect clock, ms */
   /* inc-jw0hw: a lit square takes the light color of palette color `glyphColour`;

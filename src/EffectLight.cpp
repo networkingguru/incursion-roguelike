@@ -1,9 +1,14 @@
 /* inc-jw0hw: the light an animated effect casts while it shows. See
    inc/EffectLight.h. */
 #include "Incursion.h"
+#include <vector>
+
+static EffectLight *ScriptFx = NULL;
 
 void (*EffectLightHook)(int phase) = NULL;
 void (*TargetFlashHook)(int phase) = NULL;
+void (*ScriptLightTickHook)(float clockMs) = NULL;
+void (*ScriptLightEndHook)() = NULL;
 
 /* The light color row for a damage type, or 0 when the type has none. */
 static int16 DTypeLightColour(int16 dtype) {
@@ -115,9 +120,12 @@ bool EffectLight::Sees(int16 x, int16 y) {
   return map->LineOfSight(p->x, p->y, x, y, p);
 }
 
-void EffectLight::Light(int16 x, int16 y) {
-  if (id >= 0 && !ended && Sees(x, y))
+bool EffectLight::Light(int16 x, int16 y) {
+  if (id >= 0 && !ended && Sees(x, y)) {
     LightFlashCell(id, x, y);
+    return true;
+  }
+  return false;
 }
 
 void EffectLight::MoveTo(int16 x, int16 y) {
@@ -176,6 +184,8 @@ void EffectLight::Wait(int16 ms) {
     if (id >= 0)
       LightFlashSetClock(id, clockMs);
     T1->StopWatch((int16)(upto - done));
+    if (ScriptLightTickHook && this == ScriptFx)
+      ScriptLightTickHook(clockMs);
     done = upto;
   }
 }
@@ -249,4 +259,76 @@ void EffectLight::FlashStruck(Map *m, int16 blastColour, uint8 shape,
   if (TargetFlashHook) TargetFlashHook(TF_LIT);
   fx.Tail(true);
   fx.End();
+}
+
+/* inc-jw0hw: the script light. A script lights squares it draws itself, holds,
+   then ends the light; the engine owns one EffectLight for that span. */
+static std::vector<Thing *> ScriptStruck;
+struct ScriptSq { int16 x, y; Glyph g; };
+static std::vector<ScriptSq> ScriptSquares;   /* lit squares and the glyph the script drew on each */
+static bool ScriptOverlay = false;
+static Map *ScriptMap = NULL;
+static int16 ScriptColour = 0, ScriptDType = 0;
+static TEffect *ScriptTe = NULL;
+
+void EventInfo::LightBegin() {
+  if (ScriptFx) {   /* a script that never ended its light */
+    delete ScriptFx;
+    ScriptFx = NULL;
+  }
+  ScriptStruck.clear();
+  ScriptSquares.clear();
+  Player *p = theGame->GetPlayer(0);
+  if (!EMap || !p || p->Opt(OPT_ANIMATION) == 2)
+    return;
+  ScriptMap = EMap;
+  ScriptTe = eID ? TEFF(eID) : NULL;
+  ScriptDType = DType;
+  ScriptColour = EMagic ? EMagic->cval : 0;
+  ScriptFx = new EffectLight(EMap, ScriptColour, EL_AREA, ScriptDType, ScriptTe);
+}
+
+void EventInfo::LightSquare(int16 x, int16 y, Glyph g) {
+  if (ScriptFx && ScriptFx->Light(x, y)) {
+    const ScriptSq q = { x, y, g };
+    ScriptSquares.push_back(q);
+  }
+}
+
+void EventInfo::LightHold(int16 ms) {
+  if (!ScriptFx) {
+    T1->StopWatch(ms);
+    return;
+  }
+  /* a repaint erases what the script put on the terminal: keep each lit square's glyph in the map overlay */
+  Overlay &o = ScriptMap->ov;
+  ScriptOverlay = !o.Active;
+  if (ScriptOverlay) o.Activate();
+  for (size_t i = 0; i < ScriptSquares.size(); i++)
+    o.AddGlyph(ScriptSquares[i].x, ScriptSquares[i].y, ScriptSquares[i].g);
+  ScriptFx->Refresh();
+  ScriptFx->Hold(ms);
+  if (ScriptOverlay) o.DeActivate();
+  ScriptOverlay = false;
+}
+
+void EventInfo::LightStruck(Thing *t) {
+  if (ScriptFx && t)
+    ScriptStruck.push_back(t);
+}
+
+void EventInfo::LightEnd() {
+  if (ScriptFx) {
+    EffectLight *fx = ScriptFx;
+    ScriptFx = NULL;
+    fx->Tail(false);
+    fx->End();
+    delete fx;
+    if (!ScriptStruck.empty())
+      EffectLight::FlashStruck(ScriptMap, ScriptColour, EL_AREA, ScriptDType,
+                               ScriptTe, &ScriptStruck[0], (int)ScriptStruck.size());
+    ScriptStruck.clear();
+  }
+  if (ScriptLightEndHook)
+    ScriptLightEndHook();
 }

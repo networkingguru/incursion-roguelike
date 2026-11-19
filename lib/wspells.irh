@@ -1075,9 +1075,12 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
           {                                                           \
             ETerm->PutGlyph(EActor->x + vx,                           \
                             EActor->y + vy,                           \
-                            GLYPH_VALUE(GLYPH_BULK, PINK));           \
+                            GLYPH_VALUE(247, PINK));                  \
+            e.LightSquare(EActor->x + vx,EActor->y + vy,              \
+                          GLYPH_VALUE(247, PINK));                    \
             h = EMap->FCreatureAt(EActor->x + vx,EActor->y + vy);      \
           }                                                       
+      e.LightBegin();
       h1 = NULL; h2 = NULL; h3 = NULL;
       if (DirX(e.EDir) && DirY(e.EDir)) {
         HIT_SPOT(DirX(e.EDir),DirY(e.EDir),h1)
@@ -1095,6 +1098,7 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
         HIT_SPOT(-1,DirY(e.EDir),h3)
         }
       else {
+        e.LightEnd();
         e.SetParam(1,EActor);
         ReThrow(EV_MAGIC_STRIKE,e);
         e.isSomething = true;
@@ -1103,9 +1107,13 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
       if ((EActor != NULL && EActor->isPlayer()) || 
           (EVictim != NULL && EVictim->isPlayer())) { 
         ETerm->TermUpdate();
-        ETerm->StopWatch(500);
+        e.LightHold(500);
         ETerm->RefreshMap();
       } 
+      if (h1) e.LightStruck(h1);
+      if (h2) e.LightStruck(h2);
+      if (h3) e.LightStruck(h3);
+      e.LightEnd();
       if (h1) {
         e.SetParam(1,h1);                                      
         ReThrow(EV_MAGIC_STRIKE,e);                           

@@ -204,6 +204,14 @@ struct EventInfo {
         memset(this,0,sizeof(EventInfo));
     }
     void SetParam(int16 n,Thing *t) { p[n].t = t; }
+    /* inc-jw0hw: script-callable effect light (src/EffectLight.cpp). One at a
+       time: Begin, Square once per drawn square, Hold in place of the glyph
+       hold, Struck per creature hit, End before any hit resolves. */
+    void LightBegin();
+    void LightSquare(int16 x, int16 y, Glyph g);
+    void LightHold(int16 ms);
+    void LightStruck(Thing *t);
+    void LightEnd();
 
     uint16 Event;
     EvParam p[5];

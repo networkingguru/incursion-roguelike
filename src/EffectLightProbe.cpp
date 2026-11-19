@@ -21,6 +21,8 @@ extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
 extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g);
 extern void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g);
+extern void (*ScriptLightTickHook)(float clockMs);
+extern void (*ScriptLightEndHook)();
 extern void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
@@ -234,6 +236,62 @@ void TFHook(int phase) {
         ++gTfEndCalls;
         gTfFlashesEnd = (int)LightFlashCount();
     }
+}
+
+
+/* Case BH (inc-jw0hw): Burning Hands' script light. The tick hook samples the effect's own squares
+   (the ones whose glyphs follow the ramp) at each step of the script's hold. */
+struct BhTickRec { float clk; int nGlyph; int gx[3], gy[3]; LightRGB c[3]; int lv[3]; int nLit; int nTilde; };
+std::vector<BhTickRec> gBhTicks;
+int gBhLitFrames, gBhEnds, gBhMaxGlyph, gBhTfCalls, gBhTfEndsBefore;
+int gBhTfX, gBhTfY;
+int gBhExpX[3] = { -1, -1, -1 }, gBhExpY[3] = { -1, -1, -1 };   /* the three squares the terminal must show the CP437 247 glyph on during the hold */
+LightRGB gBhTfG;
+bool gBhTfGlyph;
+Map *gBhMap;
+int BhGlyphSquares(BhTickRec &r) {
+    r.nGlyph = 0;
+    for (int y = 0; y < gBhMap->SizeY(); ++y)
+        for (int x = 0; x < gBhMap->SizeX(); ++x) {
+            LightRGB gc = { 0, 0, 0 };
+            if (!LightEffectGlyphAt((int16)x, (int16)y, gc)) continue;
+            if (r.nGlyph < 3) { r.gx[r.nGlyph] = x; r.gy[r.nGlyph] = y; r.c[r.nGlyph] = gc; r.lv[r.nGlyph] = PeakAt(x, y); }
+            ++r.nGlyph;
+        }
+    return r.nGlyph;
+}
+void BhTick(float clk) {
+    BhTickRec r;
+    r.clk = clk; r.nLit = 0; r.nTilde = 0;
+    BhGlyphSquares(r);
+    for (int k = 0; k < 3; ++k)   /* what the terminal shows at the square now */
+        if (gBhExpX[k] >= 0 && GLYPH_ID_VALUE(T1->GetGlyph((int16)gBhExpX[k], (int16)gBhExpY[k])) == 247) ++r.nTilde;   /* CP437 247, the double tilde */
+    if (r.nGlyph > gBhMaxGlyph) gBhMaxGlyph = r.nGlyph;
+    gBhTicks.push_back(r);
+}
+void BhEl(int phase) {
+    if (phase == EL_LIT) {
+        ++gBhLitFrames;
+        BhTickRec r; r.clk = 0.0f; r.nLit = 0;
+        BhGlyphSquares(r);
+        if (r.nGlyph > gBhMaxGlyph) gBhMaxGlyph = r.nGlyph;
+    } else if (phase == EL_END) ++gBhEnds;
+}
+void BhTf(int phase) {
+    if (phase != TF_LIT) return;
+    ++gBhTfCalls;
+    gBhTfEndsBefore = gBhEnds;
+    LightRGB gc = { 0, 0, 0 };
+    gBhTfGlyph = LightEffectGlyphAt((int16)gBhTfX, (int16)gBhTfY, gc);
+    gBhTfG = gc;
+}
+
+/* Case BH7: the main random stream's position when the script's light ends, before any hit resolves
+   (a strike re-seeds the stream afterward, so draws taken after the cast cannot show a draw made before it). */
+void Bh7EndHook() {
+    unsigned long sd; unsigned long long dr;
+    RngPosition(&sd, &dr);
+    Error("EFFECT_LIGHT: BH7DRAW seed %lu draws %llu", sd, dr);
 }
 
 void FlashHook(int phase) {
@@ -472,6 +530,33 @@ void EffectLightProbe(Player *pl) {
         theGame->PlayMode = true;
         pl->Options[OPT_ANIMATION] = 0;   /* Normal: shimmer; left set, because the run quits and the last frame must keep the circle */
         AuraScene(pl, mp, floor, wall);
+        theGame->PlayMode = wasPlay;
+        return;
+    }
+    if (const char *bhAnim = getenv("INCURSION_BH7_ANIM")) {
+        /* BH7: one Burning Hands cast on a struck kobold from a fixed seed, in a fresh process; the check
+           compares the stream position at the end of the script's light between an animation-Normal run and an animation-None run. */
+        const rID bh = FIND("Burning Hands"), kob = FIND("kobold");
+        if (!bh || !kob) {
+            Error("EFFECT_LIGHT: BH7DRAW INCONCLUSIVE -- Burning Hands or the kobold is missing");
+            return;
+        }
+        const bool wasPlay = theGame->PlayMode;
+        theGame->PlayMode = true;
+        init_genrand(7770002UL);
+        BuildDark(mp, pl, floor, wall);
+        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        Monster *k = new Monster(kob);
+        k->PlaceAt(mp, PX + 1, PY, true);
+        k->Initialize(true);
+        k->mHP = k->cHP = 500;
+        Refresh(pl);
+        pl->Options[OPT_ANIMATION] = (int8)atoi(bhAnim);
+        EventInfo xe; xe.Clear();
+        xe.EActor = pl; xe.EMap = mp; xe.eID = bh; xe.isSpell = true; xe.EDir = EAST;
+        ScriptLightEndHook = Bh7EndHook;
+        ReThrow(EV_EFFECT, xe);
+        ScriptLightEndHook = NULL;
         theGame->PlayMode = wasPlay;
         return;
     }
@@ -1542,6 +1627,188 @@ void EffectLightProbe(Player *pl) {
                             "next four random(30000) after Hypnotic Pattern: animation Normal %ld %ld %ld %ld, animation None %ld %ld %ld %ld (need equal)",
                             draws[0][0], draws[0][1], draws[0][2], draws[0][3],
                             draws[1][0], draws[1][1], draws[1][2], draws[1][3]);
+                    }
+                }
+            }
+
+            /* BH: Burning Hands (inc-jw0hw). The script lights each square it draws on the fire ramp,
+               holds, cools after the glyphs go, and flashes every creature it hit. */
+            if (!off) {
+                const rID bh = FIND("Burning Hands");
+                if (!bh || !kobold) {
+                    inconclusive("BH", "Burning Hands or the kobold is missing");
+                } else if (LightMode(pl) == LIGHT_LEGACY) {
+                    inconclusive("BH", "the light map is legacy");
+                } else {
+                    /* The squares the script draws, written from the spell's text, not from the script. */
+                    auto bhSquares = [](int dir, int *sx, int *sy) {
+                        const int dx = DirX[dir], dy = DirY[dir];
+                        int n = 0;
+                        auto add = [&](int ax, int ay) { sx[n] = PX + ax; sy[n] = PY + ay; ++n; };
+                        if (dx && dy) { add(dx, dy); add(dx, 0); add(0, dy); }
+                        else if (dx) { add(dx, 0); add(dx, 1); add(dx, -1); }
+                        else { add(0, dy); add(1, dy); add(-1, dy); }
+                    };
+                    /* One cast in a dark room. Kobolds stand at kx,ky (the first is the actor when
+                       monsterCasts, at the first position); a wall goes on (wx,wy) when wx >= 0. */
+                    auto bhCast = [&](int dir, int nk, const int *kx, const int *ky, int wx, int wy,
+                                      bool monsterCasts, bool boxed, int anim) {
+                        BuildDark(mp, pl, floor, wall);
+                        LightFlashClearAll();
+                        if (boxed) {
+                            for (int dx = -1; dx <= 1; ++dx)
+                                for (int dy = -1; dy <= 1; ++dy)
+                                    if (dx || dy) mp->At(PX + dx, PY + dy).Opaque = true;
+                            pl->CalcVision();
+                        }
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        if (wx >= 0) {
+                            Rect rect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
+                            mp->WriteAt(rect, wx, wy, wall, mp->RegionAt(pl->x, pl->y), PRIO_MAX, true);
+                        }
+                        Monster *kobs[3] = { NULL, NULL, NULL };
+                        for (int i = 0; i < nk; ++i) {
+                            kobs[i] = new Monster(kobold);
+                            kobs[i]->PlaceAt(mp, kx[i], ky[i], true);
+                            kobs[i]->Initialize(true);
+                            kobs[i]->mHP = kobs[i]->cHP = 500;
+                        }
+                        gBhMap = mp; gBhTicks.clear();
+                        gBhLitFrames = gBhEnds = gBhMaxGlyph = gBhTfCalls = gBhTfEndsBefore = 0;
+                        gBhTfGlyph = false; gBhTfG.r = gBhTfG.g = gBhTfG.b = 0;
+                        gBhTfX = nk > 0 ? kx[0] : -1; gBhTfY = nk > 0 ? ky[0] : -1;
+                        Refresh(pl);
+                        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                        term->MsgHistory[0] = 0;
+                        EffectLightHook = BhEl; ScriptLightTickHook = BhTick; TargetFlashHook = BhTf;
+                        pl->Options[OPT_ANIMATION] = (int8)anim;
+                        EventInfo xe; xe.Clear();
+                        xe.EActor = monsterCasts ? (Creature *)kobs[0] : (Creature *)pl;
+                        xe.EMap = mp; xe.eID = bh; xe.isSpell = true; xe.EDir = (int16)dir;
+                        if (monsterCasts) xe.EVictim = pl;   /* the player is the target, so the script holds */
+                        ReThrow(EV_EFFECT, xe);
+                        pl->Options[OPT_ANIMATION] = 0;
+                        EffectLightHook = NULL; ScriptLightTickHook = NULL; TargetFlashHook = NULL;
+                    };
+                    /* The tick nearest an age; the three effect squares there, each against the fire ramp. */
+                    auto bhNear = [&](float age, const int *sx, const int *sy, int &er, int &eg, int &eb,
+                                      float &got, bool &ok, int &lvl) {
+                        const BhTickRec *best = NULL;
+                        for (size_t i = 0; i < gBhTicks.size(); ++i)
+                            if (!best || fabsf(gBhTicks[i].clk - age) < fabsf(best->clk - age)) best = &gBhTicks[i];
+                        ok = false; got = -1.0f; lvl = -1;
+                        FireRampAt(best ? best->clk : 0.0f, er, eg, eb);
+                        if (!best || best->nGlyph != 3) return;
+                        got = best->clk;
+                        int hit = 0;
+                        for (int k = 0; k < 3; ++k)
+                            for (int j = 0; j < 3; ++j)
+                                if (best->gx[j] == sx[k] && best->gy[j] == sy[k]) {
+                                    ++hit;
+                                    /* the glyph's color is the ramp color at full value: compare hue, scaled to its brightest channel */
+                                    const int gm = best->c[j].r > best->c[j].g ? (best->c[j].r > best->c[j].b ? best->c[j].r : best->c[j].b)
+                                        : (best->c[j].g > best->c[j].b ? best->c[j].g : best->c[j].b);
+                                    const int em = er > eg ? (er > eb ? er : eb) : (eg > eb ? eg : eb);
+                                    if (!gm || !em || abs(best->c[j].r * 255 / gm - er * 255 / em) > 8 ||
+                                        abs(best->c[j].g * 255 / gm - eg * 255 / em) > 8 ||
+                                        abs(best->c[j].b * 255 / gm - eb * 255 / em) > 8) hit = -100;
+                                    lvl = best->lv[j];
+                                }
+                        ok = hit == 3;
+                    };
+                    int sx[3], sy[3];
+                    /* BH1: east, a kobold on the middle square. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                        bhSquares(EAST, sx, sy);
+                        bhCast(EAST, 1, kx, ky, -1, -1, false, false, 0);
+                        int r1, g1, b1, r2, g2, b2, r3, g3, b3;
+                        float a1, a2, a3; bool o1, o2, o3; int p1, p2, p3;
+                        bhNear(100.0f, sx, sy, r1, g1, b1, a1, o1, p1);
+                        bhNear(300.0f, sx, sy, r2, g2, b2, a2, o2, p2);
+                        bhNear(480.0f, sx, sy, r3, g3, b3, a3, o3, p3);
+                        verdict("BH1", o1 && o2 && o3 && p3 < p2 && p2 < p1 && p3 > 0 && g2 != g1 && gBhEnds == 1 && LightFlashCount() == 0,
+                            "east cast: the three squares match the fire ramp's hue at ages %.0f, %.0f, %.0f ms (%d,%d,%d then %d,%d,%d then %d,%d,%d); their light level falls %d, %d, %d: "
+                            "ok %d %d %d; light ended %d time(s) (need 1); flashes after the cast=%d (need 0)",
+                            a1, a2, a3, r1, g1, b1, r2, g2, b2, r3, g3, b3, p1, p2, p3, (int)o1, (int)o2, (int)o3,
+                            gBhEnds, (int)LightFlashCount());
+                    }
+                    /* BH2: northeast: exactly the three squares of the diagonal shape carry the effect's glyph light. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY - 1 };
+                        bhSquares(NORTHEAST, sx, sy);
+                        bhCast(NORTHEAST, 1, kx, ky, -1, -1, false, false, 0);
+                        bool exact = false;
+                        for (size_t i = 0; i < gBhTicks.size(); ++i) {
+                            const BhTickRec &t = gBhTicks[i];
+                            if (t.clk < 99.0f || t.clk > 101.0f + 33.0f) continue;
+                            int hit = 0;
+                            for (int k = 0; k < 3; ++k)
+                                for (int j = 0; j < 3 && t.nGlyph == 3; ++j)
+                                    if (t.gx[j] == sx[k] && t.gy[j] == sy[k]) ++hit;
+                            exact = t.nGlyph == 3 && hit == 3;
+                            break;
+                        }
+                        verdict("BH2", exact && gBhMaxGlyph == 3,
+                            "northeast cast: lit squares are exactly (%d,%d) (%d,%d) (%d,%d) = %d; most lit squares at once %d (need 3)",
+                            sx[0], sy[0], sx[1], sy[1], sx[2], sy[2], (int)exact, gBhMaxGlyph);
+                    }
+                    /* BH3: the struck kobold flashes on the fire ramp, after the spell's own light ended. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                        bhCast(EAST, 1, kx, ky, -1, -1, false, false, 0);
+                        const float gr = gBhTfG.r ? (float)gBhTfG.g / gBhTfG.r : 0.0f;
+                        const float br = gBhTfG.r ? (float)gBhTfG.b / gBhTfG.r : 0.0f;
+                        verdict("BH3", gBhTfCalls == 1 && gBhTfGlyph && gr >= 0.9f && br >= 0.7f && gBhTfEndsBefore == 1 &&
+                            LightFlashCount() == 0,
+                            "target flashes=%d (need 1), spell light ended first=%d, kobold glyph color %d,%d,%d on=%d (near white: green/red>=0.9, blue/red>=0.7), flashes after=%d",
+                            gBhTfCalls, gBhTfEndsBefore, gBhTfG.r, gBhTfG.g, gBhTfG.b, (int)gBhTfGlyph, (int)LightFlashCount());
+                    }
+                    /* BH4: a wall on one of the three squares: two light, nothing crashes. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                        bhSquares(EAST, sx, sy);
+                        bhCast(EAST, 1, kx, ky, sx[1], sy[1], false, false, 0);
+                        bool two = false, wallLit = false;
+                        for (size_t i = 0; i < gBhTicks.size(); ++i) {
+                            const BhTickRec &t = gBhTicks[i];
+                            for (int j = 0; j < 3 && j < t.nGlyph; ++j)
+                                if (t.gx[j] == sx[1] && t.gy[j] == sy[1]) wallLit = true;
+                            if (t.clk >= 99.0f && !two) two = t.nGlyph == 2;
+                        }
+                        verdict("BH4", two && !wallLit && gBhMaxGlyph == 2 && LightFlashCount() == 0,
+                            "wall on (%d,%d): most lit squares at once %d (need 2), the wall square lit=%d (need 0), flashes after=%d",
+                            sx[1], sy[1], gBhMaxGlyph, (int)wallLit, (int)LightFlashCount());
+                    }
+                    /* BH8: the script's glyphs stay on the terminal through the hold, on every lit square. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                        bhSquares(EAST, sx, sy);
+                        for (int k = 0; k < 3; ++k) { gBhExpX[k] = sx[k]; gBhExpY[k] = sy[k]; }
+                        bhCast(EAST, 1, kx, ky, -1, -1, false, false, 0);
+                        for (int k = 0; k < 3; ++k) gBhExpX[k] = gBhExpY[k] = -1;
+                        int worst = 3;
+                        for (size_t i = 0; i < gBhTicks.size(); ++i)
+                            if (gBhTicks[i].nTilde < worst) worst = gBhTicks[i].nTilde;
+                        verdict("BH8", !gBhTicks.empty() && worst == 3,
+                            "terminal glyph at the three squares during the hold: CP437 247 on %d of 3 at the worst of %d hold steps (need 3)",
+                            worst, (int)gBhTicks.size());
+                    }
+                    /* BH5: animation None: no light at all, and the cast returns. */
+                    {
+                        const int kx[1] = { PX + 1 }, ky[1] = { PY };
+                        bhCast(EAST, 1, kx, ky, -1, -1, false, false, 2);
+                        verdict("BH5", gBhMaxGlyph == 0 && gBhTfCalls == 0 && gBhLitFrames == 0 && LightFlashCount() == 0,
+                            "animation None: lit squares %d, target flashes %d, light frames %d, flashes after=%d (need 0 each)",
+                            gBhMaxGlyph, gBhTfCalls, gBhLitFrames, (int)LightFlashCount());
+                    }
+                    /* BH6: a kobold casts out of the player's sight: the script's hold runs, yet no square lights. */
+                    {
+                        const int kx[1] = { PX + 10 }, ky[1] = { PY };
+                        bhCast(EAST, 1, kx, ky, -1, -1, true, true, 0);
+                        verdict("BH6", gBhLitFrames >= 1 && !gBhTicks.empty() && gBhMaxGlyph == 0 && LightFlashCount() == 0,
+                            "unseen cast: light frames %d and hold steps %d (need 1+ each, so the hold ran), most lit squares %d, flashes after=%d (need 0, 0)",
+                            gBhLitFrames, (int)gBhTicks.size(), gBhMaxGlyph, (int)LightFlashCount());
                     }
                 }
             }

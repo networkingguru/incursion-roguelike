@@ -18,6 +18,7 @@ INCURSION_BALL_PROBE	inc-az4d2	ball shape probe: disc, corridor, sight, bands, m
 INCURSION_BANE_PROBE	pre-registry	-
 INCURSION_BELT_POTION_PROBE	pre-registry	-
 INCURSION_BESTOW_PROBE	pre-registry	-
+INCURSION_BH7_ANIM	inc-jw0hw	with the effect-light probe, casts Burning Hands once at the given OPT_ANIMATION and prints four random draws (tools/check_effect_light.sh BH7)
 INCURSION_BLASPHEMY_PROBE	pre-registry	-
 INCURSION_BLINDFIGHT_PROBE	pre-registry	-
 INCURSION_BLOB_MIN_PROBE	pre-registry	-
