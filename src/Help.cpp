@@ -3648,7 +3648,7 @@ String & Monster::Describe(Player *p) {
     if (tm->Feats[0]) {
         str += "It has the ";
         feats = skills = 0;
-        for (i = 0; tm->Feats[i] && i != 16; i++)
+        for (i = 0; i != MAX_MON_FEATS && tm->Feats[i]; i++)
             if (!IsSkill(tm->Feats[i]))
                 feats++;
             else
@@ -3656,10 +3656,10 @@ String & Monster::Describe(Player *p) {
         if (feats) {
             str += feats == 1 ? "feat " : "feats ";
             lc = 0;
-            for (i = 0; tm->Feats[i] && i != 16; i++)
+            for (i = 0; i != MAX_MON_FEATS && tm->Feats[i]; i++)
                 if (!IsSkill(tm->Feats[i])) {
                     str += XPrint("<5><str><7>", FeatName(tm->Feats[i]));
-                    if (tm->Feats[i] == FT_SKILL_FOCUS)
+                    if (tm->Feats[i] == FT_SKILL_FOCUS && i + 1 < MAX_MON_FEATS)
                         str += XPrint(" <5>(<str>)<7>",
                         IsSkill(tm->Feats[i + 1]) ?
                         SkillInfo[SkillIndex(tm->Feats[i + 1])].name : "invalid");
@@ -3680,7 +3680,7 @@ String & Monster::Describe(Player *p) {
         if (skills) {
             str += skills == 1 ? "skill " : "skills ";
             lc = 0;
-            for (i = 0; tm->Feats[i] && i != 16; i++)
+            for (i = 0; i != MAX_MON_FEATS && tm->Feats[i]; i++)
                 if (IsSkill(tm->Feats[i])) {
                     str += XPrint("<2><str><7>", SkillInfo[SkillIndex(tm->Feats[i])].name);
                     /* Kludge! */
@@ -4183,7 +4183,7 @@ SkipMonsterStats:
             if (tt->NewFeats[0]) {
                 str += "It has the bonus ";
                 feats = skills = 0;
-                for (i = 0; tt->NewFeats[i] && i != 16; i++)
+                for (i = 0; i != MAX_MON_FEATS && tt->NewFeats[i]; i++)
                     if (!IsSkill(tt->NewFeats[i]))
                         feats++;
                     else
@@ -4191,10 +4191,10 @@ SkipMonsterStats:
                 if (feats) {
                     str += feats == 1 ? "feat " : "feats ";
                     lc = 0;
-                    for (i = 0; tt->NewFeats[i] && i != 16; i++)
+                    for (i = 0; i != MAX_MON_FEATS && tt->NewFeats[i]; i++)
                         if (!IsSkill(tt->NewFeats[i])) {
                             str += XPrint("<5><str><7>", FeatName(tt->NewFeats[i]));
-                            if (tt->NewFeats[i] == FT_SKILL_FOCUS)
+                            if (tt->NewFeats[i] == FT_SKILL_FOCUS && i + 1 < MAX_MON_FEATS)
                                 str += XPrint(" <5>(<Str>)<7>", SkillInfo[SkillIndex(tt->NewFeats[i + 1])].name);
                             lc++;
                             if (lc >= 511)
@@ -4213,7 +4213,7 @@ SkipMonsterStats:
                 if (skills) {
                     str += skills == 1 ? "skill " : "skills ";
                     lc = 0;
-                    for (i = 0; tt->NewFeats[i] && i != 16; i++)
+                    for (i = 0; i != MAX_MON_FEATS && tt->NewFeats[i]; i++)
                         if (IsSkill(tt->NewFeats[i])) {
                             str += XPrint("<2><str><7>", SkillInfo[SkillIndex(tt->NewFeats[i])].name);
                             lc++;

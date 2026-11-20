@@ -3033,7 +3033,7 @@ void Creature::AddTemplate(rID tID)
         }
     
     // ww: previously templates could not actually grant Feats
-    for (i=0;i<16;i++) {
+    for (i=0;i<MAX_MON_FEATS && tt->NewFeats[i];i++) {
       if (tt->NewFeats[i] && tt->NewFeats[i] >= FT_FIRST && 
                              tt->NewFeats[i] <= FT_LAST)
         GainPermStati(EXTRA_FEAT,NULL,SS_MISC,tt->NewFeats[i],1,tID);

@@ -41,16 +41,16 @@ static Monster *make_feat_monster(const char *name, int dx) {
     return mn;
 }
 
-/* Copy a 16-entry feat list into saved, then remove ft from it. The list is
+/* Copy a MAX_MON_FEATS-entry feat list into saved, then remove ft from it. The list is
    zero-terminated, so the survivors are packed to the front. feats is a
-   TMonster's Feats or a TTemplate's NewFeats, both uint16[16]. */
-static void feats_without(uint16 *feats, int16 ft, uint16 saved[16]) {
-    memcpy(saved, feats, 16 * sizeof(uint16));
+   TMonster's Feats or a TTemplate's NewFeats, both uint16[MAX_MON_FEATS]. */
+static void feats_without(uint16 *feats, int16 ft, uint16 saved[MAX_MON_FEATS]) {
+    memcpy(saved, feats, MAX_MON_FEATS * sizeof(uint16));
     int j = 0;
-    for (int i = 0; i < 16; ++i)
+    for (int i = 0; i < MAX_MON_FEATS; ++i)
         if (feats[i] != (uint16)ft)
             feats[j++] = feats[i];
-    for (; j < 16; ++j)
+    for (; j < MAX_MON_FEATS; ++j)
         feats[j] = 0;
 }
 
@@ -232,7 +232,7 @@ void MonsterFeatProbe(Player *pl) {
         Monster *mn = make_feat_monster(dash[i], 0);
         if (!mn) continue;
         TMonster *t = TMON(mn->tmID);
-        uint16 saved[16];
+        uint16 saved[MAX_MON_FEATS];
         feats_without(t->Feats, FT_DASH, saved);
         log_feat_monster("dash-off", dash[i], mn);
         memcpy(t->Feats, saved, sizeof saved);
@@ -241,7 +241,7 @@ void MonsterFeatProbe(Player *pl) {
     Monster *tyr = make_feat_monster("cave tyrannosaurus", 0);
     if (tyr) {
         TMonster *t = TMON(tyr->tmID);
-        uint16 saved[16];
+        uint16 saved[MAX_MON_FEATS];
         feats_without(t->Feats, FT_WEAPON_FOCUS, saved);
         log_feat_monster("focus-off", "cave tyrannosaurus", tyr);
         memcpy(t->Feats, saved, sizeof saved);
@@ -259,7 +259,7 @@ void MonsterFeatProbe(Player *pl) {
         Monster *vamp = make_monster_beside("human", "vampire");
         if (vamp) {
             TTemplate *vt = TTEM(FIND("vampire"));
-            uint16 saved[16];
+            uint16 saved[MAX_MON_FEATS];
             feats_without(vt->NewFeats, FT_PERSUASIVE, saved);
             vamp->RemoveStati(EXTRA_FEAT, -1, FT_PERSUASIVE);
             log_skill_monster("persuasive-off", "vampire human", vamp);
@@ -267,7 +267,7 @@ void MonsterFeatProbe(Player *pl) {
             /* Grant the EXTRA_FEAT copy only while the template still lists the
                feat, as AddTemplate does, so a template edit reaches "on" too. */
             bool listed = false;
-            for (int i = 0; i < 16; ++i)
+            for (int i = 0; i < MAX_MON_FEATS; ++i)
                 if (vt->NewFeats[i] == FT_PERSUASIVE) listed = true;
             if (listed)
                 vamp->GainPermStati(EXTRA_FEAT, NULL, SS_MISC, FT_PERSUASIVE, 1,
@@ -286,7 +286,7 @@ void MonsterFeatProbe(Player *pl) {
         Monster *mn = make_monster_beside(gb[i], NULL);
         if (!mn) continue;
         TMonster *t = TMON(mn->tmID);
-        uint16 saved[16];
+        uint16 saved[MAX_MON_FEATS];
         feats_without(t->Feats, FT_GREAT_BLOW, saved);
         log_great_blow("greatblow-off", gb[i], mn);
         memcpy(t->Feats, saved, sizeof saved);
@@ -301,7 +301,7 @@ void MonsterFeatProbe(Player *pl) {
             bg->CalcValues();
             TTemplate *bt = TTEM(FIND("blackguard;template"));
             int fallback = 0;
-            for (int i = 0; i < 16 && bt->NewFeats[i]; ++i)
+            for (int i = 0; i < MAX_MON_FEATS && bt->NewFeats[i]; ++i)
                 if (!IsSkill(bt->NewFeats[i]) &&
                     strncmp(FeatName(bt->NewFeats[i]), "---", 3) == 0)
                     fallback = 1;
