@@ -355,7 +355,7 @@ class TMonster: public Resource
 			int8 Weight,
 				Nutrition,
 				Size;
-      uint16 Feats[16];
+      uint16 Feats[MAX_MON_FEATS];
 			uint8 Flags[(M_LAST/8)+1];
 			uint32 Imm;
 			uint16 Res;
@@ -383,7 +383,7 @@ class TMonster: public Resource
       return NULL;
     } 
       bool HasFeat(int16 ft) {
-        for(int16 i=0;i!=16 && Feats[i];i++)
+        for(int16 i=0;i!=MAX_MON_FEATS && Feats[i];i++)
           if (Feats[i] == ft)
             return true;
         return false;
@@ -690,7 +690,7 @@ class TTemplate: public Resource
       MVal Attr[7]; /* ww: would cause ForMType to be overwritten */
       Status Stati[NUM_TMON_STATI]; 
       int32 ForMType, AddMType;
-      uint16 NewFeats[16];
+      uint16 NewFeats[MAX_MON_FEATS];
       TAttack NewAttk[16];
       uint8 AddFlags[(M_LAST/8)+1],
              SubFlags[(M_LAST/8)+1],
@@ -711,7 +711,7 @@ class TTemplate: public Resource
       uint32 AddImm, SubImm;
       uint16 AddRes, SubRes;
       bool HasFeat(int16 ft) {
-        for(int16 i=0;i!=16 && NewFeats[i];i++)
+        for(int16 i=0;i!=MAX_MON_FEATS && NewFeats[i];i++)
           if (NewFeats[i] == ft)
             return true;
         return false;
