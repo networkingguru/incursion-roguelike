@@ -59,6 +59,33 @@
 # fact: BH7 the gameplay random stream -- each cast runs in its own process (INCURSION_BH7_ANIM), from init_genrand(7770002) just before the cast, so no state carries between casts; the check compares the stream position (seed, draws taken) when the script's light ends, before the strike, which re-seeds the stream; whatever the values are
 # fact: BH7 the struck kobold -- a kobold at (PX+1, PY), 500 hit points, on the first of the spell's squares; the spell strikes it with no roll deciding that
 # fact: BH7 process-to-process determinism -- two runs at the same animation must give equal draws; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# fact: ST1 the skull and its square -- the probe places a skull trap at (PX+4, PY), a fixed offset from the player's fixed square, with the player as its caster (the Skull Trap spell's own stati); a kobold on that square wakes it
+# fact: ST1 the waking -- the probe throws the trap's effect as Trap::TriggerTrap does, with the avoid save left out, so no roll decides that the trap fires
+# fact: ST1 the glow's color -- the color the script names (COL_CRIMSON) through LightEffectColour; the check reads the mid-rise light's hue against it, each scaled to its brightest channel, within 8 per channel
+# fact: ST2 a step's age -- the effect's own clock: the 1000 ms rise runs in 33 ms steps and the probe takes the step nearest 100, 500 and 900 ms; never the wall clock
+# fact: ST2 the level at a step -- LightFlashLevel set by the rise from its own clock; no flicker (the rise sets the flash steady), so no cosmetic roll moves it
+# fact: ST8 the last rise step -- the effect clock's final 33 ms step of the 1000 ms rise, the frame at the skull square; the level there is 1.0 by the rise's own arithmetic, so no roll decides it
+# fact: ST8 the glyph color -- LightEffectGlyphAt at the skull square, the rise level times the base color; crimson hue within 12 per channel, brightest channel at least 230
+# fact: ST9 the fire wave's squares -- the squares 1, 3 and 6 east of the skull (the globe's radius is lval 6), a fixed offset from the skull's fixed square; the wave hook reports each in ring order, so no roll decides which is lit first
+# fact: ST9 the ramp colors -- the glyph color LightEffectGlyphAt reads at each shown step, green over red at the first step at least 0.8; and the square's light color LightAt reads at every wave hook call, through the cooling after the glyphs go, first lit sample against the last with brightest channel 60+, green over red down at least 0.15; the fire ramp and the wave clock decide both, no roll
+# fact: ST10 the fire glyphs gone -- the wave hook's glyph 0 call for each fire square, in call order; the first necromantic call comes after the last fire call
+# fact: ST10 the necromantic row -- LightEffectColour(COL_NECRO) read as the table row, the owner's ruled deep purple 80,20,140; a ruled value, no roll
+# fact: ST10 the necromantic hue -- LightEffectGlyphAt at each necromantic step, the flash's own dark ramp of LightEffectColour(COL_NECRO); hue within 12 per channel
+# fact: ST11 the old highlight -- GlobeGlyphHook calls during the trap's cast; the plain globe is Pyrotechnics;blast (a globe with a cval and no EF_WAVES), cast the way case G3 casts it
+# fact: ST9 the ring and hold timing -- the wave clock (the effect's own, never the wall clock) at each wave hook call: ring d is reported at (d+1) x 10 ms, the glyphs hold 60 ms after the last ring; no roll decides it
+# fact: ST14 the wave light's cooling -- LightAt green over red at the skull's square and at the square 6 east of it, both read at the fire wave's last ring step (the first wave hook call that shows the square 6 east); skull's square 0.6 or less, 6 squares out 0.85 or more; the wave's light life (1.5 times its glyph time) and the fire ramp decide both, no roll
+# fact: ST12 the creature flash's place -- WaveFlashHook (a flash starts as a ring reaches a struck creature) against the count of wave hook calls so far; the kobold on the skull's square is struck by both waves, and its hit points (500) show that no hit came first
+# fact: ST12 the kobold's drawn glyph -- T1->GetGlyph at the skull's square (a fixed offset from the player's fixed square) against the kobold's own Image, read at each wave hook call; no roll decides it
+# fact: ST12 the kobold's drawn color -- LightEffectGlyphAt at that square, the call the renderer's LitPaint makes; the fire ramp's near-white start and warm tail and the necromantic hue are the ramp tables' own values, no roll decides them
+# fact: ST12 the kobold's square within the first hook call at its ring -- the struck set is one kobold at the skull's square with 500 hit points; no roll decides that the waves strike it
+# fact: ST12 no struck flash after the last wave -- TargetFlashHook TF_LIT count during the trap's cast, which only the old end-of-globe flash raises
+# fact: ST13 the plain globe's order -- GlobeGlyphHook recolors counted before the first TargetFlashHook TF_LIT; Pyrotechnics;blast, with a kobold at (aimX+1, PY+1) inside its radius, cast as case G3 casts it
+# fact: ST3 the last frame before the explosion -- the frame the light map holds when the script's light ends; the check reads its level at the skull square against the rise's top level
+# fact: ST4 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that nothing lights
+# fact: ST5 out of sight -- the probe makes the player's eight neighbors opaque (as case C) and places the skull at (PX+10, PY); no roll decides the line of sight
+# fact: ST7 the gameplay random stream -- each cast runs in its own process (INCURSION_ST7_ANIM), from init_genrand(7770003) just before the cast, so no state carries between casts; the check compares the stream position (seed, draws taken) when the script's light ends and the next draw, whatever the values are
+# fact: ST7 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# Cases ST1-ST14 add: Skull Trap's skull glows crimson after its scream, rising from dim to full over 1000 ms and holding at its peak; its explosion then plays a fire wave and a necromantic wave of glyphs, rings moving out 10 ms apiece, each struck creature flashing as each wave reaches it; a plain globe still runs its struck flash; no old highlight, no light when unseen or under animation None, and no gameplay roll moved.
 # Cases BH1-BH8 add (BH7 in separate processes): Burning Hands lights each square it draws on the fire ramp through the hold and the cooling, flashes every creature it hit, and moves no gameplay roll.
 # Cases CP1-CP6 add: Hypnotic Pattern, Colour Spray and Chromatic Orb draw random symbols in random colors that re-pick each 100 ms of the effect clock, the light follows each glyph's color, and no gameplay roll moves.
 # Cases LM1-LM5 add: a lit lightning stroke is drawn as a jagged path that keeps its rules and never changes the squares the spell walks.
@@ -102,7 +129,15 @@ bh7() {   # one fresh process; prints its four draws
         tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
     grep -a 'EFFECT_LIGHT: BH7DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*BH7DRAW //'
 }
+st7() {   # one fresh process; prints its end position and next draw
+    local d="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-effect-light-st7-$1-$2"
+    INCURSION_ST7_ANIM="$1" INCURSION_EFFECT_LIGHT_PROBE=1 INCURSION_LIGHT_PROBE=1 INCURSION_RUN_DIR="$d" \
+        INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$LOAD" \
+        tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
+    grep -a 'EFFECT_LIGHT: ST7DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*ST7DRAW //'
+}
 BH7_N1="$(bh7 0)"; BH7_N2="$(bh7 0)"; BH7_NONE="$(bh7 2)"
+ST7_N1="$(st7 0 a)"; ST7_N2="$(st7 0 b)"; ST7_NONE="$(st7 2 c)"
 
 log="$RUN_DIR/logs/errors.log"
 if [ ! -s "$log" ]; then
@@ -150,6 +185,15 @@ case "$last" in
             echo "EFFECT_LIGHT: BH7 FAIL stream position when the script's light ends, struck kobold: animation Normal $BH7_N1, animation None $BH7_NONE (need equal)"
             exit 1
         fi
+        if [ -z "$ST7_N1" ] || [ "$ST7_N1" != "$ST7_N2" ]; then
+            echo "INCONCLUSIVE: ST7 two animation-Normal runs gave different draws ('$ST7_N1' / '$ST7_N2')."
+            exit 2
+        fi
+        if [ "$ST7_N1" != "$ST7_NONE" ]; then
+            echo "EFFECT_LIGHT: ST7 FAIL Skull Trap stream position at the end of the script's light and next draw: animation Normal $ST7_N1, animation None $ST7_NONE (need equal)"
+            exit 1
+        fi
+        echo "EFFECT_LIGHT: ST7 PASS Skull Trap stream position at the end of the script's light and next draw: animation Normal (twice) $ST7_N1, animation None $ST7_NONE"
         echo "EFFECT_LIGHT: BH7 PASS stream position when the script's light ends, struck kobold: animation Normal (twice) $BH7_N1, animation None $BH7_NONE"
         echo "messages: $(grep -c . <<< "$msg_on") line(s), identical with the flash on and off"
         echo "PASS: an effect's squares light, show in its color, dim without hiding, and go dark."

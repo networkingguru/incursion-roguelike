@@ -209,7 +209,9 @@ struct EventInfo {
        hold, Struck per creature hit, End before any hit resolves. */
     void LightBegin();
     void LightSquare(int16 x, int16 y, Glyph g);
+    void LightColour(int16 col);
     void LightHold(int16 ms);
+    void LightRise(int16 ms);
     void LightStruck(Thing *t);
     void LightEnd();
 

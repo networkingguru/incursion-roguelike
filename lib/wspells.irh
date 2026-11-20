@@ -5209,7 +5209,7 @@ Wizard Spell "Skull Trap" : EA_GENERIC
 AI_TRAP Effect "skull trap;trap" : EA_BLAST
   {
     Desc: "A grinning human skull lies on the ground here.";
-    Flags: EF_NOGEN, EF_EVIL, EF_GLOW; SC_NEC;
+    Flags: EF_NOGEN, EF_EVIL, EF_GLOW, EF_WAVES; SC_NEC;
     On Event PRE(EV_EFFECT) {
       hObj hCaster;
       
@@ -5231,8 +5231,19 @@ AI_TRAP Effect "skull trap;trap" : EA_BLAST
         APrint(e,"The skull explodes!");
       return NOTHING;
       },
-    MSG_CAST 
-      "The skull rises from the ground, spins... and <12>*screams*<7>!";
+    MSG_CAST {
+      APrint(e,"The skull rises from the ground, spins... and <12>*screams*<7>!");
+      e.Terse = true;
+      /* inc-jw0hw: the skull's eyes glow red, rising for one second until the globe's fire light takes over */
+      if (GetHandle(EItem)) {
+        e.LightBegin();
+        e.LightColour(COL_CRIMSON);
+        e.LightSquare(EItem->x,EItem->y,EItem->Image);
+        e.LightRise(1000);
+        e.LightEnd();
+        }
+      return NOMSG;
+      };
     aval: AR_GLOBE; lval: 6; cval: RED; xval: AD_SONI; pval: 2d6;
   }
 and EA_INFLICT

@@ -81,7 +81,7 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
                          TEffect *te, bool targetFlash)
     : map(m), id(-1), ended(false), lit(true), target(targetFlash),
-      clockMs(0.0f), life(900.0f), glyphsOn(false) {
+      clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
     lit = d.lit;
@@ -128,6 +128,16 @@ bool EffectLight::Light(int16 x, int16 y) {
   return false;
 }
 
+bool EffectLight::LightStruck(int16 x, int16 y) {
+  if (!Light(x, y))
+    return false;
+  if (!glyphsOn) {
+    glyphsOn = true;
+    LightFlashGlyphs(id, true);
+  }
+  return true;
+}
+
 void EffectLight::MoveTo(int16 x, int16 y) {
   if (ended || !lit || LightFlashDisabled())
     return;
@@ -141,6 +151,16 @@ void EffectLight::MoveTo(int16 x, int16 y) {
     LightFlashGlyphs(id, glyphsOn);
     LightFlashCell(id, x, y);
   }
+}
+
+/* inc-jw0hw: the whole flash takes the color of light row or palette color `col`. */
+void EffectLight::Recolour(int16 col) {
+  colour = LightEffectColour(col);
+  ramp = LightFlashRampFor(col);
+  style = col == COL_FIRE ? LF_FIRE : col == COL_ELEC ? LF_ARC : col == COL_RAINBOW ? LF_RAINBOW : LF_STEADY;
+  gain = col == COL_SONIC ? 0.6f : 1.0f;
+  if (id >= 0 && !ended)
+    LightFlashRecolour(id, colour, style, gain, ramp);
 }
 
 void EffectLight::SetCellColour(int16 x, int16 y, int16 glyphColour) {
@@ -170,6 +190,34 @@ void EffectLight::Hold(int16 ms) {
   Wait(ms);
 }
 
+/* The rise's first level: dim, not dark. A rise has no ramp: its squares show the flash's base color at the flash level. */
+static const float RISE_START = 0.1f;
+
+void EffectLight::Rise(int16 ms) {
+  if (ms <= 0)
+    return;
+  risen = true;
+  if (id >= 0) {
+    LightFlashSetStyle(id, LF_STEADY);
+    LightFlashSetRise(id, true);
+    LightFlashLevel(id, RISE_START);
+  }
+  Refresh();
+  if (EffectLightHook) EffectLightHook(EL_HOLD);
+  const int steps = id < 0 ? 1 : (ms + 32) / 33;
+  int done = 0;
+  for (int i = 1; i <= steps; i++) {
+    const int upto = ms * i / steps;
+    clockMs += (float)(upto - done);
+    if (id >= 0)
+      LightFlashLevel(id, RISE_START + (1.0f - RISE_START) * (float)upto / (float)ms);
+    T1->StopWatch((int16)(upto - done));
+    if (ScriptLightTickHook && this == ScriptFx)
+      ScriptLightTickHook(clockMs);
+    done = upto;
+  }
+}
+
 /* A wait of `ms` in steps of about 33 ms. Each step advances the effect clock by
    exactly its own length, so the ramp animates through the wait and the total is
    exactly `ms`. With no flash the wait is one StopWatch, as before. */
@@ -190,11 +238,33 @@ void EffectLight::Wait(int16 ms) {
   }
 }
 
+/* inc-jw0hw: this light's glyphs are gone but its squares keep cooling; Age() runs
+   the cooling while another light plays, Tail() finishes it. */
+void EffectLight::GlyphsOff() {
+  glyphsOn = false;
+  if (id >= 0 && !ended) LightFlashGlyphs(id, false);
+}
+
+void EffectLight::Age(int16 ms) {
+  if (ms <= 0 || id < 0 || ended)
+    return;
+  clockMs += (float)ms;
+  LightFlashSetClock(id, clockMs);
+}
+
 /* A globe's glyphs stay up for `glyphMs`; its light lives 1.25 times as long, so
    a long hold never shows black glyphs. */
 void EffectLight::SetGlyphTime(int16 glyphMs) {
   const float want = 1.25f * (float)glyphMs;
   life = want > 900.0f ? want : 900.0f;
+  if (id >= 0)
+    LightFlashSetLife(id, life);
+}
+
+void EffectLight::SetLife(float ms) {
+  if (ms <= 0.0f)
+    return;
+  life = ms;
   if (id >= 0)
     LightFlashSetLife(id, life);
 }
@@ -225,7 +295,11 @@ void EffectLight::End() {
   if (had) {
     LightFlashRemove(id);
     id = -1;
-    Show();
+    if (risen) {   /* no dark frame between the rise and the next light */
+      Player *p = theGame->GetPlayer(0);
+      if (p) p->UpdateMap = 1;
+    } else
+      Show();
   }
   if (target) {
     if (TargetFlashHook) TargetFlashHook(TF_END);
@@ -270,6 +344,7 @@ static bool ScriptOverlay = false;
 static Map *ScriptMap = NULL;
 static int16 ScriptColour = 0, ScriptDType = 0;
 static TEffect *ScriptTe = NULL;
+static bool ScriptColourSet = false;   /* the script named its light's color */
 
 void EventInfo::LightBegin() {
   if (ScriptFx) {   /* a script that never ended its light */
@@ -278,6 +353,7 @@ void EventInfo::LightBegin() {
   }
   ScriptStruck.clear();
   ScriptSquares.clear();
+  ScriptColourSet = false;
   Player *p = theGame->GetPlayer(0);
   if (!EMap || !p || p->Opt(OPT_ANIMATION) == 2)
     return;
@@ -295,20 +371,49 @@ void EventInfo::LightSquare(int16 x, int16 y, Glyph g) {
   }
 }
 
+/* a repaint erases what the script put on the terminal: keep each lit square's glyph in the map overlay */
+static bool ScriptGlyphsOn() {
+  Overlay &o = ScriptMap->ov;
+  const bool own = !o.Active;
+  if (own) o.Activate();
+  for (size_t i = 0; i < ScriptSquares.size(); i++)
+    o.AddGlyph(ScriptSquares[i].x, ScriptSquares[i].y, ScriptSquares[i].g);
+  return own;
+}
+
+/* inc-jw0hw: the light takes this color for the rest of the script's light. */
+void EventInfo::LightColour(int16 col) {
+  if (!ScriptFx || col <= 0)
+    return;
+  ScriptFx->Recolour(col);
+  ScriptColourSet = true;
+}
+
 void EventInfo::LightHold(int16 ms) {
   if (!ScriptFx) {
     T1->StopWatch(ms);
     return;
   }
-  /* a repaint erases what the script put on the terminal: keep each lit square's glyph in the map overlay */
-  Overlay &o = ScriptMap->ov;
-  ScriptOverlay = !o.Active;
-  if (ScriptOverlay) o.Activate();
-  for (size_t i = 0; i < ScriptSquares.size(); i++)
-    o.AddGlyph(ScriptSquares[i].x, ScriptSquares[i].y, ScriptSquares[i].g);
+  ScriptOverlay = ScriptGlyphsOn();
   ScriptFx->Refresh();
   ScriptFx->Hold(ms);
-  if (ScriptOverlay) o.DeActivate();
+  if (ScriptOverlay) ScriptMap->ov.DeActivate();
+  ScriptOverlay = false;
+}
+
+/* inc-jw0hw: like LightHold, but the light climbs from dim to full over ms and
+   LightEnd then ends it at once. Nothing lit (animation None, or an unseen
+   square): no light and no wait. A palette cval colors the squares. */
+void EventInfo::LightRise(int16 ms) {
+  if (!ScriptFx || ScriptSquares.empty())
+    return;
+  const int16 cv = ScriptTe ? ScriptTe->ef.cval : 0;
+  if (!ScriptColourSet && cv > 0 && cv < COL_FIRE)
+    for (size_t i = 0; i < ScriptSquares.size(); i++)
+      ScriptFx->SetCellColour(ScriptSquares[i].x, ScriptSquares[i].y, cv);
+  ScriptOverlay = ScriptGlyphsOn();
+  ScriptFx->Rise(ms);
+  if (ScriptOverlay) ScriptMap->ov.DeActivate();
   ScriptOverlay = false;
 }
 
@@ -321,7 +426,8 @@ void EventInfo::LightEnd() {
   if (ScriptFx) {
     EffectLight *fx = ScriptFx;
     ScriptFx = NULL;
-    fx->Tail(false);
+    if (!fx->Risen())
+      fx->Tail(false);   /* a rise ends at its peak: no cooling before the next light */
     fx->End();
     delete fx;
     if (!ScriptStruck.empty())

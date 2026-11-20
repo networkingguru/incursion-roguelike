@@ -88,6 +88,7 @@ struct Flash {
   float gain, level, noise;
   float clock, life;           /* the flash's own clock and a square's light life, ms */
   bool glyphs;                 /* the effect's glyphs are on screen */
+  bool rise;                   /* a rise: every square shows its base color, brightest channel 255, at the flash level */
   int16 reach;
   uint32 seed;
   std::vector<FlashCell> cells;
@@ -843,6 +844,14 @@ static void FlashStage(const Flash &fl, const RampSet *pre, int ci,
     birth = fl.cells[ci].birth; cx = fl.cells[ci].x; cy = fl.cells[ci].y;
     tinted = fl.cells[ci].tinted; tint = fl.cells[ci].tint;
   }
+  if (fl.rise) {   /* inc-jw0hw: a rise has no ramp; its brightness is the flash level */
+    const LightRGB b = tinted ? tint : fl.c;
+    const float mx = (float)(b.r > b.g ? (b.r > b.b ? b.r : b.b) : (b.g > b.b ? b.g : b.b));
+    const float k = mx > 0.0f ? 255.0f / mx : 1.0f;
+    rgb.r = LightChannel(b.r * k); rgb.g = LightChannel(b.g * k); rgb.b = LightChannel(b.b * k);
+    lv = 1.0f;
+    return;
+  }
   float age = fl.clock - birth;
   if (age < 0.0f) age = 0.0f;
   age *= 900.0f / (fl.life > 0.0f ? fl.life : 900.0f);
@@ -1015,7 +1024,7 @@ LightRGB LightEffectColour(int16 blastColour) {
     { 255, 140,  40 },  /* COL_FIRE    */
     { 170, 210, 255 },  /* COL_COLD    */
     { 210, 190, 255 },  /* COL_MAGIC   */
-    { 140, 100, 180 },  /* COL_NECRO   */
+    {  80,  20, 140 },  /* COL_NECRO   */
     { 210, 225, 255 },  /* COL_ELEC    */
     { 255, 166, 166 },  /* COL_RAINBOW */
     { 255, 250, 235 },  /* COL_LIGHT   */
@@ -1079,7 +1088,7 @@ int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach, uint8 ramp
   if (id == Flashes.size()) Flashes.push_back(Flash());
   Flash &fl = Flashes[id];
   fl.live = true; fl.c = c; fl.style = style; fl.ramp = ramp; fl.gain = gain;
-  fl.clock = 0.0f; fl.life = 900.0f; fl.glyphs = false;
+  fl.clock = 0.0f; fl.life = 900.0f; fl.glyphs = false; fl.rise = false;
   fl.level = 1.0f; fl.noise = 1.0f; fl.reach = reach < 0 ? 0 : reach;
   fl.seed = (++flashSeq) * 2654435761u ^ (uint32)id * 40503u;
   fl.cells.clear();
@@ -1138,6 +1147,23 @@ void LightFlashLevel(int32 id, float level) {
   if (lmMap && Frame) ComposeFrame();
 }
 
+void LightFlashSetStyle(int32 id, uint8 style) {
+  Flash *fl = FlashById(id);
+  if (fl) fl->style = style;
+}
+
+void LightFlashSetRise(int32 id, bool on) {
+  Flash *fl = FlashById(id);
+  if (fl) fl->rise = on;
+}
+
+void LightFlashRecolour(int32 id, LightRGB c, uint8 style, float gain, uint8 ramp) {
+  Flash *fl = FlashById(id);
+  if (!fl) return;
+  fl->c = c; fl->style = style; fl->gain = gain; fl->ramp = ramp;
+  if (lmMap && Frame) ComposeFrame();
+}
+
 void LightFlashSetClock(int32 id, float ms) {
   Flash *fl = FlashById(id);
   if (!fl) return;
@@ -1165,21 +1191,27 @@ bool LightFlashSpent(int32 id) {
 
 bool LightEffectGlyphAt(int16 x, int16 y, LightRGB &rgb) {
   if (lmLegacy || !lmMap) return false;
+  /* inc-jw0hw: where several flashes light one square with their glyphs on, the youngest cell's color wins, so a creature's glow hands over to the next wave's. */
+  int bf = -1, bk = -1; float bestAge = 0.0f;
   for (size_t i = 0; i < Flashes.size(); i++) {
     const Flash &fl = Flashes[i];
     if (!fl.live || !fl.glyphs) continue;
     for (size_t k = 0; k < fl.cells.size(); k++) {
       if (fl.cells[k].x != x || fl.cells[k].y != y) continue;
-      RampSet set;
-      BuildRamp(fl.ramp, fl.c, set);
-      LightRGB c; float lv;
-      FlashStage(fl, fl.ramp != LR_RAINBOW ? &set : NULL, (int)k, c, lv);
-      if (lv <= 0.0f) return false;
-      rgb = c;
-      return true;
+      const float age = fl.clock - fl.cells[k].birth;
+      if (bf < 0 || age < bestAge) { bf = (int)i; bk = (int)k; bestAge = age; }
     }
   }
-  return false;
+  if (bf < 0) return false;
+  const Flash &fl = Flashes[bf];
+  RampSet set;
+  BuildRamp(fl.ramp, fl.c, set);
+  LightRGB c; float lv;
+  FlashStage(fl, fl.ramp != LR_RAINBOW ? &set : NULL, bk, c, lv);
+  if (lv <= 0.0f) return false;
+  if (fl.rise) { c.r = LightChannel(c.r * fl.level); c.g = LightChannel(c.g * fl.level); c.b = LightChannel(c.b * fl.level); }
+  rgb = c;
+  return true;
 }
 
 void LightFlashRemove(int32 id) {

@@ -1954,6 +1954,163 @@ static void HDPoolProbe(const char *fmt, ...)
     fflush(f);
 }
 
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called for each square of a
+   wave: after each ring's wait with the glyph on show, and once with g 0 when the
+   wave's glyphs go. clockMs is that wave's own clock. */
+void (*WaveHook)(int wave, int16 x, int16 y, Glyph g, float clockMs) = NULL;
+/* Called when a wave's ring reaches a struck creature's square and its flash starts. */
+void (*WaveFlashHook)(int wave, int16 x, int16 y) = NULL;
+
+/* The waves of a globe flagged EF_WAVES: one per EA_BLAST part whose damage type
+   has a wave glyph, in part order. Rings move out from the center, 10 ms apiece;
+   each square shows the glyph and lights on its own type's ramp, and a creature
+   the ring reaches starts its own flash on that ramp; the glyphs hold
+   60 ms and go, and the next wave starts as they go while this wave's light
+   cools. Only data picks the waves; a type with no row here, or that does not
+   glow (sonic), makes none. */
+struct WaveSpec { int16 dtype; Glyph glyph; int16 col; };
+static const WaveSpec WaveSpecs[] = {
+  { AD_FIRE, 247, PINK },     /* CP437 double tilde, as Burning Hands */
+  { AD_NECR, 177, SHADOW },   /* CP437 medium shade */
+};
+
+static const WaveSpec *WaveFor(int16 dtype)
+  {
+    for (size_t i = 0; i < sizeof(WaveSpecs)/sizeof(WaveSpecs[0]); i++)
+      if (WaveSpecs[i].dtype == dtype)
+        return &WaveSpecs[i];
+    return NULL;
+  }
+
+/* a wait of `ms` for wave light fx while the other lights (cooling, or this wave's struck flash) age */
+static void WaveWait(EffectLight &fx, const std::vector<EffectLight*> &ages, int16 ms)
+  {
+    while (ms > 0) {
+      const int16 step = ms > 33 ? 33 : ms;
+      for (size_t i = 0; i < ages.size(); i++)
+        ages[i]->Age(step);
+      fx.Wait(step);
+      ms -= step;
+      }
+  }
+
+/* The creatures a globe strikes: the set its struck flash lights. */
+static int16 GlobeStruck(EventInfo &e, int16 cx, int16 cy, Thing **struck, int16 cap)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    Thing *t; int16 i, n = 0;
+    MapIterate(m,t,i)
+      if (t->isCreature() && n < cap &&
+          dist(t->x,t->y,cx,cy) <= (int16)e.vRadius &&
+          !(t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE)))
+        struck[n++] = t;
+    return n;
+  }
+
+static void GlobeWaves(EventInfo &e, int16 cx, int16 cy)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    Player *pl = theGame->GetPlayer(0);
+    const int16 R = (int16)e.vRadius;
+    const int16 ringMs = 10, holdMs = 60;   /* a ring step and the hold after the last ring */
+    const float waveLife = 1.5f * (float)((R + 1) * ringMs + holdMs);   /* the light cools within the wave's own glyph time */
+    int16 x, y;
+    bool seen[33][33];
+    memset(seen, 0, sizeof(seen));
+    if (R > 16 || !pl || pl->Opt(OPT_ANIMATION) == 2)
+      return;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y))
+          seen[x-(cx-R)][y-(cy-R)] = PossiblyPause(T1,x,y,0);
+    Thing *struck[128];
+    const int16 nStruck = GlobeStruck(e, cx, cy, struck, 128);
+    std::vector<EffectLight*> cool;
+    int wave = 0;
+    for (int8 n = 0; te->Vals(n); n++) {
+      const EffectValues *ev = te->Vals(n);
+      const WaveSpec *ws = ev->eval == EA_BLAST ? WaveFor(ev->xval) : NULL;
+      if (!ws)
+        continue;
+      EffectLight *fx = new EffectLight(m, e.EMagic->cval, EL_AREA, ev->xval, te);
+      fx->SetLife(waveLife);
+      EffectLight *tf = NULL;   /* the struck creatures' flash on this wave's ramp, started as the ring reaches each */
+      std::vector<EffectLight*> ages(cool);
+      std::vector<int16> sx, sy;
+      bool host[33][33];   /* a struck creature's square: it keeps its own glyph, which takes the flash's color */
+      bool drawn = false;
+      memset(host, 0, sizeof(host));
+      o.Activate();
+      for (int16 ring = 0; ring <= R; ring++) {
+        bool ringHad = false;
+        for (int16 k = 0; k < nStruck; k++)
+          if (dist(cx,cy,struck[k]->x,struck[k]->y) == ring) {
+            if (!tf) {
+              tf = new EffectLight(m, e.EMagic->cval, EL_AREA, ev->xval, te, true);
+              ages.push_back(tf);
+              }
+            if (tf->LightStruck(struck[k]->x, struck[k]->y)) {
+              host[struck[k]->x-(cx-R)][struck[k]->y-(cy-R)] = true;
+              ringHad = true;
+              if (WaveFlashHook)
+                WaveFlashHook(wave, struck[k]->x, struck[k]->y);
+              }
+            }
+        for (x = cx-R; x <= cx+R; x++)
+          for (y = cy-R; y <= cy+R; y++)
+            if (dist(cx,cy,x,y) == ring && m->InBounds(x,y) && seen[x-(cx-R)][y-(cy-R)]) {
+              ringHad = true;
+              fx->Light(x,y);
+              if (host[x-(cx-R)][y-(cy-R)])
+                continue;
+              o.AddGlyph(x,y, GLYPH_VALUE(ws->glyph, ws->col));
+              sx.push_back(x); sy.push_back(y);
+              }
+        if (!ringHad)
+          continue;
+        drawn = true;
+        o.ShowGlyphs();
+        fx->Refresh();
+        WaveWait(*fx, ages, ringMs);
+        if (WaveHook)
+          for (size_t i = 0; i < sx.size(); i++)
+            WaveHook(wave, sx[i], sy[i], ws->glyph, fx->Clock());
+        }
+      if (drawn) {
+        WaveWait(*fx, ages, holdMs);
+        if (WaveHook)
+          for (size_t i = 0; i < sx.size(); i++)
+            WaveHook(wave, sx[i], sy[i], ws->glyph, fx->Clock());
+        }
+      o.DeActivate();
+      fx->GlyphsOff();
+      fx->Redraw();
+      if (WaveHook)
+        for (size_t i = 0; i < sx.size(); i++)
+          WaveHook(wave, sx[i], sy[i], 0, fx->Clock());
+      for (size_t i = 0; i < cool.size(); i++) {   /* the previous wave's lights finish cooling */
+        cool[i]->Tail(false);
+        cool[i]->End();
+        delete cool[i];
+        }
+      cool.clear();
+      cool.push_back(fx);
+      if (tf)
+        cool.push_back(tf);
+      wave++;
+      }
+    for (size_t i = 0; i < cool.size(); i++) {
+      cool[i]->Tail(i > 0);
+      cool[i]->End();
+      delete cool[i];
+      }
+    T1->RefreshMap();
+    T1->Update();
+  }
+
 EvReturn Magic::AGlobe(EventInfo &e)
   {
     Map *m; Thing *t; Glyph g;
@@ -1977,6 +2134,9 @@ EvReturn Magic::AGlobe(EventInfo &e)
     /* Do Highlight Effect */
     if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
       /* inc-jw0hw: the globe lights its area; the light ends before any hit. */
+      if (te && te->HasFlag(EF_WAVES))
+        GlobeWaves(e, cx, cy);
+      else {
       EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType, te);
       if (te && te->HasFlag(EF_FIREWORKS))
         GlobeFireworks(e, fx, cx, cy);
@@ -2012,16 +2172,15 @@ EvReturn Magic::AGlobe(EventInfo &e)
       }
       fx.Tail();
       fx.End();
+      }
       /* inc-jw0hw: the globe's last stage flashes every creature it strikes,
          before any hit. */
-      Thing *struck[128]; int16 nStruck = 0;
-      MapIterate(m,t,i)
-        if (t->isCreature() && nStruck < 128 &&
-            dist(t->x,t->y,cx,cy) <= (int16)e.vRadius &&
-            !(t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE)))
-          struck[nStruck++] = t;
-      EffectLight::FlashStruck(m, e.EMagic->cval, EL_AREA, e.DType, te,
-          struck, nStruck);
+      if (!(te && te->HasFlag(EF_WAVES))) {   /* a wave globe flashed each creature as its waves arrived */
+        Thing *struck[128];
+        const int16 nStruck = GlobeStruck(e, cx, cy, struck, 128);
+        EffectLight::FlashStruck(m, e.EMagic->cval, EL_AREA, e.DType, te,
+            struck, nStruck);
+        }
       }
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)

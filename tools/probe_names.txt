@@ -189,6 +189,7 @@ INCURSION_SNEAK_PROBE	pre-registry	-
 INCURSION_SOAK_TORCH_PROBE	pre-registry	-
 INCURSION_SPECIAL_PROBE	pre-registry	-
 INCURSION_SPELLFLAG_PROBE	pre-registry	-
+INCURSION_ST7_ANIM	inc-jw0hw	with the effect-light probe, wakes a Skull Trap once at the given OPT_ANIMATION and prints the stream position and the next draw (tools/check_effect_light.sh ST7)
 INCURSION_STACK_PROBE	pre-registry	-
 INCURSION_STAIR_PROBE	pre-registry	-
 INCURSION_STAIR_WARN_PROBE	pre-registry	-

@@ -23,6 +23,8 @@ extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g
 extern void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g);
 extern void (*ScriptLightTickHook)(float clockMs);
 extern void (*ScriptLightEndHook)();
+extern void (*WaveHook)(int wave, int16 x, int16 y, Glyph g, float clockMs);
+extern void (*WaveFlashHook)(int wave, int16 x, int16 y);
 extern void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
@@ -294,6 +296,82 @@ void Bh7EndHook() {
     Error("EFFECT_LIGHT: BH7DRAW seed %lu draws %llu", sd, dr);
 }
 
+/* Case ST (inc-jw0hw): Skull Trap's rising red glow. The tick hook samples the skull's square at each step of the rise;
+   the end hook samples it once more as the script's light ends, before the explosion's light. */
+struct StTickRec { float clk; int peak; bool lit; LightRGB c; bool msg; int ends; bool gl; LightRGB gc; };
+std::vector<StTickRec> gStTicks;
+int gStX, gStY, gStEnds, gStLitFrames, gStScriptLit, gStGlobeLit, gStEndCalls, gStEndPeak, gStEndFlashes, gStEndMsg;
+bool gStEndLit;
+TextTerm *gStTerm;
+unsigned long gStSeed; unsigned long long gStDraws;
+void StTickHook(float clk) {
+    StTickRec r;
+    r.clk = clk; r.peak = PeakAt(gStX, gStY); r.lit = LightLitAt((int16)gStX, (int16)gStY);
+    r.c.r = r.c.g = r.c.b = 0; LightAt((int16)gStX, (int16)gStY, r.c);
+    r.msg = strstr(gStTerm->MsgHistory, "screams") != NULL; r.ends = gStEnds;
+    r.gc.r = r.gc.g = r.gc.b = 0; r.gl = LightEffectGlyphAt((int16)gStX, (int16)gStY, r.gc);
+    gStTicks.push_back(r);
+}
+/* The waves: one record per hook call, in call order. g 0 means the wave's glyphs went. */
+struct StWaveRec { int wave, x, y; int g; float clk; bool lit; bool gl; LightRGB gc; int kg; int kimg; bool kgl; LightRGB kgc; };   /* kg, kgl, kgc: the glyph the terminal shows at the kobold's square and the color the renderer takes for it */
+std::vector<StWaveRec> gStWave;
+/* The fire wave's squares 1, 3 and 6 east of the skull: the light color there at every wave hook call, in call order, so the cooling after the glyphs go is sampled too. */
+struct StFireLight { int k; bool lit; LightRGB c; bool cl; LightRGB cc; };   /* cl, cc: the skull's own square, sampled at the same call */
+std::vector<StFireLight> gStFireLight;
+int gStGlyphHl, gStTfLit, gStTfAfter, gStTfKobHP;
+Monster *gStKob;
+/* The creature flashes: one record per wave flash start, with the count of wave hook calls so far. */
+struct StFlashRec { int wave, x, y, calls, hp; };
+std::vector<StFlashRec> gStFlash;
+void StFlashHook(int wave, int16 x, int16 y) {
+    StFlashRec r;
+    r.wave = wave; r.x = x; r.y = y; r.calls = (int)gStWave.size(); r.hp = gStKob ? (int)gStKob->cHP : -1;
+    gStFlash.push_back(r);
+}
+/* ST13: a plain globe's glyph recolors and struck flashes, in order. */
+int gSt13Gl, gSt13Tf, gSt13GlAtTf;
+void St13Gl(int16, int16, Glyph, Glyph) { ++gSt13Gl; }
+void St13Tf(int phase) { if (phase == TF_LIT) { ++gSt13Tf; if (gSt13Tf == 1) gSt13GlAtTf = gSt13Gl; } }
+void StWaveHook(int wave, int16 x, int16 y, Glyph g, float clk) {
+    StWaveRec r;
+    r.wave = wave; r.x = x; r.y = y; r.g = (int)g; r.clk = clk; r.lit = LightLitAt(x, y);
+    r.gc.r = r.gc.g = r.gc.b = 0; r.gl = LightEffectGlyphAt(x, y, r.gc);
+    r.kg = GLYPH_ID_VALUE(T1->GetGlyph((int16)gStX, (int16)gStY)); r.kimg = gStKob ? (int)GLYPH_ID_VALUE(gStKob->Image) : -1;
+    r.kgc.r = r.kgc.g = r.kgc.b = 0; r.kgl = LightEffectGlyphAt((int16)gStX, (int16)gStY, r.kgc);
+    gStWave.push_back(r);
+    static const int fireDs[3] = { 1, 3, 6 };
+    for (int k = 0; k < 3; ++k) {
+        StFireLight f; f.k = k; f.lit = LightLitAt((int16)(gStX + fireDs[k]), (int16)gStY);
+        f.c.r = f.c.g = f.c.b = 0; LightAt((int16)(gStX + fireDs[k]), (int16)gStY, f.c);
+        f.cl = LightLitAt((int16)gStX, (int16)gStY);
+        f.cc.r = f.cc.g = f.cc.b = 0; LightAt((int16)gStX, (int16)gStY, f.cc);
+        gStFireLight.push_back(f);
+    }
+}
+void StGlyphHl(int16, int16, Glyph, Glyph) { ++gStGlyphHl; }
+void StTfHook(int phase) {
+    if (phase != TF_LIT) return;
+    ++gStTfLit; gStTfAfter = (int)gStWave.size(); gStTfKobHP = gStKob ? (int)gStKob->cHP : -1;
+}
+int Max3(LightRGB c) { return c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b); }
+/* the two colors, each scaled to its brightest channel, differ by at most tol in every channel */
+bool HueNear(LightRGB a, LightRGB b, int tol) {
+    const int ma = Max3(a), mb = Max3(b);
+    return ma > 0 && mb > 0 && abs(a.r * 255 / ma - b.r * 255 / mb) <= tol &&
+        abs(a.g * 255 / ma - b.g * 255 / mb) <= tol && abs(a.b * 255 / ma - b.b * 255 / mb) <= tol;
+}
+void StEl(int phase) {
+    if (phase == EL_LIT) { ++gStLitFrames; if (gStEnds >= 1) ++gStGlobeLit; }
+    else if (phase == EL_END) ++gStEnds;
+}
+void StEndHook() {
+    ++gStEndCalls;
+    gStScriptLit = gStLitFrames;   /* the light frames up to the script's end */
+    gStEndPeak = PeakAt(gStX, gStY); gStEndLit = LightLitAt((int16)gStX, (int16)gStY);
+    gStEndFlashes = (int)LightFlashCount(); gStEndMsg = strstr(gStTerm->MsgHistory, "screams") != NULL;
+    RngPosition(&gStSeed, &gStDraws);
+}
+
 void FlashHook(int phase) {
     if (gLine) {
         if (phase == EL_LIT) {
@@ -507,6 +585,61 @@ void AuraScene(Player *pl, Map *mp, rID floor, rID wall) {
 
 } /* namespace */
 
+/* A found Skull Trap on (x, y), cast by pl as the Skull Trap spell makes it (inc-jw0hw). Shared with EffectReelProbe. */
+Trap *SkullTrapPlace(Player *pl, Map *mp, rID trapR, rID skull, rID skullSpell, int x, int y) {
+    Trap *tr = new Trap(trapR, skull);
+    tr->PlaceAt(mp, x, y);
+    tr->TrapFlags |= TS_FOUND;
+    tr->GainPermStati(EFF_FLAG1, pl, SS_MISC, 0, 0, skullSpell);
+    return tr;
+}
+
+static int gStKobDx = 0;   /* ST14: the kobold's offset from the skull's square */
+/* One Skull Trap cast: the kobold at (tx, PY) wakes the trap there, as Trap::TriggerTrap does with the avoid save left out. */
+static void StCast(Player *pl, Map *mp, rID floor, rID wall, rID kobold, rID skull, rID skullSpell, rID trapR,
+            int tx, bool boxed, int anim, bool hooks) {
+    TextTerm *term = (TextTerm *)pl->MyTerm;
+    BuildDark(mp, pl, floor, wall);
+    LightFlashClearAll();
+    if (boxed) {
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy)
+                if (dx || dy) mp->At(PX + dx, PY + dy).Opaque = true;
+        pl->CalcVision();
+    }
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+    Monster *k = new Monster(kobold);
+    k->PlaceAt(mp, tx + gStKobDx, PY, true);
+    k->Initialize(true);
+    k->mHP = k->cHP = 500;
+    pl->mHP = pl->cHP = 5000;   /* the player is in the globe: the cast must not kill them */
+    Trap *tr = SkullTrapPlace(pl, mp, trapR, skull, skullSpell, tx, PY);
+    gStTicks.clear(); gStWave.clear(); gStFireLight.clear(); gStFlash.clear();
+    gStGlyphHl = gStTfLit = gStTfAfter = 0; gStTfKobHP = -1; gStKob = k;
+    gStX = tx; gStY = PY; gStTerm = term;
+    gStEnds = gStLitFrames = gStScriptLit = gStGlobeLit = gStEndCalls = gStEndPeak = gStEndFlashes = gStEndMsg = 0;
+    gStEndLit = false; gStSeed = 0; gStDraws = 0;
+    Refresh(pl);
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+    term->MsgHistory[0] = 0;
+    if (hooks) {
+        EffectLightHook = StEl; ScriptLightTickHook = StTickHook; ScriptLightEndHook = StEndHook;
+        WaveHook = StWaveHook; WaveFlashHook = StFlashHook; GlobeGlyphHook = StGlyphHl; TargetFlashHook = StTfHook;
+    }
+    pl->Options[OPT_ANIMATION] = (int8)anim;
+    tr->TrapFlags |= TS_DISARMED;
+    tr->SetImage();
+    EventInfo xe; xe.Clear();
+    xe.EActor = k; xe.EVictim = k; xe.EMap = mp; xe.EItem = (Item *)tr; xe.eID = skull;
+    xe.isTrap = true; xe.vCasterLev = 12;
+    if (gStKobDx) { xe.isLoc = true; xe.EXVal = tx; xe.EYVal = PY; }   /* ST14: the globe's center is the skull's square, with no creature on it */
+    ReThrow(EV_EFFECT, xe);
+    pl->Options[OPT_ANIMATION] = 0;
+    EffectLightHook = NULL; ScriptLightTickHook = NULL; ScriptLightEndHook = NULL;
+    WaveHook = NULL; WaveFlashHook = NULL; GlobeGlyphHook = NULL; TargetFlashHook = NULL;
+    gStKob = NULL;
+}
+
 void EffectLightProbe(Player *pl) {
     if (!getenv("INCURSION_EFFECT_LIGHT_PROBE"))
         return;
@@ -557,6 +690,24 @@ void EffectLightProbe(Player *pl) {
         ScriptLightEndHook = Bh7EndHook;
         ReThrow(EV_EFFECT, xe);
         ScriptLightEndHook = NULL;
+        theGame->PlayMode = wasPlay;
+        return;
+    }
+    if (const char *stAnim = getenv("INCURSION_ST7_ANIM")) {
+        /* ST7: one Skull Trap cast from a fixed seed, in a fresh process; the check compares the stream position at the end of the
+           script's light and the next draw between an animation-Normal run and an animation-None run. A second cast in one process
+           inherits the first cast's state (the player's fear, the kobold's wake), so each cast has its own process. */
+        const rID skull = FIND("skull trap;trap"), skullSpell = FIND("Skull Trap"), trapR = FIND("trap"), kob = FIND("kobold");
+        if (!skull || !skullSpell || !trapR || !kob) {
+            Error("EFFECT_LIGHT: ST7DRAW INCONCLUSIVE -- the skull trap, its spell, the trap feature or the kobold is missing");
+            return;
+        }
+        const bool wasPlay = theGame->PlayMode;
+        theGame->PlayMode = true;
+        init_genrand(7770003UL);
+        StCast(pl, mp, floor, wall, kob, skull, skullSpell, trapR, PX + 4, false, atoi(stAnim), true);
+        const long next = random(30000);
+        Error("EFFECT_LIGHT: ST7DRAW end calls %d seed %lu draws %llu next %ld", gStEndCalls, gStSeed, gStDraws, next);
         theGame->PlayMode = wasPlay;
         return;
     }
@@ -1809,6 +1960,228 @@ void EffectLightProbe(Player *pl) {
                         verdict("BH6", gBhLitFrames >= 1 && !gBhTicks.empty() && gBhMaxGlyph == 0 && LightFlashCount() == 0,
                             "unseen cast: light frames %d and hold steps %d (need 1+ each, so the hold ran), most lit squares %d, flashes after=%d (need 0, 0)",
                             gBhLitFrames, (int)gBhTicks.size(), gBhMaxGlyph, (int)LightFlashCount());
+                    }
+                }
+            }
+
+            /* ST: Skull Trap (inc-jw0hw). After the scream the skull's square glows red, rising from dim to full
+               over 1000 ms and holding at its peak until the explosion's own light takes over. A creature wakes the
+               trap the way Trap::TriggerTrap does (the avoid save left out, so no roll decides it). */
+            if (!off) {
+                const rID skull = FIND("skull trap;trap"), skullSpell = FIND("Skull Trap"), trapR = FIND("trap");
+                if (!skull || !skullSpell || !trapR || !kobold) {
+                    inconclusive("ST", "the skull trap, its spell, the trap feature or the kobold is missing");
+                } else if (LightMode(pl) == LIGHT_LEGACY) {
+                    inconclusive("ST", "the light map is legacy");
+                } else {
+                    int gStGlyphHlTrap = -1, gStWaveN = -1;   /* the first cast's counts, read after later casts */
+                    auto stCast = [&](int tx, bool boxed, int anim, bool hooks) {
+                        StCast(pl, mp, floor, wall, kobold, skull, skullSpell, trapR, tx, boxed, anim, hooks);
+                    };
+                    auto stNear = [&](float age) -> const StTickRec * {
+                        const StTickRec *best = NULL;
+                        for (size_t i = 0; i < gStTicks.size(); ++i)
+                            if (!best || fabsf(gStTicks[i].clk - age) < fabsf(best->clk - age)) best = &gStTicks[i];
+                        return best;
+                    };
+                    /* ST1, ST2, ST3, ST6: the skull is seen, four squares east of the player. */
+                    stCast(PX + 4, false, 0, true);
+                    {
+                        const StTickRec *f = gStTicks.empty() ? NULL : &gStTicks[0], *h = stNear(500.0f);
+                        /* the glow's hue: the light at mid-rise, scaled to its brightest channel, against the effect's own color (cval RED) through LightEffectColour */
+                        const LightRGB want = LightEffectColour(COL_CRIMSON);
+                        const int wm = want.r > want.g ? (want.r > want.b ? want.r : want.b) : (want.g > want.b ? want.g : want.b);
+                        const int hm = h ? (h->c.r > h->c.g ? (h->c.r > h->c.b ? h->c.r : h->c.b) : (h->c.g > h->c.b ? h->c.g : h->c.b)) : 0;
+                        const bool hue = h && hm > 0 && wm > 0 && want.r > want.g && want.r > want.b &&
+                            abs(h->c.r * 255 / hm - want.r * 255 / wm) <= 8 && abs(h->c.g * 255 / hm - want.g * 255 / wm) <= 8 &&
+                            abs(h->c.b * 255 / hm - want.b * 255 / wm) <= 8;
+                        verdict("ST1", f && f->lit && f->c.r > f->c.g && f->c.r > f->c.b && hue &&
+                            f->msg && f->ends == 0 && gStGlobeLit >= 1,
+                            "first rise step: skull square lit=%d, red channel above the others=%d; mid-rise light (%d,%d,%d) against LightEffectColour(COL_CRIMSON) (%d,%d,%d) in hue=%d; scream printed=%d, script light ended before it=%d (need 0), explosion light frames after=%d (need 1+); steps %d",
+                            f ? (int)f->lit : -1, f ? (int)(f->c.r > f->c.g && f->c.r > f->c.b) : -1,
+                            h ? h->c.r : -1, h ? h->c.g : -1, h ? h->c.b : -1, want.r, want.g, want.b, (int)hue,
+                            f ? (int)f->msg : -1, f ? f->ends : -1, gStGlobeLit, (int)gStTicks.size());
+                        const StTickRec *e = stNear(100.0f), *m = stNear(500.0f), *l = stNear(900.0f);
+                        verdict("ST2", e && m && l && e->clk < m->clk && m->clk < l->clk && e->peak > 0 && e->peak < m->peak && m->peak < l->peak,
+                            "skull square level at effect clock %.0f / %.0f / %.0f ms: %d / %d / %d (need each higher than the one before)",
+                            e ? e->clk : -1.0f, m ? m->clk : -1.0f, l ? l->clk : -1.0f, e ? e->peak : -1, m ? m->peak : -1, l ? l->peak : -1);
+                        int top = 0;
+                        for (size_t i = 0; i < gStTicks.size(); ++i) if (gStTicks[i].peak > top) top = gStTicks[i].peak;
+                        verdict("ST3", gStEndCalls == 1 && gStEndLit && top > 0 && gStEndPeak >= top && gStGlobeLit >= 1 && !gStTicks.empty() && gStTicks.back().clk >= 990.0f,
+                            "last frame before the explosion's light: skull square lit=%d at level %d, the rise's top level %d, last step at %.0f ms (need lit, level at least the top, 1000 ms); explosion light frames %d",
+                            (int)gStEndLit, gStEndPeak, top, gStTicks.empty() ? -1.0f : gStTicks.back().clk, gStGlobeLit);
+                        /* ST8: the rise's last step: the skull square's light and glyph are crimson at full level. */
+                        const StTickRec *z = gStTicks.empty() ? NULL : &gStTicks.back();
+                        const LightRGB crim = LightEffectColour(COL_CRIMSON);
+                        verdict("ST8", z && z->lit && Max3(z->c) >= 230 && HueNear(z->c, crim, 12) &&
+                            z->gl && Max3(z->gc) >= 230 && HueNear(z->gc, crim, 12),
+                            "last rise step: skull square light (%d,%d,%d) lit=%d, glyph color (%d,%d,%d) shown=%d; crimson hue (%d,%d,%d); need the brightest channel at least 230 and the crimson hue in both",
+                            z ? z->c.r : -1, z ? z->c.g : -1, z ? z->c.b : -1, z ? (int)z->lit : -1,
+                            z ? z->gc.r : -1, z ? z->gc.g : -1, z ? z->gc.b : -1, z ? (int)z->gl : -1, crim.r, crim.g, crim.b);
+                        /* ST9: the fire wave: glyph 247 on every square while lit, nearer squares first, light and glyph color moving along the fire ramp. */
+                        {
+                            const int ds[3] = { 1, 3, 6 };
+                            float first[3] = { -1, -1, -1 };
+                            int shown[3] = { 0, 0, 0 }, litN[3] = { 0, 0, 0 }, glN[3] = { 0, 0, 0 }, wrong[3] = { 0, 0, 0 };
+                            float r0[3] = { 0, 0, 0 };   /* green over red at the first shown step */
+                            for (int k = 0; k < 3; ++k)
+                                for (size_t i = 0; i < gStWave.size(); ++i) {
+                                    const StWaveRec &w = gStWave[i];
+                                    if (w.wave != 0 || w.x != gStX + ds[k] || w.y != gStY || w.g == 0) continue;
+                                    if (!shown[k]) { first[k] = w.clk; if (w.gc.r) r0[k] = (float)w.gc.g / w.gc.r; }
+                                    ++shown[k]; if (w.lit) ++litN[k]; if (w.gl) ++glN[k]; if (w.g != 247) ++wrong[k];
+                                }
+                            bool ok = first[0] < first[1] && first[1] < first[2] && first[0] >= 0;
+                            for (int k = 0; k < 3; ++k)
+                                ok = ok && shown[k] > 0 && litN[k] == shown[k] && glN[k] == shown[k] && !wrong[k] && r0[k] >= 0.8f;
+                            /* the square's light over its whole life, past the glyphs: first lit sample against the last whose brightest channel is 60+ */
+                            float l0[3] = { -1, -1, -1 }, l1[3] = { -1, -1, -1 };
+                            for (size_t i = 0; i < gStFireLight.size(); ++i) {
+                                const StFireLight &f = gStFireLight[i];
+                                if (!f.lit || !f.c.r) continue;
+                                const float q = (float)f.c.g / f.c.r;
+                                if (l0[f.k] < 0) l0[f.k] = q;
+                                if (Max3(f.c) >= 60) l1[f.k] = q;
+                            }
+                            for (int k = 0; k < 3; ++k)
+                                ok = ok && l0[k] >= 0 && l1[k] >= 0 && l0[k] - l1[k] >= 0.15f;
+                            /* the rings move out 10 ms apiece (ring d is reported at (d+1) x 10 ms) and the glyphs hold 60 ms after the last ring */
+                            float lastShown = -1.0f;
+                            for (size_t i = 0; i < gStWave.size(); ++i)
+                                if (gStWave[i].wave == 0 && gStWave[i].x == gStX + 6 && gStWave[i].y == gStY && gStWave[i].g != 0) lastShown = gStWave[i].clk;
+                            const bool timed = fabsf(first[0] - 20.0f) <= 3.0f && fabsf(first[1] - 40.0f) <= 3.0f && fabsf(first[2] - 70.0f) <= 3.0f &&
+                                fabsf((lastShown - first[2]) - 60.0f) <= 3.0f;
+                            ok = ok && timed;
+                            verdict("ST9", ok,
+                                "fire wave at 1/3/6: first shown %.0f/%.0f/%.0f ms (need 20/40/70), held %.0f (need 60); steps %d/%d/%d lit %d/%d/%d colored %d/%d/%d not247 %d/%d/%d; glyph g/r first %.2f/%.2f/%.2f (need 0.8+); light g/r first %.2f/%.2f/%.2f last60+ %.2f/%.2f/%.2f (drop 0.15+)",
+                                first[0], first[1], first[2], lastShown - first[2], shown[0], shown[1], shown[2], litN[0], litN[1], litN[2], glN[0], glN[1], glN[2],
+                                wrong[0], wrong[1], wrong[2], r0[0], r0[1], r0[2], l0[0], l0[1], l0[2], l1[0], l1[1], l1[2]);
+                        }
+                        /* ST10: the necromantic wave starts after the fire glyphs are gone, shows glyph 177 and a necromantic hue. */
+                        {
+                            int lastW0 = -1, firstW1 = -1, n1 = 0, wrong1 = 0, hueOk = 0, hueN = 0;
+                            for (size_t i = 0; i < gStWave.size(); ++i) {
+                                const StWaveRec &w = gStWave[i];
+                                if (w.wave == 0) lastW0 = (int)i;
+                                if (w.wave != 1) continue;
+                                if (firstW1 < 0) firstW1 = (int)i;
+                                if (w.g == 0) continue;
+                                ++n1; if (w.g != 177) ++wrong1;
+                                if (w.gl && Max3(w.gc) >= 60) { ++hueN; if (HueNear(w.gc, LightEffectColour(COL_NECRO), 12)) ++hueOk; }
+                            }
+                            const LightRGB row = LightEffectColour(COL_NECRO), deep = { 80, 20, 140 };   /* the owner's ruled deep purple */
+                            const bool deepRow = row.r == deep.r && row.g == deep.g && row.b == deep.b;
+                            verdict("ST10", deepRow && lastW0 >= 0 && firstW1 > lastW0 && gStWave[lastW0].g == 0 && n1 > 0 && !wrong1 && hueN > 0 && hueOk == hueN,
+                                "COL_NECRO row (%d,%d,%d) (need 80,20,140); last fire-wave call %d (glyphs gone=%d) before the first necromantic call %d (need earlier); necromantic steps %d, glyph other than 177: %d (need 0); glyph color (brightest channel 60+) in the necromantic hue %d of %d (need all)",
+                                row.r, row.g, row.b, lastW0, lastW0 >= 0 ? (int)(gStWave[lastW0].g == 0) : -1, firstW1, n1, wrong1, hueOk, hueN);
+                        }
+                        /* ST12: the kobold on the skull's square starts a fire flash when the fire ring reaches it, before the fire glyphs go,
+                           and a necromantic flash when the necromantic ring reaches it, after the fire glyphs are gone and before the necromantic
+                           glyphs go; no struck flash runs after the last wave and no hit comes first. */
+                        {
+                            int f[2] = { 0, 0 }, calls[2] = { -1, -1 }, hp = 0, firstShown[2] = { -1, -1 }, goneAt[2] = { -1, -1 };
+                            for (size_t i = 0; i < gStFlash.size(); ++i) {
+                                const StFlashRec &r = gStFlash[i];
+                                if (r.x != gStX || r.y != gStY || r.wave < 0 || r.wave > 1) continue;
+                                ++f[r.wave]; calls[r.wave] = r.calls; if (r.hp != 500) ++hp;
+                            }
+                            for (size_t i = 0; i < gStWave.size(); ++i) {
+                                const StWaveRec &w = gStWave[i];
+                                if (w.wave < 0 || w.wave > 1) continue;
+                                if (w.g == 0 && goneAt[w.wave] < 0) goneAt[w.wave] = (int)i;
+                                if (w.g != 0 && firstShown[w.wave] < 0) firstShown[w.wave] = (int)i;   /* the kobold's square holds no wave glyph, so the first glyph of the wave anywhere */
+                            }
+                            /* what the terminal draws at the kobold's square: its own glyph, never the wave's, colored by its flash */
+                            int fireN = 0, fireBad = 0, necN = 0, necBad = 0;
+                            const StWaveRec *fireFirst = NULL, *fireLast = NULL, *after = NULL;
+                            for (size_t i = 0; i < gStWave.size(); ++i) {
+                                const StWaveRec &w = gStWave[i];
+                                const bool glyphOk = w.kg == w.kimg && w.kg != 247 && w.kg != 177;
+                                if (w.wave == 0 && w.g != 0 && (int)i >= calls[0]) {
+                                    ++fireN; if (!glyphOk || !w.kgl) ++fireBad;
+                                    if (!fireFirst) fireFirst = &w;
+                                    fireLast = &w;
+                                }
+                                if (w.wave == 0 && w.g == 0 && !after) after = &w;
+                                if (w.wave == 1 && w.g != 0 && (int)i >= calls[1]) {
+                                    ++necN;
+                                    if (!glyphOk || !w.kgl || !(w.kgc.b > w.kgc.g && w.kgc.r > w.kgc.g)) ++necBad;
+                                }
+                            }
+                            auto warm = [](const StWaveRec *w) { return w && w->kgl && w->kgc.r > w->kgc.b && w->kgc.r >= w->kgc.g && w->kgc.r >= 100; };
+                            const float fg0 = fireFirst && fireFirst->kgc.r ? (float)fireFirst->kgc.g / fireFirst->kgc.r : 0.0f;
+                            const float fb0 = fireFirst && fireFirst->kgc.r ? (float)fireFirst->kgc.b / fireFirst->kgc.r : 0.0f;
+                            const bool drawn = fireN > 0 && !fireBad && necN > 0 && !necBad && fireFirst && Max3(fireFirst->kgc) >= 230 && fg0 >= 0.85f && fb0 < fg0 &&
+                                warm(fireLast) && warm(after) && after->kg == after->kimg;
+                            const bool ok = f[0] == 1 && f[1] == 1 && hp == 0 && gStTfLit == 0 &&
+                                calls[0] >= 0 && calls[0] <= firstShown[0] && calls[0] < goneAt[0] &&
+                                calls[1] > goneAt[0] && calls[1] <= firstShown[1] && calls[1] < goneAt[1] && drawn;
+                            verdict("ST12", ok,
+                                "kobold flashes: fire %d, necromantic %d (need 1, 1); wave hook calls so far at the fire flash %d (need up to its first fire glyph at %d, before the fire glyphs went at %d) and at the necromantic flash %d (need after %d, up to its first glyph at %d, before they went at %d); hits taken first %d (need 0); struck flashes after the waves %d (need 0); drawn at the kobold's square ok=%d (detail on the next lines)",
+                                f[0], f[1], calls[0], firstShown[0], goneAt[0], calls[1], goneAt[0], firstShown[1], goneAt[1], hp, gStTfLit, (int)drawn);
+                            Error("EFFECT_LIGHT: ST12 drawn: fire steps %d, wrong glyph or no flash color %d (need 0 of 1+); first fire step color %d,%d,%d (bright, green over red 0.85+); last %d,%d,%d",
+                                fireN, fireBad, fireFirst ? fireFirst->kgc.r : -1, fireFirst ? fireFirst->kgc.g : -1, fireFirst ? fireFirst->kgc.b : -1,
+                                fireLast ? fireLast->kgc.r : -1, fireLast ? fireLast->kgc.g : -1, fireLast ? fireLast->kgc.b : -1);
+                            Error("EFFECT_LIGHT: ST12 drawn: first step after the fire glyphs went color %d,%d,%d glyph %d (kobold %d), need warm; necromantic steps %d, wrong glyph or color %d (need 0 of 1+)",
+                                after ? after->kgc.r : -1, after ? after->kgc.g : -1, after ? after->kgc.b : -1, after ? after->kg : -1, after ? after->kimg : -1, necN, necBad);
+                        }
+                        gStGlyphHlTrap = gStGlyphHl; gStWaveN = (int)gStWave.size();
+                        verdict("ST6", gStEndFlashes == 0 && LightFlashCount() == 0 && gStEndCalls == 1,
+                            "flashes when the script's light ended=%d, after the trap's event=%d (need 0, 0); end hook calls=%d (need 1)",
+                            gStEndFlashes, (int)LightFlashCount(), gStEndCalls);
+                    }
+                    /* ST14: at the fire wave's last ring step the skull's square has cooled toward red while the outermost ring is near white.
+                       The kobold stands out of the globe, so its own struck flash does not lend the skull's square its light. */
+                    {
+                        gStKobDx = 8;
+                        stCast(PX + 4, false, 0, true);
+                        gStKobDx = 0;
+                        int at = -1;
+                        for (size_t i = 0; i < gStWave.size(); ++i)
+                            if (gStWave[i].wave == 0 && gStWave[i].x == gStX + 6 && gStWave[i].y == gStY && gStWave[i].g != 0) { at = (int)i; break; }
+                        float qc = -1.0f, qo = -1.0f;
+                        if (at >= 0 && gStFireLight.size() >= (size_t)(3 * at + 3)) {
+                            const StFireLight &c = gStFireLight[3 * at], &o6 = gStFireLight[3 * at + 2];
+                            if (c.cl && c.cc.r) qc = (float)c.cc.g / c.cc.r;
+                            if (o6.lit && o6.c.r) qo = (float)o6.c.g / o6.c.r;
+                        }
+                        verdict("ST14", qc >= 0 && qo >= 0 && qc <= 0.6f && qo >= 0.85f,
+                            "fire wave at its last ring step (hook call %d): light green over red at the skull's square %.2f (need 0.6 or less), at 6 squares out %.2f (need 0.85 or more)",
+                            at, qc, qo);
+                    }
+                    /* ST4: animation None: no light, no wait, and the cast returns. */
+                    stCast(PX + 4, false, 2, true);
+                                    verdict("ST4", gStTicks.empty() && gStWave.empty() && gStScriptLit == 0 && !gStEndLit && gStEndPeak == 0 && LightFlashCount() == 0 && gStEndCalls == 1,
+                        "animation None: wave calls %d (need 0), rise steps %d, script light frames %d, skull square lit=%d at level %d when the script's light ended, flashes after %d (need 0 each); end hook calls %d (need 1, the cast returned)",
+                        (int)gStWave.size(), (int)gStTicks.size(), gStScriptLit, (int)gStEndLit, gStEndPeak, (int)LightFlashCount(), gStEndCalls);
+                    /* ST5: the skull is out of the player's sight: no square lights from the rise. */
+                    stCast(PX + 10, true, 0, true);
+                    verdict("ST5", gStTicks.empty() && gStWave.empty() && !gStEndLit && gStEndPeak == 0 && LightFlashCount() == 0 && gStEndCalls == 1,
+                        "unseen skull: wave calls %d (need 0), rise steps %d, skull square lit=%d at level %d when the script's light ended, flashes after %d (need 0, 0, 0, 0); end hook calls %d (need 1)",
+                        (int)gStWave.size(), (int)gStTicks.size(), (int)gStEndLit, gStEndPeak, (int)LightFlashCount(), gStEndCalls);
+                    /* ST11: the globe's old one-shot highlight does not run for the trap; a plain globe (no EF_WAVES) still runs it. */
+                    {
+                        const rID plain = FIND("Pyrotechnics;blast");
+                        gGlyphN = gGlyphBad = 0;
+                        gGlyphCval = plain ? TEFF(plain)->ef.cval : 0;
+                        if (plain) {
+                            GlobeGlyphHook = GlyphHook;
+                            cast(plain, true, false, false, false, pre, post, postR, endF);
+                            GlobeGlyphHook = NULL;
+                        }
+                        verdict("ST11", plain && !TEFF(plain)->HasFlag(EF_WAVES) && gStGlyphHlTrap == 0 && gStWaveN > 0 && gGlyphN > 0,
+                            "highlight recolors for the trap %d (need 0) while it played %d wave calls (need 1+); the plain globe (Pyrotechnics;blast, no EF_WAVES) recolored %d squares (need 1+)",
+                            gStGlyphHlTrap, gStWaveN, gGlyphN);
+                        /* ST13: that plain globe still runs its struck flash, after its highlight. */
+                        gSt13Gl = gSt13Tf = gSt13GlAtTf = 0;
+                        if (plain) {
+                            GlobeGlyphHook = St13Gl; TargetFlashHook = St13Tf;
+                            cast(plain, true, true, false, false, pre, post, postR, endF);
+                            GlobeGlyphHook = NULL; TargetFlashHook = NULL;
+                        }
+                        verdict("ST13", plain && gSt13Gl > 0 && gSt13Tf >= 1 && gSt13GlAtTf == gSt13Gl,
+                            "plain globe (no EF_WAVES): highlight recolors %d (need 1+); struck flashes %d (need 1+); recolors done when the first struck flash showed %d (need all %d)",
+                            gSt13Gl, gSt13Tf, gSt13GlAtTf, gSt13Gl);
                     }
                 }
             }

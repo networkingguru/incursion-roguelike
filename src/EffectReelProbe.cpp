@@ -15,6 +15,7 @@
 #include "Incursion.h"
 
 extern int16 Silence;
+extern Trap *SkullTrapPlace(Player *pl, Map *mp, rID trapR, rID skull, rID skullSpell, int x, int y);
 
 namespace {
 
@@ -38,6 +39,16 @@ const SkipRow kSkip[] = {
     { "Ice Storm", "it asks: hail or sleet" },
     { "Bless", "it asks: combat blessing or item blessing" },
 };
+
+/* inc-jw0hw: the Skull Trap clip's probe of the script light, on the trap's square. */
+int gSkX, gSkY, gSkTicks, gSkLitTicks, gSkEnds;
+float gSkFirst, gSkLast;
+void SkTick(float clk) {
+    if (!gSkTicks++) gSkFirst = clk;
+    gSkLast = clk;
+    if (LightLitAt((int16)gSkX, (int16)gSkY)) ++gSkLitTicks;
+}
+void SkEnd() { ++gSkEnds; }
 
 bool InBlock(int x, int y) { return x >= RX0 && x <= RX1 && y >= RY0 && y <= RY1; }
 
@@ -242,6 +253,14 @@ void EffectReelProbe(Player *pl) {
             mn->Initialize(true);
             if (k == 0) mid = mn;
         }
+        /* inc-jw0hw: the Skull Trap's script lights its skull only when EItem is the trap. */
+        Trap *skullTrap = NULL;
+        const bool isSkull = en.dtype < 0 && en.id == FIND("skull trap;trap");
+        if (isSkull) {
+            skullTrap = SkullTrapPlace(pl, mp, FIND("trap"), en.id, FIND("Skull Trap"), AIMX - 1, PY);
+            gSkX = AIMX - 1; gSkY = PY; gSkTicks = 0; gSkFirst = gSkLast = 0; gSkLitTicks = 0; gSkEnds = 0;
+            ScriptLightTickHook = SkTick; ScriptLightEndHook = SkEnd;
+        }
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
         Refresh(pl);
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
@@ -279,10 +298,20 @@ void EffectReelProbe(Player *pl) {
         xe.MM |= MM_EXTEND;
         /* inc-jw0hw: Magic.cpp:932 runs an EF_ACTIVATE segment only when isActivation is set. */
         xe.isActivation = te->HasFlag(EF_ACTIVATE);
+        if (skullTrap) {
+            xe.EItem = (Item *)skullTrap; xe.isTrap = true; xe.vCasterLev = 12;   /* as Trap::TriggerTrap */
+            skullTrap->TrapFlags |= TS_DISARMED;
+            skullTrap->SetImage();
+        }
         /* A long message makes the text terminal wait for a key; the reel prints none. */
         Silence = 1;
         ReThrow(EV_EFFECT, xe);
         Silence = 0;
+        if (isSkull) {
+            ScriptLightTickHook = NULL; ScriptLightEndHook = NULL;
+            Error("REEL_SKULL trap (%d,%d): steps %d, lit steps %d, first %.0f ms, last %.0f ms, end hook calls %d, flashes left %d",
+                  gSkX, gSkY, gSkTicks, gSkLitTicks, gSkFirst, gSkLast, gSkEnds, (int)LightFlashCount());
+        }
         pl->mHP = pl->cHP = 30000;
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
         Refresh(pl);

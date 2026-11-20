@@ -106,6 +106,9 @@ void  LightFlashCellColour(int32 id, int16 x, int16 y, LightRGB c); /* inc-jw0hw
 bool  LightFlashTintAt(int16 x, int16 y, LightRGB &c);   /* the base color a square was given, or false */
 void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
 void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
+void  LightFlashSetStyle(int32 id, uint8 style);    /* LF_*: a flash that must not flicker is set steady */
+void  LightFlashSetRise(int32 id, bool on);         /* a rise: base color at full brightness, scaled by the level (see EffectLight::Rise) */
+void  LightFlashRecolour(int32 id, LightRGB c, uint8 style, float gain, uint8 ramp); /* the whole flash takes this color */
 void  LightFlashSetClock(int32 id, float ms);       /* the flash clock; recomposes the frame */
 void  LightFlashSetLife(int32 id, float ms);        /* how long a square's light lives (default 900) */
 void  LightFlashGlyphs(int32 id, bool shown);       /* the effect's glyphs are on screen */
