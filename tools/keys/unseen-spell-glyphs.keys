@@ -1,0 +1,8 @@
+# inc-9r189: let turns pass while hostile casters fight in a closed, unseen room.
+# Oracle: UNSEEN_GLYPH lines in the isolated run errors.log.
+SPACE*30
+ESC*10
+
+s*300
+
+@quit

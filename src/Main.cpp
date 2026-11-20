@@ -553,6 +553,10 @@ void Game::Play() {
        BallShapeProbe (src/BallShapeProbe.cpp). */
     extern void BallShapeProbe(Player *pl);
     BallShapeProbe(pp);
+    /* inc-9r189: off unless INCURSION_UNSEEN_GLYPH_PROBE is set. See
+       UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). */
+    extern void UnseenGlyphProbe(Player *pl);
+    UnseenGlyphProbe(pp);
     extern void TerraformEdgeProbe(Player *pl);
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);

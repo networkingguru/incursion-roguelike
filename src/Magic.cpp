@@ -1622,6 +1622,11 @@ void (*AreaProbeXYHook)(int16,int16) = NULL;
 void (*BallRingHook)(int ring, int ntaken, const int16 *tx, const int16 *ty,
     int ndrawn, const int16 *dx, const int16 *dy, int waitMs) = NULL;
 
+/* inc-9r189: set only by UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). kind 1
+   is Overlay::AddGlyph (an overlay glyph is queued), 2 is the overlay draw in
+   Map::Update, 3 is a direct T1->PutGlyph effect highlight. */
+void (*GlyphDrawHook)(int kind, int x, int y) = NULL;
+
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
     Map *m; EvReturn r, r2; int16 oe, o_efNum;
@@ -1800,6 +1805,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
             {
               g = T1->GetGlyph(x,y);
               g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
+              if (GlyphDrawHook) GlyphDrawHook(3,x,y);
               T1->PutGlyph(x,y,g);
             }
       T1->Update();

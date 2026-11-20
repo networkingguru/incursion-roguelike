@@ -1744,8 +1744,10 @@ void Overlay::DeActivate()
       	oMap(m)->Update(GlyphX[i],GlyphY[i]);
   }
 
+extern void (*GlyphDrawHook)(int kind, int x, int y);
 void Overlay::AddGlyph(int16 x,int16 y, Glyph g)
 	{
+    if (GlyphDrawHook) GlyphDrawHook(1, x, y);
     if (GlyphCount >= MAX_OVERLAY_GLYPHS)
       return;
 		GlyphX[GlyphCount]=x;
