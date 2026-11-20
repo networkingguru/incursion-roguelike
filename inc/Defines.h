@@ -3741,7 +3741,8 @@ typedef signed int        hObj;
 #define EF_FIREWORKS  116  /* inc-jw0hw: a globe plays the fireworks animation, not a recolor */
 #define EF_COLOR_PATTERN 117 /* inc-jw0hw: the effect draws random glyphs in random colors, not a recolor */
 #define EF_WAVES      118  /* inc-jw0hw: a globe plays one wave of glyphs per EA_BLAST part, not a recolor */
-#define EF_LAST       119
+#define EF_RAIN       119  /* inc-jw0hw: a globe plays falling glyphs onto each square, not a recolor */
+#define EF_LAST       120
 // end family: ef
 // family: ea internal
 

@@ -626,7 +626,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
       
 0 Effect "Dance of Ruin" : EA_BLAST
   { cval: COL_DARKRED; xval: AD_MAGC; pval: 20d6; lval: 12; aval: AR_GLOBE;
-    xval: REF; Flags: EF_SPECABIL, EF_PARTIAL, EF_EVIL;
+    xval: REF; Flags: EF_SPECABIL, EF_PARTIAL, EF_EVIL, EF_RAIN;
     Purpose: EP_ATTACK; 
     Desc: "When three or more vrocks fight together, once every
       thirty turns they can enact the dance of ruin. All three

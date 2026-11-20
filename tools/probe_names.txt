@@ -47,6 +47,7 @@ INCURSION_DOORSTUCK_MIN	inc-zm6li	lowers the door-stuck streak floor of 10, for 
 INCURSION_DOOR_BOLT_PROBE	pre-registry	-
 INCURSION_DOOR_LOCK_ROLL	pre-registry	-
 INCURSION_DOOR_PROBE	pre-registry	-
+INCURSION_DR9_ANIM	inc-jw0hw	with the effect-light probe, casts Dance of Ruin once at the given OPT_ANIMATION and prints the stream position and the next draw (tools/check_effect_light.sh DR9)
 INCURSION_DRAW_CENSUS	inc-10v7f	file to log every random draw made during character creation (census)
 INCURSION_DUMP_CANONICAL	inc-10v7f	file to write the canonical character dump to
 INCURSION_DURATION_PROBE	pre-registry	-

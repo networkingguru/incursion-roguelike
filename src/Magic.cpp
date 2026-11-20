@@ -1798,6 +1798,90 @@ static void GlobePattern(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int1
     T1->Update();
   }
 
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called after each rain step's
+   refresh. stage 0: a falling glyph shows at (x,y). 1: a drop lands; its square's light
+   is born; g is the landing glyph, 0 on a creature's square. 2: the landing glyph is
+   gone. 3: the step ends (x and y are -1). clockMs is the effect clock. */
+void (*RainHook)(int stage, int16 x, int16 y, Glyph g, float clockMs) = NULL;
+
+/* The rain of a globe flagged EF_RAIN (Dance of Ruin): one drop per square the player
+   sees. A drop starts at a random 40 ms step of the hold, up to 3 rows above its square
+   (lower where a square above is unseen, out of bounds or solid), falls one row a step,
+   lands as '*' for 120 ms and lights its square at the landing. The color comes from
+   cval, never the damage type. A creature keeps its own glyph. Only cosmetic_random()
+   chooses. */
+static void GlobeRain(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int16 hold)
+  {
+    struct Drop { int16 x, y, rows, start; };
+    const int16 stepMs = 40, landSteps = 3, maxRows = 3;
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    Player *pl = theGame->GetPlayer(0);
+    const int16 R = (int16)e.vRadius;
+    const int cv = e.EMagic->cval;
+    const int16 col = cv >= 16 ? BlastColourSets[cv * 4] : cv;
+    int16 x, y;
+    if (R > 16 || !pl || pl->Opt(OPT_ANIMATION) == 2)
+      return;
+    const int16 slots = max(1, (hold - (maxRows + landSteps) * stepMs) / stepMs);
+    std::vector<Drop> drops;
+    int last = 0;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y) && PossiblyPause(T1,x,y,0)) {
+          Drop d; d.x = x; d.y = y; d.rows = 0;
+          while (d.rows < maxRows) {
+            const int16 ay = y - d.rows - 1;
+            if (!m->InBounds(x,ay) || m->At(x,ay).Solid || !PossiblyPause(T1,x,ay,0))
+              break;
+            d.rows++;
+            }
+          d.start = (int16)cosmetic_random(slots);
+          drops.push_back(d);
+          if (d.start + d.rows + landSteps > last)
+            last = d.start + d.rows + landSteps;
+          }
+    for (int s = 0; s <= last; s++) {
+      o.DeActivate();
+      o.Activate();
+      for (size_t i = 0; i < drops.size(); i++) {
+        const Drop &d = drops[i];
+        const int rel = s - d.start;
+        if (rel < 0 || rel >= d.rows + landSteps)
+          continue;
+        if (rel == d.rows)
+          fx.Light(d.x,d.y);
+        const int16 gy = rel < d.rows ? d.y - d.rows + rel : d.y;
+        if (!m->FCreatureAt(d.x,gy))
+          o.AddGlyph(d.x,gy, GLYPH_VALUE(rel < d.rows ? '|' : '*', col));
+        }
+      o.ShowGlyphs();
+      fx.Refresh();
+      if (RainHook) {
+        for (size_t i = 0; i < drops.size(); i++) {
+          const Drop &d = drops[i];
+          const int rel = s - d.start;
+          if (rel < 0 || rel > d.rows + landSteps)
+            continue;
+          const int16 gy = rel < d.rows ? d.y - d.rows + rel : d.y;
+          const bool host = m->FCreatureAt(d.x,gy) != NULL;
+          if (rel < d.rows && !host)
+            RainHook(0, d.x, gy, '|', fx.Clock());
+          else if (rel == d.rows)
+            RainHook(1, d.x, d.y, host ? 0 : '*', fx.Clock());
+          else if (rel == d.rows + landSteps)
+            RainHook(2, d.x, d.y, 0, fx.Clock());
+          }
+        RainHook(3, -1, -1, 0, fx.Clock());
+        }
+      if (s < last)
+        fx.Wait(stepMs);
+      }
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
+
 /* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
    opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
    ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
@@ -2142,6 +2226,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
         GlobeFireworks(e, fx, cx, cy);
       else if (PatternOn(te))
         GlobePattern(e, fx, cx, cy, e.EActor->isPlayer() ? 1500 : 500);
+      else if (te && te->HasFlag(EF_RAIN))
+        GlobeRain(e, fx, cx, cy, e.EActor->isPlayer() ? 1500 : 500);
       else {
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)

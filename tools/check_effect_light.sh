@@ -85,6 +85,18 @@
 # fact: ST5 out of sight -- the probe makes the player's eight neighbors opaque (as case C) and places the skull at (PX+10, PY); no roll decides the line of sight
 # fact: ST7 the gameplay random stream -- each cast runs in its own process (INCURSION_ST7_ANIM), from init_genrand(7770003) just before the cast, so no state carries between casts; the check compares the stream position (seed, draws taken) when the script's light ends and the next draw, whatever the values are
 # fact: ST7 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# fact: DR1 cast square, radius and which squares are seen -- the probe throws Dance of Ruin as a globe at (20, PY) with a 3-square wall at (13, 18..20), fixed offsets from the player's fixed square; the radius is the data's lval; the expected squares are those within it that the probe's own LineOfSight call says the player sees; no roll decides them
+# fact: DR1 a square's landing and first-light clocks -- the effect's own clock, 40 ms a step, the hook's clockMs; never the wall clock
+# fact: DR2 the drops' start times -- cosmetic_random() picks each from 31 slots; the check reads only that at least one landing differs in clock from the first, and all of about 400 landings sharing one clock has chance below 1e-300
+# fact: DR3 the light color -- the cval (COL_DARKRED) through LightEffectColour, read by the probe from the data; the check reads each square's own light (LightEffectGlyphAt) against that row, within 12 per channel in hue, at every step's end and at the square's first sample; the effect's loaded damage type is fire (bead inc-5d7l6) and is not controlled: the check passes only if the cval wins over it
+# fact: DR4 the glyphs -- the data's rain glyphs, | (124) falling and * (42) landing; no roll decides them; the above-square rule uses the probe's own LineOfSight, bounds and solid test
+# fact: DR5 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that nothing lights
+# fact: DR6 squares the player cannot see -- the wall's shadow in the globe; the probe counts them from its own LineOfSight call and is INCONCLUSIVE below 3; a second cast with the player's eight neighbors opaque sees none of the globe
+# fact: DR7 the struck kobold -- a kobold at (20, 15), 5000 hit points, inside the globe on a seen square; the struck flash comes before any hit and no roll decides it; the hook reads its color at TF_LIT
+# fact: DR8 flashes left -- LightFlashCount after each cast; no roll decides it
+# fact: DR9 the gameplay random stream -- each cast runs in its own process (INCURSION_DR9_ANIM), from init_genrand(7770004) just before the cast; the check compares the stream position (seed, draws taken) when the rain's light ends and the next draw, whatever the values are
+# fact: DR9 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# Cases DR1-DR9 add: Dance of Ruin's dark-red drops fall onto each square the player sees, each square lights on the dark ramp as its drop lands, the struck flash runs last, the cval beats the fire damage type, and no gameplay roll moves.
 # Cases ST1-ST14 add: Skull Trap's skull glows crimson after its scream, rising from dim to full over 1000 ms and holding at its peak; its explosion then plays a fire wave and a necromantic wave of glyphs, rings moving out 10 ms apiece, each struck creature flashing as each wave reaches it; a plain globe still runs its struck flash; no old highlight, no light when unseen or under animation None, and no gameplay roll moved.
 # Cases BH1-BH8 add (BH7 in separate processes): Burning Hands lights each square it draws on the fire ramp through the hold and the cooling, flashes every creature it hit, and moves no gameplay roll.
 # Cases CP1-CP6 add: Hypnotic Pattern, Colour Spray and Chromatic Orb draw random symbols in random colors that re-pick each 100 ms of the effect clock, the light follows each glyph's color, and no gameplay roll moves.
@@ -136,8 +148,16 @@ st7() {   # one fresh process; prints its end position and next draw
         tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
     grep -a 'EFFECT_LIGHT: ST7DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*ST7DRAW //'
 }
+dr9() {   # one fresh process; prints its end position and next draw
+    local d="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-effect-light-dr9-$1-$2"
+    INCURSION_DR9_ANIM="$1" INCURSION_EFFECT_LIGHT_PROBE=1 INCURSION_LIGHT_PROBE=1 INCURSION_RUN_DIR="$d" \
+        INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$LOAD" \
+        tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
+    grep -a 'EFFECT_LIGHT: DR9DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*DR9DRAW //'
+}
 BH7_N1="$(bh7 0)"; BH7_N2="$(bh7 0)"; BH7_NONE="$(bh7 2)"
 ST7_N1="$(st7 0 a)"; ST7_N2="$(st7 0 b)"; ST7_NONE="$(st7 2 c)"
+DR9_N1="$(dr9 0 a)"; DR9_N2="$(dr9 0 b)"; DR9_NONE="$(dr9 2 c)"
 
 log="$RUN_DIR/logs/errors.log"
 if [ ! -s "$log" ]; then
@@ -193,6 +213,15 @@ case "$last" in
             echo "EFFECT_LIGHT: ST7 FAIL Skull Trap stream position at the end of the script's light and next draw: animation Normal $ST7_N1, animation None $ST7_NONE (need equal)"
             exit 1
         fi
+        if [ -z "$DR9_N1" ] || [ "$DR9_N1" != "$DR9_N2" ]; then
+            echo "INCONCLUSIVE: DR9 two animation-Normal runs gave different draws ('$DR9_N1' / '$DR9_N2')."
+            exit 2
+        fi
+        if [ "$DR9_N1" != "$DR9_NONE" ]; then
+            echo "EFFECT_LIGHT: DR9 FAIL Dance of Ruin stream position when the rain's light ends and next draw: animation Normal $DR9_N1, animation None $DR9_NONE (need equal)"
+            exit 1
+        fi
+        echo "EFFECT_LIGHT: DR9 PASS Dance of Ruin stream position when the rain's light ends and next draw: animation Normal (twice) $DR9_N1, animation None $DR9_NONE"
         echo "EFFECT_LIGHT: ST7 PASS Skull Trap stream position at the end of the script's light and next draw: animation Normal (twice) $ST7_N1, animation None $ST7_NONE"
         echo "EFFECT_LIGHT: BH7 PASS stream position when the script's light ends, struck kobold: animation Normal (twice) $BH7_N1, animation None $BH7_NONE"
         echo "messages: $(grep -c . <<< "$msg_on") line(s), identical with the flash on and off"

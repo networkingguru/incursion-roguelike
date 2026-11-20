@@ -26,6 +26,7 @@ extern void (*ScriptLightEndHook)();
 extern void (*WaveHook)(int wave, int16 x, int16 y, Glyph g, float clockMs);
 extern void (*WaveFlashHook)(int wave, int16 x, int16 y);
 extern void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs);
+extern void (*RainHook)(int stage, int16 x, int16 y, Glyph g, float clockMs);
 extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx,
     const int16 *ty, int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
 
@@ -372,6 +373,47 @@ void StEndHook() {
     RngPosition(&gStSeed, &gStDraws);
 }
 
+/* Cases DR1-DR9 (inc-jw0hw): Dance of Ruin's rain. The rain hook records each falling and landing glyph; at each step's
+   end it samples every square of the room for its own effect light (LightEffectGlyphAt: the square's cell, not the spill)
+   and keeps the clock and color of each square's first sample. */
+struct DrRec { int x, y; float clk; int g; };
+std::vector<DrRec> gDrFall, gDrLand;
+std::vector<float> gDrFirst;
+std::vector<LightRGB> gDrFirstC;
+std::vector<char> gDrExp, gDrSee;   /* a drop must land / a falling glyph may show, by the probe's own LineOfSight */
+int gDrW, gDrCx = 20, gDrCy = 17, gDrR, gDrKx, gDrKy;
+int gDrEnds, gDrLitFrames, gDrTfCalls, gDrTfEnds, gDrTfLands, gDrBadHue, gDrSamples, gDrStray;
+bool gDrTfLit;
+LightRGB gDrTfC, gDrRow;
+unsigned long gDrSeed; unsigned long long gDrDraws;
+void DrHook(int stage, int16 x, int16 y, Glyph g, float clk) {
+    if (stage == 0 || stage == 1) {
+        DrRec r; r.x = x; r.y = y; r.clk = clk; r.g = (int)g;
+        (stage == 0 ? gDrFall : gDrLand).push_back(r);
+    } else if (stage == 3) {
+        for (int yy = 5; yy <= 29; ++yy)
+            for (int xx = 4; xx <= 38; ++xx) {
+                LightRGB c = { 0, 0, 0 };
+                if (!LightEffectGlyphAt((int16)xx, (int16)yy, c)) continue;
+                const size_t i = (size_t)yy * gDrW + xx;
+                ++gDrSamples;
+                if (!gDrExp[i]) ++gDrStray;
+                if (gDrFirst[i] < 0) { gDrFirst[i] = clk; gDrFirstC[i] = c; }
+                if (Max3(c) >= 60 && !HueNear(c, gDrRow, 12)) ++gDrBadHue;
+            }
+    }
+}
+void DrEl(int phase) {
+    if (phase == EL_LIT) ++gDrLitFrames;
+    else if (phase == EL_END) { ++gDrEnds; RngPosition(&gDrSeed, &gDrDraws); }
+}
+void DrTf(int phase) {
+    if (phase != TF_LIT) return;
+    ++gDrTfCalls; gDrTfEnds = gDrEnds; gDrTfLands = (int)gDrLand.size();
+    gDrTfC.r = gDrTfC.g = gDrTfC.b = 0;
+    gDrTfLit = LightEffectGlyphAt((int16)gDrKx, (int16)gDrKy, gDrTfC);
+}
+
 void FlashHook(int phase) {
     if (gLine) {
         if (phase == EL_LIT) {
@@ -640,6 +682,62 @@ static void StCast(Player *pl, Map *mp, rID floor, rID wall, rID kobold, rID sku
     gStKob = NULL;
 }
 
+/* One Dance of Ruin cast: its globe is thrown at (20, PY) as a spell cast would throw it, the player stands outside its radius
+   at the fixed square, a kobold stands in it, and a 3-square wall casts a shadow over part of it. EV_EFFECT runs the effect's own
+   handler, which calls EV_ISTARGET and ignores the answer, so the vrock-count gate stops nothing: no bypass is needed. */
+static void DrCast(Player *pl, Map *mp, rID floor, rID wall, rID kobold, rID dance, int anim, bool boxed, bool hooks) {
+    TextTerm *term = (TextTerm *)pl->MyTerm;
+    BuildDark(mp, pl, floor, wall);
+    LightFlashClearAll();
+    const rID region = mp->RegionAt(pl->x, pl->y);
+    Rect rect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
+    for (int i = 0; i < 3; ++i)
+        mp->WriteAt(rect, 13, 18 + i, wall, region, PRIO_MAX, true);
+    if (boxed)
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy)
+                if (dx || dy) mp->At(PX + dx, PY + dy).Opaque = true;
+    pl->CalcVision();
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+    pl->Options[OPT_AUTOMORE] = 1;
+    gDrKx = 20; gDrKy = 15;
+    Monster *k = new Monster(kobold);
+    k->PlaceAt(mp, gDrKx, gDrKy, true);
+    k->Initialize(true);
+    k->mHP = k->cHP = 5000;
+    pl->mHP = pl->cHP = 5000;
+    gDrW = mp->SizeX();
+    const size_t n = (size_t)mp->SizeX() * mp->SizeY();
+    gDrFirst.assign(n, -1.0f);
+    LightRGB none = { 0, 0, 0 };
+    gDrFirstC.assign(n, none);
+    gDrExp.assign(n, 0); gDrSee.assign(n, 0);
+    gDrR = TEFF(dance)->ef.lval;
+    gDrRow = LightEffectColour(TEFF(dance)->ef.cval);
+    for (int y = 4; y <= 30; ++y)
+        for (int x = 3; x <= 39; ++x) {
+            const bool los = mp->LineOfSight(PX, PY, x, y, pl);
+            const size_t i = (size_t)y * gDrW + x;
+            gDrSee[i] = los && !mp->At(x, y).Solid;
+            gDrExp[i] = los && InBlock(x, y) && dist(gDrCx, gDrCy, x, y) <= gDrR;
+        }
+    gDrFall.clear(); gDrLand.clear();
+    gDrEnds = gDrLitFrames = gDrTfCalls = gDrTfEnds = gDrTfLands = gDrBadHue = gDrSamples = gDrStray = 0;
+    gDrTfLit = false; gDrTfC = none; gDrSeed = 0; gDrDraws = 0;
+    Refresh(pl);
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+    term->MsgHistory[0] = 0;
+    EffectLightHook = DrEl;
+    if (hooks) { RainHook = DrHook; TargetFlashHook = DrTf; }
+    pl->Options[OPT_ANIMATION] = (int8)anim;
+    EventInfo xe; xe.Clear();
+    xe.EActor = pl; xe.EMap = mp; xe.eID = dance; xe.isSpell = true;
+    xe.isLoc = true; xe.EXVal = gDrCx; xe.EYVal = gDrCy;
+    ReThrow(EV_EFFECT, xe);
+    pl->Options[OPT_ANIMATION] = 0;
+    EffectLightHook = NULL; RainHook = NULL; TargetFlashHook = NULL;
+}
+
 void EffectLightProbe(Player *pl) {
     if (!getenv("INCURSION_EFFECT_LIGHT_PROBE"))
         return;
@@ -708,6 +806,23 @@ void EffectLightProbe(Player *pl) {
         StCast(pl, mp, floor, wall, kob, skull, skullSpell, trapR, PX + 4, false, atoi(stAnim), true);
         const long next = random(30000);
         Error("EFFECT_LIGHT: ST7DRAW end calls %d seed %lu draws %llu next %ld", gStEndCalls, gStSeed, gStDraws, next);
+        theGame->PlayMode = wasPlay;
+        return;
+    }
+    if (const char *drAnim = getenv("INCURSION_DR9_ANIM")) {
+        /* DR9: one Dance of Ruin cast from a fixed seed, in a fresh process; the check compares the stream position when the
+           rain's light ends (before any hit) and the next draw between an animation-Normal run and an animation-None run. */
+        const rID dance = FIND("Dance of Ruin"), kob = FIND("kobold");
+        if (!dance || !kob) {
+            Error("EFFECT_LIGHT: DR9DRAW INCONCLUSIVE -- Dance of Ruin or the kobold is missing");
+            return;
+        }
+        const bool wasPlay = theGame->PlayMode;
+        theGame->PlayMode = true;
+        init_genrand(7770004UL);
+        DrCast(pl, mp, floor, wall, kob, dance, atoi(drAnim), false, true);
+        const long next = random(30000);
+        Error("EFFECT_LIGHT: DR9DRAW end calls %d seed %lu draws %llu next %ld", gDrEnds, gDrSeed, gDrDraws, next);
         theGame->PlayMode = wasPlay;
         return;
     }
@@ -2183,6 +2298,119 @@ void EffectLightProbe(Player *pl) {
                             "plain globe (no EF_WAVES): highlight recolors %d (need 1+); struck flashes %d (need 1+); recolors done when the first struck flash showed %d (need all %d)",
                             gSt13Gl, gSt13Tf, gSt13GlAtTf, gSt13Gl);
                     }
+                }
+            }
+
+            /* DR: Dance of Ruin (inc-jw0hw). Dark-red drops fall onto every square of its globe that the player sees; a square lights
+               when its drop lands, on the dark ramp; the struck flash runs last, on the same ramp. */
+            if (!off) {
+                const rID dance = FIND("Dance of Ruin");
+                if (!dance || !kobold || TEFF(dance)->ef.aval != AR_GLOBE || !TEFF(dance)->ef.cval) {
+                    inconclusive("DR", "Dance of Ruin is missing, not a globe or has no color, or the kobold is missing");
+                } else if (LightMode(pl) == LIGHT_LEGACY) {
+                    inconclusive("DR", "the light map is legacy");
+                } else {
+                    DrCast(pl, mp, floor, wall, kobold, dance, 0, false, true);
+                    const int W = gDrW;
+                    const int flashes1 = (int)LightFlashCount();
+                    const int nLand = (int)gDrLand.size(), nFall = (int)gDrFall.size();
+                    const bool seenKob = gDrKx >= 0 && (gDrExp[(size_t)gDrKy * W + gDrKx] != 0);
+                    int nExp = 0, nHid = 0;
+                    std::vector<int> landN((size_t)W * mp->SizeY(), 0);
+                    std::vector<float> landClk((size_t)W * mp->SizeY(), -1.0f);
+                    for (int i = 0; i < nLand; ++i) {
+                        const size_t k = (size_t)gDrLand[i].y * W + gDrLand[i].x;
+                        ++landN[k]; landClk[k] = gDrLand[i].clk;
+                    }
+                    int miss = 0, early = 0, strayLand = 0, unlit = 0;
+                    for (int y = 5; y <= 29; ++y)
+                        for (int x = 4; x <= 38; ++x) {
+                            const size_t i = (size_t)y * W + x;
+                            if (gDrExp[i]) {
+                                ++nExp;
+                                if (landN[i] != 1) ++miss;
+                                if (gDrFirst[i] < 0) ++unlit;
+                                else if (gDrFirst[i] + 0.5f < landClk[i]) ++early;
+                            } else {
+                                if (dist(gDrCx, gDrCy, x, y) <= gDrR) ++nHid;
+                                if (landN[i]) ++strayLand;
+                            }
+                        }
+                    verdict("DR1", nExp > 0 && miss == 0 && strayLand == 0 && unlit == 0 && early == 0 && nLand == nExp,
+                        "squares the player sees in the globe %d; landings %d (need equal, one each: squares with other than 1 landing %d, landings elsewhere %d); squares never lit %d, lit before their landing %d (need 0 each)",
+                        nExp, nLand, miss, strayLand, unlit, early);
+                    float lo = 1e9f, hi = -1.0f;
+                    int nDiff = 0;
+                    for (int i = 0; i < nLand; ++i) {
+                        if (gDrLand[i].clk < lo) lo = gDrLand[i].clk;
+                        if (gDrLand[i].clk > hi) hi = gDrLand[i].clk;
+                        if (gDrLand[i].clk != gDrLand[0].clk) ++nDiff;
+                    }
+                    verdict("DR2", nLand >= 2 && nDiff >= 1,
+                        "landing clocks run from %.0f to %.0f ms; landings at a time other than the first landing's: %d (need 1+)", lo, hi, nDiff);
+                    int badFirst = 0;
+                    for (int y = 5; y <= 29; ++y)
+                        for (int x = 4; x <= 38; ++x) {
+                            const size_t i = (size_t)y * W + x;
+                            if (gDrFirst[i] >= 0 && !(Max3(gDrFirstC[i]) >= 150 && HueNear(gDrFirstC[i], gDrRow, 12))) ++badFirst;
+                        }
+                    verdict("DR3", gDrSamples > 0 && gDrBadHue == 0 && badFirst == 0 && gDrRow.r >= 2 * gDrRow.g && gDrRow.r >= 2 * gDrRow.b,
+                        "light samples %d; samples off the dark-red row (%d,%d,%d) in hue %d, squares whose first light is not full dark red %d (need 0 each); the row is red-dominant=%d",
+                        gDrSamples, gDrRow.r, gDrRow.g, gDrRow.b, gDrBadHue, badFirst, (int)(gDrRow.r >= 2 * gDrRow.g && gDrRow.r >= 2 * gDrRow.b));
+                    int badGlyph = 0, noLater = 0, noAbove = 0, hostBad = 0, noKobLand = 1;
+                    for (int i = 0; i < nFall; ++i) {
+                        const DrRec &f = gDrFall[i];
+                        if (f.g != 124) ++badGlyph;
+                        bool later = false;
+                        for (int j = 1; j <= 3 && !later; ++j)
+                            for (int q = 0; q < nLand; ++q)
+                                if (gDrLand[q].x == f.x && gDrLand[q].y == f.y + j && gDrLand[q].clk > f.clk) { later = true; break; }
+                        if (!later) ++noLater;
+                    }
+                    for (int q = 0; q < nLand; ++q) {
+                        const DrRec &l = gDrLand[q];
+                        const bool kob = l.x == gDrKx && l.y == gDrKy;
+                        if (kob) { noKobLand = 0; if (l.g != 0) ++hostBad; }
+                        else if (l.g != 42) ++badGlyph;
+                        const bool aboveKob = l.x == gDrKx && l.y - 1 == gDrKy;
+                        if (gDrSee[(size_t)(l.y - 1) * W + l.x] && !aboveKob) {
+                            bool above = false;
+                            for (int i = 0; i < nFall && !above; ++i)
+                                above = gDrFall[i].x == l.x && gDrFall[i].y == l.y - 1 && gDrFall[i].clk < l.clk;
+                            if (!above) ++noAbove;
+                        }
+                    }
+                    verdict("DR4", nFall > 0 && badGlyph == 0 && noLater == 0 && noAbove == 0,
+                        "falling glyphs drawn %d; a glyph other than | (124) falling or * (42) landing: %d; falling glyphs with no later landing below them in their column: %d; landings with a seen square above and no earlier falling glyph there: %d (need 0 each)",
+                        nFall, badGlyph, noLater, noAbove);
+                    /* DR6: nothing for a square the player cannot see */
+                    int fallHid = 0;
+                    for (int i = 0; i < nFall; ++i)
+                        if (!gDrSee[(size_t)gDrFall[i].y * W + gDrFall[i].x]) ++fallHid;
+                    const int stray1 = gDrStray;
+                    /* DR7 state, read now: later casts reuse the hook state */
+                    const int tfCalls = gDrTfCalls, tfEnds = gDrTfEnds, tfLands = gDrTfLands;
+                    const bool tfLit = gDrTfLit;
+                    const LightRGB tfC = gDrTfC;
+                    const bool kobFirst = seenKob && gDrFirst[(size_t)gDrKy * W + gDrKx] >= 0;
+                    verdict("DR7", seenKob && tfCalls >= 1 && tfEnds >= 1 && tfLands == nLand && tfLit &&
+                        Max3(tfC) >= 150 && HueNear(tfC, gDrRow, 12) && tfC.g * 2 < tfC.r && !noKobLand && hostBad == 0 && kobFirst,
+                        "struck flash on the kobold: flashes %d (need 1+); rain light ended before it %d; landings done when it showed %d of %d; its color (%d,%d,%d) lit=%d, dark-red hue and full (need both); the kobold's square lit by the rain=%d and its landing glyph 0 (no *): %d",
+                        tfCalls, tfEnds, tfLands, nLand, tfC.r, tfC.g, tfC.b, (int)tfLit, (int)kobFirst, (int)(!noKobLand && hostBad == 0));
+                    /* DR5: animation None */
+                    DrCast(pl, mp, floor, wall, kobold, dance, 2, false, true);
+                    verdict("DR5", gDrLitFrames == 0 && gDrFall.empty() && gDrLand.empty() && gDrSamples == 0 && gDrTfCalls == 0 && LightFlashCount() == 0 && gDrEnds == 1,
+                        "animation None: light frames %d, falling glyphs %d, landings %d, light samples %d, struck flashes %d, flashes left %d (need 0 each); effect light ends %d (need 1, the cast returned)",
+                        gDrLitFrames, (int)gDrFall.size(), (int)gDrLand.size(), gDrSamples, gDrTfCalls, (int)LightFlashCount(), gDrEnds);
+                    /* DR6, DR8: the player boxed in sees nothing of the globe */
+                    DrCast(pl, mp, floor, wall, kobold, dance, 0, true, true);
+                    const int boxedRecs = (int)gDrFall.size() + (int)gDrLand.size() + gDrStray + gDrLitFrames;
+                    const int flashes3 = (int)LightFlashCount();
+                    verdict("DR6", nHid >= 3 && fallHid == 0 && strayLand == 0 && stray1 == 0 && boxedRecs == 0,
+                        "squares of the globe the player cannot see %d (need 3+); falling glyphs on a square not seen %d, landings on one %d, squares lit that are not seen %d (need 0 each); player boxed in: records %d (need 0)",
+                        nHid, fallHid, strayLand, stray1, boxedRecs);
+                    verdict("DR8", flashes1 == 0 && flashes3 == 0,
+                        "light flashes left after the cast: seen globe %d, unseen globe %d (need 0 each)", flashes1, flashes3);
                 }
             }
 
