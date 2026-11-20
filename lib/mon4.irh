@@ -1182,6 +1182,8 @@ Effect "Nightmare Smite" : EA_INFLICT
       to this effect.";
     xval: EFF_FLAG1; Purpose: EP_ATTACK;
     On Event EV_ELAPSED {
+      /* inc-jw0hw: the gather's rainbow pattern ends before the blast lights */
+      e.PatternStop(EActor);
       DPrint(e,"Your ribbons of light explode outward!",
                "The <EActor>'s ribbons of light explode outward!");
       RedirectEff(e,$"Nightmare Smite;actual blast", EV_EFFECT, e);
@@ -1189,6 +1191,11 @@ Effect "Nightmare Smite" : EA_INFLICT
       },
     EV_CALC_EFFECT {
       e.vDuration = 2;
+      return NOTHING;
+      },
+    POST(EV_EFFECT) {
+      /* inc-jw0hw: the demon and the 8 squares around it show changing rainbow glyphs and light for as long as the gather stands */
+      e.PatternStand(EActor,1,COL_RAINBOW,EFF_FLAG1);
       return NOTHING;
       },
     EV_ISTARGET {

@@ -1905,6 +1905,8 @@ int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode) {
 
     ox = cx; oy = cy; wn = activeWin;
     if (theGame->InPlay()) {
+        if (Mode == MO_PLAY)
+            StandingPatternRepick();   /* inc-jw0hw: this terminal has no timed redraw: one new pick each time it waits for a key */
         if (p->UpdateMap && Mode == MO_PLAY)
             RefreshMap();
         if (p->statiChanged) {

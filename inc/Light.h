@@ -105,6 +105,7 @@ void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square, bo
 void  LightFlashCellColour(int32 id, int16 x, int16 y, LightRGB c); /* inc-jw0hw: this square takes its own base color; its age keeps running */
 bool  LightFlashTintAt(int16 x, int16 y, LightRGB &c);   /* the base color a square was given, or false */
 void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
+void  LightFlashClearCells(int32 id);               /* inc-jw0hw: the flash lights no square until LightFlashCell adds one */
 void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
 void  LightFlashSetStyle(int32 id, uint8 style);    /* LF_*: a flash that must not flicker is set steady */
 void  LightFlashSetRise(int32 id, bool on);         /* a rise: base color at full brightness, scaled by the level (see EffectLight::Rise) */

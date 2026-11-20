@@ -513,6 +513,60 @@ void CpElHook(int phase) { if (phase == EL_LIT) ++gCpLit; }
 bool CpGlyphOk(int g) { return g > 0 && g < 256 && g != ' ' && !isalnum(g) && g != '@'; }
 bool CpColourOk(int c) { return c > BLACK && c < WHITE && c != GREY && c != SHADOW; }
 
+// no-family
+const int NSX = 15, NSKX = 18;   /* the demon's and the kobold's squares, fixed offsets from the player's fixed square */
+// end no-family
+Monster *gNsCaster, *gNsKob;
+rID gNsRID;
+/* Cases NS1-NS12 (inc-jw0hw): Nightmare Smite's standing rainbow pattern and its explosion. The blast's first lit frame is read once:
+   what stands then (the pattern must be gone), and every lit square's light at four ages of the flash's own clock (set by the hook,
+   0, 300, 600 and 850 ms; the effect's next wait sets it again), so the rainbow's per-square hue and its cooling show at one instant. */
+struct NsLitRec { int x, y; LightRGB c[4]; };
+std::vector<NsLitRec> gNsLit;
+int gNsElLit, gNsEnds, gNsAtLitPat, gNsAtLitFlashes, gNsAtLitStati, gNsAtLitPoolGlyphs, gNsTf, gNsTfEnds;
+bool gNsTfLit;
+LightRGB gNsTfC;
+const int NS_POOL[] = { '~', '*', '+', '=', '%', '&', '^', 15 };   /* the probe's own copy of the pool: an oracle apart from src/Magic.cpp */
+bool NsPoolGlyph(int id) {
+    for (size_t i = 0; i < sizeof NS_POOL / sizeof NS_POOL[0]; ++i)
+        if (NS_POOL[i] == id) return true;
+    return false;
+}
+void NsEl(int phase) {
+    if (phase == EL_END) { ++gNsEnds; return; }
+    if (phase != EL_LIT || ++gNsElLit != 1) return;
+    gNsAtLitPat = StandingPatternCount();
+    gNsAtLitFlashes = (int)LightFlashCount();
+    gNsAtLitStati = gNsCaster->HasEffStati(EFF_FLAG1, gNsRID) ? 1 : 0;
+    gNsAtLitPoolGlyphs = 0;
+    Map *mp = gNsCaster->m;
+    static const float AGES[4] = { 0.0f, 300.0f, 600.0f, 850.0f };
+    gNsLit.clear();
+    for (int y = PY - 9; y <= PY + 9; ++y)
+        for (int x = NSX - 9; x <= NSX + 9; ++x) {
+            if (!mp->InBounds(x, y)) continue;
+            if (NsPoolGlyph(GLYPH_ID_VALUE(T1->GetGlyph((int16)x, (int16)y)))) ++gNsAtLitPoolGlyphs;
+            if (!LightLitAt((int16)x, (int16)y)) continue;
+            NsLitRec r; r.x = x; r.y = y;
+            gNsLit.push_back(r);
+        }
+    for (int k = 0; k < 4; ++k) {
+        for (int id = 0; id < 16; ++id) LightFlashSetClock(id, AGES[k]);
+        for (size_t i = 0; i < gNsLit.size(); ++i) {
+            LightRGB c = { 0, 0, 0 };
+            LightAt((int16)gNsLit[i].x, (int16)gNsLit[i].y, c);
+            gNsLit[i].c[k] = c;
+        }
+    }
+    for (int id = 0; id < 16; ++id) LightFlashSetClock(id, 0.0f);
+}
+void NsTf(int phase) {
+    if (phase != TF_LIT) return;
+    ++gNsTf; gNsTfEnds = gNsEnds;
+    gNsTfC.r = gNsTfC.g = gNsTfC.b = 0;
+    gNsTfLit = LightEffectGlyphAt((int16)NSKX, (int16)PY, gNsTfC);
+}
+
 /* Case G3 (inc-6dd41): the glyph a globe's highlight leaves on a square. */
 int gGlyphN, gGlyphBad, gGlyphCval;
 void GlyphHook(int16, int16, Glyph was, Glyph now) {
@@ -738,6 +792,55 @@ static void DrCast(Player *pl, Map *mp, rID floor, rID wall, rID kobold, rID dan
     EffectLightHook = NULL; RainHook = NULL; TargetFlashHook = NULL;
 }
 
+/* Case NS (inc-jw0hw): Nightmare Smite. A nalfeshnee stands at (NSX, PY), 9 squares from the player's fixed square (inside the player's sight range, outside the
+   blast of radius 8), with a kobold 3 squares east. The cast is EV_EFFECT on the gather effect with the demon as actor and victim: the effect's
+   EV_ISTARGET answer is ignored on that path (as for Dance of Ruin), so no gate needs a bypass. Game time is the demon's own
+   UpdateStati(), one call per tick, until the gather's stati ends and EV_ELAPSED throws the blast. */
+static void NsSetup(Player *pl, Map *mp, rID floor, rID wall, rID nalf, rID kobold, rID ns, bool boxed) {
+    BuildDark(mp, pl, floor, wall);
+    LightFlashClearAll();
+    if (boxed) {
+        for (int dx = -1; dx <= 1; ++dx)
+            for (int dy = -1; dy <= 1; ++dy)
+                if (dx || dy) mp->At(PX + dx, PY + dy).Opaque = true;
+        pl->CalcVision();
+    }
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+    pl->Options[OPT_AUTOMORE] = 1;
+    gNsCaster = new Monster(nalf);
+    gNsCaster->PlaceAt(mp, NSX, PY, true);
+    gNsCaster->Initialize(true);
+    gNsCaster->mHP = gNsCaster->cHP = 5000;
+    while (gNsCaster->HasStati(INVIS))   /* the nalfeshnee's spell list starts it invisible: the player must see it */
+        gNsCaster->RemoveStati(INVIS);
+    gNsKob = new Monster(kobold);
+    gNsKob->PlaceAt(mp, NSKX, PY, true);
+    gNsKob->Initialize(true);
+    gNsKob->mHP = gNsKob->cHP = 5000;
+    pl->mHP = pl->cHP = 5000;
+    gNsRID = ns;
+    Refresh(pl);
+    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+}
+static void NsGather(Map *mp) {
+    EventInfo xe; xe.Clear();
+    xe.EActor = gNsCaster; xe.EVictim = gNsCaster; xe.EMap = mp; xe.eID = gNsRID; xe.isSpell = true;
+    ReThrow(EV_EFFECT, xe);
+}
+static bool NsHeld() { return gNsCaster->HasEffStati(EFF_FLAG1, gNsRID); }
+/* One game tick on the demon; false once the gather's stati is gone. */
+static bool NsTick() {
+    gNsCaster->UpdateStati();
+    return NsHeld();
+}
+static int NsRunOut() {
+    int n = 0;
+    for (; n < 40 && NsHeld(); ++n)
+        gNsCaster->UpdateStati();
+    return n;
+}
+
+/* inc-jw0hw: the effect-light probe, run by tools/check_effect_light.sh. */
 void EffectLightProbe(Player *pl) {
     if (!getenv("INCURSION_EFFECT_LIGHT_PROBE"))
         return;
@@ -823,6 +926,34 @@ void EffectLightProbe(Player *pl) {
         DrCast(pl, mp, floor, wall, kob, dance, atoi(drAnim), false, true);
         const long next = random(30000);
         Error("EFFECT_LIGHT: DR9DRAW end calls %d seed %lu draws %llu next %ld", gDrEnds, gDrSeed, gDrDraws, next);
+        theGame->PlayMode = wasPlay;
+        return;
+    }
+    if (const char *nsAnim = getenv("INCURSION_NS12_ANIM")) {
+        /* NS12: one Nightmare Smite, the gather and the blast, from a fixed seed in a fresh process; the check compares the stream
+           position and the next draw after the blast between an animation-Normal run and an animation-None run. */
+        const rID ns = FIND("Nightmare Smite"), nalf = FIND("nalfeshnee"), kob = FIND("kobold");
+        if (!ns || !nalf || !kob) {
+            Error("EFFECT_LIGHT: NS12DRAW INCONCLUSIVE -- Nightmare Smite, the nalfeshnee or the kobold is missing");
+            return;
+        }
+        const bool wasPlay = theGame->PlayMode;
+        theGame->PlayMode = true;
+        init_genrand(7770005UL);
+        NsSetup(pl, mp, floor, wall, nalf, kob, ns, false);
+        /* The pattern's light shows the demon in a dark room, and the player's first sight of a monster rolls (Player::ScrutinizeMon,
+           two gameplay draws): a cause of seeing, not of drawing. Mark both monsters scrutinized so that animation None, which shows
+           nothing, draws the same. */
+        gNsCaster->StateFlags |= MS_SCRUTINIZED; gNsKob->StateFlags |= MS_SCRUTINIZED;
+        pl->Options[OPT_ANIMATION] = (int8)atoi(nsAnim);
+        NsGather(mp);
+        const bool held = NsHeld();
+        const int ticks = NsRunOut();
+        unsigned long sd; unsigned long long dr;
+        RngPosition(&sd, &dr);
+        const long next = random(30000);
+        Error("EFFECT_LIGHT: NS12DRAW held %d ticks %d left %d seed %lu draws %llu next %ld kobHP %d", held ? 1 : 0, ticks, NsHeld() ? 1 : 0, sd, dr, next, (int)gNsKob->cHP);
+        pl->Options[OPT_ANIMATION] = 0;
         theGame->PlayMode = wasPlay;
         return;
     }
@@ -2411,6 +2542,186 @@ void EffectLightProbe(Player *pl) {
                         nHid, fallHid, strayLand, stray1, boxedRecs);
                     verdict("DR8", flashes1 == 0 && flashes3 == 0,
                         "light flashes left after the cast: seen globe %d, unseen globe %d (need 0 each)", flashes1, flashes3);
+                }
+            }
+
+            /* NS: Nightmare Smite (inc-jw0hw). The gather draws a standing rainbow pattern on the demon's square and the 8 around it,
+               changing each 100 ms, across turns, following the demon, stopping before the blast; the blast lights on the rainbow
+               ramp and flashes the creatures it strikes. Game time is the demon's UpdateStati(); the pattern's clock is the value
+               the probe passes to StandingPatternFrame, never the wall clock. */
+            if (!off) {
+                const rID ns = FIND("Nightmare Smite"), nalf = FIND("nalfeshnee");
+                if (!ns || !nalf || !kobold || TEFF(ns)->ef.eval != EA_INFLICT) {
+                    inconclusive("NS", "Nightmare Smite, the nalfeshnee or the kobold is missing, or the gather is not an inflict");
+                } else if (LightMode(pl) == LIGHT_LEGACY) {
+                    inconclusive("NS", "the light map is legacy");
+                } else {
+                    struct NsG { int exp, have, lit, shown, anchorOk, badPick, extra, total; };
+                    /* What the 3x3 around the demon should show, graded against the probe's own line of sight and the terminal. */
+                    auto grade = [&]() -> NsG {
+                        NsG g = { 0, 0, 0, 0, 0, 0, 0, 0 };
+                        int16 ax[256], ay[256], ac[256]; Glyph ag[256];
+                        const int n = StandingPatternSquares(ax, ay, ag, ac, 256);
+                        g.total = n;
+                        for (int dy = -1; dy <= 1; ++dy)
+                            for (int dx = -1; dx <= 1; ++dx) {
+                                const int x = gNsCaster->x + dx, y = gNsCaster->y + dy;
+                                if (!mp->InBounds(x, y) || !mp->LineOfSight(PX, PY, x, y, pl)) continue;
+                                ++g.exp;
+                                int k = -1;
+                                for (int i = 0; i < n; ++i) if (ax[i] == x && ay[i] == y) k = i;
+                                if (k >= 0) ++g.have;
+                                if (LightLitAt((int16)x, (int16)y)) ++g.lit;
+                                const int gid = (int)GLYPH_ID_VALUE(T1->GetGlyph((int16)x, (int16)y));
+                                if (!dx && !dy) { if (gid == (int)GLYPH_ID_VALUE(gNsCaster->Image)) ++g.anchorOk; }
+                                else if (k >= 0 && gid == (int)GLYPH_ID_VALUE(ag[k])) ++g.shown;
+                            }
+                        for (int i = 0; i < n; ++i) {
+                            if (!CpGlyphOk((int)ag[i]) || !CpColourOk(ac[i])) ++g.badPick;
+                            if (dist(gNsCaster->x, gNsCaster->y, ax[i], ay[i]) > 1) ++g.extra;
+                        }
+                        return g;
+                    };
+                    auto litCount = [&]() { int n = 0; for (int y = 4; y <= 30; ++y) for (int x = 3; x <= 39; ++x) if (LightLitAt((int16)x, (int16)y)) ++n; return n; };
+                    /* squares around (cx, cy) that show a pattern glyph or light */
+                    auto stray = [&](int cx, int cy) { int n = 0;
+                        for (int dy = -1; dy <= 1; ++dy) for (int dx = -1; dx <= 1; ++dx) {
+                            if (!dx && !dy) continue;
+                            if (NsPoolGlyph((int)GLYPH_ID_VALUE(T1->GetGlyph((int16)(cx + dx), (int16)(cy + dy)))) || LightLitAt((int16)(cx + dx), (int16)(cy + dy))) ++n; }
+                        return n; };
+                    const int saveAnim = pl->Options[OPT_ANIMATION];
+
+                    NsSetup(pl, mp, floor, wall, nalf, kobold, ns, false);
+                    NsGather(mp);   /* graded as the cast left the screen: no repaint of the probe's own */
+                    const int heldAfterCast = NsHeld() ? 1 : 0;
+                    NsG g1 = grade();
+                    verdict("NS1", heldAfterCast && StandingPatternCount() == 1 && g1.exp == 9 && g1.have == 9 && g1.lit == 9 && g1.shown == 8 &&
+                        g1.anchorOk == 1 && g1.badPick == 0 && g1.extra == 0,
+                        "after the cast, stati held %d (need 1), patterns %d (need 1); squares the player sees in the 3x3 %d (need 9): in the pattern %d, lit %d, showing their pattern glyph %d of 8, the demon's own glyph on its square %d, bad picks %d, squares outside the 3x3 %d (need 9, 9, 9, 8, 1, 0, 0)",
+                        heldAfterCast, StandingPatternCount(), g1.exp, g1.have, g1.lit, g1.shown, g1.anchorOk, g1.badPick, g1.extra);
+
+                    /* NS2: the pattern keeps changing. The first Frame call sets the pattern's clock; 50 ms later nothing changes, 100 ms later it does. */
+                    int16 ax0[256], ay0[256], ac0[256], ax1[256], ay1[256], ac1[256]; Glyph ag0[256], ag1[256];
+                    StandingPatternFrame(1000);
+                    const int n0 = StandingPatternSquares(ax0, ay0, ag0, ac0, 256);
+                    const bool r50 = StandingPatternFrame(1050);
+                    const bool r100 = StandingPatternFrame(1100);
+                    Refresh(pl);
+                    const int n1 = StandingPatternSquares(ax1, ay1, ag1, ac1, 256);
+                    int changed = 0;
+                    for (int i = 0; i < n0 && i < n1; ++i)
+                        if (ag0[i] != ag1[i] || ac0[i] != ac1[i]) ++changed;
+                    NsG g2 = grade();
+                    verdict("NS2", !r50 && r100 && n0 == 9 && n1 == 9 && changed >= 1 && g2.shown == 8 && g2.lit == 9,
+                        "redraw 50 ms after the clock starts %d (need 0), 100 ms after %d (need 1); squares %d then %d (need 9); squares whose glyph or color changed %d (need 1+); the terminal shows the new glyphs on %d of 8 and %d lit",
+                        (int)r50, (int)r100, n0, n1, changed, g2.shown, g2.lit);
+
+                    /* NS3: one game tick later the pattern still stands, drawn and lit. */
+                    const bool heldTick = NsTick();
+                    StandingPatternFrame(1200);
+                    Refresh(pl);
+                    NsG g3 = grade();
+                    verdict("NS3", heldTick && StandingPatternCount() == 1 && g3.exp == 9 && g3.have == 9 && g3.lit == 9 && g3.shown == 8 && g3.anchorOk == 1,
+                        "after one game tick: stati still held %d (need 1), patterns %d (need 1); of the 9 squares in the pattern %d, lit %d, showing their glyph %d of 8, the demon's own glyph %d (need 9, 9, 8, 1)",
+                        (int)heldTick, StandingPatternCount(), g3.have, g3.lit, g3.shown, g3.anchorOk);
+
+                    /* NS4: the pattern follows the demon one square north; the old squares outside the new 3x3 show the true map. */
+                    gNsCaster->Move(NSX, PY - 1, false);
+                    StandingPatternFrame(1300);
+                    Refresh(pl);
+                    NsG g4 = grade();
+                    int oldClean = 0;
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        const int x = NSX + dx, y = PY + 1;
+                        if (!NsPoolGlyph((int)GLYPH_ID_VALUE(T1->GetGlyph((int16)x, (int16)y)))) ++oldClean;
+                    }
+                    verdict("NS4", gNsCaster->y == PY - 1 && g4.exp == 9 && g4.have == 9 && g4.lit == 9 && g4.shown == 8 && g4.anchorOk == 1 && g4.extra == 0 && oldClean == 3,
+                        "the demon moved to (%d,%d) (need y %d): its 3x3 has %d squares in the pattern, %d lit, %d showing their glyph of 8, the demon's own glyph %d, squares outside the 3x3 %d (need 9, 9, 8, 1, 0); the 3 old squares below it that show no pattern glyph (the light spills one square past the pattern, so it is not graded there): %d (need 3)",
+                        (int)gNsCaster->x, (int)gNsCaster->y, PY - 1, g4.have, g4.lit, g4.shown, g4.anchorOk, g4.extra, oldClean);
+
+                    /* NS5, NS9, NS10: the blast. EV_ELAPSED stops the pattern before it throws the blast. */
+                    gNsLit.clear(); gNsElLit = gNsEnds = gNsAtLitPat = gNsAtLitFlashes = gNsAtLitStati = gNsAtLitPoolGlyphs = gNsTf = gNsTfEnds = 0;
+                    gNsTfLit = false;
+                    EffectLightHook = NsEl; TargetFlashHook = NsTf;
+                    const int ticksLeft = NsRunOut();
+                    EffectLightHook = NULL; TargetFlashHook = NULL;
+                    verdict("NS5", gNsElLit >= 1 && gNsAtLitPat == 0 && gNsAtLitFlashes == 1 && gNsAtLitPoolGlyphs == 0 && !NsHeld(),
+                        "at the blast's first lit frame (after %d tick(s)): blast frames %d (need 1+), patterns standing %d, flashes %d (need 0, 1: the blast's own), pattern glyphs on the terminal within 9 squares of the demon %d (need 0), gather stati held %d (need 0)",
+                        ticksLeft, gNsElLit, gNsAtLitPat, gNsAtLitFlashes, gNsAtLitPoolGlyphs, (int)NsHeld());
+                    int nStrong = 0, nBad = 0, nDiff = 0;
+                    const int hx = gNsLit.empty() ? 0 : Max3(gNsLit[0].c[1]);
+                    for (size_t i = 0; i < gNsLit.size(); ++i) {
+                        const NsLitRec &r = gNsLit[i];
+                        const int m0 = Max3(r.c[0]), m2 = Max3(r.c[2]), m3 = Max3(r.c[3]);
+                        if (m0 >= 100) {
+                            ++nStrong;
+                            if (!(m0 > m2 && m2 > m3)) ++nBad;
+                        }
+                        const LightRGB &a = gNsLit[0].c[1], &b = r.c[1];
+                        const int ma = Max3(a), mb = Max3(b);
+                        if (ma > 0 && mb > 0 &&
+                            abs(a.r * 255 / ma - b.r * 255 / mb) + abs(a.g * 255 / ma - b.g * 255 / mb) + abs(a.b * 255 / ma - b.b * 255 / mb) > 90)
+                            ++nDiff;
+                    }
+                    verdict("NS9", gNsLit.size() >= 20 && nStrong >= 10 && nBad == 0 && nDiff >= 1 && hx > 0,
+                        "blast squares lit %d (need 20+), with a first-frame level of 100+ on %d (need 10+); of those, squares whose light does not cool from age 0 to 600 to 850 ms %d (need 0); squares at age 300 ms whose hue differs from the first square's %d (need 1+)",
+                        (int)gNsLit.size(), nStrong, nBad, nDiff);
+                    verdict("NS10", gNsTf >= 1 && gNsTfEnds >= 1 && gNsTfLit && Max3(gNsTfC) >= 150,
+                        "struck flash on the kobold: flashes %d (need 1+), blast light ended before it %d (need 1+), its square lit %d (need 1), its color (%d,%d,%d) brightest channel 150+",
+                        gNsTf, gNsTfEnds, (int)gNsTfLit, gNsTfC.r, gNsTfC.g, gNsTfC.b);
+                    const int flashesEnd = (int)LightFlashCount(), patsEnd = StandingPatternCount(), ovEnd = mp->ov.Active ? 1 : 0;
+                    verdict("NS11", flashesEnd == 0 && patsEnd == 0 && ovEnd == 0,
+                        "after the blast: flashes left %d, standing patterns %d, overlay still active %d (need 0 each)", flashesEnd, patsEnd, ovEnd);
+
+                    /* NS6: the stati removed (a dispel), then the demon removed (a kill), each stops the pattern at the next redraw. */
+                    NsSetup(pl, mp, floor, wall, nalf, kobold, ns, false);
+                    NsGather(mp);
+                    Refresh(pl);
+                    const int before6a = StandingPatternCount();
+                    const int cx6 = gNsCaster->x, cy6 = gNsCaster->y;
+                    gNsCaster->RemoveEffStati(gNsRID);
+                    StandingPatternFrame(2000);
+                    Refresh(pl);
+                    const int after6a = StandingPatternCount(), strayA = stray(cx6, cy6), flashA = (int)LightFlashCount();
+                    StandingPatternStopAll();
+                    NsSetup(pl, mp, floor, wall, nalf, kobold, ns, false);
+                    NsGather(mp);
+                    Refresh(pl);
+                    const int before6b = StandingPatternCount();
+                    gNsCaster->Remove(true);
+                    StandingPatternFrame(3000);
+                    Refresh(pl);
+                    const int after6b = StandingPatternCount(), strayB = stray(cx6, cy6), flashB = (int)LightFlashCount();
+                    StandingPatternStopAll();
+                    verdict("NS6", before6a == 1 && after6a == 0 && strayA == 0 && flashA == 0 && before6b == 1 && after6b == 0 && strayB == 0 && flashB == 0,
+                        "stati removed: patterns %d then %d (need 1, 0), squares around the demon still showing a pattern glyph or light %d, flashes left %d; demon removed: patterns %d then %d (need 1, 0), stray squares %d, flashes %d (need 0 each)",
+                        before6a, after6a, strayA, flashA, before6b, after6b, strayB, flashB);
+
+                    /* NS7: with the player boxed in, the pattern stands but draws nothing and lights nothing. */
+                    NsSetup(pl, mp, floor, wall, nalf, kobold, ns, true);
+                    NsGather(mp);
+                    Refresh(pl);
+                    int16 bx[256], by[256], bc[256]; Glyph bg[256];
+                    const int nBoxed = StandingPatternSquares(bx, by, bg, bc, 256);
+                    const int litBoxed = litCount(), patBoxed = StandingPatternCount();
+                    StandingPatternStopAll();
+                    verdict("NS7", patBoxed == 1 && nBoxed == 0 && litBoxed == 0,
+                        "player boxed in, demon casting: patterns standing %d (need 1), squares drawn %d, squares lit %d (need 0 each)", patBoxed, nBoxed, litBoxed);
+
+                    /* NS8: animation None starts no pattern and no light, and the run ends cleanly. */
+                    NsSetup(pl, mp, floor, wall, nalf, kobold, ns, false);
+                    pl->Options[OPT_ANIMATION] = 2;
+                    NsGather(mp);
+                    Refresh(pl);
+                    const int pat8 = StandingPatternCount(), lit8 = litCount(), fl8 = (int)LightFlashCount();
+                    const int run8 = NsRunOut();
+                    const int fl8End = (int)LightFlashCount(), pat8End = StandingPatternCount(), held8 = NsHeld() ? 1 : 0;
+                    pl->Options[OPT_ANIMATION] = saveAnim;
+                    verdict("NS8", pat8 == 0 && lit8 == 0 && fl8 == 0 && fl8End == 0 && pat8End == 0 && held8 == 0 && run8 >= 1,
+                        "animation None: patterns %d, squares lit %d, flashes %d after the cast (need 0 each); after the run (%d tick(s), gather ended %d): flashes %d, patterns %d (need 0)",
+                        pat8, lit8, fl8, run8, (int)(!held8), fl8End, pat8End);
+                    StandingPatternStopAll();
+                    LightFlashClearAll();
                 }
             }
 

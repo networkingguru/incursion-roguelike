@@ -256,6 +256,7 @@ void EffectReelProbe(Player *pl) {
         /* inc-jw0hw: the Skull Trap's script lights its skull only when EItem is the trap. */
         Trap *skullTrap = NULL;
         const bool isSkull = en.dtype < 0 && en.id == FIND("skull trap;trap");
+        const bool isNightmare = en.dtype < 0 && en.id == FIND("nightmare smite;actual blast");   /* cast through its gather */
         if (isSkull) {
             skullTrap = SkullTrapPlace(pl, mp, FIND("trap"), en.id, FIND("Skull Trap"), AIMX - 1, PY);
             gSkX = AIMX - 1; gSkY = PY; gSkTicks = 0; gSkFirst = gSkLast = 0; gSkLitTicks = 0; gSkEnds = 0;
@@ -305,7 +306,28 @@ void EffectReelProbe(Player *pl) {
         }
         /* A long message makes the text terminal wait for a key; the reel prints none. */
         Silence = 1;
-        ReThrow(EV_EFFECT, xe);
+        if (isNightmare) {
+            /* inc-jw0hw: the Nightmare Smite clip plays what a player sees: the demon casts the gather, its rainbow pattern
+               changes for 2 s while the game waits for a key (idle frames), one turn passes with the pattern still changing,
+               then the next turn ends the gather and the blast and the struck flash play. The demon stands north of the
+               kobolds, 11 squares from the player, who is outside the blast. */
+            const rID gather = FIND("Nightmare Smite"), nalf = FIND("nalfeshnee");
+            Monster *demon = new Monster(nalf);
+            demon->PlaceAt(mp, AIMX - 1, RY0 + 1, true);
+            demon->Initialize(true);
+            demon->mHP = demon->cHP = 5000;
+            while (demon->HasStati(INVIS)) demon->RemoveStati(INVIS);   /* its spell list starts it invisible */
+            EventInfo ge; ge.Clear();
+            ge.EActor = demon; ge.EVictim = demon; ge.EMap = mp; ge.eID = gather; ge.isSpell = true;
+            ReThrow(EV_EFFECT, ge);
+            Refresh(pl);
+            pl->MyTerm->StopWatch(2000);
+            demon->UpdateStati();           /* one turn passes: the gather stands */
+            pl->MyTerm->StopWatch(1000);
+            demon->UpdateStati();           /* the gather ends: the pattern stops, the blast plays */
+            StandingPatternStopAll();
+        } else
+            ReThrow(EV_EFFECT, xe);
         Silence = 0;
         if (isSkull) {
             ScriptLightTickHook = NULL; ScriptLightEndHook = NULL;

@@ -1140,6 +1140,11 @@ void LightFlashMoveTo(int32 id, int16 x, int16 y) {
   fl->cells.push_back(fc);
 }
 
+void LightFlashClearCells(int32 id) {
+  Flash *fl = FlashById(id);
+  if (fl) fl->cells.clear();
+}
+
 void LightFlashLevel(int32 id, float level) {
   Flash *fl = FlashById(id);
   if (!fl) return;

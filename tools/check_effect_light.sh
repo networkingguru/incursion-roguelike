@@ -96,6 +96,25 @@
 # fact: DR8 flashes left -- LightFlashCount after each cast; no roll decides it
 # fact: DR9 the gameplay random stream -- each cast runs in its own process (INCURSION_DR9_ANIM), from init_genrand(7770004) just before the cast; the check compares the stream position (seed, draws taken) when the rain's light ends and the next draw, whatever the values are
 # fact: DR9 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# fact: NS1 the demon, the kobold and the squares -- the probe places a nalfeshnee at (PX+9, PY) and a kobold at (PX+12, PY), fixed offsets from the player's fixed square; the expected 3x3 squares are those the probe's own LineOfSight call says the player sees; no roll decides them
+# fact: NS1 the demon's visibility -- the probe removes the INVIS status the nalfeshnee's spell list gives it at creation, so the player perceives it and its own glyph shows; no roll decides it
+# fact: NS1 the cast -- EV_EFFECT on the gather effect with the demon as actor and victim, which ignores EV_ISTARGET (as Dance of Ruin's does); no attack roll or saving throw decides that the gather stands
+# fact: NS1 each pick's glyph and color -- cosmetic_random() picks them; the check reads only invariants every pick keeps (a symbol that is not a letter, digit or @; a palette color that is not black, shadow, grey or white) and that the terminal shows the pick the engine reports on each of the 8 squares
+# fact: NS2 the pattern's clock -- the value the probe passes to StandingPatternFrame (1000, 1050, 1100 ms), never the wall clock; a pick repeats on a square with chance 1/64, so none of 9 squares changing has chance below 1e-16
+# fact: NS3 one game tick -- the demon's own UpdateStati(), once; the gather's duration is 2 (EV_CALC_EFFECT), so its stati still holds; no roll decides it
+# fact: NS4 the move -- the probe moves the demon one square north with Thing::Move; no roll decides where the 3x3 stands
+# fact: NS5 the blast's first lit frame -- the first EL_LIT call of the effect-light hook after the gather's stati elapses; the pattern count and the flash count are read there; no roll decides them
+# fact: NS6 the stop -- the probe removes the gather's stati (RemoveEffStati) in one cast and the demon (Remove) in another, then passes the next pattern clock value; no roll decides it
+# fact: NS7 out of sight -- the probe makes the player's eight neighbors opaque (as case C); no roll decides the line of sight
+# fact: NS8 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that nothing draws or lights
+# fact: NS9 each square's age -- the flash's own clock, set by the probe's hook to 0, 300, 600 and 850 ms and reset by the effect's next wait; never the wall clock
+# fact: NS9 each square's hue -- a hash of its coordinates and the flash's sequence number (src/Light.cpp, the rainbow ramp), no random draw; the check reads that at least one of about 300 squares differs from the first by over 90 in normalized color, which a hash of 300 squares misses with chance below 1e-100
+# fact: NS10 the struck kobold -- a kobold at (PX+12, PY), 5000 hit points, inside the blast's radius of 8 from the demon on a seen square; the struck flash comes before any hit and no save or hit roll decides it
+# fact: NS11 the end state -- LightFlashCount, StandingPatternCount and the overlay's Active flag after the blast; no roll decides them
+# fact: NS12 the gameplay random stream -- each cast runs in its own process (INCURSION_NS12_ANIM), from init_genrand(7770005) just before the demon's setup and cast; the check compares the stream position (seed, draws taken), the next draw, and the kobold's hit points after the gather and blast between an animation-Normal run and an animation-None run, whatever the values are
+# fact: NS12 the player's first sight of the demon and the kobold -- the probe marks both MS_SCRUTINIZED, so the player's first-sight roll (Player::ScrutinizeMon, 2 gameplay draws, measured 160 against 162 draws with it unmarked) does not fire when the pattern's light shows the demon in the dark room and animation None shows nothing; light that reveals a creature starts that roll, which is seeing and not drawing
+# fact: NS12 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# Cases NS1-NS12 add (NS12 in separate processes): Nightmare Smite's gather draws a standing rainbow pattern of changing glyphs and light on the demon and the 8 squares around it, for as long as the gather stands, across turns, following the demon, only on squares the player sees; the pattern stops before the blast, when the gather ends early, when the demon goes, and never starts under animation None; the blast lights on the rainbow ramp, each square in its own hue and cooling, and flashes the creatures it strikes; and no gameplay roll moves.
 # Cases DR1-DR9 add: Dance of Ruin's dark-red drops fall onto each square the player sees, each square lights on the dark ramp as its drop lands, the struck flash runs last, the cval beats the fire damage type, and no gameplay roll moves.
 # Cases ST1-ST14 add: Skull Trap's skull glows crimson after its scream, rising from dim to full over 1000 ms and holding at its peak; its explosion then plays a fire wave and a necromantic wave of glyphs, rings moving out 10 ms apiece, each struck creature flashing as each wave reaches it; a plain globe still runs its struck flash; no old highlight, no light when unseen or under animation None, and no gameplay roll moved.
 # Cases BH1-BH8 add (BH7 in separate processes): Burning Hands lights each square it draws on the fire ramp through the hold and the cooling, flashes every creature it hit, and moves no gameplay roll.
@@ -155,9 +174,17 @@ dr9() {   # one fresh process; prints its end position and next draw
         tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
     grep -a 'EFFECT_LIGHT: DR9DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*DR9DRAW //'
 }
+ns12() {   # one fresh process; prints its end position, next draw and the kobold's hit points
+    local d="$ROOT/logs/runs/$(date +%Y%m%d-%H%M%S)-$$-effect-light-ns12-$1-$2"
+    INCURSION_NS12_ANIM="$1" INCURSION_EFFECT_LIGHT_PROBE=1 INCURSION_LIGHT_PROBE=1 INCURSION_RUN_DIR="$d" \
+        INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$LOAD" \
+        tools/headless.sh "$KEYS" "$SEED" > /dev/null 2>&1
+    grep -a 'EFFECT_LIGHT: NS12DRAW' "$d/logs/errors.log" 2>/dev/null | sed 's/.*NS12DRAW //'
+}
 BH7_N1="$(bh7 0)"; BH7_N2="$(bh7 0)"; BH7_NONE="$(bh7 2)"
 ST7_N1="$(st7 0 a)"; ST7_N2="$(st7 0 b)"; ST7_NONE="$(st7 2 c)"
 DR9_N1="$(dr9 0 a)"; DR9_N2="$(dr9 0 b)"; DR9_NONE="$(dr9 2 c)"
+NS12_N1="$(ns12 0 a)"; NS12_N2="$(ns12 0 b)"; NS12_NONE="$(ns12 2 c)"
 
 log="$RUN_DIR/logs/errors.log"
 if [ ! -s "$log" ]; then
@@ -221,6 +248,15 @@ case "$last" in
             echo "EFFECT_LIGHT: DR9 FAIL Dance of Ruin stream position when the rain's light ends and next draw: animation Normal $DR9_N1, animation None $DR9_NONE (need equal)"
             exit 1
         fi
+        if [ -z "$NS12_N1" ] || [ "$NS12_N1" != "$NS12_N2" ]; then
+            echo "INCONCLUSIVE: NS12 two animation-Normal runs gave different draws ('$NS12_N1' / '$NS12_N2')."
+            exit 2
+        fi
+        if [ "$NS12_N1" != "$NS12_NONE" ]; then
+            echo "EFFECT_LIGHT: NS12 FAIL Nightmare Smite stream position after the blast and next draw: animation Normal $NS12_N1, animation None $NS12_NONE (need equal)"
+            exit 1
+        fi
+        echo "EFFECT_LIGHT: NS12 PASS Nightmare Smite stream position after the blast and next draw: animation Normal (twice) $NS12_N1, animation None $NS12_NONE"
         echo "EFFECT_LIGHT: DR9 PASS Dance of Ruin stream position when the rain's light ends and next draw: animation Normal (twice) $DR9_N1, animation None $DR9_NONE"
         echo "EFFECT_LIGHT: ST7 PASS Skull Trap stream position at the end of the script's light and next draw: animation Normal (twice) $ST7_N1, animation None $ST7_NONE"
         echo "EFFECT_LIGHT: BH7 PASS stream position when the script's light ends, struck kobold: animation Normal (twice) $BH7_N1, animation None $BH7_NONE"

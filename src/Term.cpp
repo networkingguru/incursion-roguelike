@@ -976,6 +976,7 @@ void TextTerm::ShowMap() {
 
     Check(m, "Null Map in ShowMap?!");
     Color(GREY);
+    StandingPatternPrepare(m);   /* inc-jw0hw: before the light map, so a pattern's light is in it */
     /* Vision reads the light map, so the map must be built first. */
     LightRebuild(m, p);
     if (p->UpdateMap)
@@ -1048,6 +1049,7 @@ void TextTerm::ShowMap() {
 
     if (m->ov.Active)
         m->ov.ShowGlyphs();
+    StandingPatternDone(m);
 }
 
 void TextTerm::AdjustMap(int16 vx, int16 vy,bool newmap) {
@@ -1288,7 +1290,7 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
     if (m->At(x,y).Shade)
       g = FloorShading(x,y,g);
 
-    if (m->At(x,y).hasField && ((g & GLYPH_BACK_MASK) != GLYPH_BACK(WHITE))) {
+    if (m->At(x,y).hasField && ((g & GLYPH_BACK_MASK) != GLYPH_BACK(WHITE)) && !StandingPatternDrawsAt(x,y,g)) {
       g = m->FieldGlyph(x,y,g);
     }
 

@@ -81,7 +81,7 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
                          TEffect *te, bool targetFlash)
     : map(m), id(-1), ended(false), lit(true), target(targetFlash),
-      clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false) {
+      clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false), standing(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
     lit = d.lit;
@@ -166,6 +166,22 @@ void EffectLight::Recolour(int16 col) {
 void EffectLight::SetCellColour(int16 x, int16 y, int16 glyphColour) {
   if (id >= 0 && !ended)
     LightFlashCellColour(id, x, y, LightEffectColour(glyphColour));
+}
+
+/* inc-jw0hw: a standing light. Each square keeps its own color at full brightness and never ages (the rise's render path at its
+   top level); the light's glyphs are the caller's, drawn in the overlay, so the light leaves every glyph's color alone. */
+void EffectLight::Stand() {
+  standing = true;
+  if (id >= 0 && !ended) {
+    LightFlashSetStyle(id, LF_STEADY);
+    LightFlashSetRise(id, true);
+    LightFlashLevel(id, 1.0f);
+  }
+}
+
+void EffectLight::ClearCells() {
+  if (id >= 0 && !ended)
+    LightFlashClearCells(id);
 }
 
 void EffectLight::Redraw() {
@@ -295,12 +311,17 @@ void EffectLight::End() {
   if (had) {
     LightFlashRemove(id);
     id = -1;
-    if (risen) {   /* no dark frame between the rise and the next light */
+    if (standing) {   /* End() may run inside a repaint: the caller repaints */
+      Player *p = theGame->GetPlayer(0);
+      if (p) p->UpdateMap = 1;
+    } else if (risen) {   /* no dark frame between the rise and the next light */
       Player *p = theGame->GetPlayer(0);
       if (p) p->UpdateMap = 1;
     } else
       Show();
   }
+  if (standing)   /* a standing light is no effect: no test hook hears it */
+    return;
   if (target) {
     if (TargetFlashHook) TargetFlashHook(TF_END);
   } else if (EffectLightHook)
@@ -437,4 +458,15 @@ void EventInfo::LightEnd() {
   }
   if (ScriptLightEndHook)
     ScriptLightEndHook();
+}
+
+/* inc-jw0hw: the script's standing pattern. The effect that calls it owns the pattern. */
+void EventInfo::PatternStand(Thing *t, int16 radius, int16 col, int16 stati) {
+  if (!col && EMagic)
+    col = EMagic->cval;
+  StandingPatternStart(t, radius, col, eID, stati);
+}
+
+void EventInfo::PatternStop(Thing *t) {
+  StandingPatternStop(t, eID);
 }

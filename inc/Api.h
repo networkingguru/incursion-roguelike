@@ -703,6 +703,8 @@ system void    T_EVENTINFO::LightHold(int16 ms);
 system void    T_EVENTINFO::LightRise(int16 ms);
 system void    T_EVENTINFO::LightStruck(hObj:T_THING t);
 system void    T_EVENTINFO::LightEnd();
+system void    T_EVENTINFO::PatternStand(hObj:T_THING t,int16 radius,int16 col,int16 stati);
+system void    T_EVENTINFO::PatternStop(hObj:T_THING t);
 
 system int16   T_EVENTINFO::Event;
 system int16   T_EVENTINFO::EXVal;

@@ -1404,6 +1404,8 @@ static void AuraDrawAll(SDL_Surface *screen) {
    saves even when LightFrame would not fire (Fast mode, no lit cell). */
 void libtcodTerm::RecStep() {
 	g_virtMs += 33;
+	if (Mode == MO_PLAY && p && StandingPatternFrame(g_virtMs) && p->UpdateMap)
+		RefreshMap();   /* inc-jw0hw: a standing pattern picks again on the virtual clock too */
 	if (litCells && Mode == MO_PLAY) {
 		LightTick(g_virtMs);
 		const int32 n = (int32)sizeX * sizeY;
@@ -2209,6 +2211,8 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
             }
         }
 
+        if (Mode == MO_PLAY)
+            StandingPatternFrame(NowMs());   /* inc-jw0hw: a standing pattern keeps changing while the game waits for a key */
         if (Mode == MO_PLAY && p->UpdateMap)
             RefreshMap();
 

@@ -48,6 +48,7 @@ struct EffectLight {
               TEffect *te = NULL, bool targetFlash = false);
   ~EffectLight();
   bool Light(int16 x, int16 y);   /* only if the player has line of sight to it; true when lit */
+  bool Sees(int16 x, int16 y);    /* the player has line of sight to the square on this light's map */
   void MoveTo(int16 x, int16 y);  /* missile: the area becomes this square */
   float Clock() const { return clockMs; }   /* the effect clock, ms */
   /* inc-jw0hw: a lit square takes the light color of palette color `glyphColour`;
@@ -78,8 +79,12 @@ struct EffectLight {
      effect, under OPT_ANIMATION None, or for a square the player cannot see. */
   static void FlashStruck(Map *m, int16 blastColour, uint8 shape, int16 dtype,
                           TEffect *te, Thing *const *list, int n);
+  /* inc-jw0hw: a standing light for a standing pattern (see StandingPatternStart). It holds each lit square at the peak of its own
+     color and never cools. Stand() makes it so; ClearCells() drops every square, to be lit again with Light(). A standing light
+     ends without a repaint: the caller repaints, because End() may run inside a repaint. */
+  void Stand();
+  void ClearCells();
 private:
-  bool Sees(int16 x, int16 y);
   void Show();
   LightRGB colour;
   uint8 style;
@@ -94,6 +99,29 @@ private:
   float clockMs, life;   /* the effect clock and a square's light life, ms */
   bool glyphsOn;
   bool risen;
+  bool standing;
 };
+
+/* inc-jw0hw: a standing pattern. Random glyphs in random colors, with the light of each square following its glyph's color,
+   drawn on the squares within `radius` of an anchor creature that the player sees, and kept changing (a new pick each 100 ms)
+   until it stops. It is general: a script starts it on any creature and stops it, its colors come from `col` (a COL_* set, a
+   palette color, or 0 and COL_RAINBOW for the full pool), and nothing in it names a spell. It stops by itself when the anchor
+   dies or leaves the player's map, when OPT_ANIMATION is None, or when `stati` is not 0 and the anchor no longer holds that
+   status from effect `owner`. Only cosmetic_random() chooses, so no gameplay roll moves. Returns false when nothing started. */
+bool StandingPatternStart(Thing *anchor, int16 radius, int16 col, rID owner, int16 stati);
+void StandingPatternStop(Thing *anchor, rID owner);   /* every pattern the anchor holds for owner (0: for any owner) */
+void StandingPatternStopAll();
+int  StandingPatternCount();
+/* The squares the patterns drew at the last repaint: their glyph and palette color. Returns how many (at most max). */
+int  StandingPatternSquares(int16 *x, int16 *y, Glyph *g, int16 *col, int max);
+/* ShowMap calls Prepare before it builds the light map (so the light is in it) and Done after it paints. */
+void StandingPatternPrepare(Map *m);
+void StandingPatternDone(Map *m);
+/* True when g is the glyph a pattern draws at (x, y): the terminal then keeps it over a field's glyph (a big creature's body). */
+bool StandingPatternDrawsAt(int16 x, int16 y, Glyph g);
+/* A terminal's wait loop calls Frame with its clock in ms: it drops a pattern that must stop and picks again each 100 ms.
+   True when the map needs a repaint. Repick picks again at once (a terminal with no timed redraw calls it once a repaint). */
+bool StandingPatternFrame(uint32 nowMs);
+void StandingPatternRepick();
 
 #endif

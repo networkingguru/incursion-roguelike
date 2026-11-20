@@ -1728,6 +1728,22 @@ static bool PatternOn(TEffect *te)
     return te && te->HasFlag(EF_COLOR_PATTERN) && p && p->Opt(OPT_ANIMATION) != 2;
   }
 
+/* One pick of the pattern's pool, shared by the traveling pattern and the standing one. A glyph first, then a color: col 0 and
+   COL_RAINBOW take the full pool of eight, any other COL_* set one of its four, a palette color itself. */
+static Glyph PatternPickGlyph()
+  {
+    return PatternGlyphs[cosmetic_random(sizeof(PatternGlyphs)/sizeof(PatternGlyphs[0]))];
+  }
+
+static int16 PatternPickColour(int16 col)
+  {
+    if (col <= 0 || col == COL_RAINBOW || col > COL_SUNYELLOW)
+      return PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
+    if (col < 16)
+      return col;
+    return BlastColourSets[col * 4 + cosmetic_random(4)];
+  }
+
 struct ColorPattern
   {
     struct Sq { int16 x, y; float last; Glyph g; int16 col; };
@@ -1741,8 +1757,8 @@ struct ColorPattern
       }
     void Pick(Sq &s)
       {
-        s.g = PatternGlyphs[cosmetic_random(sizeof(PatternGlyphs)/sizeof(PatternGlyphs[0]))];
-        s.col = PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
+        s.g = PatternPickGlyph();
+        s.col = PatternPickColour(0);
         s.last = fx.Clock();
         fx.SetCellColour(s.x, s.y, s.col);
         if (PatternHook) PatternHook(s.x, s.y, s.g, s.col, s.last);
@@ -1796,6 +1812,202 @@ static void GlobePattern(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int1
     o.DeActivate();
     T1->RefreshMap();
     T1->Update();
+  }
+
+/* inc-jw0hw: the standing pattern (inc/EffectLight.h). ponytail: a table of 8 patterns, enough for the creatures a screen
+   shows at once; a ninth start returns false. Upgrade path: a std::vector with no cap, once a use needs more than 8. A pattern
+   keeps no overlay between repaints: ShowMap fills it in StandingPatternPrepare and StandingPatternDone switches it off, so an
+   effect that owns the overlay (Active at Prepare) is never wiped and a save never holds a pattern's glyphs. */
+// no-family
+static const int SP_MAX = 8, SP_RADIUS_MAX = 8;
+static const uint32 SP_REPICK_MS = 100;
+// end no-family
+struct SPSq { int16 x, y; Glyph g; int16 col; };
+struct StandPat
+  {
+    hObj anchor; rID owner; int16 radius, col, stati;
+    EffectLight *fx; std::vector<SPSq> sq;
+    uint32 last; bool clocked;
+  };
+static std::vector<StandPat> SP;
+static bool SPOwn = false;   /* StandingPatternPrepare switched the overlay on and Done must switch it off */
+static int SPDepth = 0;      /* ShowMap calls nest: a monster seen for the first time makes Map::Update repaint the whole map from inside it */
+
+static Creature *SPAnchor(const StandPat &p)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!pl || !pl->m || pl->Opt(OPT_ANIMATION) == 2 || !theRegistry->Exists(p.anchor))
+      return NULL;
+    Thing *t = oThing(p.anchor);
+    if (!t || !t->isCreature() || ((Creature*)t)->isDead() || t->m != pl->m || t->x < 0)
+      return NULL;
+    if (p.stati && !t->HasEffStati(p.stati, p.owner))
+      return NULL;
+    return (Creature*)t;
+  }
+
+static void SPEnd(StandPat &p)
+  {
+    if (p.fx) { p.fx->End(); delete p.fx; p.fx = NULL; }
+  }
+
+static void SPRepick(StandPat &p)
+  {
+    for (size_t i = 0; i < p.sq.size(); i++) {
+      p.sq[i].g = PatternPickGlyph();
+      p.sq[i].col = PatternPickColour(p.col);
+      }
+  }
+
+bool StandingPatternStart(Thing *anchor, int16 radius, int16 col, rID owner, int16 stati)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!anchor || !anchor->isCreature() || !pl || pl->Opt(OPT_ANIMATION) == 2 || radius < 1)
+      return false;
+    StandingPatternStop(anchor, owner);
+    if ((int)SP.size() >= SP_MAX)
+      return false;
+    StandPat p;
+    p.anchor = anchor->myHandle; p.owner = owner; p.radius = radius > SP_RADIUS_MAX ? SP_RADIUS_MAX : radius;
+    p.col = col; p.stati = stati; p.fx = NULL; p.last = 0; p.clocked = false;
+    SP.push_back(p);
+    pl->UpdateMap = 1;
+    T1->RefreshMap();
+    return true;
+  }
+
+void StandingPatternStop(Thing *anchor, rID owner)
+  {
+    bool any = false;
+    for (size_t i = 0; i < SP.size(); ) {
+      if (anchor && SP[i].anchor == anchor->myHandle && (!owner || SP[i].owner == owner)) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        any = true;
+        }
+      else
+        i++;
+      }
+    Player *pl = theGame->GetPlayer(0);
+    if (any && pl) {
+      pl->UpdateMap = 1;
+      T1->RefreshMap();   /* the squares show the true map at once */
+      }
+  }
+
+void StandingPatternStopAll()
+  {
+    for (size_t i = 0; i < SP.size(); i++)
+      SPEnd(SP[i]);
+    SP.clear();
+  }
+
+int StandingPatternCount()
+  {
+    return (int)SP.size();
+  }
+
+int StandingPatternSquares(int16 *x, int16 *y, Glyph *g, int16 *col, int max)
+  {
+    int n = 0;
+    for (size_t i = 0; i < SP.size(); i++)
+      for (size_t k = 0; k < SP[i].sq.size() && n < max; k++, n++) {
+        x[n] = SP[i].sq[k].x; y[n] = SP[i].sq[k].y; g[n] = SP[i].sq[k].g; col[n] = SP[i].sq[k].col;
+        }
+    return n;
+  }
+
+void StandingPatternPrepare(Map *m)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    SPDepth++;
+    if (SP.empty() || !m || !pl)
+      return;
+    Overlay &o = m->ov;
+    const bool glyphs = !o.Active;   /* Done switches the overlay off, so an Active one belongs to an effect that is drawing */
+    if (glyphs) { o.Activate(); SPOwn = true; }
+    for (size_t i = 0; i < SP.size(); ) {
+      Creature *c = SPAnchor(SP[i]);
+      if (!c || c->m != m) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        continue;
+        }
+      StandPat &p = SP[i++];
+      if (!p.fx) {
+        p.fx = new EffectLight(m, WHITE, EL_MISSILE);
+        p.fx->Stand();
+        }
+      p.fx->ClearCells();
+      std::vector<SPSq> was(p.sq);
+      p.sq.clear();
+      for (int16 x = c->x - p.radius; x <= c->x + p.radius; x++)
+        for (int16 y = c->y - p.radius; y <= c->y + p.radius; y++) {
+          if (dist(c->x, c->y, x, y) > p.radius || !m->InBounds(x, y) || !p.fx->Sees(x, y))
+            continue;
+          SPSq s; s.x = x; s.y = y; s.g = 0; s.col = 0;
+          for (size_t k = 0; k < was.size(); k++)
+            if (was[k].x == x && was[k].y == y) s = was[k];
+          if (!s.g) { s.g = PatternPickGlyph(); s.col = PatternPickColour(p.col); }
+          p.sq.push_back(s);
+          p.fx->Light(x, y);
+          p.fx->SetCellColour(x, y, s.col);
+          /* a creature keeps its glyph on its own square; a big one's body squares (its size field) take the pattern */
+          Creature *host = m->FCreatureAt(x, y);
+          if (glyphs && !(host && host->x == x && host->y == y))
+            o.AddGlyph(x, y, GLYPH_VALUE(s.g, s.col));
+          }
+      }
+  }
+
+bool StandingPatternDrawsAt(int16 x, int16 y, Glyph g)
+  {
+    for (size_t i = 0; i < SP.size(); i++)
+      for (size_t k = 0; k < SP[i].sq.size(); k++)
+        if (SP[i].sq[k].x == x && SP[i].sq[k].y == y && GLYPH_ID_VALUE(SP[i].sq[k].g) == GLYPH_ID_VALUE(g))
+          return true;
+    return false;
+  }
+
+void StandingPatternDone(Map *m)
+  {
+    if (SPDepth > 0)
+      SPDepth--;
+    if (SPDepth == 0 && SPOwn && m) {
+      m->ov.Active = false;
+      SPOwn = false;
+      }
+  }
+
+bool StandingPatternFrame(uint32 nowMs)
+  {
+    bool again = false;
+    Player *pl = theGame->GetPlayer(0);
+    if (SP.empty() || !pl)
+      return false;
+    for (size_t i = 0; i < SP.size(); ) {
+      if (!SPAnchor(SP[i])) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        again = true;
+        continue;
+        }
+      StandPat &p = SP[i++];
+      if (!p.clocked) { p.last = nowMs; p.clocked = true; }
+      else if (nowMs - p.last >= SP_REPICK_MS) { SPRepick(p); p.last = nowMs; again = true; }
+      }
+    if (again)
+      pl->UpdateMap = 1;
+    return again;
+  }
+
+void StandingPatternRepick()
+  {
+    Player *pl = theGame->GetPlayer(0);
+    for (size_t i = 0; i < SP.size(); i++)
+      SPRepick(SP[i]);
+    if (!SP.empty() && pl)
+      pl->UpdateMap = 1;
   }
 
 /* inc-jw0hw: test hook, NULL unless a probe sets it. Called after each rain step's

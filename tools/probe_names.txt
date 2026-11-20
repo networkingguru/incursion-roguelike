@@ -139,6 +139,7 @@ INCURSION_MUSIC_AREA_PROBE_GOD	pre-registry	-
 INCURSION_MUSIC_CHOIR_PROBE	pre-registry	-
 INCURSION_NAMES_PLANT	pre-registry	-
 INCURSION_NATHEAL_PROBE	pre-registry	-
+INCURSION_NS12_ANIM	inc-jw0hw	with the effect-light probe, casts Nightmare Smite (gather and blast) once at the given OPT_ANIMATION and prints the stream position and the next draw (tools/check_effect_light.sh NS12)
 INCURSION_OOB_PROBE	pre-registry	-
 INCURSION_OPENXY_PROBE	pre-registry	-
 INCURSION_OPTIONS	inc-10v7f	options file recorded in a .char fixture
