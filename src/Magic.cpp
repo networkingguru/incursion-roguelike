@@ -40,6 +40,10 @@
 #include "Incursion.h"
 #include "HideCheck.h"
 
+/* inc-8vxk6: opt-in dead-target oracle hooks; see FieldDeadTargetProbe. */
+void FieldDeadTargetKill(EventInfo &e);
+void FieldDeadTargetEnter();
+
 #define is_elemental_dmg(i) (i == AD_FIRE || i == AD_COLD || i == AD_ELEC || \
                              i == AD_TOXI || i == AD_SONI || i == AD_ACID)  
 
@@ -2044,6 +2048,7 @@ EvReturn Magic::ABarrier(EventInfo &e)
 EvReturn Magic::AField(EventInfo &e)
   {
     Glyph g; int16 tx,ty,x, y;
+    FieldDeadTargetEnter();
     if (!e.EActor || !e.EActor->m) return ABORT;
     
       /* Later, figure out if blast, hit, target, self, etc. */
@@ -2067,6 +2072,10 @@ EvReturn Magic::AField(EventInfo &e)
 
     tx = e.EXVal ? e.EXVal : e.ETarget ? e.ETarget->x : e.EActor->x;
     ty = e.EYVal ? e.EYVal : e.ETarget ? e.ETarget->y : e.EActor->y;
+    /* upstream: a field center outside the map must not reach Map::NewField.
+       The original code does the same on every platform. Observed, inc-8vxk6,
+       not sent. */
+    if (!e.EActor->m->InBounds(tx,ty)) return ABORT;
 
     e.vRadius = (int8)LevelAdjust(e.EMagic->lval,e.vCasterLev,(e.EItem && e.EItem->isItem()) ? e.EItem->GetPlus() : 0);
     e.vRadius = abs(e.vRadius); 
@@ -4852,6 +4861,16 @@ EvReturn Magic::ATouch(EventInfo &e)
     return DONE;
 }
 
+/* upstream: a spell's creature target can die in the caster's attack of
+   opportunity and then has no map position; the spell must not run on it.
+   The original code does the same on every platform. Observed, inc-8vxk6,
+   not sent. */
+static bool SpellTargetGone(EventInfo &e) {
+    Thing *t = e.ETarget;
+    if (!t || !t->isCreature()) return false;
+    return t->isDead() || !t->m || t->x == -1;
+}
+
 EvReturn Creature::Cast(EventInfo &e) {
     int16 mCost, rating, dmg_pen, roll; 
     EvReturn res; Item *it; bool dmgFail, wasThreatened;
@@ -5264,6 +5283,12 @@ ContinueCasting:
         StateFlags &= ~(MS_CASTING|MS_STILL_CAST);
         return ABORT;
     }
+    FieldDeadTargetKill(e);
+    /* upstream: see SpellTargetGone. Observed, inc-8vxk6, not sent. */
+    if (SpellTargetGone(e)) {
+        StateFlags &= ~(MS_CASTING|MS_STILL_CAST);
+        return DONE;
+    }
 
     if (e.EActor->HasStati(INVIS))
         if (!(e.EActor->GetStatiVal(INVIS) == INV_IMPROVED)) 
@@ -5479,6 +5504,10 @@ EvReturn Creature::Invoke(EventInfo &e)
     // ww: we weren't checking this before!
     if (e.EActor->isDead())
       return DONE; 
+    FieldDeadTargetKill(e);
+    /* upstream: see SpellTargetGone. Observed, inc-8vxk6, not sent. */
+    if (SpellTargetGone(e))
+      return DONE;
 
     csr = Counterspell(e,NULL);
     if (csr == ABORT)

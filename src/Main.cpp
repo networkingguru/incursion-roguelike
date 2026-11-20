@@ -631,6 +631,9 @@ void Game::Play() {
     /* inc-h5v6o: opt-in mount field-event oracle; see MountFieldProbe. */
     extern void MountFieldProbe(Player *pl);
     MountFieldProbe(pp);
+    /* inc-8vxk6: opt-in dead-spell-target oracle; see FieldDeadTargetProbe. */
+    extern void FieldDeadTargetProbe(Player *pl);
+    FieldDeadTargetProbe(pp);
 
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);
