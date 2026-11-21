@@ -211,6 +211,7 @@ INCURSION_TRUE_BLOWS_PROBE	pre-registry	-
 INCURSION_TRUE_ILLUSION_PROBE	pre-registry	-
 INCURSION_TRUE_ILLUSION_SPELL	pre-registry	-
 INCURSION_UNDEAD_MOUNT_PROBE	pre-registry	-
+INCURSION_UNSEEN_GLYPH_PROBE	inc-9r189	casters in a closed, never-seen room; logs spell glyph draws on unseen squares (tools/check_unseen_spell_glyphs.sh)
 INCURSION_V1_RAW	pre-registry	-
 INCURSION_WAKE_PROBE	pre-registry	-
 INCURSION_WAS_FRIENDLY_PROBE	inc-n3eni	WAS_FRIENDLY granted once per attacker oracle (tools/check_was_friendly_once.sh)

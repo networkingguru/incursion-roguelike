@@ -1622,6 +1622,11 @@ void (*AreaProbeXYHook)(int16,int16) = NULL;
 void (*BallRingHook)(int ring, int ntaken, const int16 *tx, const int16 *ty,
     int ndrawn, const int16 *dx, const int16 *dy, int waitMs) = NULL;
 
+/* inc-9r189: set only by UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). kind 1
+   is Overlay::AddGlyph (an overlay glyph is queued), 2 is the overlay draw in
+   Map::Update, 3 is a direct T1->PutGlyph effect highlight. */
+void (*GlyphDrawHook)(int kind, int x, int y) = NULL;
+
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
     Map *m; EvReturn r, r2; int16 oe, o_efNum;
@@ -1800,6 +1805,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
             {
               g = T1->GetGlyph(x,y);
               g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
+              if (GlyphDrawHook) GlyphDrawHook(3,x,y);
               T1->PutGlyph(x,y,g);
             }
       T1->Update();
@@ -2549,9 +2555,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         break;
       }
 
-    // draw something on this square? 
-    if (m.At(cx/2,cy/2).Visibility & VI_DEFINED)
-      vis = true;
+    /* upstream: a bolt or beam glyph draws only where the player has line
+       of sight, as light does, dark or not. `vis = true` at the top never
+       closed, so every square drew. Original source, every platform.
+       Observed via tools/check_unseen_spell_glyphs.sh; inc-9r189, not sent. */
+    vis = PossiblyPause(T1,cx/2,cy/2,0);
 
 
     if (vis) {
@@ -2561,6 +2569,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       else 
         colour = BlastColourSets[Color * 4];
       o.AddGlyph(cx/2,cy/2, g | GLYPH_FORE(colour));
+      if (GlyphDrawHook) GlyphDrawHook(5,cx/2,cy/2); /* inc-9r189 probe */
       o.ShowGlyphs();
       PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {
