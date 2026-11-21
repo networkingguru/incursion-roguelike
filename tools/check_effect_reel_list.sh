@@ -5,7 +5,8 @@
 # module, every effect whose first component is EA_BLAST, or AR_GLOBE, or an
 # AR_FIELD/AR_MFIELD with FI_MODIFIER or FI_BLOCKER, or that carries EF_COLOR_PATTERN
 # (a beam or bolt that draws the color pattern), and one Breath Weapon per
-# damage type a monster breathes. This check counts the same things in
+# damage type a monster breathes, and one "form" clip per answer of the Pyrotechnics
+# prompt (the probe queues the key). This check counts the same things in
 # lib/program.i by text, independently of the engine, and compares the two
 # counts per kind. The probe logs one REEL line or one REEL_SKIP line per effect
 # (a skip names a prompt the reel cannot answer). The posix build runs the probe
@@ -15,6 +16,7 @@
 # fact: the effect list -- read from lib/program.i at run time, and from the loaded module by the probe; no fixed number
 # fact: character -- fixture xsummon-priest-seed5-opt0822
 # fact: settings -- options-2026-08-22.dat
+# fact: Pyrotechnics forms -- counted from the RedirectEff(e,$"Pyrotechnics;...") answers in lib/program.i at run time; no fixed number
 # fact: breath damage types -- read from the monster attack lines in lib/program.i at run time; no fixed number
 # fact: effect scripts that prompt -- the probe skips them by name and logs REEL_SKIP; the check counts each skip as listed
 # Exit 0 PASS, 1 FAIL, 2 INCONCLUSIVE (no build, no fixture, no REEL_DONE).
@@ -64,6 +66,7 @@ top = re.compile(r'^(?:\d+ / )*(?:\d+ )?([A-Z][a-z]+) "')
 stop_comp = re.compile(r'^(On Event|\}\s*and\s|and\s)')
 
 kinds = collections.Counter()
+kinds["form"] = len(re.findall(r'RedirectEff\(e,\s*\$"Pyrotechnics;', "\n".join(lines)))
 breath = set()
 section = None
 mon_lines = []
@@ -119,7 +122,7 @@ kinds["breath"] = len(breath)
 
 probe = collections.Counter()
 for ln in open(log, encoding="latin-1"):
-    m = re.search(r'  REEL \d+ .* (blast|globe|aura|breath|pattern)$', ln)
+    m = re.search(r'  REEL \d+ .* (blast|globe|aura|breath|pattern|form)$', ln)
     if m:
         probe[m.group(1)] += 1
         continue
@@ -129,16 +132,18 @@ for ln in open(log, encoding="latin-1"):
         # kind the text count gives it, so count it under "skipped" and add it below
         probe["skipped"] += 1
 
-total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "breath", "pattern"))
-total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "breath", "pattern")) + probe["skipped"]
+total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "breath", "pattern", "form"))
+total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "breath", "pattern", "form")) + probe["skipped"]
 print("kind    text-count  probe-reels")
-for k in ("blast", "globe", "aura", "breath", "pattern"):
+for k in ("blast", "globe", "aura", "breath", "pattern", "form"):
     print("%-7s %10d  %11d" % (k, kinds[k], probe[k]))
 print("skipped %10s  %11d" % ("-", probe["skipped"]))
 print("total   %10d  %11d" % (total_text, total_probe))
 bad = []
 if kinds["breath"] != probe["breath"]:
     bad.append("breath")
+if kinds["form"] != probe["form"]:
+    bad.append("form")
 deficit = 0
 for k in ("blast", "globe", "aura", "pattern"):
     if probe[k] > kinds[k]:

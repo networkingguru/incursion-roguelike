@@ -12,7 +12,9 @@
 #include <strings.h>
 #include <string>
 #include <vector>
+#define protected public   /* Term::QueuedChar (answers a script prompt) and Term::XOff/YOff (the map view), as EffectLightProbe does */
 #include "Incursion.h"
+#undef protected
 
 extern int16 Silence;
 extern Trap *SkullTrapPlace(Player *pl, Map *mp, rID trapR, rID skull, rID skullSpell, int x, int y);
@@ -23,7 +25,9 @@ namespace {
 /* inc-jw0hw: the paint decision TextTerm::PutGlyph made for the three kobold squares in the last Refresh: -1 not painted through the light, 0 lit, 1 remembered. */
 int gPaintRem[3] = { -1, -1, -1 };
 int16 gPaintX[3], gPaintY[3];
+signed char gSqPaint[64][40];   /* the same decision for every square of the Pyrotechnics (smoke) log: -1 none, 0 lit, 1 remembered */
 void PaintHook(int16 x, int16 y, bool remembered, uint16) {
+    if (x >= 0 && x < 64 && y >= 0 && y < 40) gSqPaint[x][y] = remembered ? 1 : 0;
     for (int k = 0; k < 3; ++k)
         if (x == gPaintX[k] && y == gPaintY[k]) gPaintRem[k] = remembered ? 1 : 0;
 }
@@ -36,7 +40,40 @@ const int AIMX = PX + 9;       /* the middle target; the other two stand 2 squar
 const int STUBX = AIMX + 2;    /* a wall stub for the spill to land on */
 // end no-family
 
-struct Entry { rID id; const char *kind; int dtype; };   /* dtype -1: not a breath */
+struct Entry { rID id; const char *kind; int dtype; char form; };   /* dtype -1: not a breath; form: the answer to Pyrotechnics' prompt, 0 for none */
+
+/* inc-jw0hw: how a player's cast aims an effect. The first segment's qval says what the
+   cast prompt asks for (Monster.cpp:1622-1640 is the monster form of the same test); with
+   none of Q_TAR, Q_LOC and Q_DIR there is no prompt and Magic.cpp:1250 makes the caster
+   the target. An aura field and a breath keep the reel's own aim. */
+bool IsTouch(TEffect *te) {
+    if (te->ef.aval == AR_TOUCH) return true;
+    for (int8 v = 1; te->Vals(v); ++v)
+        if (te->Vals(v)->aval == AR_TOUCH) return true;
+    return false;
+}
+// no-family
+enum AimKind { AIM_SELF, AIM_DIR, AIM_TAR, AIM_LOC, AIM_FIELD, AIM_BREATH };
+// end no-family
+const char *const kAimName[] = { "self", "dir", "tar", "loc", "field", "breath" };
+AimKind AimOf(const Entry &en, TEffect *te) {
+    if (en.dtype >= 0) return AIM_BREATH;
+    if (en.form) return AIM_LOC;               /* Pyrotechnics is Q_LOC */
+    if (en.kind[0] == 'a') return AIM_FIELD;
+    const uint32 q = (uint32)te->ef.qval;
+    if (q & Q_TAR) return AIM_TAR;
+    if (q & Q_LOC) return AIM_LOC;
+    if (q & Q_DIR) return AIM_DIR;
+    /* Only a player-centered globe or a touch is cast on the caster. An effect with no prompt and no area (a poison
+       or venom, a bolt a monster fires) is delivered to a victim, and cast on the player it drains him dead and
+       ends the run; a death effect (Unearthly Beauty, a gaze) does the same whatever the hit points. Those two
+       and a trapdoor are aimed at the middle kobold. */
+    bool globeOrTouch = IsTouch(te) || te->ef.aval == AR_GLOBE;
+    for (int8 v = 1; te->Vals(v); ++v) globeOrTouch = globeOrTouch || te->Vals(v)->aval == AR_GLOBE;
+    /* A trapdoor drops its victim to the next level, so on the caster it ends the clip run. */
+    if (te->HasFlag(EF_DEATH) || !globeOrTouch || strstr(NAME(en.id), "trapdoor")) return AIM_TAR;
+    return AIM_SELF;
+}
 
 /* Effects whose script asks the player to choose (a menu, a prompt); the reel has no
    keys to answer with. ponytail: a new prompting effect hangs the run until it is
@@ -71,6 +108,12 @@ void BuildRoom(Map *mp, Player *pl, rID floor, rID wall) {
         remove->Remove(true);
     }
     for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
+    /* inc-jw0hw: a clip that casts on the caster leaves its statuses behind (AFRAID stops the next clip's touch
+       strike, Magic.cpp:1248 aims at the caster). Clear every status an effect put on the player. */
+    StatiIter(pl)
+        if (S->eID && RES(S->eID)->Type == T_TEFFECT && S->Nature != HELD_MANA)
+            StatiIter_RemoveCurrent(pl)
+    StatiIterEnd(pl)
     pl->PlaceAt(mp, PX, PY);
     const rID region = mp->RegionAt(pl->x, pl->y);
     Rect rect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
@@ -92,10 +135,28 @@ void BuildRoom(Map *mp, Player *pl, rID floor, rID wall) {
     pl->CalcVision();
 }
 
+/* inc-jw0hw: the view every frame of every clip uses. TextTerm::AdjustMap (Term.cpp:1061-1107) reads the
+   player's old screen position (rx, ry) BEFORE it recenters, then adds a scroll of 2*lx or 2*ly on that stale
+   value when the old position lay near an edge. One AdjustMap(CX, PY, true) can therefore land off by 10 rows
+   (seen: origin y -12, then -2 on the next call), which is a room that moves on screen. Repeat it until the
+   origin stops changing; the result is a fixpoint, and the player's square lies inside the no-scroll band of
+   it, so the non-newmap AdjustMap calls (RefreshMap: Term.h:760, Wlibtcod.cpp:1427, Main.cpp:883) leave it. */
+int16 gViewX, gViewY;
 void Refresh(Player *pl) {
-    pl->MyTerm->AdjustMap(CX, PY, true);   /* the room fills the frame, not the player */
+    for (int i = 0; i < 6; ++i) {
+        const int16 ox = pl->MyTerm->XOff, oy = pl->MyTerm->YOff;
+        pl->MyTerm->AdjustMap(CX, PY, true);   /* the room fills the frame, not the player */
+        if (pl->MyTerm->XOff == ox && pl->MyTerm->YOff == oy && i) break;
+    }
+    gViewX = pl->MyTerm->XOff; gViewY = pl->MyTerm->YOff;
     pl->UpdateMap = 1;
     pl->MyTerm->ShowMap();
+}
+
+/* inc-jw0hw: the map window's origin, to show that a clip keeps the view Refresh() sets. */
+void ViewLog(Player *pl, const char *nm, const char *when) {
+    Error("REEL_VIEW %s %s %s origin %d,%d window %dx%d map %dx%d center-option %d", nm, when, pl->MyTerm->XOff == gViewX && pl->MyTerm->YOff == gViewY ? "pinned" : "MOVED", (int)pl->MyTerm->XOff, (int)pl->MyTerm->YOff,
+          (int)pl->MyTerm->MSizeX(), (int)pl->MyTerm->MSizeY(), (int)pl->m->SizeX(), (int)pl->m->SizeY(), (int)pl->Opt(OPT_CENTER_MAP));
 }
 
 std::string Sanitize(const char *s) {
@@ -133,6 +194,11 @@ const char *LightClass(int16 colour, char *buf, size_t n) {
     return "random";
 }
 
+const char *FormWord(char f) { return f == 's' ? "smoke" : f == 'f' ? "fireworks" : "explosion"; }
+rID FormEffect(char f) {
+    return FIND(f == 's' ? "Pyrotechnics;smoke" : f == 'f' ? "Pyrotechnics;flash" : "Pyrotechnics;blast");
+}
+
 bool WantedByFilter(const char *only, const char *name) {
     if (!only || !*only) return true;
     const char *p = only;
@@ -167,6 +233,7 @@ void EffectReelProbe(Player *pl) {
         Error("REEL_ERROR map %dx%d is smaller than 44x34", (int)mp->SizeX(), (int)mp->SizeY());
         return;
     }
+    /* inc-jw0hw: INCURSION_EFFECT_REEL_ONLY keeps the named effects (tools/render_effect_reel.sh --only). */
     const char *only = getenv("INCURSION_EFFECT_REEL_ONLY");
 
     /* The list, from the loaded module. */
@@ -177,7 +244,7 @@ void EffectReelProbe(Player *pl) {
         const char *kind;
         if (id == breath) continue;   /* once per damage type, below */
         if (IsReelKind(mod->QEff[i], &kind)) {
-            Entry e = { id, kind, -1 };
+            Entry e = { id, kind, -1, 0 };
             list.push_back(e);
         }
     }
@@ -191,8 +258,18 @@ void EffectReelProbe(Player *pl) {
             if (!seen) dts.push_back(a.DType);
         }
     for (size_t k = 0; k < dts.size(); ++k) {
-        Entry e = { breath, "breath", dts[k] };
+        Entry e = { breath, "breath", dts[k], 0 };
         list.push_back(e);
+    }
+    /* inc-jw0hw: Pyrotechnics asks "Smoke, fireworks or explosion?" and redirects to one of
+       three effects; one clip per answer, with the answer queued in the terminal. */
+    const rID pyro = FIND("Pyrotechnics");
+    if (pyro && TEFF(pyro)->ef.eval == EA_GENERIC) {
+        const char formKey[3] = { 's', 'f', 'e' };
+        for (int k = 0; k < 3; ++k) {
+            Entry e = { pyro, "form", -1, formKey[k] };
+            list.push_back(e);
+        }
     }
 
     if (tableMode) {
@@ -203,9 +280,12 @@ void EffectReelProbe(Player *pl) {
             char nm[160];
             if (en.dtype >= 0)
                 snprintf(nm, sizeof nm, "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
+            else if (en.form)
+                snprintf(nm, sizeof nm, "Pyrotechnics (%s)", FormWord(en.form));
             else   /* the declared name keeps its ;tag, which keys a repeated name */
                 snprintf(nm, sizeof nm, "%s", mod->GetText(TEFF(en.id)->Name));
-            TEffect *te = TEFF(en.id);
+            /* a form is lit as the effect its answer redirects to */
+            TEffect *te = en.form ? TEFF(FormEffect(en.form)) : TEFF(en.id);
             bool skip = (te->ef.qval & (Q_INV | Q_EQU | Q_ITM | Q_LOOK)) != 0;
             for (size_t k = 0; k < sizeof kSkip / sizeof kSkip[0]; ++k)
                 if (en.dtype < 0 && strcmp(kSkip[k].name, NAME(en.id)) == 0) skip = true;
@@ -233,11 +313,17 @@ void EffectReelProbe(Player *pl) {
     for (size_t n = 0; n < list.size(); ++n) {
         const Entry &en = list[n];
         char nm[160];
+        char key[160];   /* the table's name for the clip: the declared name with its ;tag */
         if (en.dtype >= 0)
             snprintf(nm, sizeof nm, "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
+        else if (en.form)
+            snprintf(nm, sizeof nm, "Pyrotechnics (%s)", FormWord(en.form));
         else
             snprintf(nm, sizeof nm, "%s", NAME(en.id));
-        if (!WantedByFilter(only, nm) && !(en.dtype >= 0 && WantedByFilter(only, "Breath Weapon")))
+        if (en.dtype < 0 && !en.form) snprintf(key, sizeof key, "%s", mod->GetText(TEFF(en.id)->Name));
+        else snprintf(key, sizeof key, "%s", nm);
+        if (!WantedByFilter(only, nm) && !(en.dtype >= 0 && WantedByFilter(only, "Breath Weapon"))
+            && !(en.form && WantedByFilter(only, "Pyrotechnics")))
             continue;
         TEffect *te = TEFF(en.id);
         const char *skipWhy = NULL;
@@ -252,15 +338,62 @@ void EffectReelProbe(Player *pl) {
             continue;
         }
         BuildRoom(mp, pl, floor, wall);
+        /* inc-jw0hw: the Pyrotechnics script removes the middle kobold's torch, so the smoke would land on dark squares.
+           A wall torch in the stub (LK_WALLTORCH, range 3, Light.cpp) is a separate source the cast does not remove.
+           BuildRoom rewrites every square, so the next clip starts without it. */
+        if (en.form == 's') {
+            /* The cast removes the kobold's torch, so the room is dark and three wall torches (LK_WALLTORCH, range 3) light it:
+               (21,17) behind the cloud on the player's row, (14,25) in the south wall beside the cloud (its glow on rows 22-24 is
+               outside the cloud and not behind it), and (10,18) on the player's side, which lights the cloud's front face. */
+            Rect trect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
+            const rID reg = mp->RegionAt(pl->x, pl->y);
+            const rID wt = FIND("Wall Torch");
+            for (int y = PY - 2; y <= PY + 2; ++y) mp->WriteAt(trect, STUBX, y, floor, reg, PRIO_MAX, true);
+            mp->WriteAt(trect, 21, PY, wt, reg, PRIO_MAX, true);
+            mp->WriteAt(trect, 14, RY1 + 1, wt, reg, PRIO_MAX, true);
+            mp->WriteAt(trect, 10, PY + 1, wt, reg, PRIO_MAX, true);
+            /* BuildRoom set Memory from the old glyphs; take it again from the new ones, as BuildRoom does. */
+            const int mx[8] = { STUBX, STUBX, STUBX, STUBX, STUBX, 21, 14, 10 };
+            const int my[8] = { PY - 2, PY - 1, PY, PY + 1, PY + 2, PY, RY1 + 1, PY + 1 };
+            for (int i = 0; i < 8; ++i) mp->At(mx[i], my[i]).Memory = (uint32)mp->At(mx[i], my[i]).Glyph;
+            pl->CalcVision();
+        }
         LightFlashClearAll();
         pl->mHP = pl->cHP = 30000;      /* the player survives every clip */
         pl->cFP = wasFP;                /* an effect that costs fatigue asks nothing */
+        const AimKind aim = AimOf(en, te);
+        const bool touch = IsTouch(te);
+        /* The kobolds stand where the cast reaches them. Default: 9 squares east, rows PY-2, PY, PY+2.
+           A caster-centered globe (no target prompt): inside its radius lval, so Electric Loop
+           (lval 1) has all three adjacent to the player. A touch: the middle kobold adjacent. */
+        int kx[3], ky[3];
+        for (int k = 0; k < 3; ++k) { kx[k] = AIMX; ky[k] = PY + 2 * (k - 1); }
+        if (aim == AIM_SELF && te->ef.aval == AR_GLOBE) {
+            const int L = te->ef.lval < 1 ? 1 : te->ef.lval > 9 ? 9 : te->ef.lval;
+            const int d = L <= 2 ? 1 : L - 1, sp = L <= 2 ? 1 : 2;
+            for (int k = 0; k < 3; ++k) { kx[k] = PX + d; ky[k] = PY + sp * (k - 1); }
+        }
+        /* A directional effect with no area type is a script that strikes the three squares in front of the caster
+           (Burning Hands, lib/wspells.irh:1065): all three kobolds stand there, east of the player. */
+        if (aim == AIM_DIR && te->ef.aval == AR_NONE)
+            for (int k = 0; k < 3; ++k) { kx[k] = PX + 1; ky[k] = PY + (k - 1); }
+        if (touch) { kx[1] = PX + 1; ky[1] = PY; }
         Monster *mid = NULL, *ks[3] = { NULL, NULL, NULL };
-        for (int k = -1; k <= 1; ++k) {
-            Monster *mn = new Monster(kobold); ks[k + 1] = mn;
-            mn->PlaceAt(mp, AIMX, PY + 2 * k, true);
+        for (int k = 0; k < 3; ++k) {
+            Monster *mn = new Monster(kobold); ks[k] = mn;
+            mn->PlaceAt(mp, kx[k], ky[k], true);
             mn->Initialize(true);
-            if (k == 0) mid = mn;
+            if (k == 1) mid = mn;
+        }
+        /* inc-jw0hw: Pyrotechnics proceeds only if the target square holds a creature with a lit torch in SL_LIGHT. */
+        if (en.form) {
+            Item *torch = Item::Create(FIND("torch"));
+            if (torch) {
+                mid->GainItem(torch, true);
+                ThrowVal(EV_WIELD, SL_LIGHT, mid, NULL, torch);
+            }
+            Error("REEL_TORCH %s in-slot %d range %d", nm, mid->InSlot(SL_LIGHT) ? 1 : 0,
+                  mid->InSlot(SL_LIGHT) ? (int)mid->InSlot(SL_LIGHT)->GetLightRange() : 0);
         }
         /* inc-jw0hw: the Skull Trap's script lights its skull only when EItem is the trap. */
         Trap *skullTrap = NULL;
@@ -283,16 +416,48 @@ void EffectReelProbe(Player *pl) {
         FrameClip(cname);
         pl->MyTerm->StopWatch(300);
 
+        /* REEL_SMOKE: the row through the cloud's center (AIM y), and one row outside the cloud, east of the player. */
+        auto smokeLog = [&](const char *when) {
+            if (en.form != 's') return;
+            const int rows[4] = { mid->y, 22, 23, 24 };
+            for (int r = 0; r < 4; ++r)
+                for (int x = PX + 1; x <= RX1; ++x) {
+                    LightRGB fc;
+                    Error("REEL_SMOKE %s %d,%d vis %d lit %d fog %d paint %d", when, x, rows[r],
+                          (mp->At(x, rows[r]).Visibility & VI_VISIBLE) ? 1 : 0, LightLitAt((int16)x, (int16)rows[r]) ? 1 : 0,
+                          LightFogAt((int16)x, (int16)rows[r], fc) ? 1 : 0, (int)gSqPaint[x][rows[r]]);
+                }
+        };
+        memset(gSqPaint, -1, sizeof gSqPaint);   /* no paint is recorded before the cast */
+        smokeLog("before");
         EventInfo xe; xe.Clear();
-        xe.EActor = pl; xe.EMap = mp; xe.eID = en.id; xe.isSpell = true; xe.isLoc = true;
-        /* Everything but an aura field lands on the middle target, away from the player
-           (a death effect ignores hit points). A field is centered on the player. */
-        const bool aimAtTarget = en.kind[0] != 'a';
-        if (aimAtTarget) {
-            xe.EXVal = AIMX; xe.EYVal = PY; xe.EVictim = mid;
-        } else {
-            xe.EXVal = PX; xe.EYVal = PY;       /* a globe or field on the player */
+        xe.EActor = pl; xe.EMap = mp; xe.eID = en.id; xe.isSpell = true;
+        /* Aim as the player's prompt would (see AimOf); a breath lands on the middle target and a
+           field is centered on the player, as before. A death effect ignores hit points. */
+        switch (aim) {
+        case AIM_SELF:   /* no prompt: Magic.cpp:1250 makes the caster the target */
+            xe.ETarget = pl; xe.EVictim = pl; xe.EXVal = PX; xe.EYVal = PY;
+            break;
+        case AIM_DIR:
+            xe.isDir = true; xe.EDir = EAST;
+            break;
+        case AIM_TAR:
+            xe.ETarget = mid; xe.EVictim = mid; xe.EXVal = mid->x; xe.EYVal = mid->y;
+            break;
+        case AIM_LOC:
+            xe.isLoc = true; xe.EXVal = mid->x; xe.EYVal = mid->y;
+            break;
+        case AIM_FIELD:
+            xe.isLoc = true; xe.EXVal = PX; xe.EYVal = PY;
+            break;
+        case AIM_BREATH:
+            xe.isLoc = true; xe.EXVal = AIMX; xe.EYVal = PY; xe.EVictim = mid;
+            break;
         }
+        int16 hp0[3]; for (int k = 0; k < 3; ++k) hp0[k] = ks[k]->cHP;
+        ViewLog(pl, nm, "before-cast");
+        Error("REEL_AIM %s %s", nm, kAimName[aim]);
+        Error("REEL_KEY %d %s", count, key);
         if (en.dtype >= 0) {
             /* Fight.cpp (A_BREA) loads the resource with the attack's values before the throw. */
             te->ef.pval.Number = 3; te->ef.pval.Sides = 6; te->ef.pval.Bonus = 0;
@@ -335,8 +500,31 @@ void EffectReelProbe(Player *pl) {
             pl->MyTerm->StopWatch(1000);
             demon->UpdateStati();           /* the gather ends: the pattern stops, the blast plays */
             StandingPatternStopAll();
-        } else
+        } else {
+            /* inc-jw0hw: the spell asks its question through the terminal's key read; the queued key is the answer. */
+            if (en.form) pl->MyTerm->QueuedChar = (uint8)en.form;
             ReThrow(EV_EFFECT, xe);
+            if (en.form) {
+                Error("REEL_FORM %s answered %d", nm, pl->MyTerm->QueuedChar ? 0 : 1);
+                pl->MyTerm->QueuedChar = 0;
+            }
+        }
+        /* inc-jw0hw: the cast of a touch spell only charges the hand (TOUCH_ATTACK); the touch lands in melee
+           (Fight.cpp:7461). The player strikes the adjacent middle kobold through EV_NATTACK, as a bump does
+           (Move.cpp:417). A miss leaves the charge, so the strike repeats until the charge falls (a natural 20
+           always hits); the loop is capped at 60 strikes. */
+        if (touch) {
+            const bool charged = pl->HasStati(TOUCH_ATTACK);
+            const int mag0 = charged ? (int)pl->GetStatiMag(TOUCH_ATTACK) : 0;
+            int tries = 0; bool landed = false;
+            while (charged && !landed && tries < 60 && !mid->isDead()) {
+                ++tries;
+                Throw(EV_NATTACK, pl, mid);
+                /* Fight.cpp:7500 lowers the charge by one, or removes the stati at the last one */
+                landed = !pl->HasStati(TOUCH_ATTACK) || (int)pl->GetStatiMag(TOUCH_ATTACK) < mag0;
+            }
+            Error("REEL_TOUCH %s landed %d (charged %d, charge %d, strikes %d)", nm, landed ? 1 : 0, charged ? 1 : 0, mag0, tries);
+        }
         Silence = 0;
         if (isSkull) {
             ScriptLightTickHook = NULL; ScriptLightEndHook = NULL;
@@ -345,10 +533,26 @@ void EffectReelProbe(Player *pl) {
         }
         pl->mHP = pl->cHP = 30000;
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        Error("REEL_HP %s kobold hp %d/%d %d/%d %d/%d", nm, (int)ks[0]->cHP, (int)hp0[0], (int)ks[1]->cHP, (int)hp0[1], (int)ks[2]->cHP, (int)hp0[2]);
+        ViewLog(pl, nm, "after-cast");
         for (int k = 0; k < 3; ++k) { gPaintX[k] = ks[k]->x; gPaintY[k] = ks[k]->y; gPaintRem[k] = -1; }
+        memset(gSqPaint, -1, sizeof gSqPaint);
         PutGlyphProbeHook = PaintHook;
         Refresh(pl);
         PutGlyphProbeHook = NULL;
+        ViewLog(pl, nm, "after-refresh");
+        if (en.form == 's') {
+            int lit = 0, fog = 0; LightRGB fc;
+            for (int y = mid->y - 3; y <= mid->y + 3; ++y)
+                for (int x = mid->x - 3; x <= mid->x + 3; ++x)
+                    if ((x - mid->x) * (x - mid->x) + (y - mid->y) * (y - mid->y) <= 9) {
+                        if (LightLitAt((int16)x, (int16)y)) ++lit;
+                        if (LightFogAt((int16)x, (int16)y, fc)) ++fog;
+                    }
+            Error("REEL_LIGHT %s after-cast lit-squares %d fog-squares %d", nm, lit, fog);
+            pl->CalcVision();
+            smokeLog("after");
+        }
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
         /* inc-jw0hw (Phase 4h): a clip whose effect leaves creatures glowing holds 2 s, as an aura does, so the glow flickers on the recording. */
         bool leavesGlow = te->ef.eval == EA_INFLICT && te->ef.xval == ILLUMINATED;   /* the first component is te->ef; Vals(1) on are the later ones */
@@ -365,10 +569,11 @@ void EffectReelProbe(Player *pl) {
             }
         };
         glowLog("after-cast");
-        const int idleMs = en.kind[0] == 'a' || leavesGlow ? 2000 : 700;
+        const int idleMs = en.kind[0] == 'a' || leavesGlow || en.form == 's' ? 2000 : 700;
         Error("REEL_IDLE %s %d", nm, idleMs);
         pl->MyTerm->StopWatch(idleMs);
         glowLog("after-idle");
+        ViewLog(pl, nm, "after-idle");
     }
     Error("REEL_DONE %d", count);
 

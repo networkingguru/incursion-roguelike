@@ -8,7 +8,8 @@
 #   (sunlight-yellow, darkred, crimson). '-' for UNLIT rows.
 # shows_nothing: yes only where a ruling says the effect shows nothing.
 # basis: R<date> = ruling of that date in the bead notes; otherwise the principle used.
-# Not here: Pyrotechnics;smoke (not a reel effect; ruled UNLIT) and the 9 REEL_SKIP effects.
+# Pyrotechnics (smoke|fireworks|explosion) are the reel's three clips of the parent spell, one per answer of its prompt.
+# Not here: the 9 REEL_SKIP effects.
 effect	glow	color	shows_nothing	basis
 Aura of Valour	UNLIT	-	no	rulings: not luminous by Desc/type (lib/classes.irh:1739)
 Surreal Presence	UNLIT	-	no	rulings: not luminous by Desc/type (lib/prestige.irh:455)
@@ -63,6 +64,9 @@ Halt Undead	UNLIT	-	no	rulings: not luminous by Desc/type (lib/wspells.irh:1555)
 Web	UNLIT	-	no	rulings: not luminous by Desc/type (lib/wspells.irh:2157)
 Pyrotechnics;blast	LIT	fire	no	R11-17 (lib/wspells.irh:2312)
 Pyrotechnics;flash	LIT	rainbow	no	R11-17 fireworks (lib/wspells.irh:2328)
+Pyrotechnics (smoke)	UNLIT	-	no	Pyrotechnics;smoke ruled UNLIT (material)
+Pyrotechnics (fireworks)	LIT	rainbow	no	copies Pyrotechnics;flash (lib/wspells.irh:2328)
+Pyrotechnics (explosion)	LIT	fire	no	copies Pyrotechnics;blast (lib/wspells.irh:2312)
 Electric Loop	LIT	elec	no	R11-18 (lib/wspells.irh:2710)
 Scorcher	LIT	fire	no	R11-18 (lib/wspells.irh:2724)
 Acid Arrow	UNLIT	-	no	rulings: not luminous by Desc/type (lib/wspells.irh:2732)

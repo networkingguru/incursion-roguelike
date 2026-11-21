@@ -1122,6 +1122,7 @@ bool LightAuraAt(int32 i, int16 &cx, int16 &cy, int16 &rad, LightRGB &c, float &
   return false;
 }
 
+/* inc-jw0hw: the effect reel's light-off pass (tools/render_effect_reel.sh). */
 bool LightFlashDisabled() {
   return getenv("INCURSION_EFFECT_LIGHT_OFF") != NULL;
 }
