@@ -10,7 +10,7 @@ INCURSION_ALIGN_PROBE	pre-registry	-
 INCURSION_AOO_PROBE	pre-registry	-
 INCURSION_AREA_PROBE	pre-registry	-
 INCURSION_ARMOUR_PROBE	pre-registry	-
-INCURSION_AURA_SCENE	inc-jw0hw	with the effect-light probe, builds the aura-circle scene and waits 1000 ms (tools/check_aura_circle.sh)
+INCURSION_AURA_SCENE	inc-jw0hw	with the effect-light probe, builds the aura-circle scene and waits 1000 ms; the value hide also sets OPT_AURA_CIRCLES to HIDE (tools/check_aura_circle.sh)
 INCURSION_AUTOKNOCK_PROBE	pre-registry	-
 INCURSION_AUTOLOOT_PACKS_PROBE	pre-registry	-
 INCURSION_AUTOPICKUP_PACKS_PROBE	pre-registry	-

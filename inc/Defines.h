@@ -4764,6 +4764,9 @@ typedef signed int        hObj;
    own OPT_GEN_* name, and add one branch to MigrateOptions. Never renumber an
    existing generation, and never lower OPT_GEN_CURRENT. */
 #define OPT_SETTINGS_GEN        437
+/* inc-jw0hw: 0 shows the aura circles, 1 hides them. 0 is the shown value so
+   every older Options.Dat keeps its meaning and OPT_SETTINGS_GEN does not move. */
+#define OPT_AURA_CIRCLES        438
 // end family: opt
 // family: opt_gen stored ordinal i8 at-of Player.Options[OPT_SETTINGS_GEN]
 #define OPT_GEN_NONE            0   /* written before this field existed */
@@ -4771,6 +4774,10 @@ typedef signed int        hObj;
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
 #define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
 // end family: opt_gen
+// family: val_aura_circles stored ordinal i8 at-of Player.Options[OPT_AURA_CIRCLES]
+#define AURA_CIRCLES_SHOW       0
+#define AURA_CIRCLES_HIDE       1
+// end family: val_aura_circles
 // family: opt stored ordinal u16 bound OPT_LAST grows OPT_LAST block 100
 
 

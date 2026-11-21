@@ -1307,8 +1307,11 @@ bool libtcodTerm::LightFrame(uint32 now) {
    Visibility), so a wall in view takes the circle and a cell behind it does
    not. Nothing is cached. The covered cells are dirtied so libtcod repaints
    them before the next draw and the circle does not smear. */
+#define AURA_TINT_K 0.05f   /* one aura's tint: about the old 0.12 blend on a mid-gray floor */
 void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0)
+		return;
+	if (p->Opt(OPT_AURA_CIRCLES) == AURA_CIRCLES_HIDE)
 		return;
 	const int32 nAura = LightAuraCount();
 	const int bpp = scr->format->BytesPerPixel;
@@ -1334,12 +1337,12 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 		if (x1 > scr->w - 1) x1 = scr->w - 1;
 		if (y1 > scr->h - 1) y1 = scr->h - 1;
 		const float lineHalf = 1.0f;
-		{	/* where the circle really is, for tools/check_aura_circle.sh; one line per change */
-			static int lastX = -1, lastY = -1, lastR = -1;
-			if (ccx != lastX || ccy != lastY || (int)(R + 0.5f) != lastR) {
-				lastX = ccx; lastY = ccy; lastR = (int)(R + 0.5f);
+		{	/* where each circle really is, for tools/check_aura_circle.sh; one line per aura per change, with the aura's map cell */
+			static int lastX[16], lastY[16], lastR[16], seen[16];
+			if (i < 16 && (!seen[i] || ccx != lastX[i] || ccy != lastY[i] || (int)(R + 0.5f) != lastR[i])) {
+				seen[i] = 1; lastX[i] = ccx; lastY[i] = ccy; lastR[i] = (int)(R + 0.5f);
 				if (getenv("INCURSION_AURA_SCENE"))
-					Error("AURA_DRAWN: %d %d %d", ccx, ccy, lastR);
+					Error("AURA_DRAWN: %d %d %d %d %d", ccx, ccy, lastR[i], (int)ax, (int)ay);
 			}
 		}
 		const float nr = c.r * noise, ng = c.g * noise, nb = c.b * noise;
@@ -1353,9 +1356,10 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 				const float dx = (float)(px - ccx), dy = (float)(py - ccy);
 				const float dn = sqrtf(dx * dx + dy * dy);
 				float a = 0.0f;
+				bool tint = false;   /* the interior ADDS its color, so overlapping auras sum */
 				if (fabsf(dn - R) <= lineHalf) a = 0.9f;
-				else if (dn < R) a = 0.12f;
-				if (a == 0.0f) continue;
+				else if (dn < R) tint = true;
+				if (a == 0.0f && !tint) continue;
 				const LitCell &lc = litCells[cy * sizeX + cx];
 				if (!lc.lit || !m->InBounds(lc.mx, lc.my) ||
 				    !(m->At(lc.mx, lc.my).Visibility & VI_VISIBLE))
@@ -1367,9 +1371,16 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 				        : (pix[0] | pix[1] << 8 | pix[2] << 16));
 				Uint8 r, g, b;
 				SDL_GetRGB(v, scr->format, &r, &g, &b);
-				r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
-				g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
-				b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
+				if (tint) {
+					const float k = AURA_TINT_K;
+					r = (Uint8)fminf(255.0f, r + nr * k + 0.5f);
+					g = (Uint8)fminf(255.0f, g + ng * k + 0.5f);
+					b = (Uint8)fminf(255.0f, b + nb * k + 0.5f);
+				} else {
+					r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
+					g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
+					b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
+				}
 				v = SDL_MapRGB(scr->format, r, g, b);
 				if (bpp == 4) *(Uint32 *)pix = v;
 				else if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {

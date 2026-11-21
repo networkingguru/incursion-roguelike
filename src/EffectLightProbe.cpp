@@ -623,22 +623,29 @@ int PeakAt(int x, int y) { return Peak(x, y); }
 
 
 /* The aura-circle scene (tools/check_aura_circle.sh, INCURSION_AURA_SCENE=1).
-   A dark room; the player sees only what the aura lights. Frames are recorded
-   first without the field ("before", 300 ms), then with it ("after", 1000 ms).
-   A wall hides the south-east of the circle. Writes AURA_SCENE lines with the
-   pixel coordinates the check compares between the two clips: a seen point
-   inside the circle, the circle's topmost and rightmost points, a hidden
-   point inside it, and an outside point. */
+   A room lit by the map (an aura gives no light, so something else must show
+   the floor); the player sees it by that light. Frames are recorded first
+   without the fields ("before", 300 ms), then with two overlapping purple
+   auras A at (AX, AY) and B five squares west of it ("after", 1000 ms). A wall
+   hides the south-east of A's circle. Writes AURA_SCENE lines with the pixel
+   offsets from A's center that the check compares between the two clips: a seen
+   point inside A only ("seen"), a seen point inside both A and B ("overlap"),
+   A's topmost and rightmost ring points, a hidden point on the ring, and an
+   outside point. INCURSION_AURA_SCENE=hide sets OPT_AURA_CIRCLES to HIDE. */
 void AuraScene(Player *pl, Map *mp, rID floor, rID wall) {
-    const int AX = PX + 10, AY = PY, RAD = 4;
+    const int AX = PX + 10, AY = PY, BX = AX - 5, RAD = 4;
     BuildDark(mp, pl, floor, wall);
     LightFlashClearAll();
+    for (int y = 0; y < mp->SizeY(); ++y)
+        for (int x = 0; x < mp->SizeX(); ++x)
+            if (InBlock(x, y)) mp->At(x, y).Lit = true;
     pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
     const rID region = mp->RegionAt(pl->x, pl->y);
     Rect rect(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
     const int wx[3] = { AX + 2, AX + 3, AX + 2 }, wy[3] = { AY + 2, AY + 2, AY + 3 };
     for (int i = 0; i < 3; ++i)
         mp->WriteAt(rect, wx[i], wy[i], wall, region, PRIO_MAX, true);
+    pl->CalcVision();
     Refresh(pl);
     pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
     int px, py, cw, ch;
@@ -650,6 +657,7 @@ void AuraScene(Player *pl, Map *mp, rID floor, rID wall) {
     FrameClip("before");
     pl->MyTerm->StopWatch(300);
     mp->NewField(FI_MODIFIER, AX, AY, RAD, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, NULL);
+    mp->NewField(FI_MODIFIER, BX, AY, RAD, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, NULL);
     Refresh(pl);
     pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
     FrameClip("after");
@@ -666,7 +674,8 @@ void AuraScene(Player *pl, Map *mp, rID floor, rID wall) {
     auto vis = [&](int x, int y) { return (mp->At(x, y).Visibility & VI_VISIBLE) ? 1 : 0; };
     auto cellX = [&](int dx) { return AX + (int)floorf((float)(cw / 2 + dx) / cw); };
     auto cellY = [&](int dy) { return AY + (int)floorf((float)(ch / 2 + dy) / ch); };
-    Error("AURA_SCENE: seen %d %d vis=%d", -2 * cw, 0, vis(cellX(-2 * cw), cellY(0)));
+    Error("AURA_SCENE: seen %d %d vis=%d", cw, 0, vis(cellX(cw), cellY(0)));
+    Error("AURA_SCENE: overlap %d %d vis=%d", -2 * cw, 0, vis(cellX(-2 * cw), cellY(0)));
     Error("AURA_SCENE: top %d %d vis=%d", 0, -R, vis(cellX(0), cellY(-R)));
     Error("AURA_SCENE: right %d %d vis=%d", R, 0, vis(cellX(R), cellY(0)));
     /* the hidden point is ON the ring (south-east, behind the wall), so a missing
@@ -674,6 +683,7 @@ void AuraScene(Player *pl, Map *mp, rID floor, rID wall) {
     const int hdx = (int)(0.6f * R + 0.5f), hdy = (int)(0.8f * R + 0.5f);
     Error("AURA_SCENE: hidden %d %d vis=%d", hdx, hdy, vis(cellX(hdx), cellY(hdy)));
     Error("AURA_SCENE: cell %d %d vis=1", cw, ch);
+    Error("AURA_SCENE: auracell %d %d vis=1", AX, AY);   /* the map cell of the aura the points are offsets from */
     Error("AURA_SCENE: outside %d %d vis=%d", opx + cw / 2 - ccx, opy + ch / 2 - ccy, vis(ox, AY));
     pl->MyTerm->StopWatch(1000);
     Error("AURA_SCENE: DONE");
@@ -863,6 +873,8 @@ void EffectLightProbe(Player *pl) {
         const bool wasPlay = theGame->PlayMode;
         theGame->PlayMode = true;
         pl->Options[OPT_ANIMATION] = 0;   /* Normal: shimmer; left set, because the run quits and the last frame must keep the circle */
+        if (!strcmp(getenv("INCURSION_AURA_SCENE"), "hide"))
+            pl->Options[OPT_AURA_CIRCLES] = AURA_CIRCLES_HIDE;
         AuraScene(pl, mp, floor, wall);
         theGame->PlayMode = wasPlay;
         return;
@@ -2725,10 +2737,9 @@ void EffectLightProbe(Player *pl) {
                 }
             }
 
-            /* J: aura fields (Task 6). A modifier or blocker field that gives no light
-               lights its area, at a level between LIGHT_SEE_MIN and 0.6 x the Fireball's
-               center level; a fog, darkness or silence field adds none. The square one
-               past the area carries a trace of light but is below LIGHT_SEE_MIN. */
+            /* J: aura fields (Task 6, changed in Phase 5). No field lights its area: a modifier
+               or blocker field (an aura) gives no light and keeps one circle source for the SDL
+               build; a fog, darkness or silence field adds none either. */
             if (!off && gFireLevel > 0) {
                 const int AX = PX + 10, AY = PY;
                 auto aura = [&](const char *name, int32 ftype, int colour, int RAD) {
@@ -2764,6 +2775,7 @@ void EffectLightProbe(Player *pl) {
                             }
                         }
                     const int anyLit = (nLit > 0) || (nRingLit > 0);
+                    const int nCirc = (int)LightAuraCount();
                     for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
                     Refresh(pl);
                     pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
@@ -2773,12 +2785,10 @@ void EffectLightProbe(Player *pl) {
                         for (int x = AX - RAD - 2; x <= AX + RAD + 2; ++x)
                             if (LightLitAt((int16)x, (int16)y)) ++litAfter;
                     if (ftype & (FI_MODIFIER | FI_BLOCKER)) {
-                        verdict(name, nArea > 0 && nLit == nArea && nSeen == nArea &&
-                            lo >= LIGHT_SEE_MIN && hi <= (int)(0.6f * gFireLevel) &&
-                            nRingLit == nRing && ringHi < lo && gone && litAfter == 0,
-                            "area lit %d/%d seen %d/%d level %d..%d (need %d..%d); ring has light %d/%d, peak %d; unlit after removal=%d",
-                            nLit, nArea, nSeen, nArea, lo, hi, (int)LIGHT_SEE_MIN,
-                            (int)(0.6f * gFireLevel), nRingLit, nRing, ringHi, (int)(gone && litAfter == 0));
+                        /* an aura gives no light (inc-jw0hw Phase 5): nothing lit, nothing seen, and one circle source for the SDL build */
+                        verdict(name, nArea > 0 && nCirc == 1 && !anyLit && nSeen == 0 && gone && litAfter == 0,
+                            "no light: area lit %d/%d, ring with light %d, seen %d, circle sources %d (need 1)",
+                            nLit, nArea, nRingLit, nSeen, nCirc);
                     } else {
                         verdict(name, !anyLit && nSeen == 0 && gone,
                             "no light: area lit %d/%d, ring with light %d, seen %d", nLit, nArea, nRingLit, nSeen);
@@ -2793,6 +2803,64 @@ void EffectLightProbe(Player *pl) {
             }
             pl->LightRange = wasLight; pl->InfraRange = wasInfra; pl->ShadowRange = wasShadow;
             pl->Options[OPT_AUTOMORE] = wasMore;
+        }
+    }
+
+    /* ---- Case AU (inc-jw0hw, Phase 5): an aura gives no light. Two overlapping purple auras (FI_MODIFIER, radius 4) go into a dark room (AU1)
+       and into a room whose squares are lit by the map (AU2). For every square of the room the probe compares, with and without the fields,
+       LightLevelAt (the level the engine tests and the renderer reads: the larger of the source light SrcLit and the map's own light) and
+       the composed light color LightAt; the two MUST be equal. LightAuraCount is 2 with the fields: the SDL circles still exist. ---- */
+    if (LightMode(pl) == LIGHT_LEGACY) {
+        inconclusive("AU", "the light map is legacy");
+    } else {
+        for (int lit = 0; lit < 2; ++lit) {
+            const char *name = lit ? "AU2" : "AU1";
+            const int AX = PX + 10, AY = PY, BX = AX - 5, RAD = 4;
+            BuildDark(mp, pl, floor, wall);
+            LightFlashClearAll();
+            if (lit) {
+                for (int y = 0; y < mp->SizeY(); ++y)
+                    for (int x = 0; x < mp->SizeX(); ++x)
+                        if (InBlock(x, y)) mp->At(x, y).Lit = true;
+                pl->CalcVision();
+            }
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            Refresh(pl);
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            const int W = mp->SizeX(), H = mp->SizeY();
+            std::vector<int> lv0((size_t)W * H, 0), pk0((size_t)W * H, 0);
+            for (int y = 0; y < H; ++y)
+                for (int x = 0; x < W; ++x) {
+                    lv0[(size_t)y * W + x] = (int)LightLevelAt((int16)x, (int16)y);
+                    pk0[(size_t)y * W + x] = Peak(x, y);
+                }
+            const int c0 = (int)LightAuraCount();
+            mp->NewField(FI_MODIFIER, AX, AY, RAD, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, NULL);
+            mp->NewField(FI_MODIFIER, BX, AY, RAD, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, NULL);
+            Refresh(pl);
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            int nDiffLv = 0, nDiffPk = 0, base = 0, firstX = -1, firstY = -1;
+            for (int y = 0; y < H; ++y)
+                for (int x = 0; x < W; ++x) {
+                    const int a = (int)LightLevelAt((int16)x, (int16)y), b = Peak(x, y);
+                    if (lv0[(size_t)y * W + x] > 0) ++base;
+                    if (a != lv0[(size_t)y * W + x] || b != pk0[(size_t)y * W + x]) {
+                        if (firstX < 0) { firstX = x; firstY = y; }
+                    }
+                    if (a != lv0[(size_t)y * W + x]) ++nDiffLv;
+                    if (b != pk0[(size_t)y * W + x]) ++nDiffPk;
+                }
+            const int c1 = (int)LightAuraCount();
+            for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
+            Refresh(pl);
+            if (lit && base == 0)
+                inconclusive(name, "the lit room has no lit square before the fields");
+            else if (!lit && base != 0)
+                inconclusive(name, "the dark room has a lit square before the fields");
+            else
+                verdict(name, c0 == 0 && c1 == 2 && nDiffLv == 0 && nDiffPk == 0,
+                    "no light: LightLevelAt (max of SrcLit and map light) differs on %d of %d squares and LightAt on %d with two overlapping auras (need 0); circle sources %d without, %d with (need 0, 2); squares lit before %d; first differing square %d,%d",
+                    nDiffLv, W * H, nDiffPk, c0, c1, base, firstX, firstY);
         }
     }
 

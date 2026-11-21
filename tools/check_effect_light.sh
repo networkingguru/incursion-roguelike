@@ -117,6 +117,9 @@
 # fact: FF1 which color a cast picks -- random(5) in the spell's script, seeded; the probe reads the color word from the hit message ("limned in flickering <word> light") and passes for any word, over 12 casts; the oracle table (silver, violet, amber, azure, crimson) is the probe's own
 # fact: FF1 that the player sees the kobold, so the hit message prints -- the probe gives the player infravision 12 for the cast only (then zeroes it), and the kobold is warm-blooded; no roll decides it
 # fact: FF1 two kobolds' squares -- fixed offsets (KX, PY-1) and (KX, PY+1) from the player's fixed square, KX = PX+8, inside the globe's radius 4; the probe aims at (KX, PY)
+# fact: AU1/AU2 the room and the fields -- the probe builds a dark room (AU1) or one whose block squares are all legacy .Lit (AU2), and two purple FI_MODIFIER fields of radius 4 at (PX+10, PY) and (PX+5, PY), fixed offsets from the player's fixed square; no roll decides them
+# fact: AU1/AU2 the compared light -- LightLevelAt and LightAt over every square, before and after the fields, with the player's light, infravision and shadow ranges zeroed; no flicker enters (an aura casts no footprint), no random draw
+# fact: J1/J2/J6 aura light -- the probe's fields are FI_MODIFIER or FI_BLOCKER at (PX+10, PY); the expected light is none, whatever the field's color
 # fact: FF2 flicker -- LightTick at the clock values the probe passes (0..3000 ms in steps of 100), never the wall clock; each source's noise is a hash of its square, so no random draw
 # fact: FF3 the move -- the probe moves the kobold three squares south with Thing::Move; no roll decides it
 # fact: FF4 the neighbors -- the eight squares around the kobold in a dark room; the probe zeroes the ambient light and the player's light ranges
@@ -133,6 +136,7 @@
 # fact: FF12 the background tint -- computed from the glow color and the current flicker by LightLimnAt; the same message-read word as FF11, no roll decides it
 # fact: FF13 neighbor and removal -- the squares beside the kobold and the status removal by the probe; no roll decides them
 # fact: FF10 the flash count -- LightFlashCount after the probe; no roll decides it
+# Cases AU1-AU2 add: two overlapping aura fields change no square's light level or color, in a dark room and in a lit one; J1, J2 and J6 expect no light from an aura (they expected its area lit before Phase 5).
 # Cases FF1-FF10 add: every ILLUMINATED creature (Faerie Fire in the color its message names, Glitterdust amber, Mooncloak silver, Energy Containment the absorbed energy's color, a fey-trapping weapon silver) lights its own square only, gently flickering, moving with it and ending with the status; a value of 0 takes the effect's cval, else silver; and no gameplay roll moves.
 # Cases NS1-NS12 add (NS12 in separate processes): Nightmare Smite's gather draws a standing rainbow pattern of changing glyphs and light on the demon and the 8 squares around it, for as long as the gather stands, across turns, following the demon, only on squares the player sees; the pattern stops before the blast, when the gather ends early, when the demon goes, and never starts under animation None; the blast lights on the rainbow ramp, each square in its own hue and cooling, and flashes the creatures it strikes; and no gameplay roll moves.
 # Cases DR1-DR9 add: Dance of Ruin's dark-red drops fall onto each square the player sees, each square lights on the dark ramp as its drop lands, the struck flash runs last, the cval beats the fire damage type, and no gameplay roll moves.

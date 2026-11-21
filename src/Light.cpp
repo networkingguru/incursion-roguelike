@@ -61,7 +61,7 @@ struct LightSource {
   int32 first, count;          /* slice of Foot[] */
   int8 rdx, rdy;               /* reflected source only: the hemisphere it lights,
                                   toward the light that lit it; 0,0 = all round */
-  int32 fid;                   /* LK_FLASH: index into Flashes; LK_AURA: into AuraCells; LK_LIMN: into LimnCells */
+  int32 fid;                   /* LK_FLASH: index into Flashes; LK_LIMN: into LimnCells */
 };
 
 struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; int16 ci; }; /* ci: a flash footprint's nearest effect square (index into Flash::cells), else -1 */
@@ -621,12 +621,10 @@ static void ScanCreatures(Map *m) {
 }
 
 /* inc-jw0hw: a modifier or blocker field that gives no light of its own (a
-   globe, a magic circle) glows faintly over its area plus one square. Fields
-   carry no damage type, so the color is the field's own, lightened. */
-static std::vector< std::vector<FlashCell> > AuraCells;
-
+   globe, a magic circle) is an aura. It adds NO light: its LK_AURA source casts
+   no footprint, and only the SDL circle (LightAuraAt) reads it. The circle is
+   the field's own color, neutral gray when that color is black. */
 static void ScanFields(Map *m) {
-  AuraCells.clear();
   for (int32 i = 0; i < m->Fields.Total(); i++) {
     Field *f = m->Fields[i];
     if (!f) continue;
@@ -635,18 +633,9 @@ static void ScanFields(Map *m) {
       LightRGB col = plain ? Palette[f->Color] : GlyphColour(f->Image);
       AddSource(f->cx, f->cy, f->rad, LK_FIELD, col);
     } else if (f->FType & (FI_MODIFIER | FI_BLOCKER)) {
-      LightRGB col = LightEffectColour(plain ? f->Color
-        : (int16)(GLYPH_FORE_VALUE(f->Image) & COLOUR_MASK));
-      AddSource(f->cx, f->cy, f->rad + 1, LK_AURA, col);
-      /* The aura lights its own area evenly, plus a one-square spill. */
-      std::vector<FlashCell> cells;
-      for (int16 y = f->cy - f->rad; y <= f->cy + f->rad; y++)
-        for (int16 x = f->cx - f->rad; x <= f->cx + f->rad; x++)
-          if (m->InBounds(x, y) && f->inArea(x, y)) {
-            FlashCell fc; fc.x = x; fc.y = y; fc.birth = 0.0f; fc.tinted = false; cells.push_back(fc);
-          }
-      Src[nSrc - 1].fid = (int32)AuraCells.size();
-      AuraCells.push_back(cells);
+      const int16 ci = plain ? f->Color : (int16)(GLYPH_FORE_VALUE(f->Image) & COLOUR_MASK);
+      LightRGB gray = { 160, 160, 160 };
+      AddSource(f->cx, f->cy, f->rad + 1, LK_AURA, ci == 0 ? gray : LightEffectColour(ci));
     }
   }
 }
@@ -655,8 +644,8 @@ static void ScanFields(Map *m) {
    Energy Containment, a fey-trapping weapon) lights its own square, and only
    that square, at aura brightness. The status's Val names the color: a
    LIMN_* color, a COL_* row or a palette color. Val 0 takes the owning
-   effect's cval, else silver. LK_LIMN copies the LK_AURA row, so the glow does
-   not depend on aura light. */
+   effect's cval, else silver. LK_LIMN copies the LK_AURA row's brightness numbers; the glow does
+   not depend on any aura. */
 static std::vector< std::vector<FlashCell> > LimnCells;
 static std::vector<int32> LimnSrc;   /* LimnCells[i]'s source, an index into Src */
 
@@ -974,8 +963,7 @@ void LightRebuild(Map *m, Player *p) {
   int32 nPrimary = nSrc;
   for (int32 i = 0; i < nSrc; i++) {
     if (Src[i].kind == LK_FLASH) CastFlashFootprint(m, Src[i]);
-    else if (Src[i].kind == LK_AURA)
-      CastAreaFootprint(m, Src[i], AreaSpec(AuraCells[Src[i].fid], 1, Src[i].gain));
+    else if (Src[i].kind == LK_AURA) { Src[i].first = nFoot; Src[i].count = 0; }   /* an aura gives no light */
     else if (Src[i].kind == LK_LIMN)
       CastAreaFootprint(m, Src[i], AreaSpec(LimnCells[Src[i].fid], 0, Src[i].gain));
     else CastFootprint(m, Src[i]);
