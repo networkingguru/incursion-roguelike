@@ -19,7 +19,7 @@
 
 // family: light-kind internal
 enum LightKind { LK_TORCH, LK_LANTERN, LK_GLOW, LK_FIELD, LK_MAGMA,
-                 LK_WALLTORCH, LK_REFLECT, LK_FLASH, LK_AURA, LK_KINDS };
+                 LK_WALLTORCH, LK_REFLECT, LK_FLASH, LK_AURA, LK_LIMN, LK_KINDS };
 // end family: light-kind
 
 /* ponytail: a source's colour comes from this table, or from its own glyph
@@ -40,6 +40,7 @@ static const LightKindRow KindTable[LK_KINDS] = {
   /* LK_REFLECT   */ { {   0,   0,   0 }, 1.00f, 0.00f,  1.0f, 1, 1.00f },
   /* LK_FLASH     */ { {   0,   0,   0 }, 1.00f, 0.00f,  1.0f, 1, 1.00f },
   /* LK_AURA      */ { {   0,   0,   0 }, 0.50f, 0.30f,  1.2f, 3, 4.00f },
+  /* LK_LIMN      */ { {   0,   0,   0 }, 1.00f, 0.30f,  1.2f, 3, 1.00f },
 };
 
 static LightRGB Palette[MAX_COLOURS] = {
@@ -60,7 +61,7 @@ struct LightSource {
   int32 first, count;          /* slice of Foot[] */
   int8 rdx, rdy;               /* reflected source only: the hemisphere it lights,
                                   toward the light that lit it; 0,0 = all round */
-  int32 fid;                   /* LK_FLASH: index into Flashes; LK_AURA: into AuraCells */
+  int32 fid;                   /* LK_FLASH: index into Flashes; LK_AURA: into AuraCells; LK_LIMN: into LimnCells */
 };
 
 struct FootCell { int32 idx; uint8 w; uint8 fr, fg, fb; int16 ci; }; /* ci: a flash footprint's nearest effect square (index into Flash::cells), else -1 */
@@ -650,6 +651,68 @@ static void ScanFields(Map *m) {
   }
 }
 
+/* inc-jw0hw: an ILLUMINATED creature (Faerie Fire, Glitterdust, Mooncloak,
+   Energy Containment, a fey-trapping weapon) lights its own square, and only
+   that square, at aura brightness. The status's Val names the color: a
+   LIMN_* color, a COL_* row or a palette color. Val 0 takes the owning
+   effect's cval, else silver. LK_LIMN copies the LK_AURA row, so the glow does
+   not depend on aura light. */
+static std::vector< std::vector<FlashCell> > LimnCells;
+static std::vector<int32> LimnSrc;   /* LimnCells[i]'s source, an index into Src */
+
+static LightRGB LimnColour(int16 val, rID eID) {
+  if (val == LIMN_VIOLET) { LightRGB c = { 170, 110, 255 }; return c; }
+  if (val == LIMN_AZURE)  { LightRGB c = {  60, 150, 255 }; return c; }
+  if ((val > 0 && val < MAX_COLOURS) || (val >= COL_FIRE && val <= COL_SUNYELLOW))
+    return LightEffectColour(val);
+  if (eID && TEFF(eID)) {
+    const int16 cv = TEFF(eID)->ef.cval;
+    if ((cv > 0 && cv < MAX_COLOURS) || (cv >= COL_FIRE && cv <= COL_SUNYELLOW))
+      return LightEffectColour(cv);
+  }
+  return LightEffectColour(COL_SILVERY);
+}
+
+static void ScanLimn(Map *m) {
+  LimnCells.clear();
+  LimnSrc.clear();
+  for (Thing *t = m->FirstThing(); t; t = m->NextThing()) {
+    if (!t->isCreature()) continue;
+    Creature *c = (Creature *)t;
+    if (c->isDead() || !m->InBounds(c->x, c->y)) continue;
+    int16 val = 0; rID eID = 0; bool lit = false;
+    StatiIterNature(c, ILLUMINATED)
+      if (!lit) { lit = true; val = S->Val; eID = S->eID; }
+    StatiIterEnd(c)
+    if (!lit) continue;
+    AddSource(c->x, c->y, 1, LK_LIMN, LimnColour(val, eID));
+    FlashCell fc; fc.x = c->x; fc.y = c->y; fc.birth = 0.0f; fc.tinted = false;
+    std::vector<FlashCell> cells; cells.push_back(fc);
+    Src[nSrc - 1].fid = (int32)LimnCells.size();
+    LimnSrc.push_back(nSrc - 1);
+    LimnCells.push_back(cells);
+  }
+}
+
+/* inc-jw0hw: a limned creature's glyph takes its glow color at full value,
+   and its square's background a tint of it, both scaled by the glow's own
+   current flicker (0.7..1.0), so the glow is plainly visible and flickers on
+   the glyph. Only the limned creature's own square. The paint path
+   consults this as it does LightEffectGlyphAt. */
+#define LIMN_BG_TINT 0.30f
+bool LightLimnAt(int16 x, int16 y, LightRGB &glyph, LightRGB &bg) {
+  if (lmLegacy || !lmMap) return false;
+  for (size_t i = 0; i < LimnSrc.size(); i++) {
+    const LightSource &s = Src[LimnSrc[i]];
+    if (s.x != x || s.y != y) continue;
+    glyph.r = (uint8)(s.c.r * s.noise); glyph.g = (uint8)(s.c.g * s.noise); glyph.b = (uint8)(s.c.b * s.noise);
+    bg.r = (uint8)(s.c.r * LIMN_BG_TINT * s.noise); bg.g = (uint8)(s.c.g * LIMN_BG_TINT * s.noise);
+    bg.b = (uint8)(s.c.b * LIMN_BG_TINT * s.noise);
+    return true;
+  }
+  return false;
+}
+
 /* Read terrain once for light sources and fog, clearing the fog map first. */
 static void ScanTerrain(Map *m) {
   memset(FogCol, 0, sizeof(uint8) * lmCells);
@@ -904,6 +967,7 @@ void LightRebuild(Map *m, Player *p) {
   lmMap = m; nSrc = 0; nFoot = 0; anyFlicker = false;
   ScanCreatures(m);
   ScanFields(m);
+  ScanLimn(m);
   ScanFlashes();
   ScanTerrain(m);
   ScanFog(m);
@@ -912,6 +976,8 @@ void LightRebuild(Map *m, Player *p) {
     if (Src[i].kind == LK_FLASH) CastFlashFootprint(m, Src[i]);
     else if (Src[i].kind == LK_AURA)
       CastAreaFootprint(m, Src[i], AreaSpec(AuraCells[Src[i].fid], 1, Src[i].gain));
+    else if (Src[i].kind == LK_LIMN)
+      CastAreaFootprint(m, Src[i], AreaSpec(LimnCells[Src[i].fid], 0, Src[i].gain));
     else CastFootprint(m, Src[i]);
   }
   memset(SrcLit, 0, sizeof(uint8) * lmCells);

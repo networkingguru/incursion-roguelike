@@ -1061,14 +1061,20 @@ Druid  Spell "Faerie Fire" : EA_INFLICT
     On Event EV_MAGIC_HIT {    
       hText str;  
       switch(random(5)) {
-        case 0: str = "silver"; break;
-        case 1: str = "violet"; break;
-        case 2: str = "amber"; break;
-        case 3: str = "azure"; break;
-        case 4: str = "crimson"; break;
+        case 0: str = "silver"; e.vVal = COL_SILVERY; break;
+        case 1: str = "violet"; e.vVal = LIMN_VIOLET; break;
+        case 2: str = "amber"; e.vVal = COL_SUNYELLOW; break;
+        case 3: str = "azure"; e.vVal = LIMN_AZURE; break;
+        case 4: str = "crimson"; e.vVal = COL_CRIMSON; break;
         }
       VPrint(e,"You are limned in flickering <hText> light.",
                "The <EVictim> is limned in flickering <hText> light.", str);
+      return NOTHING;
+      },
+    POST(EV_MAGIC_HIT) {
+      /* inc-jw0hw: the status exists now; its Val is the glow color. */
+      if (EVictim->isCreature())
+        EVictim->SetEffStatiVal(ILLUMINATED,e.eID,e.vVal);
       return NOTHING;
       };
     Flags: EF_SHOWNAME, EF_DMIN, EF_GLOW;

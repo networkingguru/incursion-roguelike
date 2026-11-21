@@ -122,6 +122,8 @@ bool  LightFlashDisabled();                         /* INCURSION_EFFECT_LIGHT_OF
    effect square at x,y with level above zero; rgb is that square's ramp color
    at full value. */
 bool  LightEffectGlyphAt(int16 x, int16 y, LightRGB &rgb);
+/* inc-jw0hw: true on the square of a limned (ILLUMINATED) creature; glyph is its glow color and bg a tint of it, both at the current flicker. */
+bool  LightLimnAt(int16 x, int16 y, LightRGB &glyph, LightRGB &bg);
 
 /* Aura circles (inc-jw0hw): one per modifier or blocker field that gives no light. */
 int32 LightAuraCount();

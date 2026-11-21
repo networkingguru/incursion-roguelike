@@ -1281,6 +1281,8 @@ Glyph TextTerm::FloorShading(int16 x, int16 y, Glyph g) {
       */
 }
 
+void (*PutGlyphProbeHook)(int16 x, int16 y, bool remembered, uint16 vis) = NULL;   /* inc-jw0hw: set only by src/EffectReelProbe.cpp */
+
 void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
     if(x<XOff || y<YOff || !m)
       return;
@@ -1310,6 +1312,7 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
        fall through to the unlit path and paint at full brightness. */
     if (LightMode(p) != LIGHT_LEGACY && ((vis & VI_DEFINED) || m->At(x,y).Memory)) {
       bool remembered = !(vis & VI_VISIBLE) || m->At(x,y).Dark;
+      if (PutGlyphProbeHook) PutGlyphProbeHook(x, y, remembered, vis);   /* inc-jw0hw: probe record of the decision */
       /* A defined cell always goes through the light: no light at all is
          the floor brightness, not full colour. Floor cells (TF_SHADE) fall
          further than walls and doors, so a room's walls keep their shape

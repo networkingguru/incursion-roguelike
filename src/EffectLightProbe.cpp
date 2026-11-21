@@ -2796,7 +2796,316 @@ void EffectLightProbe(Player *pl) {
         }
     }
 
+    /* ---- Case FF (inc-jw0hw, Phase 4h): every ILLUMINATED creature glows in the color its source names, on its own square only,
+       flickering, moving with it, ending with the status. The colors below are the probe's own oracle, apart from src/Light.cpp. ---- */
+    {
+        const rID ff = FIND("Faerie Fire"), kobF = FIND("kobold"), gd = FIND("Glitterdust"), mc = FIND("Mooncloak"),
+            ec = FIND("Energy Containment"), ecg = FIND("Energy Containment;glow");
+        if (!ff || !kobF || !gd || !mc || !ec || !ecg) {
+            inconclusive("FF", "Faerie Fire, Glitterdust, Mooncloak, Energy Containment (or its glow) or the kobold is missing");
+        } else if (LightMode(pl) == LIGHT_LEGACY) {
+            inconclusive("FF", "the light map is legacy");
+        } else {
+            struct Hue { const char *name; int r, g, b; };
+            static const Hue hues[] = { { "silver", 220, 225, 240 }, { "violet", 170, 110, 255 }, { "amber", 255, 215, 110 },
+                { "azure", 60, 150, 255 }, { "crimson", 220, 40, 60 }, { "fire", 255, 140, 40 }, { "skyblue", 127, 255, 255 } };
+            const int nHue = (int)(sizeof hues / sizeof hues[0]);
+            const int8 wasMore = pl->Options[OPT_AUTOMORE];
+            TextTerm *term = (TextTerm*)pl->MyTerm;
+            const int KX = PX + 8, KY = PY;
+            auto dark = [&]() {
+                BuildDark(mp, pl, floor, wall);
+                LightFlashClearAll();
+                pl->Options[OPT_AUTOMORE] = 1;
+                pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                Refresh(pl);
+                pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            };
+            auto mk = [&](int x, int y) {
+                Monster *k = new Monster(kobF);
+                k->PlaceAt(mp, x, y, true);
+                k->Initialize(true);
+                k->mHP = k->cHP = 5000;
+                k->StateFlags |= MS_SCRUTINIZED;
+                return k;
+            };
+            auto relight = [&]() {
+                LightFlashClearAll();
+                pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                Refresh(pl);
+                pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            };
+            auto castAt = [&](rID eid, int ax, int ay, Thing *tgt = NULL) {
+                /* The player sees warm kobolds by infravision during the cast, so the hit messages print; relight zeroes it. */
+                pl->InfraRange = 12;
+                Refresh(pl);
+                term->MsgHistory[0] = 0;
+                EventInfo xe; xe.Clear();
+                xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = true;
+                if (tgt) { xe.ETarget = tgt; xe.EVictim = (Creature*)tgt; }
+                else { xe.isLoc = true; xe.EXVal = ax; xe.EYVal = ay; }
+                ReThrow(EV_EFFECT, xe);
+                relight();
+            };
+            /* the index of the oracle color nearest the light on a square, by hue (each side scaled to its brightest channel); -1 when unlit */
+            auto hueAt = [&](int x, int y, int &dist2) -> int {
+                LightRGB c;
+                dist2 = 999999;
+                if (!LightAt((int16)x, (int16)y, c)) return -1;
+                const int m = c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b);
+                if (m <= 0) return -1;
+                int best = -1;
+                for (int i = 0; i < nHue; ++i) {
+                    const int hm = hues[i].r > hues[i].g ? (hues[i].r > hues[i].b ? hues[i].r : hues[i].b) : (hues[i].g > hues[i].b ? hues[i].g : hues[i].b);
+                    const int dr = c.r * 255 / m - hues[i].r * 255 / hm, dg = c.g * 255 / m - hues[i].g * 255 / hm, db = c.b * 255 / m - hues[i].b * 255 / hm;
+                    const int d = dr * dr + dg * dg + db * db;
+                    if (d < dist2) { dist2 = d; best = i; }
+                }
+                return best;
+            };
+            auto hueIndexOf = [&](const char *name) { for (int i = 0; i < nHue; ++i) if (!strcmp(hues[i].name, name)) return i; return -1; };
+            /* the color words of "limned in flickering <word> light" in the message log, in order */
+            auto words = [&](int *out, int cap) {
+                int n = 0;
+                const char *p = term->MsgHistory;
+                while (n < cap && (p = strstr(p, "limned in flickering ")) != NULL) {
+                    p += strlen("limned in flickering ");
+                    const char *e = strstr(p, " light");
+                    char w[16] = { 0 };
+                    if (e && e - p < 15) memcpy(w, p, e - p);
+                    out[n++] = hueIndexOf(w);
+                }
+                return n;
+            };
+            auto lit = [&](int x, int y) { return LightLitAt((int16)x, (int16)y) && LightLevelAt((int16)x, (int16)y) > 0; };
+            auto dim = [&](int x, int y) { return !LightLitAt((int16)x, (int16)y) && LightLevelAt((int16)x, (int16)y) == 0; };
+
+            /* FF1: Faerie Fire lights each kobold it hits in the color its message names. The first cast hits two kobolds; the 11 after hit one. */
+            {
+                int bad = 0, seen[8] = { 0 }, nCast = 12, worst = 0;
+                char first[160] = { 0 };
+                for (int it = 0; it < nCast; ++it) {
+                    dark();
+                    const int nK = it == 0 ? 2 : 1;
+                    Monster *a = mk(KX, KY - (nK == 2 ? 1 : 0));
+                    Monster *b = nK == 2 ? mk(KX, KY + 1) : NULL;
+                    relight();
+                    castAt(ff, KX, KY);
+                    int w[4]; const int nw = words(w, 4);
+                    int da, db = 0;
+                    const int ha = hueAt(a->x, a->y, da), hb = b ? hueAt(b->x, b->y, db) : -1;
+                    bool ok = nw == nK && lit(a->x, a->y) && (!b || lit(b->x, b->y));
+                    if (ok && nK == 1) ok = ha == w[0] && w[0] >= 0 && w[0] <= 4;
+                    if (ok && nK == 2) ok = w[0] >= 0 && w[1] >= 0 && w[0] <= 4 && w[1] <= 4 &&
+                        ((ha == w[0] && hb == w[1]) || (ha == w[1] && hb == w[0]));
+                    if (da > worst && da != 999999) worst = da;
+                    for (int i = 0; i < nw; ++i) if (w[i] >= 0 && w[i] < 8) ++seen[w[i]];
+                    if (!ok) { ++bad; if (!first[0]) snprintf(first, sizeof first, "cast %d: %d word(s) %d,%d, light %s/%s", it, nw, nw > 0 ? w[0] : -1, nw > 1 ? w[1] : -1, ha >= 0 ? hues[ha].name : "none", hb >= 0 ? hues[hb].name : "-"); }
+                }
+                verdict("FF1", bad == 0,
+                    "%d casts (the first on two kobolds): each kobold's square lit in the color its message names; bad %d (need 0)%s%s; words seen silver %d violet %d amber %d azure %d crimson %d; worst hue distance^2 %d",
+                    nCast, bad, first[0] ? " first: " : "", first, seen[0], seen[1], seen[2], seen[3], seen[4], worst);
+            }
+
+            /* FF2..FF5: one kobold under Faerie Fire. */
+            dark();
+            Monster *k = mk(KX, KY);
+            relight();
+            castAt(ff, KX, KY);
+            if (!k->HasEffStati(ILLUMINATED, ff)) {
+                inconclusive("FF2", "Faerie Fire did not light the kobold");
+            } else {
+                int lo = 999, hi = 0, nDistinct = 0, prev = -1;
+                for (int t = 0; t <= 3000; t += 100) {
+                    LightTick((uint32)t);
+                    const int v = Peak(k->x, k->y);
+                    if (v < lo) lo = v;
+                    if (v > hi) hi = v;
+                    if (v != prev) ++nDistinct;
+                    prev = v;
+                }
+                verdict("FF2", hi > 0 && hi > lo && nDistinct >= 2,
+                    "31 ticks, 0..3000 ms, on the kobold's square: brightness %d..%d with %d changes (need a lit square that changes)", lo, hi, nDistinct);
+                LightTick(0);
+
+                /* FF4 first: the glow lights only its own square. */
+                int nbLit = 0, nbPeak = 0;
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        if (!dx && !dy) continue;
+                        if (!dim(k->x + dx, k->y + dy)) ++nbLit;
+                        const int pk = Peak(k->x + dx, k->y + dy);
+                        if (pk > nbPeak) nbPeak = pk;
+                    }
+                verdict("FF4", lit(k->x, k->y) && nbLit == 0 && nbPeak == 0,
+                    "the kobold's square lit %d (need 1); its 8 neighbors lit %d (need 0), brightest neighbor %d (need 0)", lit(k->x, k->y) ? 1 : 0, nbLit, nbPeak);
+
+                /* FF3: the glow moves with the creature. */
+                const int ox = k->x, oy = k->y, nx = ox, ny = oy + 3;
+                k->Move(nx, ny, false);
+                relight();
+                verdict("FF3", k->x == nx && k->y == ny && lit(nx, ny) && dim(ox, oy),
+                    "the kobold moved (%d,%d) to (%d,%d): new square lit %d (need 1), old square dark %d (need 1)", ox, oy, (int)k->x, (int)k->y, lit(nx, ny) ? 1 : 0, dim(ox, oy) ? 1 : 0);
+
+                /* FF5: the glow ends with the status and with the creature. */
+                k->RemoveEffStati(ff);
+                relight();
+                const bool offStatus = dim(nx, ny);
+                castAt(ff, nx, ny);
+                const bool back = lit(nx, ny);
+                ThrowDmg(EV_DAMAGE, AD_BLUNT, 10000, "probe", pl, k);
+                const bool dead = k->isDead();
+                relight();
+                verdict("FF5", offStatus && back && dead && dim(nx, ny),
+                    "status removed: square dark %d (need 1); recast: lit %d (need 1); kobold killed: dead %d (need 1), square dark %d (need 1)",
+                    offStatus ? 1 : 0, back ? 1 : 0, dead ? 1 : 0, dim(nx, ny) ? 1 : 0);
+            }
+
+            /* FF6: the other four sources. */
+            {
+                int d;
+                /* Glitterdust: amber. Its real path: the spell, cast at a kobold. */
+                /* The dust's blindness part allows a Fortitude save, and a kobold that makes it also skips the glow part; cast on fresh kobolds until one fails. */
+                int gdTries = 0;
+                for (; gdTries < 40; ++gdTries) {
+                    dark(); k = mk(PX + 3, KY); relight();
+                    castAt(gd, PX + 3, KY);
+                    if (k->HasEffStati(ILLUMINATED, gd)) break;
+                }
+                int h = hueAt(k->x, k->y, d);
+                verdict("FF6a", k->HasEffStati(ILLUMINATED, gd) && lit(k->x, k->y) && h == hueIndexOf("amber"),
+                    "Glitterdust cast on a kobold (glow after %d casts): status %d (need 1), square lit %d (need 1), color %s (need amber)", gdTries + 1, k->HasEffStati(ILLUMINATED, gd) ? 1 : 0, lit(k->x, k->y) ? 1 : 0, h >= 0 ? hues[h].name : "none");
+
+                /* Mooncloak: silver. Its real path: the spell, cast by the player on the player. */
+                /* The spell may call for a saving throw of the victim, and it spends fatigue; recast, with the player's fatigue refilled, until the glow stands. */
+                int mcTries = 0;
+                for (; mcTries < 40; ++mcTries) {
+                    dark();
+                    pl->RemoveStati(ILLUMINATED);
+                    pl->cFP = 50;
+                    term->MsgHistory[0] = 0;
+                    { EventInfo xe; xe.Clear(); xe.EActor = pl; xe.ETarget = pl; xe.EVictim = pl; xe.EMap = mp; xe.eID = mc; xe.isSpell = true;
+                      ReThrow(EV_EFFECT, xe); }
+                    relight();
+                    if (pl->HasEffStati(ILLUMINATED, mc)) break;
+                }
+                h = hueAt(pl->x, pl->y, d);
+                const bool mcOn = pl->HasEffStati(ILLUMINATED, mc);
+                verdict("FF6b", mcOn && lit(pl->x, pl->y) && h == hueIndexOf("silver"),
+                    "Mooncloak cast by the player on the player (glow after %d casts): status %d (need 1), the player's square lit %d (need 1), color %s (need silver)", mcTries + 1, mcOn ? 1 : 0, lit(pl->x, pl->y) ? 1 : 0, h >= 0 ? hues[h].name : "none");
+                pl->RemoveEffStati(mc);
+                pl->RemoveStati(ILLUMINATED);
+
+                /* Energy Containment: the absorbed energy's color; an extension keeps it. Its real path: the power on a kobold, then fire damage. */
+                dark(); k = mk(KX, KY); relight();
+                { EventInfo xe; xe.Clear(); xe.EActor = pl; xe.ETarget = k; xe.EVictim = k; xe.EMap = mp; xe.eID = ec; xe.isSpell = true;
+                  ReThrow(EV_EFFECT, xe); }
+                int tries = 0;
+                for (; tries < 60 && !k->HasEffStati(ILLUMINATED, ecg); ++tries)
+                    ThrowDmg(EV_DAMAGE, AD_FIRE, 5, "probe", pl, k);
+                relight();
+                h = hueAt(k->x, k->y, d);
+                const int dur1 = k->GetEffStatiDur(ILLUMINATED, ecg);
+                verdict("FF6c", k->HasEffStati(ILLUMINATED, ecg) && lit(k->x, k->y) && h == hueIndexOf("fire"),
+                    "Energy Containment on a kobold, fire damage (absorbed after %d tries): glow status %d (need 1), square lit %d (need 1), color %s (need fire)", tries + 1, k->HasEffStati(ILLUMINATED, ecg) ? 1 : 0, lit(k->x, k->y) ? 1 : 0, h >= 0 ? hues[h].name : "none");
+                int tries2 = 0;
+                for (; tries2 < 60 && k->GetEffStatiDur(ILLUMINATED, ecg) <= dur1; ++tries2)
+                    ThrowDmg(EV_DAMAGE, AD_ELEC, 5, "probe", pl, k);
+                relight();
+                h = hueAt(k->x, k->y, d);
+                verdict("FF6d", k->GetEffStatiDur(ILLUMINATED, ecg) > dur1 && lit(k->x, k->y) && h == hueIndexOf("fire"),
+                    "a second absorbed blast (electricity) extends the glow: duration %d to %d (need longer), the color stays fire: %s", dur1, k->GetEffStatiDur(ILLUMINATED, ecg), h >= 0 ? hues[h].name : "none");
+
+                /* A fey-trapping weapon: silver. Set up by granting the status as src/Fight.cpp does (no value, no effect): the real path needs a fey-trapping weapon and a hit roll. */
+                dark(); k = mk(KX, KY); relight();
+                k->GainTempStati(ILLUMINATED, pl, 20, SS_ATTK);
+                relight();
+                h = hueAt(k->x, k->y, d);
+                verdict("FF6e", lit(k->x, k->y) && h == hueIndexOf("silver"),
+                    "fey-trapping grant (ILLUMINATED, no value, no effect): square lit %d (need 1), color %s (need silver)", lit(k->x, k->y) ? 1 : 0, h >= 0 ? hues[h].name : "none");
+
+                /* FF8: a value of 0 takes the effect's cval, else silver. */
+                dark(); k = mk(KX, KY); relight();
+                k->GainTempStati(ILLUMINATED, pl, 20, SS_MISC, 0, 0, ff);
+                relight();
+                const int hSky = hueAt(k->x, k->y, d);
+                k->RemoveStati(ILLUMINATED);
+                k->GainTempStati(ILLUMINATED, pl, 20, SS_MISC, 0, 0, 0);
+                relight();
+                const int hNone = hueAt(k->x, k->y, d);
+                verdict("FF8", hSky == hueIndexOf("skyblue") && hNone == hueIndexOf("silver"),
+                    "value 0: with Faerie Fire's effect the color is %s (need skyblue, its cval lightened); with no effect %s (need silver)",
+                    hSky >= 0 ? hues[hSky].name : "none", hNone >= 0 ? hues[hNone].name : "none");
+            }
+
+            /* FF9: the gameplay random stream does not depend on the animation. From one fixed state, cast Faerie Fire, then draw. */
+            {
+                unsigned long sd[2]; unsigned long long dr[2]; long nx[2]; int anim[2] = { 0, 2 };
+                const int saveAnim = pl->Options[OPT_ANIMATION];
+                for (int r = 0; r < 2; ++r) {
+                    dark();
+                    Monster *a = mk(KX, KY - 1), *b = mk(KX, KY + 1);
+                    (void)a; (void)b;
+                    relight();
+                    init_genrand(7770006UL);
+                    pl->Options[OPT_ANIMATION] = (int8)anim[r];
+                    castAt(ff, KX, KY);
+                    RngPosition(&sd[r], &dr[r]);
+                    nx[r] = random(30000);
+                    pl->Options[OPT_ANIMATION] = (int8)saveAnim;
+                }
+                Error("EFFECT_LIGHT: FF9DRAW normal seed %lu draws %llu next %ld; none seed %lu draws %llu next %ld", sd[0], dr[0], nx[0], sd[1], dr[1], nx[1]);
+                verdict("FF9", sd[0] == sd[1] && dr[0] == dr[1] && nx[0] == nx[1],
+                    "Faerie Fire on two kobolds from one fixed stream state: animation Normal draws %llu next %ld, animation None draws %llu next %ld (need equal)", dr[0], nx[0], dr[1], nx[1]);
+            }
+            /* FF11..FF13: the glyph and background a limned creature's square is painted with (LightLimnAt, the function the SDL paint path reads).
+               The glyph is the glow color at full value times the glow's flicker (0.65..1.0 of the color); the background tint is at least 40 on its
+               brightest channel at the dimmest flicker (the Faerie Fire target flash, which the owner saw plainly, paints a background of about 12). */
+            {
+                dark();
+                Monster *lk = mk(KX, KY);
+                relight();
+                castAt(ff, KX, KY);
+                int w[2]; const int nw = words(w, 2);
+                int ok = nw == 1 && w[0] >= 0 && w[0] <= 4 && lk->HasEffStati(ILLUMINATED, ff);
+                int nOut = 0, nDistinct = 0, prevG = -1, minBg = 999, maxBg = 0, nTick = 0, nOn = 0;
+                for (int t = 0; ok && t <= 3000; t += 100) {
+                    LightTick((uint32)t);
+                    LightRGB g, b;
+                    ++nTick;
+                    if (!LightLimnAt((int16)lk->x, (int16)lk->y, g, b)) continue;
+                    ++nOn;
+                    const Hue &o = hues[w[0]];
+                    const int oc[3] = { o.r, o.g, o.b }, gc[3] = { g.r, g.g, g.b };
+                    for (int c = 0; c < 3; ++c)
+                        if (gc[c] < oc[c] * 65 / 100 - 1 || gc[c] > oc[c]) ++nOut;
+                    const int gs = g.r + g.g + g.b;
+                    if (gs != prevG) ++nDistinct;
+                    prevG = gs;
+                    const int bm = b.r > b.g ? (b.r > b.b ? b.r : b.b) : (b.g > b.b ? b.g : b.b);
+                    if (bm < minBg) minBg = bm;
+                    if (bm > maxBg) maxBg = bm;
+                }
+                verdict("FF11", ok && nOn == nTick && nOut == 0 && nDistinct >= 2,
+                    "limned kobold (%s): over %d ticks the glyph color was in %d of %d (need all), outside 0.65..1.0 of the color on %d channels (need 0), and changed %d times (need 2 or more)",
+                    ok ? hues[w[0]].name : "none", nTick, nOn, nTick, nOut, nDistinct);
+                verdict("FF12", ok && nOn == nTick && minBg >= 40,
+                    "background tint of the limned square: brightest channel %d..%d over the ticks (need at least 40)", minBg == 999 ? 0 : minBg, maxBg);
+                LightRGB g, b;
+                const bool nb = LightLimnAt((int16)(lk->x + 1), (int16)lk->y, g, b) || LightLimnAt((int16)lk->x, (int16)(lk->y - 1), g, b);
+                lk->RemoveEffStati(ff);
+                relight();
+                const bool gone = !LightLimnAt((int16)lk->x, (int16)lk->y, g, b);
+                verdict("FF13", ok && !nb && gone,
+                    "a neighbor square is limned %d (need 0); after the status ends the square is limned %d (need 0)", nb ? 1 : 0, gone ? 0 : 1);
+            }
+
+            pl->Options[OPT_AUTOMORE] = wasMore;
+        }
+    }
+
     LightFlashClearAll();
+    verdict("FF10", LightFlashCount() == 0, "after the probe the flash count is %d (need 0)", (int)LightFlashCount());
     BuildDark(mp, pl, floor, wall);
     pl->Options[OPT_ANIMATION] = wasAnim;
     theGame->PlayMode = wasInPlay;

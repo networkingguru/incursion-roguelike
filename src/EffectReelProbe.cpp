@@ -17,7 +17,16 @@
 extern int16 Silence;
 extern Trap *SkullTrapPlace(Player *pl, Map *mp, rID trapR, rID skull, rID skullSpell, int x, int y);
 
+extern void (*PutGlyphProbeHook)(int16 x, int16 y, bool remembered, uint16 vis);
+
 namespace {
+/* inc-jw0hw: the paint decision TextTerm::PutGlyph made for the three kobold squares in the last Refresh: -1 not painted through the light, 0 lit, 1 remembered. */
+int gPaintRem[3] = { -1, -1, -1 };
+int16 gPaintX[3], gPaintY[3];
+void PaintHook(int16 x, int16 y, bool remembered, uint16) {
+    for (int k = 0; k < 3; ++k)
+        if (x == gPaintX[k] && y == gPaintY[k]) gPaintRem[k] = remembered ? 1 : 0;
+}
 
 // no-family
 const int PX = 5, PY = 17;     /* the player's square in every clip: west end of the room, middle row */
@@ -246,9 +255,9 @@ void EffectReelProbe(Player *pl) {
         LightFlashClearAll();
         pl->mHP = pl->cHP = 30000;      /* the player survives every clip */
         pl->cFP = wasFP;                /* an effect that costs fatigue asks nothing */
-        Monster *mid = NULL;
+        Monster *mid = NULL, *ks[3] = { NULL, NULL, NULL };
         for (int k = -1; k <= 1; ++k) {
-            Monster *mn = new Monster(kobold);
+            Monster *mn = new Monster(kobold); ks[k + 1] = mn;
             mn->PlaceAt(mp, AIMX, PY + 2 * k, true);
             mn->Initialize(true);
             if (k == 0) mid = mn;
@@ -336,9 +345,30 @@ void EffectReelProbe(Player *pl) {
         }
         pl->mHP = pl->cHP = 30000;
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        for (int k = 0; k < 3; ++k) { gPaintX[k] = ks[k]->x; gPaintY[k] = ks[k]->y; gPaintRem[k] = -1; }
+        PutGlyphProbeHook = PaintHook;
         Refresh(pl);
+        PutGlyphProbeHook = NULL;
         pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
-        pl->MyTerm->StopWatch(en.kind[0] == 'a' ? 2000 : 700);
+        /* inc-jw0hw (Phase 4h): a clip whose effect leaves creatures glowing holds 2 s, as an aura does, so the glow flickers on the recording. */
+        bool leavesGlow = te->ef.eval == EA_INFLICT && te->ef.xval == ILLUMINATED;   /* the first component is te->ef; Vals(1) on are the later ones */
+        for (int8 v = 1; te->Vals(v); ++v)
+            if (te->Vals(v)->eval == EA_INFLICT && te->Vals(v)->xval == ILLUMINATED) leavesGlow = true;
+        auto glowLog = [&](const char *when) {
+            if (!leavesGlow) return;
+            for (int k = 0; k < 3; ++k) {
+                LightRGB c = { 0, 0, 0 }; const bool got = LightAt(ks[k]->x, ks[k]->y, c);
+                Status *st = ks[k]->GetStati(ILLUMINATED);
+                Error("REEL_GLOW %s kobold %d stati %d val %d light %d,%d,%d (%d) lit %d seen %d level %d painted-remembered %d", when, k, st ? 1 : 0, st ? (int)st->Val : -1,
+                    (int)c.r, (int)c.g, (int)c.b, got ? 1 : 0, LightLitAt(ks[k]->x, ks[k]->y) ? 1 : 0,
+                    (mp->At(ks[k]->x, ks[k]->y).Visibility & VI_VISIBLE) ? 1 : 0, (int)LightLevelAt(ks[k]->x, ks[k]->y), gPaintRem[k]);
+            }
+        };
+        glowLog("after-cast");
+        const int idleMs = en.kind[0] == 'a' || leavesGlow ? 2000 : 700;
+        Error("REEL_IDLE %s %d", nm, idleMs);
+        pl->MyTerm->StopWatch(idleMs);
+        glowLog("after-idle");
     }
     Error("REEL_DONE %d", count);
 

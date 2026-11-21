@@ -2077,6 +2077,7 @@ AI_PSIONIC Effect "Energy Containment" : EA_INFLICT
       of a <9>faerie fire<1> spell for one round per point of
       damage so absorbed.";
     On Event META(EVICTIM(EV_DAMAGE)) {
+      int16 glowCol;
       if (e.DType == AD_FIRE || e.DType == AD_ELEC ||
           e.DType == AD_SONI || e.DType == AD_MAGC)
         {
@@ -2092,9 +2093,15 @@ AI_PSIONIC Effect "Energy Containment" : EA_INFLICT
             EVictim->SetEffStatiDur(ILLUMINATED,$"Energy Containment;glow",
               EVictim->GetEffStatiDur(ILLUMINATED,$"Energy Containment;glow") +
                 min(20,e.vDmg));
-          else
-            EVictim->GainTempStati(ILLUMINATED,NULL_OBJ,min(20,e.vDmg),SS_MISC,0,0,
+          else {
+            /* inc-jw0hw: the glow takes the light color of the absorbed energy. */
+            glowCol = COL_MAGIC;
+            if (e.DType == AD_FIRE) glowCol = COL_FIRE;
+            else if (e.DType == AD_ELEC) glowCol = COL_ELEC;
+            else if (e.DType == AD_SONI) glowCol = COL_SONIC;
+            EVictim->GainTempStati(ILLUMINATED,NULL_OBJ,min(20,e.vDmg),SS_MISC,glowCol,0,
                   $"Energy Containment;glow");
+          }
           if (e.vDmg <= 20)
             return DONE;
           else

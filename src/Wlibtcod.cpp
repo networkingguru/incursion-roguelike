@@ -1254,6 +1254,14 @@ void libtcodTerm::LitPaint(int32 idx) {
 	if (!lc.remembered && LightEffectGlyphAt(lc.mx, lc.my, eg))
 		fg = eg;
 	LightRGB bg = LightGlow(lc.bi, L);
+	/* inc-jw0hw: a limned creature's glyph takes its glow color, over a tinted background. */
+	LightRGB limnFg, limnBg;
+	if (!lc.remembered && LightLimnAt(lc.mx, lc.my, limnFg, limnBg)) {
+		fg = limnFg;
+		if (limnBg.r > bg.r) bg.r = limnBg.r;
+		if (limnBg.g > bg.g) bg.g = limnBg.g;
+		if (limnBg.b > bg.b) bg.b = limnBg.b;
+	}
 	LightRGB fogc;
 	if (LightFogAt(lc.mx, lc.my, fogc))
 		{ fg = LightFogMix(fg, fogc, L); bg = LightFogMix(bg, fogc, L); }

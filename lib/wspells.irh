@@ -2085,7 +2085,7 @@ Wizard Spell "Glitterdust" : EA_INFLICT
     Purpose: EP_CURSE | AIM_AT_SELF; Flags: EF_CASTER_IMMUNE, EF_DROUND;
     aval: AR_BALL; lval: 1; cval: COL_RAINBOW; xval: BLIND; }
   and EA_INFLICT {
-    aval: AR_BALL; lval: 1; xval: ILLUMINATED; pval: +1; 
+    aval: AR_BALL; lval: 1; xval: ILLUMINATED; yval: COL_SUNYELLOW; pval: +1; 
     On Event EV_MAGIC_HIT {
       EVictim->RemoveStati(INVIS); 
       EVictim->Reveal(false); 
@@ -7469,7 +7469,7 @@ Wizard Spell "Mooncloak" : EA_INFLICT
       rounds -- literally, they are moonstruck. The bolt hits
       a single creature and requires a ranged attack roll to
       successfully impact.";
-    xval: ILLUMINATED; pval +1;
+    xval: ILLUMINATED; yval: COL_SILVERY; pval +1;
     Flags: EF_ACTIVATE3, EF_ACTIVATE2, EF_ONCEONLY, EF_ATTACK, EF_PROTECTS_ITEMS;
   }
 and EA_BLAST

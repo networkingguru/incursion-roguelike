@@ -3933,6 +3933,13 @@ typedef signed int        hObj;
 #define COL_DARKRED  31 /* inc-jw0hw: Dance of Ruin */
 #define COL_SUNYELLOW 32 /* inc-jw0hw: Circlet of Blasting, warm sunlight */
 // end family: col
+// family: limn stored ordinal i16
+
+/* inc-jw0hw: light colors of an ILLUMINATED status (its Val) that no COL_* or
+   palette color gives. Val also takes a COL_* row or a palette color. */
+#define LIMN_VIOLET  64
+#define LIMN_AZURE   65
+// end family: limn
 // family: fi stored bits u32 field-of Map.Fields.Element.FType
 
 /* Field types are sorted in order of glyph

@@ -114,6 +114,26 @@
 # fact: NS12 the gameplay random stream -- each cast runs in its own process (INCURSION_NS12_ANIM), from init_genrand(7770005) just before the demon's setup and cast; the check compares the stream position (seed, draws taken), the next draw, and the kobold's hit points after the gather and blast between an animation-Normal run and an animation-None run, whatever the values are
 # fact: NS12 the player's first sight of the demon and the kobold -- the probe marks both MS_SCRUTINIZED, so the player's first-sight roll (Player::ScrutinizeMon, 2 gameplay draws, measured 160 against 162 draws with it unmarked) does not fire when the pattern's light shows the demon in the dark room and animation None shows nothing; light that reveals a creature starts that roll, which is seeing and not drawing
 # fact: NS12 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
+# fact: FF1 which color a cast picks -- random(5) in the spell's script, seeded; the probe reads the color word from the hit message ("limned in flickering <word> light") and passes for any word, over 12 casts; the oracle table (silver, violet, amber, azure, crimson) is the probe's own
+# fact: FF1 that the player sees the kobold, so the hit message prints -- the probe gives the player infravision 12 for the cast only (then zeroes it), and the kobold is warm-blooded; no roll decides it
+# fact: FF1 two kobolds' squares -- fixed offsets (KX, PY-1) and (KX, PY+1) from the player's fixed square, KX = PX+8, inside the globe's radius 4; the probe aims at (KX, PY)
+# fact: FF2 flicker -- LightTick at the clock values the probe passes (0..3000 ms in steps of 100), never the wall clock; each source's noise is a hash of its square, so no random draw
+# fact: FF3 the move -- the probe moves the kobold three squares south with Thing::Move; no roll decides it
+# fact: FF4 the neighbors -- the eight squares around the kobold in a dark room; the probe zeroes the ambient light and the player's light ranges
+# fact: FF5 the kill -- ThrowDmg of 10000 blunt damage on a kobold with 5000 hit points; no roll decides that it dies
+# fact: FF6a Glitterdust's save -- the blindness part allows a Fortitude save, and a kobold that makes it skips the glow part too; the probe casts on fresh kobolds until the glow stands (at most 40; a kobold makes the save with chance at most 0.6, so 40 all made has chance below 1e-8)
+# fact: FF6b Mooncloak's save and fatigue -- the probe refills the player's fatigue before each cast and casts until the glow stands (at most 40, as FF6a)
+# fact: FF6c whether the power absorbs a blast -- the script rolls 1d20 + Intelligence modifier against 10; the probe repeats the fire damage until the glow stands (at most 60; one try fails with chance at most 0.5, so 60 all failing has chance below 1e-18)
+# fact: FF6d the second blast -- the same retry with electricity; the check reads only that the duration grew and the color stayed
+# fact: FF6e fey trapping -- the probe grants the status with the same call src/Fight.cpp makes (ILLUMINATED, SS_ATTK, no value, no effect); the real path needs a fey-trapping weapon's hit roll, which the check does not drive
+# fact: FF7 that the status value is saved -- the check greps inc/SaveLegacyTags.h for the StatiCollection.Status "val" row and src/SaveV1.cpp for its round-trip comparison of Val; no game state
+# fact: FF8 the fallback -- the probe grants the status with value 0, once with Faerie Fire's effect (cval SKYBLUE) and once with none; no roll decides it
+# fact: FF9 the gameplay random stream -- init_genrand(7770006) just before each of two casts of Faerie Fire on two kobolds (animation Normal, then animation None, in one process), then the stream position and the next draw are compared; both kobolds are marked MS_SCRUTINIZED so the player's first-sight roll (as NS12) does not fire
+# fact: FF11 the glyph color's flicker -- LightTick at the clock values the probe passes (0..3000 ms), never the wall clock; the color word comes from the hit message, so the check passes for any word
+# fact: FF12 the background tint -- computed from the glow color and the current flicker by LightLimnAt; the same message-read word as FF11, no roll decides it
+# fact: FF13 neighbor and removal -- the squares beside the kobold and the status removal by the probe; no roll decides them
+# fact: FF10 the flash count -- LightFlashCount after the probe; no roll decides it
+# Cases FF1-FF10 add: every ILLUMINATED creature (Faerie Fire in the color its message names, Glitterdust amber, Mooncloak silver, Energy Containment the absorbed energy's color, a fey-trapping weapon silver) lights its own square only, gently flickering, moving with it and ending with the status; a value of 0 takes the effect's cval, else silver; and no gameplay roll moves.
 # Cases NS1-NS12 add (NS12 in separate processes): Nightmare Smite's gather draws a standing rainbow pattern of changing glyphs and light on the demon and the 8 squares around it, for as long as the gather stands, across turns, following the demon, only on squares the player sees; the pattern stops before the blast, when the gather ends early, when the demon goes, and never starts under animation None; the blast lights on the rainbow ramp, each square in its own hue and cooling, and flashes the creatures it strikes; and no gameplay roll moves.
 # Cases DR1-DR9 add: Dance of Ruin's dark-red drops fall onto each square the player sees, each square lights on the dark ramp as its drop lands, the struck flash runs last, the cval beats the fire damage type, and no gameplay roll moves.
 # Cases ST1-ST14 add: Skull Trap's skull glows crimson after its scream, rising from dim to full over 1000 ms and holding at its peak; its explosion then plays a fire wave and a necromantic wave of glyphs, rings moving out 10 ms apiece, each struck creature flashing as each wave reaches it; a plain globe still runs its struck flash; no old highlight, no light when unseen or under animation None, and no gameplay roll moved.
@@ -256,6 +276,11 @@ case "$last" in
             echo "EFFECT_LIGHT: NS12 FAIL Nightmare Smite stream position after the blast and next draw: animation Normal $NS12_N1, animation None $NS12_NONE (need equal)"
             exit 1
         fi
+        if ! grep -q '"StatiCollection.Status", 2, "val"' inc/SaveLegacyTags.h || ! grep -q 'sa->Val != sb->Val' src/SaveV1.cpp; then
+            echo "EFFECT_LIGHT: FF7 FAIL the status value (an ILLUMINATED glow color) is not a saved Status field"
+            exit 1
+        fi
+        echo "EFFECT_LIGHT: FF7 PASS the status value is a saved Status field (inc/SaveLegacyTags.h row val; src/SaveV1.cpp compares Val on a round trip), so the glow color survives a save"
         echo "EFFECT_LIGHT: NS12 PASS Nightmare Smite stream position after the blast and next draw: animation Normal (twice) $NS12_N1, animation None $NS12_NONE"
         echo "EFFECT_LIGHT: DR9 PASS Dance of Ruin stream position when the rain's light ends and next draw: animation Normal (twice) $DR9_N1, animation None $DR9_NONE"
         echo "EFFECT_LIGHT: ST7 PASS Skull Trap stream position at the end of the script's light and next draw: animation Normal (twice) $ST7_N1, animation None $ST7_NONE"

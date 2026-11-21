@@ -132,11 +132,12 @@ void Thing::GainTempStati(int16 n, Thing *t, int16 Duration, int8 Cause, int16 V
 
     hObj _h = t ? t->myHandle : 0;
 
-    /* enchantment durations stack */
+    /* enchantment durations stack. inc-jw0hw: an ILLUMINATED status's Val
+       is its light color, not part of its identity, so a recast stacks. */
     if (Cause == SS_ENCH) {
         StatiIterNature(this,n)
             if (S->Source == SS_ENCH &&
-                S->Val == Val &&
+                (S->Val == Val || n == ILLUMINATED) &&
                 S->Mag == Mag &&
                 S->h == _h &&
                 S->eID == eID &&
