@@ -2555,9 +2555,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         break;
       }
 
-    // draw something on this square? 
-    if (m.At(cx/2,cy/2).Visibility & VI_DEFINED)
-      vis = true;
+    /* upstream: a bolt or beam glyph draws only where the player has line
+       of sight, as light does, dark or not. `vis = true` at the top never
+       closed, so every square drew. Original source, every platform.
+       Observed via tools/check_unseen_spell_glyphs.sh; inc-9r189, not sent. */
+    vis = PossiblyPause(T1,cx/2,cy/2,0);
 
 
     if (vis) {
@@ -2567,6 +2569,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       else 
         colour = BlastColourSets[Color * 4];
       o.AddGlyph(cx/2,cy/2, g | GLYPH_FORE(colour));
+      if (GlyphDrawHook) GlyphDrawHook(5,cx/2,cy/2); /* inc-9r189 probe */
       o.ShowGlyphs();
       PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {
