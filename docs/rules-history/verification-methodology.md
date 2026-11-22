@@ -186,3 +186,7 @@ On the exemption: "do not make me name the file. You ask 'is <FOO> exempt', and 
 The proposal then put the exemption question straight after a refusal. Brian: "2 shoudl NOT FUCKING OCCUR unless you absolutely cannot find a way to resolve the hole AND you have already asked me and *I* ALSO cannot think of a way to close it. It shoudl be EXCEEDINGLY rare."
 
 On forged passes: "Explicit cheats are not in scope; if you do that, it will become apparent when things break that the test was supposed to catch, and then I will get medieval abotu the tests". On a fixed list of "none" wordings versus free text: "free text is fine. Again, if a agent cheats, we will find out fiarly quickly and can ratchet the test down".
+
+## watch-every-visual-before-brian-reviews
+
+Ruled 2026-11-22 during the inc-jw0hw effect-reel triage. Clip after clip showed nothing because the reel's scene lacked what the effect acts on (Undeath to Death with no undead, Animate Objects with no items, Mud Spray judged from one frame, venoms with nothing to draw). Brian: "I need you to verify that the goddamn implementers are putting enough shit in the reel dso the effect cna be seen. YOU should be looking at each of these fuckign things befiore I am ever asked". Then: "Add it to the rules, but this is a geeneric rule that applies to any visual effect, including UIs and maps and whatnot".
