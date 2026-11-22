@@ -185,6 +185,7 @@ INCURSION_SNEAK_PROBE	pre-registry	-
 INCURSION_SOAK_TORCH_PROBE	pre-registry	-
 INCURSION_SPECIAL_PROBE	pre-registry	-
 INCURSION_SPELLFLAG_PROBE	pre-registry	-
+INCURSION_SQUARE_BOLT_PROBE	inc-s87gl	bolt aimed at a square or cast in a direction: flight glyphs and per-square effect (tools/check_square_bolt_flight.sh)
 INCURSION_STACK_PROBE	pre-registry	-
 INCURSION_STAIR_PROBE	pre-registry	-
 INCURSION_STAIR_WARN_PROBE	pre-registry	-
