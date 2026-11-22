@@ -557,6 +557,10 @@ void Game::Play() {
        UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). */
     extern void UnseenGlyphProbe(Player *pl);
     UnseenGlyphProbe(pp);
+    /* inc-s87gl: off unless INCURSION_SQUARE_BOLT_PROBE is set. See
+       SquareBoltProbe (src/SquareBoltProbe.cpp). */
+    extern void SquareBoltProbe(Player *pl);
+    SquareBoltProbe(pp);
     extern void TerraformEdgeProbe(Player *pl);
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
