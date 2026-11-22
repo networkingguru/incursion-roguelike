@@ -39,6 +39,7 @@ void NoteXY(int16 x, int16 y) {
 } /* namespace */
 
 void SquareBoltProbe(Player *pl) {
+    /* inc-s87gl: the probe runs only when this variable is set. */
     if (!getenv("INCURSION_SQUARE_BOLT_PROBE"))
         return;
     if (!pl || !pl->m) {
