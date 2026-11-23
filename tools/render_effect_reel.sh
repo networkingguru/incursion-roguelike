@@ -5,13 +5,16 @@
 # through tools/headless.sh, once with INCURSION_EFFECT_LIGHT_OFF=1, joins each
 # clip's two frame sets into one side-by-side mp4 (tools/frames_to_video.sh
 # --pair), and writes logs/effect-reel/<date>/index.html with a video per clip.
+#   tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>]
 # inc-as123: after the effects come 25 weapon clips (a held light, a hit flash, a flight light), keyed "Weapon held|hit|flight ..." in the table;
 # --only Weapons renders just those.
-#   tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames]
 #   tools/render_effect_reel.sh --selftest   (no build: fabricated BMP frames prove the map-area identical-frames check)
 # A clip whose light-on frames have an identical map area (sidebar, messages, status line ignored) fails the run, unless its row in
 # tools/fixtures/effect-light-table.tsv (matched by the REEL_KEY line the probe logs: the declared name
 # with its ;tag) says shows_nothing = yes. The run still writes the index, then exits 1.
+# Output dir: --out <dir> when given. Else, in a bead worktree (the git branch matches ^inc-[a-z0-9.]+$ and the tree is not
+# ~/Scripts/Incursion), ~/Scripts/Incursion/docs/evidence/<bead>/reel-<stamp>/ in the shared checkout, because
+# tools/finish_bead.sh destroys the worktree and its logs/. Elsewhere logs/effect-reel/<stamp>/ (inc-epzc0).
 # Each run's frames/ tree is 1-4 GB (--only) to ~55 GB (full reel). The script copies each run's errors.log to
 # $OUT/errors-{off,on}.log, then deletes both run dirs (also on an early error exit). --keep-frames skips the deletion.
 # Needs ./incursion (./build_macos.sh), ./incursion-headless
@@ -33,13 +36,15 @@ FIXTURE=xsummon-priest-seed5-opt0822
 ONLY=""
 SELFTEST=0
 KEEP_FRAMES=0
+OUT_ARG=""
 TABLE="${INCURSION_LIGHT_TABLE:-tools/fixtures/effect-light-table.tsv}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --only) ONLY="${2:-}"; shift 2 ;;
         --selftest) SELFTEST=1; shift ;;
         --keep-frames) KEEP_FRAMES=1; shift ;;
-        *) echo "usage: tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] | --selftest" >&2; exit 2 ;;
+        --out) OUT_ARG="${2:-}"; [ -n "$OUT_ARG" ] || { echo "usage: --out needs a directory" >&2; exit 2; }; shift 2 ;;
+        *) echo "usage: tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>] | --selftest" >&2; exit 2 ;;
     esac
 done
 
@@ -204,7 +209,16 @@ LOAD="$(tools/fixture_cache.sh "$FIXTURE")" || { echo "ERROR: tools/fixture_cach
 
 START=$(date +%s)
 STAMP="$(date +%Y%m%d-%H%M%S)"
-OUT="$ROOT/logs/effect-reel/$STAMP"
+SHARED="$HOME/Scripts/Incursion"
+BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+if [ -n "$OUT_ARG" ]; then
+    OUT="$OUT_ARG"
+elif [[ "$BRANCH" =~ ^inc-[a-z0-9.]+$ ]] && [ "$ROOT" != "$SHARED" ]; then
+    OUT="$SHARED/docs/evidence/$BRANCH/reel-$STAMP"
+else
+    OUT="$ROOT/logs/effect-reel/$STAMP"
+fi
+echo "reel output: $OUT"
 mkdir -p "$OUT"
 OFF_RUN=""; ON_RUN=""
 trap 'cleanup_runs "$OFF_RUN" "$ON_RUN"' EXIT

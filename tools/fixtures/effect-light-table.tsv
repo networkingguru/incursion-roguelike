@@ -284,6 +284,26 @@ Wall of Fog	UNLIT	-	no	Phase 4b: a wall joins the reel to show its formation; no
 Wall of Ice	UNLIT	-	no	Phase 4b: a wall joins the reel to show its formation; no light ruling, the engine's decision (lib/wspells.irh:4006)
 Wall of Stone	UNLIT	-	no	Phase 4b: a wall joins the reel to show its formation; no light ruling, the engine's decision (lib/wspells.irh:7559)
 Wind Wall	UNLIT	-	no	Phase 4b: a wall joins the reel to show its formation; no light ruling, the engine's decision (lib/wspells.irh:2139)
+Breath Weapon (Acid) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Blindness) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Blunt Damage) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Cold) cone	LIT	cold	no	inc-epzc0 cone breath
+Breath Weapon (Disintegration) cone	LIT	disint	no	inc-epzc0 cone breath
+Breath Weapon (Fire) cone	LIT	fire	no	inc-epzc0 cone breath
+Breath Weapon (Knockback) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Light Damage) cone	LIT	light	no	inc-epzc0 cone breath
+Breath Weapon (Lightning) cone	LIT	elec	no	inc-epzc0 cone breath
+Breath Weapon (Paralysis) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Poison) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Pure Magic) cone	LIT	magic	no	inc-epzc0 cone breath
+Breath Weapon (Slashing Damage) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Sleep) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Slowing) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Sonic Damage) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Special) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Strength Damage) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Stunning) cone	UNLIT	-	no	inc-epzc0 cone breath
+Breath Weapon (Tripping) cone	UNLIT	-	no	inc-epzc0 cone breath
 Weapon held flaming long sword	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
 Weapon held flame blade	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
 Weapon held produced flame	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf

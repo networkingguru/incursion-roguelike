@@ -281,6 +281,8 @@ Monster "ghour" : MA_DEMON, MA_GIANT
     "cloud of weakening gas";
   Desc: "A ghour is a 20-foot-tall humanoid creature that strongly
   resembles an oversized ogre."; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "palrethee" : MA_DEMON
@@ -948,6 +950,8 @@ Monster "wastrilith" : MA_DEMON, MA_AQUATIC
       __Wastriliths have diamond-shaped upper bodies with insectile heads
       and two tentacles in place of arms; their lower body tapers off into
       a long, prehensile tail like an eel's.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "chasme" : MA_DEMON
@@ -2022,6 +2026,8 @@ Monster "hell hound" : MA_OUTSIDER, MA_DOG, MA_DEVIL
     Feats: SK_SPOT, SK_HIDE, SK_MOVE_SIL,
            FT_RUN, FT_SWARM;
     Flags: M_LAWFUL, M_EVIL, M_NO_CORPSE, M_NOHANDS, M_FIRE;
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "yeth hound" : MA_OUTSIDER, MA_DOG, MA_DEVIL
@@ -2459,6 +2465,8 @@ Monster "fire mephit" : MA_OUTSIDER, MA_FIRE, MA_IMPKIN
       weaker than them.\n
       __Fire mephits look like red-skinned, puckish devils, and
       have a malicious sense of humour to suit.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "ice mephit" : MA_OUTSIDER, MA_COLD, MA_IMPKIN
@@ -2488,6 +2496,8 @@ Monster "ice mephit" : MA_OUTSIDER, MA_COLD, MA_IMPKIN
       regal manners. Aloof and distant, they remember petty
       vendettas for centuries.";
     On Event MSG_BLASTNAME "frost breath";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "water mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2517,7 +2527,9 @@ Monster "water mephit" : MA_OUTSIDER, MA_IMPKIN
       __Resembling tiny fish people, water mephits have cheerful
       (if callous) senses of humour; their enthusiasm gets on the
       nerves of everyone around them.";
-    On Event MSG_BLASTNAME "jet of water";
+    On Event MSG_BLASTNAME "cone of water";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "dust mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2547,6 +2559,8 @@ Monster "dust mephit" : MA_OUTSIDER, MA_IMPKIN
       mephits speak slowly and take a morbid, nihilistic attitude 
       to life.";
     On Event MSG_BLASTNAME "cloud of dust";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }  
   
 Monster "ooze mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2576,6 +2590,8 @@ Monster "ooze mephit" : MA_OUTSIDER, MA_IMPKIN
       skin, giving off an offensive odor and delighting in 
       shocking everyone around them with their perversity.";
     On Event MSG_BLASTNAME "glob of slime";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }  
 
 Monster "earth mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2603,6 +2619,8 @@ Monster "earth mephit" : MA_OUTSIDER, MA_IMPKIN
       __Stocky and broad-shouldered, earth mephits have a stubborn
       and petty cast to their personalities.";
     On Event MSG_BLASTNAME "spray of tiny stones";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }    
 
 Monster "salt mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2631,6 +2649,8 @@ Monster "salt mephit" : MA_OUTSIDER, MA_IMPKIN
       __Salt mephits appear as albino humanoids with bleary eyes
       and a bored and apathetic demeanour.";
     On Event MSG_BLASTNAME "spray of salt crystals";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
   
 Effect "dehydrate" : EA_DRAIN
@@ -2674,6 +2694,8 @@ Monster "air mephit" : MA_OUTSIDER, MA_IMPKIN
       cross between a pixie and an imp. Their hyperactive
       mindset irritates all who must spend time with them.";
     On Event MSG_BLASTNAME "blast of compressed air";  
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }  
   
 Monster "fog mephit" : MA_OUTSIDER, MA_IMPKIN
@@ -2701,6 +2723,8 @@ Monster "fog mephit" : MA_OUTSIDER, MA_IMPKIN
       __Fog mephits are plump and ponderous, slow to act and
       easily distracted by anything getting in their way.";
     On Event MSG_BLASTNAME "cone of scalding steam";  
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }  
   
 /*** GENIES ***/
@@ -3496,6 +3520,8 @@ Monster "vaporighu" : MA_OUTSIDER, MA_HOMINID
       intelligent or civilized conduct. They are solitary and have little
       or no society, living to prey on those weaker than them and enjoy
       the sadistic pleasures of the Lower Planes.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
   
 0 Effect "Summon Night Hag" : EA_SUMMON

@@ -6267,7 +6267,7 @@ Wizard / Scroll  Spell "Emotion" : EA_GENERIC
 
 Wizard / Scroll Spell "Fear" : EA_GENERIC
   { SC_ENC; Base: SP_MEDIUM; Cost: 7; Level: 4; sval: WILL; 
-    qval: Q_DIR; Flags: EF_MENTAL, EF_HARDSAVE4, EF_FEAR, EF_DROUND; aval: AR_BEAM;
+    qval: Q_DIR; Flags: EF_MENTAL, EF_HARDSAVE4, EF_FEAR, EF_DROUND; aval: AR_CONE;
     Purpose: EP_CURSE (VS_MENTAL); lval: 8; cval: PURPLE;
     On Event EV_MAGIC_HIT {
       hObj h;
@@ -6383,9 +6383,9 @@ Wizard  Spell "Force Missiles" : EA_BLAST
 Wizard / Scroll Spell "Shout" : EA_BLAST
   { SC_EVO; Base: SP_EASY; Cost: 12; Level: 4; lval: 5; cval: COL_SONIC; 
     qval: Q_DIR; xval: AD_SONI; sval: FORT partial; Flags: EF_SOUND;
-    pval: (LEVEL_1PER2)d10; aval: AR_BEAM; Purpose: EP_ATTACK; }
+    pval: (LEVEL_1PER2)d10; aval: AR_CONE; Purpose: EP_ATTACK; }
 and EA_INFLICT
-  { xval: STUNNED; sval: WILL; aval: AR_BEAM; lval: 5; 
+  { xval: STUNNED; sval: WILL; aval: AR_CONE; lval: 5; 
     Desc: "Amplifies a shout into a shattering cone of sound that
       inflicts 1d10 points of damage for every 2 caster levels (Fortitude 
       save for half) and stuns anyone who fails a Will save."; 
@@ -7888,7 +7888,7 @@ Wizard  Spell "Fire Lotus" : EA_BLAST
   }
 
 Wizard / Scroll Spell "Cone of Cold" : EA_BLAST
-  { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 10; Level: 5; aval: AR_BEAM; qval: Q_DIR;
+  { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 10; Level: 5; aval: AR_CONE; qval: Q_DIR;
     xval: AD_COLD; lval: 7; sval: REF partial; pval: (LEVEL_SCALED)d8;
     Purpose: EP_ATTACK (VS_COLD); cval: AZURE; 
 		On Event MSG_BLASTNAME "cone of cold"; Flags: EF_COMMON, EF_NO_GLOW;

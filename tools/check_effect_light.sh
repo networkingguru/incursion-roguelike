@@ -16,6 +16,10 @@
 # fact: a square's age -- the flash's own clock, set by the probe (LightFlashSetClock) or the sum of the ball's ring waits; never the wall clock
 # fact: the ruled fire ramp -- the probe's own table (FireRampAt), from logs/ramp-mock/mock.py
 # fact: messages a cast prints -- the same seeded run twice, flash on and flash off; the probe records MsgHistory
+# fact: CF/CC/CU cone aim -- a direction (east) from the player's fixed square; the probe builds the dark room and, for CF6, a wall column at PX+4
+# fact: CF/CC/CU cone effects -- the Dragon tattoo (lval 6, cval RED), Ice;wand (cval SKYBLUE) and Cone of Cold, read by name from the data; the probe makes the wand with 50 charges
+# fact: CF/CC/CU struck squares -- no roll decides them (as check_cone_shape.sh); the probe sets the player's hit points to 500 so no death ends the cast
+# fact: CF/CC flicker -- the flash's own noise seed, read at fixed LightTick times 0..3000 ms, never the wall clock
 # fact: T1 kobold squares -- fixed offsets (0,-2) and (0,+2) from the aim square (PX+5, inside the fireball's own range); the probe verifies both are struck
 # fact: T2 the touch lands or misses -- the probe forces the attack roll (LOFSetForcedRoll 20 for a hit, 1 for a miss)
 # fact: T2 the touch spell and its hand charge -- the probe gives the player the TOUCH_ATTACK status for Chill Touch

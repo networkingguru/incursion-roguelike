@@ -6,6 +6,7 @@
 static EffectLight *ScriptFx = NULL;
 
 void (*EffectLightHook)(int phase) = NULL;
+void (*EffectWaitHook)(int ms) = NULL;
 void (*TargetFlashHook)(int phase) = NULL;
 void (*EffectStepHook)(int kind, int16 x, int16 y, Glyph g) = NULL;
 void (*ScriptLightTickHook)(float clockMs) = NULL;
@@ -266,6 +267,7 @@ void EffectLight::Rise(int16 ms) {
 void EffectLight::Wait(int16 ms) {
   if (ms <= 0)
     return;
+  if (EffectWaitHook) EffectWaitHook(ms);
   const int steps = id < 0 ? 1 : (ms + 32) / 33;
   int done = 0;
   for (int i = 1; i <= steps; i++) {

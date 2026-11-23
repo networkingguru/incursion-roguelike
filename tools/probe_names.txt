@@ -35,6 +35,7 @@ INCURSION_CLOAK_DMG_PROBE	pre-registry	-
 INCURSION_COMPANION_TRAP_PROBE	pre-registry	-
 INCURSION_CONCENT_MONSTER_PROBE	pre-registry	-
 INCURSION_CONCENT_PROBE	pre-registry	-
+INCURSION_CONE_PROBE	inc-epzc0	cone shape probe: quarter circle, hallway, wall, off-axis, wave, prediction, breaths, items (tools/check_cone_shape.sh)
 INCURSION_COSMETIC_BURN	pre-registry	-
 INCURSION_DAMAGE_CLASS_PROBE	pre-registry	-
 INCURSION_DEQU_FORCE_SAVE	pre-registry	-

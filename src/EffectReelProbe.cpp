@@ -56,7 +56,7 @@ const int AIMX = PX + 9;       /* the middle target; the other two stand 2 squar
 const int STUBX = AIMX + 2;    /* a wall stub for the spill to land on */
 // end no-family
 
-struct Entry { rID id; const char *kind; int dtype; char form; };   /* dtype -1: not a breath; form: the answer to Pyrotechnics' prompt, 0 for none */
+struct Entry { rID id; const char *kind; int dtype; char form; bool cone; };   /* dtype -1: not a breath; form: the answer to Pyrotechnics' prompt, 0 for none */
 
 /* inc-jw0hw: how a player's cast aims an effect. The first segment's qval says what the
    cast prompt asks for (Monster.cpp:1622-1640 is the monster form of the same test); with
@@ -883,7 +883,7 @@ void EffectReelProbe(Player *pl) {
         const char *kind;
         if (id == breath) continue;   /* once per damage type, below */
         if (IsReelKind(mod->QEff[i], &kind)) {
-            Entry e = { id, kind, -1, 0 };
+            Entry e = { id, kind, -1, 0, false };
             list.push_back(e);
         }
     }
@@ -897,7 +897,22 @@ void EffectReelProbe(Player *pl) {
             if (!seen) dts.push_back(a.DType);
         }
     for (size_t k = 0; k < dts.size(); ++k) {
-        Entry e = { breath, "breath", dts[k], 0 };
+        Entry e = { breath, "breath", dts[k], 0, false };
+        list.push_back(e);
+    }
+    /* inc-epzc0: a second clip for each damage type some monster breathes as a cone (Fight.cpp scopes AR_CONE the same way). */
+    std::vector<int> cdts;
+    for (int i = 0; i < mod->szMon; ++i)
+        for (int j = 0; j < NUM_TMON_ATTK; ++j) {
+            const TAttack &a = mod->QMon[i].Attk[j];
+            if (a.AType != A_BREA && a.AType != A_BRE2) continue;
+            if (mod->QMon[i].GetConst(a.AType == A_BREA ? BREATH_SHAPE : BREATH2_SHAPE) != (uint32)AR_CONE) continue;
+            bool seen = false;
+            for (size_t k = 0; k < cdts.size(); ++k) seen = seen || cdts[k] == a.DType;
+            if (!seen) cdts.push_back(a.DType);
+        }
+    for (size_t k = 0; k < cdts.size(); ++k) {
+        Entry e = { breath, "cone", cdts[k], 0, true };
         list.push_back(e);
     }
     /* inc-jw0hw: Pyrotechnics asks "Smoke, fireworks or explosion?" and redirects to one of
@@ -906,7 +921,7 @@ void EffectReelProbe(Player *pl) {
     if (pyro && TEFF(pyro)->ef.eval == EA_GENERIC) {
         const char formKey[3] = { 's', 'f', 'e' };
         for (int k = 0; k < 3; ++k) {
-            Entry e = { pyro, "form", -1, formKey[k] };
+            Entry e = { pyro, "form", -1, formKey[k], false };
             list.push_back(e);
         }
     }
@@ -918,7 +933,7 @@ void EffectReelProbe(Player *pl) {
             const Entry &en = list[n];
             char nm[160];
             if (en.dtype >= 0)
-                snprintf(nm, sizeof nm, "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
+                snprintf(nm, sizeof nm, en.cone ? "Breath Weapon (%s) cone" : "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
             else if (en.form)
                 snprintf(nm, sizeof nm, "Pyrotechnics (%s)", FormWord(en.form));
             else   /* the declared name keeps its ;tag, which keys a repeated name */
@@ -957,7 +972,7 @@ void EffectReelProbe(Player *pl) {
         char nm[160];
         char key[160];   /* the table's name for the clip: the declared name with its ;tag */
         if (en.dtype >= 0)
-            snprintf(nm, sizeof nm, "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
+            snprintf(nm, sizeof nm, en.cone ? "Breath Weapon (%s) cone" : "Breath Weapon (%s)", Lookup(DTypeNames, en.dtype));
         else if (en.form)
             snprintf(nm, sizeof nm, "Pyrotechnics (%s)", FormWord(en.form));
         else
@@ -1328,6 +1343,7 @@ void EffectReelProbe(Player *pl) {
             te->ef.pval.Number = 3; te->ef.pval.Sides = 6; te->ef.pval.Bonus = 0;
             te->ef.lval = 4;
             te->ef.xval = (uint8)en.dtype;
+            te->ef.aval = en.cone ? AR_CONE : AR_BREATH;   /* inc-epzc0: scoped to this clip; restored after the loop */
             xe.DType = (int8)en.dtype;
             xe.Dmg = te->ef.pval;
             xe.AType = A_BREA;
@@ -1685,6 +1701,7 @@ void EffectReelProbe(Player *pl) {
         }
         ViewLog(pl, nm, "after-idle");
     }
+    TEFF(breath)->ef.aval = AR_BREATH;   /* inc-epzc0 */
     WeaponReel(pl, mp, floor, wall, only, table, count);
     Error("REEL_DONE %d", count);
 

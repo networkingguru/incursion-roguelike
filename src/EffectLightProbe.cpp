@@ -214,6 +214,69 @@ void NegHook(int) {
     if (lit > gNegMaxLit) gNegMaxLit = lit;
 }
 
+/* Cases CF, CC (inc-epzc0): a cone's light. At the hold the hook counts, over the squares of the room, the struck squares
+   lit, the squares within 2 (dist()) of a struck one lit, the squares farther than that lit, and the squares behind a
+   wall column lit; it also ticks the flash clock to see whether the light flickers. */
+struct ConeRec {
+    bool hold, end;
+    int nStruck, nStruckLit, nStruckSeen, nStruckBehind, nSpill, nSpillLit, nFar, nFarLit, nBehind, nBehindLit;
+    int nDistinct, flashesHold, flashesEnd;
+    uint32 snap;
+    LightRGB cc;
+    char miss[160];   /* the first squares within 2 of a struck square and not lit */
+};
+ConeRec gCn;
+int gConeWallX, gConeLit, gConeHolds, gConeEnds, gConeSqX, gConeSqY;
+void ConeSample(ConeRec &r) {
+    Map *mp = gMap;
+    r.nStruck = (int)gSx.size();
+    for (size_t i = 0; i < gSx.size(); ++i) {
+        if (LightLitAt((int16)gSx[i], (int16)gSy[i])) ++r.nStruckLit;
+        if (mp->At(gSx[i], gSy[i]).Visibility & VI_VISIBLE) ++r.nStruckSeen;
+        if (gConeWallX && gSx[i] > gConeWallX) ++r.nStruckBehind;
+    }
+    for (int y = 0; y < mp->SizeY(); ++y)
+        for (int x = 0; x < mp->SizeX(); ++x) {
+            if (!InBlock(x, y) || mp->At(x, y).Solid || gStruckGrid[y * mp->SizeX() + x]) continue;
+            int cheb = 999;   /* the game's own dist() to the nearest struck square, as the light's reach measures it */
+            for (size_t i = 0; i < gSx.size(); ++i) {
+                const int d = dist(x, y, gSx[i], gSy[i]);
+                if (d < cheb) cheb = d;
+            }
+            const bool lit = LightLitAt((int16)x, (int16)y);
+            if (gConeWallX && x > gConeWallX) { ++r.nBehind; if (lit) ++r.nBehindLit; }
+            else if (cheb <= 2) {
+                ++r.nSpill;
+                if (lit) ++r.nSpillLit;
+                else if (strlen(r.miss) < 120) snprintf(r.miss + strlen(r.miss), 20, " (%d,%d)", x, y);
+            }
+            else { ++r.nFar; if (lit) ++r.nFarLit; }
+        }
+    r.flashesHold = (int)LightFlashCount();
+    r.cc.r = r.cc.g = r.cc.b = 0;
+    LightAt((int16)gConeSqX, (int16)gConeSqY, r.cc);
+    int prev = -1;
+    r.nDistinct = 0;
+    for (int t = 0; t <= 3000; t += 100) {
+        LightTick((uint32)t);
+        const int v = PeakAt(gConeSqX, gConeSqY);
+        if (v != prev) ++r.nDistinct;
+        prev = v;
+    }
+    LightTick(0);
+}
+void ConeEl(int phase) {
+    if (!gFill) return;
+    if (phase == EL_LIT) ++gConeLit;
+    else if (phase == EL_HOLD) {
+        ++gConeHolds;
+        if (!gCn.hold) { gCn.hold = true; ConeSample(gCn); }
+    } else if (phase == EL_END) {
+        ++gConeEnds;
+        if (!gCn.end) { gCn.end = true; gCn.snap = Snap(gMap); gCn.flashesEnd = (int)LightFlashCount(); }
+    }
+}
+
 /* Cases T1-T3: the target flash. The hook samples the struck squares at age 0 and
    again when the flash ends. */
 int gTfN, gTfLineTo, gTfLitCalls, gTfEndCalls, gTfFlashesLit, gTfFlashesEnd, gTfEnds, gTfLineLit;
@@ -3407,6 +3470,136 @@ void EffectLightProbe(Player *pl) {
                 const bool gone = !LightLimnAt((int16)lk->x, (int16)lk->y, g, b);
                 verdict("FF13", ok && !nb && gone,
                     "a neighbor square is limned %d (need 0); after the status ends the square is limned %d (need 0)", nb ? 1 : 0, gone ? 0 : 1);
+            }
+
+            /* CF, CC, CU (inc-epzc0): a cone lights as inc-jw0hw rules for its effect. Each cast goes east from the
+               player's square through the effect's real path, in a dark room with the player's own sight zeroed. */
+            if (!LightFlashDisabled()) {
+                pl->Options[OPT_AUTOMORE] = 1;
+                TextTerm *term = (TextTerm*)pl->MyTerm;
+                auto effectByName = [&](const char *name) {
+                    rID eid = 0;   /* FIND takes a monster or item of the same name first ("Dragon") */
+                    for (int q = 0; q < MAX_MODULES && !eid; ++q)
+                        if (theGame->Modules[q])
+                            for (int k = 0; k < theGame->Modules[q]->szEff; ++k)
+                                if (!stricmp(name, theGame->Modules[q]->GetText(theGame->Modules[q]->QEff[k].Name)))
+                                    { eid = theGame->Modules[q]->EffectID(k); break; }
+                    return eid;
+                };
+                /* mode 0 spell, 1 zap a wand, 2 activate an ability; wallX 0 for none, else a wall column there */
+                auto coneCast = [&](rID eid, int mode, int wallX, bool unlit, uint32 &pre, uint32 &post,
+                        uint32 &postRefresh, int &endFlashes) {
+                    BuildDark(mp, pl, floor, wall);
+                    LightFlashClearAll();
+                    if (wallX) {
+                        Rect wr(0, 0, mp->SizeX() - 1, mp->SizeY() - 1);
+                        for (int y = PY - 10; y <= PY + 10; ++y)
+                            mp->WriteAt(wr, wallX, y, wall, mp->RegionAt(PX, PY), PRIO_MAX, true);
+                    }
+                    pl->cHP = pl->mHP = 500;
+                    Item *it = NULL;
+                    if (mode == 1) {
+                        it = Item::Create(FIND("wand"));
+                        it->MakeMagical(eid);
+                        it->MakeKnown(0xFF);
+                        it->SetCharges(50);
+                        pl->GainItem(it, true);
+                    }
+                    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                    gMap = mp; gPl = pl;
+                    gStruckGrid.assign((size_t)mp->SizeX() * mp->SizeY(), 0);
+                    gSx.clear(); gSy.clear();
+                    gS[0].taken = gS[1].taken = false;
+                    gLit = gHolds = gEnds = 0;
+                    gFill = false; gGlobe = false; gOpen = false; gTimeShow = false; gLine = false;
+                    memset(&gCn, 0, sizeof gCn);
+                    gConeWallX = wallX; gConeLit = gConeHolds = gConeEnds = 0;
+                    gConeSqX = PX + 3; gConeSqY = PY;
+                    gNegMap = mp; gNegCalls = gNegMaxFlashes = gNegMaxLit = 0;
+                    Refresh(pl);
+                    pre = Snap(mp);
+                    const uint32 preLight = Snap(mp, -1, false);
+                    gPreDirty = 0;
+                    for (int y = 0; y < mp->SizeY(); ++y)
+                        for (int x = 0; x < mp->SizeX(); ++x) {
+                            if (LightLitAt((int16)x, (int16)y)) ++gPreDirty;
+                            if ((mp->At(x, y).Visibility & VI_VISIBLE) && dist(x, y, PX, PY) > 1) ++gPreDirty;
+                        }
+                    term->MsgHistory[0] = 0;
+                    AreaProbeXYHook = NoteXY; BallRingHook = NoteRing;
+                    EffectLightHook = unlit ? NegHook : ConeEl;
+                    EventInfo xe; xe.Clear();
+                    xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = mode == 0;
+                    xe.EItem = it; xe.isItem = it != NULL; xe.isActivation = mode == 2;
+                    xe.isDir = true; xe.EDir = EAST;
+                    ReThrow(EV_EFFECT, xe);
+                    AreaProbeXYHook = NULL; BallRingHook = NULL; EffectLightHook = NULL;
+                    post = Snap(mp, -1, false) == preLight ? pre : ~pre;
+                    endFlashes = (int)LightFlashCount();
+                    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                    Refresh(pl);
+                    postRefresh = Snap(mp);
+                    if (it) it->Remove(true);
+                };
+                /* the lit cases: id is "CF" or "CC"; wantFlicker says whether the light flickers */
+                auto litCone = [&](const char *id, rID eid, int mode, bool wantFlicker, bool wantFire) {
+                    uint32 pre, post, postR; int endF;
+                    char nm[8];
+                    coneCast(eid, mode, 0, false, pre, post, postR, endF);
+                    const ConeRec &c = gCn;
+                    if (gPreDirty || LightMode(pl) == LIGHT_LEGACY || !c.hold) {
+                        inconclusive(id, "a square is lit or in view before the cast, the light map is legacy, or no hold was reached");
+                        return;
+                    }
+                    snprintf(nm, sizeof nm, "%s1", id);
+                    verdict(nm, gConeLit > 0 && gConeHolds == 1 && gConeEnds == 1 && c.flashesHold == 1 && c.nStruck > 0,
+                        "light is created: lit frames=%d hold=%d end=%d flashes at hold=%d struck=%d",
+                        gConeLit, gConeHolds, gConeEnds, c.flashesHold, c.nStruck);
+                    snprintf(nm, sizeof nm, "%s2", id);
+                    verdict(nm, c.nStruckLit == c.nStruck && c.nStruckSeen == c.nStruck,
+                        "struck squares lit %d/%d, in view %d/%d", c.nStruckLit, c.nStruck, c.nStruckSeen, c.nStruck);
+                    snprintf(nm, sizeof nm, "%s3", id);
+                    verdict(nm, c.nSpill > 0 && c.nSpillLit == c.nSpill && c.nFar > 0 && c.nFarLit == 0,
+                        "reach exactly 2 past the cone's edge: squares within 2 lit %d/%d (need all); squares past 2 lit %d/%d (need 0); unlit within 2:%s",
+                        c.nSpillLit, c.nSpill, c.nFarLit, c.nFar, c.miss);
+                    snprintf(nm, sizeof nm, "%s4", id);
+                    const bool hueOk = wantFire ? (c.cc.r > 0 && c.cc.r >= c.cc.g && c.cc.g >= c.cc.b)
+                                                : (c.cc.b > 0 && c.cc.b >= c.cc.g && c.cc.b >= c.cc.r);
+                    verdict(nm, (wantFlicker ? c.nDistinct >= 2 : c.nDistinct == 1) && hueOk,
+                        "%s: the square (%d,%d) at 31 ticks of 100 ms took %d distinct brightness values (need %s); color there %d,%d,%d",
+                        wantFlicker ? "flickers" : "steady", gConeSqX, gConeSqY, c.nDistinct,
+                        wantFlicker ? "2 or more" : "exactly 1", c.cc.r, c.cc.g, c.cc.b);
+                    snprintf(nm, sizeof nm, "%s5", id);
+                    verdict(nm, c.end && c.snap == pre && c.flashesEnd == 0 && post == pre && postR == pre && endF == 0,
+                        "light ends: end hook same=%d flashes=%d; after return same=%d; after refresh same=%d; flashes=%d",
+                        (int)(c.snap == pre), c.flashesEnd, (int)(post == pre), (int)(postR == pre), endF);
+                };
+                const rID dragon = effectByName("Dragon"), iceWand = effectByName("Ice;wand"),
+                    coneCold = FIND("Cone of Cold");
+                if (!dragon || !iceWand || !coneCold) {
+                    inconclusive("CF", "the Dragon tattoo, Ice;wand or Cone of Cold effect is missing");
+                } else {
+                    litCone("CF", dragon, 2, true, true);
+                    litCone("CC", iceWand, 1, false, false);
+                    {   /* CF6: a wall column cuts the cone; no light shows behind it */
+                        uint32 pre, post, postR; int endF;
+                        const int wallX = PX + 4;
+                        coneCast(dragon, 2, wallX, false, pre, post, postR, endF);
+                        const ConeRec &c = gCn;
+                        if (!c.hold) inconclusive("CF6", "no hold was reached");
+                        else
+                            verdict("CF6", c.nStruck > 0 && c.nStruckLit == c.nStruck && c.nStruckBehind == 0 && c.nBehind > 0 && c.nBehindLit == 0,
+                                "wall column at x=%d: struck %d, struck behind %d (need 0); squares behind lit %d/%d (need 0)",
+                                wallX, c.nStruck, c.nStruckBehind, c.nBehindLit, c.nBehind);
+                    }
+                    {   /* CU1: Cone of Cold is ruled unlit (EF_NO_GLOW): no flash, no lit square */
+                        uint32 pre, post, postR; int endF;
+                        coneCast(coneCold, 0, 0, true, pre, post, postR, endF);
+                        verdict("CU1", gNegCalls > 0 && gNegMaxFlashes == 0 && gNegMaxLit == 0 && endF == 0 && post == pre,
+                            "Cone of Cold: light code reached %d times, most flashes %d, most lit squares %d, after return same=%d (need >0, 0, 0, 1)",
+                            gNegCalls, gNegMaxFlashes, gNegMaxLit, (int)(post == pre));
+                    }
+                }
             }
 
             pl->Options[OPT_AUTOMORE] = wasMore;
