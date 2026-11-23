@@ -235,6 +235,7 @@ INCURSION_WALL_SAVE	inc-jw0hw	effect reel probe: leave the Wall of Fire standing
 INCURSION_WAS_FRIENDLY_PROBE	inc-n3eni	WAS_FRIENDLY granted once per attacker oracle (tools/check_was_friendly_once.sh)
 INCURSION_WATER_WALKING_PROBE	pre-registry	-
 INCURSION_WEAPONTYPE_PROBE	pre-registry	-
+INCURSION_WEAPON_LIGHT_PROBE	inc-as123	weapon light probe (tools/check_weapon_light.sh)
 INCURSION_WROUGHT_HARDNESS_PROBE	pre-registry	-
 INCURSION_WROUGHT_METAL_PROBE	pre-registry	-
 INCURSION_XPDRAIN_PROBE	pre-registry	-

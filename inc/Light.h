@@ -16,6 +16,16 @@ struct LightRGB { uint8 r, g, b; };
 
 class Map;
 class Player;
+class Creature;
+class Item;
+
+/* inc-as123: the radius, in squares, of the light a weapon gives while this creature holds it; 0 when it gives none. */
+int16 LightHeldRadius(Creature *c, Item *w);
+/* inc-as123: the color of that light; false when the weapon gives none. */
+bool LightHeldColour(Creature *c, Item *w, LightRGB &rgb);
+/* inc-as123: the light a thrown or fired missile carries in flight: the held verdict of the missile, or a flaming launcher.
+   col is the light row it starts from; rgb is its own color. False when the missile carries none. */
+bool LightMissileOf(Item *missile, Item *launcher, int16 &col, LightRGB &rgb);
 
 /* Per turn. Scans the level for sources, casts each one's footprint through
    line of sight, and sums the steady light. Cheap enough to call from every
@@ -97,7 +107,7 @@ enum { LF_STEADY = 0, LF_FIRE = 1, LF_ARC = 2, LF_RAINBOW = 3 };
 // family: light-flash-ramp internal
 enum { LR_GENERIC = 0, LR_FIRE = 1, LR_DARK = 2, LR_RAINBOW = 3 };
 // end family: light-flash-ramp
-LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SUNYELLOW, or a palette index 0..15 */
+LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_AZURE, or a palette index 0..15 */
 uint8 LightFlashRampFor(int16 blastColour);     /* the LR_* ramp a light color takes */
 int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach,
                     uint8 ramp = LR_GENERIC);  /* id >= 0, or -1 when disabled */
