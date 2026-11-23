@@ -45,6 +45,7 @@
 
 /* Set by Creature::Multiply to the copy it is placing, cleared after. */
 extern Thing *MultiplyPlacingCopy;
+extern int FormationFieldSuppress;   /* src/Magic.cpp, inc-jw0hw */
 
 /* Fault injection for tools/check_multiply_noroom.sh: set
    INCURSION_MULTIPLY_NOROOM to make PlaceNear behave as if no square is free,
@@ -356,8 +357,10 @@ void Thing::PlaceAt(Map*_m,int16 _x,int16 _y, bool share_square)
         if (MyFields[i].Creator && theRegistry->Exists(MyFields[i].Creator) &&
             oThing(MyFields[i].Creator)->isCreature())
           fCreator = (Creature*)oThing(MyFields[i].Creator);
+        FormationFieldSuppress++;   /* inc-jw0hw: a fog field carried to a new level does not billow */
         m->NewField(MyFields[i].FType,x,y,MyFields[i].rad,MyFields[i].Image,
           MyFields[i].Dur, MyFields[i].eID,fCreator);
+        FormationFieldSuppress--;
       }
       if (thisc->HasAbility(CA_AURA_OF_VALOUR)) {
         rID vID = FIND("Aura of Valour");

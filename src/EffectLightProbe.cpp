@@ -19,6 +19,7 @@
 extern void (*AreaProbeXYHook)(int16,int16);
 extern void LOFSetForcedRoll(int8 r);
 extern void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph);
+extern void (*GlobeHoldHook)(float fromMs, float toMs, float lifeMs);
 extern void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g);
 extern void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g);
 extern void (*ScriptLightTickHook)(float clockMs);
@@ -79,6 +80,8 @@ void FireRampAt(float age, int &r, int &g, int &b) {
     r = (int)(c[0] * c[3]); g = (int)(c[1] * c[3]); b = (int)(c[2] * c[3]);
 }
 bool Near(int a, int b) { return abs(a - b) <= 3; }
+float gGhFrom, gGhTo, gGhLife; int gGhCalls;   /* G4: the plain globe's hold, on the effect clock */
+void GhHook(float from, float to, float life) { gGhFrom = from; gGhTo = to; gGhLife = life; ++gGhCalls; }
 int gWaitMs;   /* the ring waits so far in the current ball: the effect clock at the hold */
 
 void NoteXY(int16 x, int16 y) {
@@ -879,6 +882,45 @@ void EffectLightProbe(Player *pl) {
         theGame->PlayMode = wasPlay;
         return;
     }
+    if (getenv("INCURSION_GRADE_PROBE")) {
+        /* inc-jw0hw Phase 3: each graded effect's real EffectLight lights one square in a dark room; print the peak light
+           on the square and on the 1..4 squares east of it, then again after the light ends. */
+        static const char *const names[] = { "Minor Drain", "Major Drain", "Inflict Light Wounds",
+            "Inflict Moderate Wounds", "Inflict Serious Wounds", "Inflict Critical Wounds",
+            "minor lightning bolt trap", "major lightning bolt trap", "inflict light wounds trap",
+            "inflict serious wounds trap", "inflict critical wounds trap", "Minor Light Ray", "Major Light Ray" };
+        const bool wasPlay = theGame->PlayMode;
+        theGame->PlayMode = true;
+        pl->Options[OPT_ANIMATION] = 0;
+        BuildDark(mp, pl, floor, wall);
+        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        const int cx = PX + 10;
+        for (size_t n = 0; n < sizeof names / sizeof names[0]; ++n) {
+            const rID id = FIND(names[n]);
+            TEffect *te = id ? TEFF(id) : NULL;
+            if (!te) { Error("EFFECT_LIGHT: GRADE %s MISSING", names[n]); continue; }
+            LightFlashClearAll();
+            EffectLight *fx = new EffectLight(mp, te->ef.cval, EL_AREA, te->ef.xval, te);
+            fx->Light((int16)cx, PY);
+            Refresh(pl);
+            int pk[7];
+            for (int d = 0; d < 7; ++d) pk[d] = Peak(cx + d, PY);
+            const int grade = te->HasFlag(EF_GRADE_3) ? 3 : te->HasFlag(EF_GRADE_2) ? 2 : te->HasFlag(EF_GRADE_1) ? 1 : 0;
+            Error("EFFECT_LIGHT: GRADE %s grade=%d p0=%d p1=%d p2=%d p3=%d p4=%d p5=%d p6=%d", names[n], grade, pk[0], pk[1], pk[2], pk[3], pk[4], pk[5], pk[6]);
+            { LightRGB q[7];
+              for (int d = 0; d < 7; ++d) { q[d].r = q[d].g = q[d].b = 0; LightAt((int16)(cx + d), PY, q[d]); }
+              Error("EFFECT_LIGHT: GRADEC %s %d,%d,%d %d,%d,%d %d,%d,%d %d,%d,%d %d,%d,%d %d,%d,%d %d,%d,%d", names[n],
+                  q[0].r, q[0].g, q[0].b, q[1].r, q[1].g, q[1].b, q[2].r, q[2].g, q[2].b, q[3].r, q[3].g, q[3].b,
+                  q[4].r, q[4].g, q[4].b, q[5].r, q[5].g, q[5].b, q[6].r, q[6].g, q[6].b); }
+            fx->End();
+            delete fx;
+            Refresh(pl);
+            Error("EFFECT_LIGHT: GRADEEND %s p0=%d p1=%d p2=%d p3=%d p4=%d p5=%d p6=%d flashes=%d", names[n],
+                Peak(cx, PY), Peak(cx + 1, PY), Peak(cx + 2, PY), Peak(cx + 3, PY), Peak(cx + 4, PY), Peak(cx + 5, PY), Peak(cx + 6, PY), (int)LightFlashCount());
+        }
+        theGame->PlayMode = wasPlay;
+        return;
+    }
     if (const char *bhAnim = getenv("INCURSION_BH7_ANIM")) {
         /* BH7: one Burning Hands cast on a struck kobold from a fixed seed, in a fresh process; the check
            compares the stream position at the end of the script's light between an animation-Normal run and an animation-None run. */
@@ -1075,7 +1117,7 @@ void EffectLightProbe(Player *pl) {
     /* ---- Cases B (Fireball), B2 (a globe), H (Hellstorm timing). ---- */
     {
         const rID fire = FIND("Fireball"), hell = FIND("the Hellstorm"),
-            sleepE = FIND("Pyrotechnics;blast"), kobold = FIND("kobold");
+            sleepE = FIND("cold trap"), kobold = FIND("kobold");
         if (!fire || !hell || !sleepE || !kobold ||
             TEFF(sleepE)->ef.aval != AR_GLOBE || !TEFF(sleepE)->ef.cval) {
             inconclusive("B", "Fireball, the Hellstorm, Sleep (a globe with a color) or kobold is missing");
@@ -1214,7 +1256,7 @@ void EffectLightProbe(Player *pl) {
                         "boxed in: hooks=%d most flashes=%d flashes at end=%d view changed=%d",
                         gCHooks, gCFlashMax, endF, (int)gCDiffer);
             }
-            /* B2: a globe flash (Pyrotechnics;blast, a lit globe; Sleep no longer glows, inc-jw0hw). */
+            /* B2: a globe flash (the cold trap, a lit globe that recolors; Sleep no longer glows, inc-jw0hw). */
             cast(sleepE, true, true, false, false, pre, post, postR, endF);  /* learns the struck squares */
             if (!off) cast(sleepE, true, true, false, true, pre, post, postR, endF);
             if (off) {
@@ -1256,6 +1298,40 @@ void EffectLightProbe(Player *pl) {
                     verdict("G3", bad[0] == 0 && bad[1] == 0,
                         "globe glyph: Fire Lotus (color set) %d squares, %d bad; plain globe %d squares, %d bad",
                         n[0], bad[0], n[1], bad[1]);
+            }
+            /* G4 (inc-jw0hw): a plain globe's glyphs hold 750 ms for the player and 250 ms for a monster (half of the old 1500 / 500);
+               its light lives 1.25 times the hold, never under 900 ms. The hold is read off the effect clock around the wait. */
+            if (!off && LightMode(pl) != LIGHT_LEGACY) {
+                float hold[2] = { -1, -1 }, life[2] = { -1, -1 }; int calls[2] = { 0, 0 };
+                for (int who = 0; who < 2; ++who) {
+                    BuildDark(mp, pl, floor, wall);
+                    LightFlashClearAll();
+                    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                    Monster *caster = NULL;
+                    if (who == 1) {
+                        caster = new Monster(kobold);
+                        caster->PlaceAt(mp, PX + 3, PY, true);
+                        caster->Initialize(true);
+                        caster->mHP = caster->cHP = 5000;
+                    }
+                    Refresh(pl);
+                    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                    gGhCalls = 0; GlobeHoldHook = GhHook;
+                    EventInfo xe; xe.Clear();
+                    xe.EActor = who == 1 ? (Creature *)caster : (Creature *)pl; xe.EMap = mp; xe.eID = sleepE; xe.isSpell = true;
+                    xe.isLoc = true; xe.EXVal = who == 1 ? PX + 4 : aimX; xe.EYVal = PY;
+                    ReThrow(EV_EFFECT, xe);
+                    GlobeHoldHook = NULL;
+                    calls[who] = gGhCalls; hold[who] = gGhTo - gGhFrom; life[who] = gGhLife;
+                    pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+                    Refresh(pl);
+                }
+                if (calls[0] != 1 || calls[1] != 1)
+                    inconclusive("G4", "the globe's hold did not run exactly once for both the player and the monster");
+                else
+                    verdict("G4", Near((int)hold[0], 750) && Near((int)hold[1], 250) && Near((int)life[0], 937) && Near((int)life[1], 900),
+                        "plain globe hold %.0f ms for the player (need 750), %.0f ms for a monster (need 250); light life %.0f / %.0f ms (need 937 / 900)",
+                        hold[0], hold[1], life[0], life[1]);
             }
             /* FW1 (F1 in the brief; F1 is taken by the bolt case): the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone,
                ring by ring, each ring pointing away from the center, light born with its ring. */
@@ -1663,6 +1739,8 @@ void EffectLightProbe(Player *pl) {
                         acidArrow = FIND("Acid Arrow");
                     const int KHP = 500;
                     struct LmRun { std::vector<std::vector<MeanderRec> > arcs; int hits[3]; int ks; };
+                    int lmAimY = PY;   /* LM6 moves the aim row; every other case aims along the cast row */
+                    int lmKy[3] = { 0, 0, 0 };   /* LM7 puts a kobold off the cast row; every other case keeps them on it */
                     /* One cast in a dark room (or a one-square corridor). Kobolds sit at the given x on
                        the cast row; victim -1 aims at (aimX, PY) with no chosen creature. */
                     auto lmCast = [&](rID eid, bool corridor, int nk, const int *kx, int victim, int aimX,
@@ -1682,7 +1760,7 @@ void EffectLightProbe(Player *pl) {
                         Monster *kobs[3] = { NULL, NULL, NULL };
                         for (int i = 0; i < nk; ++i) {
                             kobs[i] = new Monster(kobold);
-                            kobs[i]->PlaceAt(mp, kx[i], PY, true);
+                            kobs[i]->PlaceAt(mp, kx[i], PY + lmKy[i], true);
                             kobs[i]->Initialize(true);
                             kobs[i]->mHP = kobs[i]->cHP = KHP;
                         }
@@ -1699,7 +1777,7 @@ void EffectLightProbe(Player *pl) {
                         AreaProbeXYHook = NoteXY; EffectLightHook = FlashHook; MeanderHook = MeanderRecHook;
                         EventInfo xe; xe.Clear();
                         xe.EActor = pl; xe.EMap = mp; xe.eID = eid; xe.isSpell = true;
-                        xe.isLoc = true; xe.EXVal = aimX; xe.EYVal = PY;
+                        xe.isLoc = true; xe.EXVal = aimX; xe.EYVal = lmAimY;
                         if (victim >= 0) xe.EVictim = kobs[victim];
                         /* range is 5 + caster level / 2: +30 levels to every school gives 20 squares */
                         pl->GainTempStati(BONUS_SCHOOL_CASTING_LEVEL, pl, 100, SS_ENCH, 0x7FFF, 30, 0);
@@ -1711,8 +1789,25 @@ void EffectLightProbe(Player *pl) {
                         for (int i = 0; i < nk; ++i) run.hits[i] = kobs[i]->cHP < KHP;
                     };
                     /* The rules of rule 3, counted: how many squares break them, and how many leave the line. */
+                    /* Rule R1: two consecutive strokes are never opposite diagonals. */
+                    auto lmOpposite = [&](const std::vector<MeanderRec> &a) {
+                        int n = 0;
+                        for (size_t i = 1; i < a.size(); ++i)
+                            if ((a[i - 1].g == '/' && a[i].g == '\\') || (a[i - 1].g == '\\' && a[i].g == '/')) ++n;
+                        return n;
+                    };
+                    /* Rule R1 across a chain's arcs: the last glyph of one arc and the first of the next. */
+                    auto lmJunction = [&](const std::vector<std::vector<MeanderRec> > &arcs) {
+                        int n = 0;
+                        for (size_t k = 1; k < arcs.size(); ++k) {
+                            if (arcs[k - 1].size() < 2 || arcs[k].size() < 2) continue;
+                            const Glyph a = arcs[k - 1].back().g, b = arcs[k].front().g;
+                            if ((a == '/' && b == '\\') || (a == '\\' && b == '/')) ++n;
+                        }
+                        return n;
+                    };
                     auto lmArc = [&](const std::vector<MeanderRec> &a, int &offLine, int &offGap) {
-                        int bad = 0;
+                        int bad = lmOpposite(a);
                         offLine = offGap = 0;
                         for (size_t i = 0; i < a.size(); ++i) {
                             const MeanderRec &r = a[i];
@@ -1827,6 +1922,61 @@ void EffectLightProbe(Player *pl) {
                                 events, drew);
                         }
 
+                        /* LM6: a stroke never draws opposite diagonals back to back, whatever the aim: 13 rows
+                           by 6 columns of aim points, 4 casts each, in the open room. */
+                        {
+                            int casts = 0, opp = 0, bent = 0, firstDy = 0, firstX = 0;
+                            const int8 wasMoreLm = pl->Options[OPT_AUTOMORE];
+                            pl->Options[OPT_AUTOMORE] = 1;   /* 312 casts must not wait for keys of the key script */
+                            for (int dy = -6; dy <= 6; ++dy)
+                                for (int ax = PX + 7; ax <= PX + 12; ++ax)
+                                    for (int rep = 0; rep < 4; ++rep) {
+                                        LmRun run;
+                                        lmAimY = PY + dy;
+                                        lmCast(lightning, false, 0, NULL, -1, ax, run);
+                                        lmAimY = PY;
+                                        ++casts;
+                                        for (size_t a = 0; a < run.arcs.size(); ++a) {
+                                            const int o = lmOpposite(run.arcs[a]);
+                                            if (o && !opp) { firstDy = dy; firstX = ax; }
+                                            opp += o;
+                                            if (run.arcs[a].size() > 3) ++bent;
+                                        }
+                                    }
+                            pl->Options[OPT_AUTOMORE] = wasMoreLm;
+                            verdict("LM6", opp == 0 && bent >= casts / 2,
+                                "%d casts at varied aims: %d back-to-back opposite diagonals (need 0; first at aim dy=%d x=%d); %d arcs of 4+ squares (need %d+)",
+                                casts, opp, firstDy, firstX, bent, casts / 2);
+                        }
+
+                        /* LM7: a chain that turns never draws opposite diagonals across the join of two arcs: the victim at (PX+6, PY),
+                           a second kobold at 5 columns by 13 rows of offsets from it, 4 casts each. */
+                        {
+                            int casts = 0, joins = 0, opp = 0, inArc = 0;
+                            const int8 wasMoreL7 = pl->Options[OPT_AUTOMORE];
+                            pl->Options[OPT_AUTOMORE] = 1;
+                            static const int BX[5] = { -4, -2, 2, 4, 6 };
+                            for (int by = -6; by <= 6; ++by)
+                                for (int bi = 0; bi < 5; ++bi)
+                                    for (int rep = 0; rep < 4; ++rep) {
+                                        if (!by && BX[bi] < 0) continue;   /* (PX+2.., PY) is on the first arc's own row: keep the row, skip behind the victim */
+                                        const int kx7[2] = { PX + 6, PX + 6 + BX[bi] };
+                                        lmKy[0] = 0; lmKy[1] = by;
+                                        LmRun run;
+                                        lmCast(chainL, false, 2, kx7, 0, PX + 6, run);
+                                        lmKy[1] = 0;
+                                        ++casts;
+                                        for (size_t k = 1; k < run.arcs.size(); ++k)
+                                            if (run.arcs[k - 1].size() >= 2 && run.arcs[k].size() >= 2) ++joins;
+                                        opp += lmJunction(run.arcs);
+                                        for (size_t a = 0; a < run.arcs.size(); ++a) inArc += lmOpposite(run.arcs[a]);
+                                    }
+                            pl->Options[OPT_AUTOMORE] = wasMoreL7;
+                            verdict("LM7", opp == 0 && inArc == 0 && joins >= 40,
+                                "%d chain casts with a second kobold off the row: %d joins of two arcs (need 40+), %d opposite diagonals across joins (need 0), %d inside arcs (need 0)",
+                                casts, joins, opp, inArc);
+                        }
+
                         /* LM5: gameplay unchanged: the squares the spell resolves are the straight line. */
                         {
                             LmRun run;
@@ -1923,7 +2073,7 @@ void EffectLightProbe(Player *pl) {
                         st.glyphs = (int)glyphSeen.size();
                     };
                     /* CP1: Hypnotic Pattern on a kobold. Every square of the globe that the player sees gets at least
-                       10 picks through the 1500 ms hold; no square outside it gets one. */
+                       5 to 7 picks through the 750 ms hold; no square outside it gets one. */
                     {
                         const int kx[1] = { aimX };
                         cpCast(hypno, 1, kx, -1, aimX, false, 0);
@@ -1943,10 +2093,10 @@ void EffectLightProbe(Player *pl) {
                             }
                         float firstMax = 0.0f;
                         for (size_t i = 0; i < gCp.size(); ++i) if (gCp[i].clk > firstMax && gCp[i].clk < 1.0f) firstMax = gCp[i].clk;
-                        verdict("CP1", nExp > 0 && nGot == nExp && outside == 0 && st.minPer >= 10 && st.badGap == 0 &&
+                        verdict("CP1", nExp > 0 && nGot == nExp && outside == 0 && st.minPer >= 5 && st.maxPer <= 7 && st.badGap == 0 &&
                             st.colours >= 4 && st.glyphs >= 4 && st.badGlyph == 0 && st.badColour == 0 && st.badPair == 0 &&
                             st.diffPairs >= 1 && gCpLit >= 1,
-                            "radius %d: %d squares expected, %d picked, %d picked outside; picks per square %d..%d (need 10+); "
+                            "radius %d: %d squares expected, %d picked, %d picked outside; picks per square %d..%d (need 5..7: the 750 ms hold); "
                             "%d gaps outside 80..150 ms; %d colors, %d glyphs (need 4+ each); %d bad glyphs, %d bad colors; "
                             "%d picks whose light base color is not LightEffectColour of the glyph color; %d re-picks changed the color; %d light frames",
                             R, nExp, nGot, outside, st.minPer, st.maxPer, st.badGap, st.colours, st.glyphs, st.badGlyph, st.badColour,
@@ -2004,7 +2154,7 @@ void EffectLightProbe(Player *pl) {
                     /* CP4: an effect without the flag never fires the hook: a COL_RAINBOW globe and a Fireball. */
                     {
                         int fired = 0, drew = 0;
-                        cpCast(nightmare, 0, NULL, -1, aimX, false, 0);
+                        cpCast(nightmare, 0, NULL, -1, aimX + 1, false, 0);   /* one square farther: the globe's radius 8 then misses the player, whose hit points the cast recomputes to 37 */
                         fired += (int)gCp.size(); drew += gCpLit > 0;
                         cpCast(fire, 0, NULL, -1, aimX, false, 0);
                         fired += (int)gCp.size(); drew += gCpLit > 0;
@@ -2327,10 +2477,10 @@ void EffectLightProbe(Player *pl) {
                                 ++n1; if (w.g != 177) ++wrong1;
                                 if (w.gl && Max3(w.gc) >= 60) { ++hueN; if (HueNear(w.gc, LightEffectColour(COL_NECRO), 12)) ++hueOk; }
                             }
-                            const LightRGB row = LightEffectColour(COL_NECRO), deep = { 80, 20, 140 };   /* the owner's ruled deep purple */
+                            const LightRGB row = LightEffectColour(COL_NECRO), deep = { 150, 60, 220 };   /* the owner's ruled purple */
                             const bool deepRow = row.r == deep.r && row.g == deep.g && row.b == deep.b;
                             verdict("ST10", deepRow && lastW0 >= 0 && firstW1 > lastW0 && gStWave[lastW0].g == 0 && n1 > 0 && !wrong1 && hueN > 0 && hueOk == hueN,
-                                "COL_NECRO row (%d,%d,%d) (need 80,20,140); last fire-wave call %d (glyphs gone=%d) before the first necromantic call %d (need earlier); necromantic steps %d, glyph other than 177: %d (need 0); glyph color (brightest channel 60+) in the necromantic hue %d of %d (need all)",
+                                "COL_NECRO row (%d,%d,%d) (need 150,60,220); last fire-wave call %d (glyphs gone=%d) before the first necromantic call %d (need earlier); necromantic steps %d, glyph other than 177: %d (need 0); glyph color (brightest channel 60+) in the necromantic hue %d of %d (need all)",
                                 row.r, row.g, row.b, lastW0, lastW0 >= 0 ? (int)(gStWave[lastW0].g == 0) : -1, firstW1, n1, wrong1, hueOk, hueN);
                         }
                         /* ST12: the kobold on the skull's square starts a fire flash when the fire ring reaches it, before the fire glyphs go,
@@ -2419,7 +2569,7 @@ void EffectLightProbe(Player *pl) {
                         (int)gStWave.size(), (int)gStTicks.size(), (int)gStEndLit, gStEndPeak, (int)LightFlashCount(), gStEndCalls);
                     /* ST11: the globe's old one-shot highlight does not run for the trap; a plain globe (no EF_WAVES) still runs it. */
                     {
-                        const rID plain = FIND("Pyrotechnics;blast");
+                        const rID plain = FIND("cold trap");   /* inc-jw0hw Phase 2: Pyrotechnics;blast now draws blast rings (EF_BLAST_RINGS), so the plain recolor globe is the cold trap */
                         gGlyphN = gGlyphBad = 0;
                         gGlyphCval = plain ? TEFF(plain)->ef.cval : 0;
                         if (plain) {
@@ -2428,7 +2578,7 @@ void EffectLightProbe(Player *pl) {
                             GlobeGlyphHook = NULL;
                         }
                         verdict("ST11", plain && !TEFF(plain)->HasFlag(EF_WAVES) && gStGlyphHlTrap == 0 && gStWaveN > 0 && gGlyphN > 0,
-                            "highlight recolors for the trap %d (need 0) while it played %d wave calls (need 1+); the plain globe (Pyrotechnics;blast, no EF_WAVES) recolored %d squares (need 1+)",
+                            "highlight recolors for the trap %d (need 0) while it played %d wave calls (need 1+); the plain globe (cold trap, no EF_WAVES) recolored %d squares (need 1+)",
                             gStGlyphHlTrap, gStWaveN, gGlyphN);
                         /* ST13: that plain globe still runs its struck flash, after its highlight. */
                         gSt13Gl = gSt13Tf = gSt13GlAtTf = 0;
@@ -2489,8 +2639,8 @@ void EffectLightProbe(Player *pl) {
                         if (gDrLand[i].clk > hi) hi = gDrLand[i].clk;
                         if (gDrLand[i].clk != gDrLand[0].clk) ++nDiff;
                     }
-                    verdict("DR2", nLand >= 2 && nDiff >= 1,
-                        "landing clocks run from %.0f to %.0f ms; landings at a time other than the first landing's: %d (need 1+)", lo, hi, nDiff);
+                    verdict("DR2", nLand >= 2 && nDiff >= 1 && hi <= 750.0f,
+                        "landing clocks run from %.0f to %.0f ms (need the last by 750, the globe's hold); landings at a time other than the first landing's: %d (need 1+)", lo, hi, nDiff);
                     int badFirst = 0;
                     for (int y = 5; y <= 29; ++y)
                         for (int x = 4; x <= 38; ++x) {
@@ -2861,6 +3011,96 @@ void EffectLightProbe(Player *pl) {
                 verdict(name, c0 == 0 && c1 == 2 && nDiffLv == 0 && nDiffPk == 0,
                     "no light: LightLevelAt (max of SrcLit and map light) differs on %d of %d squares and LightAt on %d with two overlapping auras (need 0); circle sources %d without, %d with (need 0, 2); squares lit before %d; first differing square %d,%d",
                     nDiffLv, W * H, nDiffPk, c0, c1, base, firstX, firstY);
+        }
+    }
+
+    /* ---- Case AU3 (inc-jw0hw): the player sees auras of their own, of a friendly creature and of a creator-less field, and never of an
+       enemy. Four purple FI_MODIFIER fields stand in a lit room: made by the player, by a companion kobold, by a hostile kobold, and by
+       nobody. LightAuraCount must be 3, and the sources must sit on the first, second and fourth centers. ---- */
+    const rID kobold = FIND("kobold");
+    if (LightMode(pl) == LIGHT_LEGACY) {
+        inconclusive("AU3", "the light map is legacy");
+    } else if (!kobold) {
+        inconclusive("AU3", "the kobold is missing");
+    } else {
+        BuildDark(mp, pl, floor, wall);
+        LightFlashClearAll();
+        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        const int AY = PY, XS[4] = { PX + 6, PX + 12, PX + 18, PX + 24 };
+        Monster *friendK = new Monster(kobold), *foeK = new Monster(kobold);
+        friendK->PlaceAt(mp, PX + 3, PY + 3, true); friendK->Initialize(true);
+        foeK->PlaceAt(mp, PX + 3, PY - 3, true); foeK->Initialize(true);
+        const bool joined = friendK->MakeCompanion(pl, PHD_FREEBIE);
+        const bool friendOk = friendK->isFriendlyTo(pl), foeOk = foeK->isHostileTo(pl) && !foeK->isFriendlyTo(pl);
+        Creature *by[4] = { pl, friendK, foeK, NULL };
+        for (int i = 0; i < 4; ++i)
+            mp->NewField(FI_MODIFIER, XS[i], AY, 2, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, by[i]);
+        Refresh(pl);
+        pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+        const int n = (int)LightAuraCount();
+        bool at[4] = { false, false, false, false };
+        for (int i = 0; i < n; ++i) {
+            int16 cx, cy, rad; LightRGB c; float noise;
+            if (!LightAuraAt(i, cx, cy, rad, c, noise)) continue;
+            for (int k = 0; k < 4; ++k) if (cx == XS[k] && cy == AY) at[k] = true;
+        }
+        for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
+        Refresh(pl);
+        if (!joined || !friendOk || !foeOk)
+            inconclusive("AU3", joined ? "the companion is not friendly or the other kobold is not hostile" : "the kobold did not join the party");
+        else
+            verdict("AU3", n == 3 && at[0] && at[1] && !at[2] && at[3],
+                "aura circles %d (need 3); own %d, friendly creature %d, hostile creature %d, no creator %d (need 1,1,0,1)",
+                n, (int)at[0], (int)at[1], (int)at[2], (int)at[3]);
+    }
+
+    /* ---- Case AU4 (inc-jw0hw): a field that only changes the light shows no aura. Globe of Shadow, cast for real by the player, makes
+       no aura source; a purple FI_MODIFIER field (a real modifier globe) made by the player still makes one; and so do the flags
+       alone: FI_SHADOW|FI_MODIFIER and FI_DARKNESS|FI_MODIFIER make none. ---- */
+    {
+        const rID gos = FIND("Globe of Shadow");
+        if (LightMode(pl) == LIGHT_LEGACY) {
+            inconclusive("AU4", "the light map is legacy");
+        } else if (!gos) {
+            inconclusive("AU4", "Globe of Shadow is missing");
+        } else {
+            BuildDark(mp, pl, floor, wall);
+            LightFlashClearAll();
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            Refresh(pl);
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            const int c0 = (int)LightAuraCount();
+            EventInfo xe; xe.Clear();
+            xe.EActor = pl; xe.EMap = mp; xe.eID = gos; xe.isSpell = true;
+            xe.isLoc = true; xe.EXVal = PX; xe.EYVal = PY;
+            ReThrow(EV_EFFECT, xe);
+            Refresh(pl);
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            int globes = 0;
+            for (int i = 0; mp->Fields[i]; ++i) if (mp->Fields[i]->FType & FI_SHADOW) ++globes;
+            const int c1 = (int)LightAuraCount();
+            for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
+            const int XS[3] = { PX + 6, PX + 12, PX + 18 };
+            mp->NewField(FI_MODIFIER, XS[0], PY, 2, GLYPH_VALUE(GLYPH_FLOOR2, PURPLE), -1, 0, pl);
+            mp->NewField(FI_SHADOW | FI_MODIFIER, XS[1], PY, 2, GLYPH_VALUE(GLYPH_FLOOR2, SHADOW), -1, 0, pl);
+            mp->NewField(FI_DARKNESS | FI_MODIFIER, XS[2], PY, 2, GLYPH_VALUE(GLYPH_FLOOR2, SHADOW), -1, 0, pl);
+            Refresh(pl);
+            pl->LightRange = pl->InfraRange = pl->ShadowRange = 0;
+            const int n = (int)LightAuraCount();
+            bool at[3] = { false, false, false };
+            for (int i = 0; i < n; ++i) {
+                int16 cx, cy, rad; LightRGB c; float noise;
+                if (!LightAuraAt(i, cx, cy, rad, c, noise)) continue;
+                for (int k = 0; k < 3; ++k) if (cx == XS[k] && cy == PY) at[k] = true;
+            }
+            for (int i = 0; mp->Fields[i]; ) mp->RemoveField(mp->Fields[i]);
+            Refresh(pl);
+            if (c0 != 0 || globes < 1)
+                inconclusive("AU4", "the cast made no Globe of Shadow field, or an aura stood before it");
+            else
+                verdict("AU4", c1 == 0 && n == 1 && at[0] && !at[1] && !at[2],
+                    "Globe of Shadow cast (%d field): aura sources %d (need 0); plain modifier field %d, shadow modifier %d, darkness modifier %d (need 1,0,0), total %d (need 1)",
+                    globes, c1, (int)at[0], (int)at[1], (int)at[2], n);
         }
     }
 

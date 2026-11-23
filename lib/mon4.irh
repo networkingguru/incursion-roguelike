@@ -697,7 +697,7 @@ Monster "vrock" : MA_DEMON, MA_BIRD
   
 Poison "Vrock Spores" : EA_BLAST
   {  
-    Level: 7;
+    Flags: EF_SPORES; Level: 7;
     /*Iteration*/   cval: 1;
     /*Save DC*/     sval: 24;
     /*Persistance*/ lval: 3;
@@ -3280,7 +3280,7 @@ Effect "Major Light Ray" : EA_BLAST
   { SC_EVO; Cost: 1; aval: AR_BEAM; qval: Q_DIR; cval: YELLOW;
     xval: AD_SUNL; lval: 8; sval: REF partial; pval: 3d8;
     Purpose: EP_ATTACK; On Event MSG_BLASTNAME "light ray";
-    Flags: EF_SPECABIL;
+    Flags: EF_SPECABIL, EF_GRADE_1;
     Desc: "Projects a ray of light at the archon's enemies inflicting
       3d8 points of damage. A Reflex save halves the damage."; }
 

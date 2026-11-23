@@ -34,9 +34,20 @@
 # fact: LM2 corridor -- the probe walls every square of the room off the cast row; the path is the line by rule, no roll decides it
 # fact: LM3 chain target -- one kobold at (PX+6, PY) as the chosen victim; the arc ends within 1 square of it, no roll decides that
 # fact: LM4 non-meandering casts -- fire breath, Acid Arrow and Magic Missile are not lit electricity, so no hook fires whatever the roll
+# fact: LM6 which squares the stroke picks -- cosmetic_random() picks them; the check reads only that no two consecutive glyphs are opposite diagonals, over aim points that are a fixed grid (13 rows x 6 columns x 4 casts), no seed or roll fixes an aim
+# fact: LM7 chain geometry -- the victim kobold at (PX+6, PY) and a second kobold at fixed offsets (5 columns x 13 rows) from it, 4 casts each; cosmetic_random() picks the drawn squares, and the check reads only that no opposite diagonals stand back to back inside an arc or across the join of two arcs, whatever the roll
+# fact: LM7 the chain reaches the second kobold -- the engine arcs to the nearest creature with a clear line; the check is INCONCLUSIVE-by-FAIL below 40 joins, so a layout the chain never turns on cannot pass
+# fact: LM1 opposite diagonals -- the same invariant counted in every LM1-LM3 arc, whatever the roll
+# fact: AU3 who is friendly -- the probe makes one kobold join the player (MakeCompanion, PHD_FREEBIE) and leaves the other hostile; the case is INCONCLUSIVE unless the engine's own isFriendlyTo/isHostileTo agree; no roll decides it
+# fact: AU3 field creators -- the probe names them in NewField: player, companion, hostile kobold, none
+# fact: AU4 the cast -- the player casts Globe of Shadow at the player's own fixed square; the field's flags are the data's (FI_SHADOW|FI_MODIFIER), no roll decides that it stands; the case is INCONCLUSIVE when no field stands
+# fact: AU4 the flag-only fields -- three fields the probe names itself (modifier, shadow+modifier, darkness+modifier), at fixed offsets (PX+6, PX+12, PX+18) from the player's fixed square; no roll decides them
+# fact: G4 the casters -- the player, and a kobold at (PX+3, PY) casting Sleep (a plain globe) at (PX+4, PY); the hold is read off the effect clock around the wait, no roll decides it
+# fact: G4 the globe's hold -- the effect clock before and after the glyph hold, 750 ms for the player and 250 ms for a monster, with the light life 1.25 times the hold and never under 900 ms (937 and 900)
 # fact: LM5 the spell's own squares -- no roll decides them: the spell walks a straight row from the player
+# fact: CP4 the player's hit points -- the probe aims the Nightmare smite blast at (aimX+1, PY), 9 squares from the player's fixed square, outside the blast's radius of 8, so its damage roll cannot reach the player (a cast recomputes the player's maximum to 37, so raising it does not help)
 # fact: CP1 cast square, radius and kobold -- the probe aims Hypnotic Pattern at (PX+8, PY) with one kobold on that square; the radius is the data's lval (2), the expected squares are those within it that the probe's own LineOfSight call says the player sees
-# fact: CP1 picks per square and the gap between picks -- the effect's own clock: the 1500 ms hold runs in steps of 33 ms and a square picks again at the first step 100 ms after its last pick, so 12 picks 132 ms apart; no roll and no wall clock decide them
+# fact: CP1 picks per square and the gap between picks -- the effect's own clock: the 750 ms hold runs in steps of 33 ms and a square picks again at the first step 100 ms after its last pick, so 6 picks 132 ms apart (the check takes 5 to 7); no roll and no wall clock decide them
 # fact: CP1 the glyph and color of each pick -- cosmetic_random() picks them; the check reads only invariants every pick keeps (a symbol that is not a letter, digit or @; a palette color that is not black, shadow, grey or white; the light base color equals LightEffectColour of the glyph color)
 # fact: CP1 at least 4 distinct colors and 4 distinct glyphs -- 252 picks (21 squares, 12 each) draw each from 8 values, so fewer than 4 distinct of either happen with chance below 1e-90
 # fact: CP1 a re-pick changes a square's color -- 231 consecutive pairs of picks each repeat the color with chance 1/8, so none changing it has chance below 1e-200
@@ -69,9 +80,9 @@
 # fact: ST9 the fire wave's squares -- the squares 1, 3 and 6 east of the skull (the globe's radius is lval 6), a fixed offset from the skull's fixed square; the wave hook reports each in ring order, so no roll decides which is lit first
 # fact: ST9 the ramp colors -- the glyph color LightEffectGlyphAt reads at each shown step, green over red at the first step at least 0.8; and the square's light color LightAt reads at every wave hook call, through the cooling after the glyphs go, first lit sample against the last with brightest channel 60+, green over red down at least 0.15; the fire ramp and the wave clock decide both, no roll
 # fact: ST10 the fire glyphs gone -- the wave hook's glyph 0 call for each fire square, in call order; the first necromantic call comes after the last fire call
-# fact: ST10 the necromantic row -- LightEffectColour(COL_NECRO) read as the table row, the owner's ruled deep purple 80,20,140; a ruled value, no roll
+# fact: ST10 the necromantic row -- LightEffectColour(COL_NECRO) read as the table row, the owner's ruled purple 150,60,220; a ruled value, no roll
 # fact: ST10 the necromantic hue -- LightEffectGlyphAt at each necromantic step, the flash's own dark ramp of LightEffectColour(COL_NECRO); hue within 12 per channel
-# fact: ST11 the old highlight -- GlobeGlyphHook calls during the trap's cast; the plain globe is Pyrotechnics;blast (a globe with a cval and no EF_WAVES), cast the way case G3 casts it
+# fact: ST11 the old highlight -- GlobeGlyphHook calls during the trap's cast; the plain globe is the cold trap (a lit globe with a cval and no EF_WAVES, no EF_BLAST_RINGS), cast the way case G3 casts it
 # fact: ST9 the ring and hold timing -- the wave clock (the effect's own, never the wall clock) at each wave hook call: ring d is reported at (d+1) x 10 ms, the glyphs hold 60 ms after the last ring; no roll decides it
 # fact: ST14 the wave light's cooling -- LightAt green over red at the skull's square and at the square 6 east of it, both read at the fire wave's last ring step (the first wave hook call that shows the square 6 east); skull's square 0.6 or less, 6 squares out 0.85 or more; the wave's light life (1.5 times its glyph time) and the fire ramp decide both, no roll
 # fact: ST12 the creature flash's place -- WaveFlashHook (a flash starts as a ring reaches a struck creature) against the count of wave hook calls so far; the kobold on the skull's square is struck by both waves, and its hit points (500) show that no hit came first
@@ -79,7 +90,7 @@
 # fact: ST12 the kobold's drawn color -- LightEffectGlyphAt at that square, the call the renderer's LitPaint makes; the fire ramp's near-white start and warm tail and the necromantic hue are the ramp tables' own values, no roll decides them
 # fact: ST12 the kobold's square within the first hook call at its ring -- the struck set is one kobold at the skull's square with 500 hit points; no roll decides that the waves strike it
 # fact: ST12 no struck flash after the last wave -- TargetFlashHook TF_LIT count during the trap's cast, which only the old end-of-globe flash raises
-# fact: ST13 the plain globe's order -- GlobeGlyphHook recolors counted before the first TargetFlashHook TF_LIT; Pyrotechnics;blast, with a kobold at (aimX+1, PY+1) inside its radius, cast as case G3 casts it
+# fact: ST13 the plain globe's order -- GlobeGlyphHook recolors counted before the first TargetFlashHook TF_LIT; the cold trap, with a kobold at (aimX+1, PY+1) inside its radius, cast as case G3 casts it
 # fact: ST3 the last frame before the explosion -- the frame the light map holds when the script's light ends; the check reads its level at the skull square against the rise's top level
 # fact: ST4 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that nothing lights
 # fact: ST5 out of sight -- the probe makes the player's eight neighbors opaque (as case C) and places the skull at (PX+10, PY); no roll decides the line of sight
@@ -87,7 +98,7 @@
 # fact: ST7 process-to-process determinism -- two runs at the same animation must give equal output; the check runs animation Normal twice and is INCONCLUSIVE if they differ
 # fact: DR1 cast square, radius and which squares are seen -- the probe throws Dance of Ruin as a globe at (20, PY) with a 3-square wall at (13, 18..20), fixed offsets from the player's fixed square; the radius is the data's lval; the expected squares are those within it that the probe's own LineOfSight call says the player sees; no roll decides them
 # fact: DR1 a square's landing and first-light clocks -- the effect's own clock, 40 ms a step, the hook's clockMs; never the wall clock
-# fact: DR2 the drops' start times -- cosmetic_random() picks each from 31 slots; the check reads only that at least one landing differs in clock from the first, and all of about 400 landings sharing one clock has chance below 1e-300
+# fact: DR2 the drops' start times -- cosmetic_random() picks each from 12 slots (the 750 ms hold less the fall, in 40 ms steps); the last landing falls by 750 ms whatever the roll; the check reads only that at least one landing differs in clock from the first, and all of about 400 landings sharing one clock has chance below 1e-300
 # fact: DR3 the light color -- the cval (COL_DARKRED) through LightEffectColour, read by the probe from the data; the check reads each square's own light (LightEffectGlyphAt) against that row, within 12 per channel in hue, at every step's end and at the square's first sample; the effect's loaded damage type is fire (bead inc-5d7l6) and is not controlled: the check passes only if the cval wins over it
 # fact: DR4 the glyphs -- the data's rain glyphs, | (124) falling and * (42) landing; no roll decides them; the above-square rule uses the probe's own LineOfSight, bounds and solid test
 # fact: DR5 animation None -- the probe sets OPT_ANIMATION 2 for the cast; no roll decides that nothing lights
@@ -143,7 +154,8 @@
 # Cases ST1-ST14 add: Skull Trap's skull glows crimson after its scream, rising from dim to full over 1000 ms and holding at its peak; its explosion then plays a fire wave and a necromantic wave of glyphs, rings moving out 10 ms apiece, each struck creature flashing as each wave reaches it; a plain globe still runs its struck flash; no old highlight, no light when unseen or under animation None, and no gameplay roll moved.
 # Cases BH1-BH8 add (BH7 in separate processes): Burning Hands lights each square it draws on the fire ramp through the hold and the cooling, flashes every creature it hit, and moves no gameplay roll.
 # Cases CP1-CP6 add: Hypnotic Pattern, Colour Spray and Chromatic Orb draw random symbols in random colors that re-pick each 100 ms of the effect clock, the light follows each glyph's color, and no gameplay roll moves.
-# Cases LM1-LM5 add: a lit lightning stroke is drawn as a jagged path that keeps its rules and never changes the squares the spell walks.
+# Case AU3 adds: the player sees auras of self, friends and creator-less fields, never of enemies. Case AU4 adds: a field that only changes light (Globe of Shadow) shows no aura. Case G4 adds: a plain globe's glyphs hold 750 ms (player) or 250 ms (monster).
+# Cases LM1-LM7 add (LM6, LM7: no opposite diagonals back to back, inside an arc or across a chain's join): a lit lightning stroke is drawn as a jagged path that keeps its rules and never changes the squares the spell walks.
 # Case FW1 adds: the fireworks globe (Pyrotechnics;flash) plays dot, star, flower, gone, ring by ring, pointing away from the center.
 # Cases T1-T3 add: the target flash (Fireball with two kobolds, a landed and a missed Chill Touch, Call Lightning).
 # Cases R1-R3 add: a square's light cools by its own age (fire, then no white stage for dark energy), and a Fireball

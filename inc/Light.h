@@ -111,6 +111,7 @@ void  LightFlashSetStyle(int32 id, uint8 style);    /* LF_*: a flash that must n
 void  LightFlashSetRise(int32 id, bool on);         /* a rise: base color at full brightness, scaled by the level (see EffectLight::Rise) */
 void  LightFlashRecolour(int32 id, LightRGB c, uint8 style, float gain, uint8 ramp); /* the whole flash takes this color */
 void  LightFlashSetClock(int32 id, float ms);       /* the flash clock; recomposes the frame */
+void  LightFlashSetGrade(int32 id, int grade);      /* inc-jw0hw: grade extra lights of the flash, light k reaching k squares farther */
 void  LightFlashSetLife(int32 id, float ms);        /* how long a square's light lives (default 900) */
 void  LightFlashGlyphs(int32 id, bool shown);       /* the effect's glyphs are on screen */
 bool  LightFlashSpent(int32 id);                    /* every square's age has passed the life */

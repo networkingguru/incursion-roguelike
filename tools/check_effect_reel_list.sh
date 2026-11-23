@@ -46,7 +46,7 @@ KEYS="$RUN_DIR/scene.keys"
 echo "@quit" > "$KEYS"
 
 INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$LOAD" INCURSION_RUN_DIR="$RUN_DIR" \
-    INCURSION_EFFECT_REEL=1 \
+    INCURSION_EFFECT_REEL=1 INCURSION_LIGHT_TABLE="$ROOT/tools/fixtures/effect-light-table.tsv" \
     tools/headless.sh "$KEYS" "$SEED" > "$RUN_DIR/run.out" 2>&1
 
 log="$RUN_DIR/logs/errors.log"
@@ -110,6 +110,8 @@ while i < len(lines):
                 kinds["globe"] += 1
             elif aval in (7, 9) and (rval & 0x24):
                 kinds["aura"] += 1
+            elif aval == 8:      # AR_BARRIER (inc/Defines.h): a wall
+                kinds["barrier"] += 1
             elif 117 in flags:   # EF_COLOR_PATTERN (inc/Defines.h): a beam or bolt that draws the color pattern
                 kinds["pattern"] += 1
     if section == "Monster":
@@ -122,20 +124,20 @@ kinds["breath"] = len(breath)
 
 probe = collections.Counter()
 for ln in open(log, encoding="latin-1"):
-    m = re.search(r'  REEL \d+ .* (blast|globe|aura|breath|pattern|form)$', ln)
+    m = re.search(r'  REEL \d+ .* (blast|globe|aura|barrier|breath|pattern|form)$', ln)
     if m:
         probe[m.group(1)] += 1
         continue
-    m = re.search(r'  REEL_SKIP (.*?) (?:it |the )', ln)
+    m = re.search(r'  REEL_SKIP (.*?) (?:it |the |shows )', ln)
     if m:
         # a skip is a listed effect that the reel cannot answer; its kind is the
         # kind the text count gives it, so count it under "skipped" and add it below
         probe["skipped"] += 1
 
-total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "breath", "pattern", "form"))
-total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "breath", "pattern", "form")) + probe["skipped"]
+total_text = sum(kinds[k] for k in ("blast", "globe", "aura", "barrier", "breath", "pattern", "form"))
+total_probe = sum(probe[k] for k in ("blast", "globe", "aura", "barrier", "breath", "pattern", "form")) + probe["skipped"]
 print("kind    text-count  probe-reels")
-for k in ("blast", "globe", "aura", "breath", "pattern", "form"):
+for k in ("blast", "globe", "aura", "barrier", "breath", "pattern", "form"):
     print("%-7s %10d  %11d" % (k, kinds[k], probe[k]))
 print("skipped %10s  %11d" % ("-", probe["skipped"]))
 print("total   %10d  %11d" % (total_text, total_probe))
@@ -145,7 +147,7 @@ if kinds["breath"] != probe["breath"]:
 if kinds["form"] != probe["form"]:
     bad.append("form")
 deficit = 0
-for k in ("blast", "globe", "aura", "pattern"):
+for k in ("blast", "globe", "aura", "barrier", "pattern"):
     if probe[k] > kinds[k]:
         bad.append(k + " (probe lists more than the text)")
     else:
@@ -157,6 +159,6 @@ if total_text != total_probe:
 if bad:
     print("FAIL: the probe's list differs from the text count in: " + ", ".join(bad))
     sys.exit(1)
-print("PASS: the reel lists every blast, globe, aura field, color pattern and breath type in lib/program.i.")
+print("PASS: the reel lists every blast, globe, aura field, wall, color pattern and breath type in lib/program.i.")
 PY
 exit $?

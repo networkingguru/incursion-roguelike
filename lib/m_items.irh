@@ -3932,7 +3932,7 @@ AI_BOOTS Effect "Elvenkind;boots" : EA_GRANT
       Silently skill rating equal to thrice their magical plus."; }
 
 AI_BOOTS Effect "Thunder" : EA_INFLICT
-  { SC_ARC; Level: 3;
+  { Flags: EF_SHAKE_GLOBE; SC_ARC; Level: 3;
     aval: AR_GLOBE; lval: 6; qval: Q_LOC;
     xval: PRONE; sval: REF; cval: BROWN;
     On Event EV_ISTARGET {

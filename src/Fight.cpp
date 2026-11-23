@@ -9325,6 +9325,9 @@ WoundIgnored:
                                                 xID = Candidates[random((int16)n)];
                                             if (e.EVictim->HasEffStati(POISONED,xID))
                                                 break;
+                                            /* inc-jw0hw (Phase 5): a spreader's spores blast out from it, whether or not the victim saves */
+                                            if (TEFF(xID)->HasFlag(EF_SPORES) && e.EActor->m)
+                                                SporeBlast(*e.EActor->m, e.EActor, e.EVictim);
                                             if (e.saveDC == 0)
                                                 e.saveDC = TEFF(xID)->ef.sval;
                                             if (!e.EVictim->SavingThrow(FORT,e.saveDC)) {

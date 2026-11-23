@@ -7,6 +7,7 @@ static EffectLight *ScriptFx = NULL;
 
 void (*EffectLightHook)(int phase) = NULL;
 void (*TargetFlashHook)(int phase) = NULL;
+void (*EffectStepHook)(int kind, int16 x, int16 y, Glyph g) = NULL;
 void (*ScriptLightTickHook)(float clockMs) = NULL;
 void (*ScriptLightEndHook)() = NULL;
 
@@ -20,7 +21,7 @@ static int16 DTypeLightColour(int16 dtype) {
     case AD_DISN: return COL_DISINT;
     case AD_SONI: return COL_SONIC;
     case AD_TOXI: case AD_POIS: return COL_POISON;
-    case AD_NECR: case AD_DREX: case AD_DRST: case AD_DRCO: return COL_NECRO;
+    case AD_NECR: case AD_DREX: case AD_DRST: case AD_DRCO: case AD_EVIL: return COL_NECRO;
     case AD_SUNL: return COL_LIGHT;
     case AD_MAGC: return COL_MAGIC;
     case AD_STON: return COL_PETRI;
@@ -52,8 +53,10 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
   EffectLightDecision d;
   d.lit = true;
   d.colour = 0;
+  d.grade = 0;
   if (!te)
     return d;
+  d.grade = te->HasFlag(EF_GRADE_3) ? 3 : te->HasFlag(EF_GRADE_2) ? 2 : te->HasFlag(EF_GRADE_1) ? 1 : 0;
   if (te->HasFlag(EF_GLOW)) d.lit = true;
   else if (te->HasFlag(EF_NO_GLOW)) d.lit = false;
   else d.lit = TypeGlows(dtype);
@@ -80,13 +83,14 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
                          TEffect *te, bool targetFlash)
-    : map(m), id(-1), ended(false), lit(true), target(targetFlash),
+    : grade(0), map(m), id(-1), ended(false), lit(true), target(targetFlash),
       clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false), standing(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
-    lit = d.lit;
+    lit = d.lit || (targetFlash && te->HasFlag(EF_FLASH_STRUCK));   /* inc-jw0hw: an unlit effect may still flash what it strikes */
     if (d.colour)
       blastColour = d.colour;
+    grade = d.grade;
   } else if (const int16 dc = DTypeLightColour(dtype))
     blastColour = dc;
   style = LF_STEADY;
@@ -103,6 +107,7 @@ EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
   if (shape == EL_BEAM) life = 300.0f;   /* beams rise fast and fade just as fast */
   if (lit) {
     id = LightFlashAdd(colour, style, gain, reach, ramp);
+    LightFlashSetGrade(id, grade);
     LightFlashSetLife(id, life);
   }
 }
@@ -146,6 +151,7 @@ void EffectLight::MoveTo(int16 x, int16 y) {
     LightFlashRemove(id);
   id = Sees(x, y) ? LightFlashAdd(colour, style, gain, reach, ramp) : -1;
   if (id >= 0) {
+    LightFlashSetGrade(id, grade);
     LightFlashSetLife(id, life);
     LightFlashSetClock(id, clockMs);   /* the new square is born now */
     LightFlashGlyphs(id, glyphsOn);
@@ -170,10 +176,11 @@ void EffectLight::SetCellColour(int16 x, int16 y, int16 glyphColour) {
 
 /* inc-jw0hw: a standing light. Each square keeps its own color at full brightness and never ages (the rise's render path at its
    top level); the light's glyphs are the caller's, drawn in the overlay, so the light leaves every glyph's color alone. */
-void EffectLight::Stand() {
+void EffectLight::Stand(bool keepFlicker) {
   standing = true;
   if (id >= 0 && !ended) {
-    LightFlashSetStyle(id, LF_STEADY);
+    if (!keepFlicker)
+      LightFlashSetStyle(id, LF_STEADY);
     LightFlashSetRise(id, true);
     LightFlashLevel(id, 1.0f);
   }
@@ -470,3 +477,147 @@ void EventInfo::PatternStand(Thing *t, int16 radius, int16 col, int16 stati) {
 void EventInfo::PatternStop(Thing *t) {
   StandingPatternStop(t, eID);
 }
+
+/* inc-jw0hw (Phase 5): motion. See inc/EffectLight.h. */
+void (*MotionHook)(int start, int n, const int16 *xs, const int16 *ys, const uint8 *modes) = NULL;
+struct MotionSq { int16 x, y; uint8 mode; };
+static std::vector<MotionSq> MotionSet;   /* the cast's hold: a shake, or a dance for the hold only */
+static std::vector<MotionSq> DanceSet;    /* the creatures that hold the Dancing status: set at each repaint, kept while the game waits */
+static uint32 MotionSalt = 0;
+
+static const MotionSq *MotionAt(int i)
+  {
+    if (i < 0) return NULL;
+    if (i < (int)MotionSet.size()) return &MotionSet[i];
+    i -= (int)MotionSet.size();
+    return i < (int)DanceSet.size() ? &DanceSet[i] : NULL;
+  }
+
+static uint32 MotionHash(uint32 a, uint32 b, uint32 c)
+  {
+    uint32 h = a * 2654435761u ^ (b + 0x9e3779b9u) * 2246822519u ^ (c + 0x85ebca6bu) * 3266489917u;
+    h ^= h >> 15; h *= 2246822519u; h ^= h >> 13; h *= 3266489917u; h ^= h >> 16;
+    return h;
+  }
+
+void MotionStart(const int16 *xs, const int16 *ys, const uint8 *modes, int n)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    MotionSet.clear();
+    if (!pl || pl->Opt(OPT_ANIMATION) == 2)
+      n = 0;
+    for (int i = 0; i < n; i++) {
+      MotionSq q = { xs[i], ys[i], modes[i] };
+      MotionSet.push_back(q);
+      }
+    for (size_t d = 0; d < DanceSet.size(); ) {   /* a dancer in the hold moves once, as the hold's square */
+      bool dup = false;
+      for (size_t h = 0; h < MotionSet.size(); h++)
+        if (MotionSet[h].x == DanceSet[d].x && MotionSet[h].y == DanceSet[d].y) dup = true;
+      if (dup) DanceSet.erase(DanceSet.begin() + d); else d++;
+      }
+    MotionSalt = (uint32)cosmetic_random(32000) * 65537u + (uint32)cosmetic_random(32000);
+    if (MotionHook && n)
+      MotionHook(1, n, xs, ys, modes);
+  }
+
+void MotionStop()
+  {
+    if (MotionSet.empty())
+      return;
+    if (MotionHook) {
+      std::vector<int16> xs, ys; std::vector<uint8> md;
+      for (size_t i = 0; i < MotionSet.size(); i++) {
+        xs.push_back(MotionSet[i].x); ys.push_back(MotionSet[i].y); md.push_back(MotionSet[i].mode);
+        }
+      MotionHook(0, (int)MotionSet.size(), &xs[0], &ys[0], &md[0]);
+      }
+    MotionSet.clear();
+    TermMotionClear();
+  }
+
+bool MotionActive() { return !MotionSet.empty() || !DanceSet.empty(); }
+int  MotionCount() { return (int)(MotionSet.size() + DanceSet.size()); }
+
+bool MotionSquare(int i, int16 &x, int16 &y, uint8 &mode)
+  {
+    const MotionSq *q = MotionAt(i);
+    if (!q)
+      return false;
+    x = q->x; y = q->y; mode = q->mode;
+    return true;
+  }
+
+void MotionDancers(const int16 *xs, const int16 *ys, int n)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    std::vector<MotionSq> nw;
+    if (pl && pl->Opt(OPT_ANIMATION) != 2)
+      for (int i = 0; i < n; i++) {
+        bool dup = false;
+        for (size_t h = 0; h < MotionSet.size(); h++)
+          if (MotionSet[h].x == xs[i] && MotionSet[h].y == ys[i]) dup = true;
+        if (!dup) { MotionSq q = { xs[i], ys[i], MOT_DANCE }; nw.push_back(q); }
+        }
+    bool same = nw.size() == DanceSet.size();
+    for (size_t i = 0; same && i < nw.size(); i++)
+      same = nw[i].x == DanceSet[i].x && nw[i].y == DanceSet[i].y;
+    if (same)
+      return;
+    const bool had = !DanceSet.empty();
+    if (!had && MotionSet.empty())
+      MotionSalt = (uint32)cosmetic_random(32000) * 65537u + (uint32)cosmetic_random(32000);
+    DanceSet = nw;
+    if (had && DanceSet.empty() && MotionSet.empty())
+      TermMotionClear();   /* the last dancer stopped: repaint its square */
+  }
+
+/* A dance moves in periods of 3 frames (100 ms). Each period has a raw pick of 4 mirror states (none, left-right, upside-down,
+   both); in some groups of 4 periods the states instead step in order, which reads as a spin. Two periods in a row never both
+   hold no mirror, so a dancer shows a mirror at least every other period. */
+static int DanceState(uint32 salt, int i, uint32 period)
+  {
+    const uint32 grp = period / 4;
+    const bool spin = (MotionHash(salt, (uint32)i, grp + 7777u) & 1u) != 0;
+    const uint32 h0 = MotionHash(salt, (uint32)i, period);
+    const int raw = spin ? (int)((MotionHash(salt, (uint32)i, grp + 1234u) + period) & 3u) : (int)(h0 & 3u);
+    if (raw != 0 || period == 0)
+      return raw;
+    const uint32 pp = period - 1, pg = pp / 4;
+    const bool pspin = (MotionHash(salt, (uint32)i, pg + 7777u) & 1u) != 0;
+    const int praw = pspin ? (int)((MotionHash(salt, (uint32)i, pg + 1234u) + pp) & 3u) : (int)(MotionHash(salt, (uint32)i, pp) & 3u);
+    return praw == 0 ? 1 + (int)((h0 >> 8) % 3u) : 0;
+  }
+
+MotionXf MotionPick(uint32 frame, int i)
+  {
+    MotionXf xf = { 0, 0, false, false };
+    const MotionSq *q = MotionAt(i);
+    if (!q)
+      return xf;
+    const uint32 h = MotionHash(MotionSalt, (uint32)i, frame);
+    const int mag = 1 + (int)((h >> 3) % 3u);          /* 1..3 pixels */
+    const int dir = (int)(h % 8u);                      /* one of 8 directions */
+    static const int DX[8] = { 1, 1, 0, -1, -1, -1, 0, 1 }, DY[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    xf.dx = DX[dir] * mag; xf.dy = DY[dir] * mag;
+    if (q->mode & MOT_DANCE) {
+      const int st = DanceState(MotionSalt, i, frame / 3u);
+      xf.flipX = (st & 1) != 0; xf.flipY = (st & 2) != 0;
+      }
+    return xf;
+  }
+
+void MotionTransform(const uint32 *src, uint32 *dst, int cw, int ch, const MotionXf &xf, uint32 bg)
+  {
+    for (int y = 0; y < ch; y++)
+      for (int x = 0; x < cw; x++) {
+        int sx = x - xf.dx, sy = y - xf.dy;   /* the pixel of the moved image that lands on (x, y) */
+        if (sx < 0 || sx >= cw || sy < 0 || sy >= ch) {
+          dst[y * cw + x] = bg;
+          continue;
+          }
+        if (xf.flipX) sx = cw - 1 - sx;
+        if (xf.flipY) sy = ch - 1 - sy;
+        dst[y * cw + x] = src[sy * cw + sx];
+        }
+  }

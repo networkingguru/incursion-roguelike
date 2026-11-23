@@ -1,0 +1,7 @@
+# Save the level as it stands, with the Wall of Fire the probe left up (INCURSION_WALL_SAVE=1).
+# Used by tools/check_effect_motion.sh stage W3. ESC opens the System Menu, [b] is Save and Continue
+# (see the header of tools/keys/save-continue.keys). The run needs no turn of its own: the probe's cast is one.
+ESC
+@expect "System Menu"
+b
+@dump:saved

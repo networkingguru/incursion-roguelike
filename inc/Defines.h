@@ -3742,7 +3742,29 @@ typedef signed int        hObj;
 #define EF_COLOR_PATTERN 117 /* inc-jw0hw: the effect draws random glyphs in random colors, not a recolor */
 #define EF_WAVES      118  /* inc-jw0hw: a globe plays one wave of glyphs per EA_BLAST part, not a recolor */
 #define EF_RAIN       119  /* inc-jw0hw: a globe plays falling glyphs onto each square, not a recolor */
-#define EF_LAST       120
+#define EF_PILLAR     120  /* inc-jw0hw: the area falls onto the target from the top of the view; no projectile */
+#define EF_BLAST_RINGS 121 /* inc-jw0hw: a globe draws rings of blast glyphs over its area, as a ball does, not a recolor */
+#define EF_THROWN     122  /* inc-jw0hw: a globe's item flies from the thrower to the target square before it bursts */
+#define EF_DART       123  /* inc-jw0hw: a trap's dart flies 1-3 squares from the nearest wall to the victim, with no light */
+#define EF_FLASH_STRUCK 124 /* inc-jw0hw: the creatures this effect strikes flash although the effect gives no light */
+#define EF_GRADE_1    125  /* inc-jw0hw: a lit effect one grade above its basic one: one extra light, reach + 1 */
+#define EF_GRADE_2    126  /* inc-jw0hw: two grades above basic: two extra lights, reach + 1 and + 2 */
+#define EF_GRADE_3    127  /* inc-jw0hw: three grades above basic: three extra lights, reach + 1, + 2 and + 3 */
+#define EF_FORM_RINGS 128  /* inc-jw0hw: the area forms ring by ring from its center (water floods, webs spread) */
+#define EF_FORM_POP   129  /* inc-jw0hw: the area forms one random square after another */
+#define EF_FORM_FALL  130  /* inc-jw0hw: the area falls away one random square at a time, center first */
+#define EF_FORM_SCATTER 131 /* inc-jw0hw: the area forms in a scattered order, outward from the center, as if thrown */
+#define EF_FORM_BILLOW 132 /* inc-jw0hw: the area fills with fog glyphs that billow outward from the source */
+#define EF_FORM_SWEEP 133  /* inc-jw0hw: a wall's line forms one section at a time, from one end to the other */
+#define EF_FORM_CLUMP 134  /* inc-jw0hw: the area grows in clumps: a few scattered seeds, then clusters around them */
+#define EF_FORM_GROW  135  /* inc-jw0hw: the area grows from a seed or two and spreads to its neighbors */
+#define EF_SHAKE_GLOBE 136 /* inc-jw0hw: every creature and item inside the globe shakes while the effect plays */
+#define EF_SHAKE_VICTIM 137 /* inc-jw0hw: the one victim shakes while the effect plays */
+#define EF_SHAKE_ITEMS 138 /* inc-jw0hw: the items the effect will affect shake while it plays */
+#define EF_DANCE      139  /* inc-jw0hw: the creatures the effect affects dance: they shake, flip and spin */
+#define EF_FORM_RISE  140  /* inc-jw0hw: each corpse the effect raises stands up as undead, one at a time in random order */
+#define EF_SPORES     141  /* inc-jw0hw: spores fly from the caster in every direction, drawn with arrow glyphs */
+#define EF_LAST       142
 // end family: ef
 // family: ea internal
 

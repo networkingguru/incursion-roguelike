@@ -1508,8 +1508,12 @@ StartSearch:
         }
 }
 
+extern void FormationScriptFog(Map *m, int16 x, int16 y, int16 radius, Glyph g);   /* src/Magic.cpp, inc-jw0hw */
+
 void Map::NewField(int32 FType, int16 x, int16 y, uint8 rad,Glyph Img, int16 Dur, rID eID, Creature *Creator) {
     uint8 ix, iy; int16 i; Thing *t;
+    if (FType & FI_FOG)
+        FormationScriptFog(this, x, y, rad, Img);   /* a fog bank billows outward before the field takes over */
     Field *f = Fields.NewItem();
     ASSERT(f)
 

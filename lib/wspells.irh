@@ -675,7 +675,7 @@ Potion / Wizard / Scroll Spell "Mending" : EA_GENERIC
   }
 
 Wizard / Druid Spell "Wall of Fog" : EA_TERRAFORM
-  { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
+  { Flags: EF_FORM_BILLOW; SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
     xval: TERRA_FLOOR; rval: $"fog"; Flags: EF_DMIN;
     Desc: "Conjures a curtain of fog useful for, among other things,
@@ -2137,7 +2137,7 @@ Wizard / Scroll Spell "Passwall" : EA_TRAVEL
   }
 
  Wizard / Priest / Druid Spell "Wind Wall" : EA_TERRAFORM
-  { SC_ARC|SC_AIR; Base: SP_EASY; Cost: 3; Level: 2; lval: 6;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_AIR; Base: SP_EASY; Cost: 3; Level: 2; lval: 6;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DROUND;
     rval: $"strong updraft"; qval: Q_DIR;
     Purpose: EP_COUNTER | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
@@ -2163,7 +2163,7 @@ Terrain "strong updraft"
   }
 
  Wizard / Scroll Spell "Web" : EA_TERRAFORM
-  { SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2; Flags: EF_D10MIN;
+  { Flags: EF_FORM_RINGS; SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2; Flags: EF_D10MIN;
     xval: TERRA_OPEN; rval: $"webbing"; qval: Q_LOC|Q_TAR; cval: GREY;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY; sval: NOSAVE;
 	  Desc: "Creates a mass of sticky webbing that holds enemies
@@ -2213,7 +2213,7 @@ Wizard / Scroll Spell "Spirit Net" : EA_GENERIC
   }
 
 Wizard Spell "Wall of Doors" : EA_GENERIC
-  { SC_ARC; Base: SP_EASY; Cost: 8; Level: 2; lval: 6; qval: Q_DIR;
+  { Flags: EF_FORM_SWEEP; SC_ARC; Base: SP_EASY; Cost: 8; Level: 2; lval: 6; qval: Q_DIR;
     aval: AR_BARRIER; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_CURSE | EP_BARRIER | AIM_AT_ENEMY;
     Desc: "Conjures a solid barrier made out of wooden doors, displacing
@@ -2318,7 +2318,7 @@ Wizard / Druid / Scroll Spell "Pyrotechnics" : EA_GENERIC
   }
 
 0 Effect "Pyrotechnics;blast" : EA_BLAST
-  { aval: AR_GLOBE; lval: 2; cval: RED;
+  { aval: AR_GLOBE; lval: 2; cval: RED; Flags: EF_BLAST_RINGS;
     xval: AD_FIRE; pval: 3d8; }
 and EA_BLAST
   { aval: AR_GLOBE; lval: 2; cval: RED;
@@ -4004,7 +4004,7 @@ Terrain "strange rune"
 
 
 Wizard / Druid / Scroll Spell "Wall of Ice" : EA_TERRAFORM
-  { SC_ARC|SC_COLD; Base: SP_EASY; Cost: 6; Level: 3; lval: 6; qval: Q_DIR;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_COLD; Base: SP_EASY; Cost: 6; Level: 3; lval: 6; qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
     rval: $"ice wall"; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_FOIL_PURSUIT | EP_ESCAPE | EP_BARRIER | AIM_AT_ENEMY;
@@ -4998,7 +4998,7 @@ Wizard Spell "Adamant Facade" : EA_INFLICT
  Wizard / Scroll Spell "Major Drain" : EA_BLAST
   { SC_NEC; Base: SP_EASY; Cost: 6; Level: 3; xval: AD_NECR; 
     Purpose: EP_ATTACK | EP_FIX_TROUBLE (TROUBLE_INJURY); cval: WHITE;
-    pval: (LEVEL_SCALED)d4; sval: NOSAVE; 
+    pval: (LEVEL_SCALED)d4; sval: NOSAVE; Flags: EF_GRADE_1;
     qval: Q_TAR; aval: AR_BOLT;
     Desc: "With this spell, the wizard drains the life and vital force from
       a target and adds it to his own. The target creature suffers 1d4
@@ -5759,7 +5759,7 @@ Wizard Spell "Aura of Abjuration" : EA_INFLICT
 /* --ARCANA 4-- */
 
 Wizard / Druid / Scroll Spell "Solid Fog" : EA_TERRAFORM
-  { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC; sval: NOSAVE;
+  { Flags: EF_FORM_BILLOW; SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC; sval: NOSAVE;
     Purpose: EP_CURSE | EP_FOIL_PURSUIT | AIM_AT_ENEMY; Flags: EF_DMIN;
     xval: TERRA_OPEN; rval: $"solid fog bank"; aval: AR_GLOBE; lval: 4;
     Desc: "Creates a bank of solid fog. Solid fog reduces movement to 15~
@@ -5779,7 +5779,7 @@ Wizard / Druid / Scroll Spell "Transmute Rock to Mud" : EA_TERRAFORM
       "The rock collapses into thick mud!"; }
 
 Wizard Spell "Tremor" : EA_DRAIN
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; 
+  { Flags: EF_SHAKE_GLOBE; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; 
     aval: AR_GLOBE; lval: 6; qval: Q_LOC;
     xval: AD_TRIP; sval: REF + 10; cval: BROWN;
     Purpose: EP_CURSE;
@@ -5809,7 +5809,7 @@ and EA_BLAST
   { xval: AD_BLUNT; pval: 2d12; }
 
 Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
-  { SC_EVO|SC_FIRE; Base: SP_EASY; Cost: 8; Level: 4; lval: 6; 
+  { Flags: EF_FORM_SWEEP, EF_GLOW; cval: COL_FIRE; SC_EVO|SC_FIRE; Base: SP_EASY; Cost: 8; Level: 4; lval: 6; 
     qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
     rval: $"curtain of flame"; pval: 2d6 + (LEVEL_MAX20);
@@ -5825,12 +5825,12 @@ Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
         }
       APrint(e,"A <Res> flares into existance!",e.rval);
       return NOTHING; };
-    Desc: "Creates a curtain of violet flames which causes (2d6
+    Desc: "Creates a curtain of red flames which causes (2d6
       + caster level) points of fire damage to any creature
       which passes through it."; }
 
 Terrain "curtain of flame"
-  { Image: magenta ';'; Mat:MAT_MINERAL; /* The *floor* */
+  { Image: red ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
     Constants:
       /* inc-1xr3 phase 2j: the curtain's per-step damage is the caster's
@@ -6366,7 +6366,7 @@ Wizard Spell "Fire Charm" : EA_INFLICT
 Wizard  Spell "Force Missiles" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_EASY; Cost: 7; Level: 4; sval: NOSAVE; 
     xval: AD_MAGC; pval: (LEVEL_2PER3)d4; 
-    Purpose: EP_ATTACK;
+    Purpose: EP_ATTACK; Flags: EF_GLOW;
     aval: AR_BOLT; qval: Q_TAR; cval: COL_MAGIC;
     Desc: "This spell creates a brilliant globe of magical energy that
     streaks forth from the caster's hand to unerringly strike its target,
@@ -7537,7 +7537,7 @@ Wizard / Scroll Spell "Cloudkill" : EA_BLAST
     lval: 2; 
     xval: AD_TOXI; pval: (LEVEL_SCALED)d4; aval: AR_BALL;
     cval: COL_POISON;	Purpose: EP_ATTACK; sval: FORT;
-    Flags: EF_PARTIAL, EF_LIM_MTYPE, EF_GLYPH_FOG, EF_CASTER_IMMUNE; 
+    Flags: EF_PARTIAL, EF_LIM_MTYPE, EF_GLYPH_FOG, EF_CASTER_IMMUNE, EF_GLOW; 
     tval: MA_BREATHER;
 		On Event POST(EV_MAGIC_HIT) {
 		  if (e.Immune || EVictim->isDead())
@@ -7557,7 +7557,7 @@ Wizard / Scroll Spell "Cloudkill" : EA_BLAST
 	}
 
 Wizard / Druid / Priest  Spell "Wall of Stone" : EA_TERRAFORM
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 10; Level: 5; lval: 10; qval: Q_DIR;
+  { Flags: EF_FORM_SWEEP; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 10; Level: 5; lval: 10; qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_PERMANANT;
     rval: $"dungeon wall"; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER|AIM_AT_ENEMY;
@@ -9293,10 +9293,10 @@ your body awakens unharmed.
  */
 
 Wizard Spell "Othello's Irresistable Dance" : EA_INFLICT
-  { SC_ENC; Base: SP_MEDIUM; Cost: 75; Level: 8; tval: MA_HUMANOID;
+  { Flags: EF_DANCE; SC_ENC; Base: SP_MEDIUM; Cost: 75; Level: 8; tval: MA_HUMANOID;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_LOC; 
     aval: AR_GLOBE; cval: EMERALD; lval: 30;
-    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_MENTAL;
+    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_MENTAL, EF_CASTER_IMMUNE;
     On Event MSG_STATINAME "Dancing" / "Dan";
     On Event EV_CALC_EFFECT {
       e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d4+1), e.MM, 0);

@@ -1,0 +1,7 @@
+# inc-jw0hw (Phase 6b): the session for the Fiery Prison probe. It needs only a started session.
+#   INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat INCURSION_LOAD=xsummon-priest-seed5-opt0822 \
+#   INCURSION_FIERY_ROOM=1 tools/headless.sh tools/keys/fiery-room.keys 1
+# Read logs/errors.log of the run: FIERY_ROOM seen N lit M standing S (exit 5, NO GAMEPLAY, is expected).
+ESC
+ESC
+@quit

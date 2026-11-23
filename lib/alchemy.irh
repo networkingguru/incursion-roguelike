@@ -220,7 +220,7 @@ Item "bag" : T_TOOL
 
 AI_ALCHEMY Effect "tanglefoot bag" : EA_TERRAFORM { 
   SC_ARC; Cost: 0; aval: AR_GLOBE; Level: 1; lval: 1; qval: Q_LOC;
-  Flags: EF_NAMEONLY, EF_AUTOID, EF_MUNDANE, EF_ACTIVATE; 
+  Flags: EF_NAMEONLY, EF_AUTOID, EF_MUNDANE, EF_ACTIVATE, EF_THROWN; 
   xval: TERRA_OPEN; rval: $"tanglefoot strands"; sval: NOSAVE; 
   Purpose: EP_ATTACK | EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY; 
   Desc: "A tanglefoot bag can be thrown to create a mass of tanglefoot 

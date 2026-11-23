@@ -21,6 +21,15 @@ enum { EL_AREA = 0, EL_BEAM = 1, EL_MISSILE = 2 };
    at EL_HOLD before the hold, and at EL_END after the flash is removed. */
 extern void (*EffectLightHook)(int phase);
 
+/* inc-jw0hw (Phase 2): test hook for the pieces an effect draws. kind says which, x,y the square, g the glyph with its color
+   (0 when none). ES_TRAVEL: a projectile starts to fly (x,y the caster). ES_STEP: it shows on a square. ES_PILLAR: a falling
+   pillar shows on a square. ES_DART: a trap's dart shows on a square. ES_THROWN: a thrown item shows on a square.
+   ES_BURST: a burst glyph shows on a square. */
+// family: effect-step-kind internal
+enum { ES_TRAVEL = 0, ES_STEP = 1, ES_PILLAR = 2, ES_DART = 3, ES_THROWN = 4, ES_BURST = 5 };
+// end family: effect-step-kind
+extern void (*EffectStepHook)(int kind, int16 x, int16 y, Glyph g);
+
 /* inc-jw0hw: test hook for the target flash (FlashStruck). Called at TF_LIT
    once the struck squares show at age 0, and at TF_END after the flash is
    removed. The target flash never calls EffectLightHook. */
@@ -35,9 +44,13 @@ extern void (*ScriptLightTickHook)(float clockMs);
 /* Called when EventInfo::LightEnd returns, whether or not a light ran. */
 extern void (*ScriptLightEndHook)();
 
+/* inc-jw0hw: where a trap's dart comes from: the flight's squares (source first, the square next to the victim last), 1 to 3,
+   from the nearest wall. Returns the count. dxs, dys (may be NULL) get the flight's direction. */
+int DartFlightPlan(Map *m, int16 vx, int16 vy, int16 *px, int16 *py, int max_n, int16 *dxs, int16 *dys);
+
 /* inc-jw0hw: whether an effect glows, and the light color row (COL_* or a
    plain palette color, 0 for none). te NULL: lit, no color. */
-struct EffectLightDecision { bool lit; int16 colour; };
+struct EffectLightDecision { bool lit; int16 colour; int grade; };   /* grade 0..3: extra lights above the basic grade (EF_GRADE_n) */
 EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype);
 
 struct EffectLight {
@@ -66,6 +79,7 @@ struct EffectLight {
      the next effect's light shows in the same frame. */
   void Rise(int16 ms);
   bool Risen() const { return risen; }
+  float Life() const { return life; }       /* a square's light life, ms */
   void GlyphsOff();               /* glyphs gone, light keeps cooling: Age() it, then Tail() */
   void Age(int16 ms);             /* advance this light's clock alone: it cools while another light plays */
   void Wait(int16 ms);            /* a wait that advances the effect clock */
@@ -82,7 +96,7 @@ struct EffectLight {
   /* inc-jw0hw: a standing light for a standing pattern (see StandingPatternStart). It holds each lit square at the peak of its own
      color and never cools. Stand() makes it so; ClearCells() drops every square, to be lit again with Light(). A standing light
      ends without a repaint: the caller repaints, because End() may run inside a repaint. */
-  void Stand();
+  void Stand(bool keepFlicker = false);   /* keepFlicker: the style the effect chose (fire flickers) stays; the light still holds its peak */
   void ClearCells();
 private:
   void Show();
@@ -90,6 +104,7 @@ private:
   uint8 style;
   float gain;
   int16 reach;
+  int grade;   /* extra lights over the same squares, from EffectLightDecide */
   Map *map;
   int32 id;
   bool ended;
@@ -108,6 +123,16 @@ private:
    palette color, or 0 and COL_RAINBOW for the full pool), and nothing in it names a spell. It stops by itself when the anchor
    dies or leaves the player's map, when OPT_ANIMATION is None, or when `stati` is not 0 and the anchor no longer holds that
    status from effect `owner`. Only cosmetic_random() chooses, so no gameplay roll moves. Returns false when nothing started. */
+/* inc-jw0hw (Phase 5): a standing wall light. A wall of terrain whose effect glows (EffectLightDecide) lights each of its squares,
+   at the effect's color and flicker, for as long as the terrain stands on that square. It rides the standing light of a pattern
+   (Stand, ClearCells, Light, redone at each repaint in StandingPatternPrepare). It ends when no wall square is left, when the
+   player leaves the map, or under OPT_ANIMATION None. Nothing is saved: on entering a map (SetMap, which a load calls too) the next
+   repaint finds the squares that hold the terrain of a glowing barrier effect and starts the light again. Returns false when
+   nothing started. */
+bool StandingWallStart(Map *m, rID terrain, const int16 *xs, const int16 *ys, int n, TEffect *te);
+int  StandingWallCount();
+void StandingWallStopAll();
+
 bool StandingPatternStart(Thing *anchor, int16 radius, int16 col, rID owner, int16 stati);
 void StandingPatternStop(Thing *anchor, rID owner);   /* every pattern the anchor holds for owner (0: for any owner) */
 void StandingPatternStopAll();
@@ -123,5 +148,34 @@ bool StandingPatternDrawsAt(int16 x, int16 y, Glyph g);
    True when the map needs a repaint. Repick picks again at once (a terminal with no timed redraw calls it once a repaint). */
 bool StandingPatternFrame(uint32 nowMs);
 void StandingPatternRepick();
+
+/* inc-jw0hw (Phase 5): motion. The SDL build moves the pixels of some squares for a while: a shake (each glyph moves 1 to 3 pixels
+   in a new random direction every frame, inside its own square) and a dance (a shake, with mirrors and spins). The text terminal
+   draws none. Only the drawing moves; the game's rolls and results do not. MotionStart names the squares and MotionStop ends
+   them. A frame is 33 ms of the terminal's clock (the recorder's virtual clock when it records). A frame's picks come from a hash
+   of the start's salt, the frame and the square: no game RNG, and the same frame always gives the same picks. */
+// family: motion-mode internal
+enum { MOT_SHAKE = 1, MOT_DANCE = 2 };
+// end family: motion-mode
+struct MotionXf { int dx, dy; bool flipX, flipY; };   /* dx, dy: pixels, each within 1..3 either way; flipX mirrors left-right, flipY upside-down */
+/* Test hook, NULL unless a probe sets it: called by MotionStart (start 1) and MotionStop (start 0) with the squares and modes. */
+extern void (*MotionHook)(int start, int n, const int16 *xs, const int16 *ys, const uint8 *modes);
+void MotionStart(const int16 *xs, const int16 *ys, const uint8 *modes, int n);
+void MotionStop();
+/* The squares of the creatures that hold the Dancing status, found at each repaint (StandingPatternPrepare). They dance (mode
+   MOT_DANCE) for as long as the status lasts, beside the cast's hold set, and are counted in MotionCount and MotionSquare. */
+void MotionDancers(const int16 *xs, const int16 *ys, int n);
+bool MotionActive();
+int  MotionCount();
+bool MotionSquare(int i, int16 &x, int16 &y, uint8 &mode);
+/* The transform of square i (0 <= i < MotionCount()) on frame `frame`. */
+MotionXf MotionPick(uint32 frame, int i);
+/* The pixels of one cell after xf: dst gets src moved by (dx, dy) and mirrored, and the strip the move uncovers takes `bg`.
+   src and dst hold cw * ch pixels each and MUST NOT overlap. Nothing outside dst[0 .. cw*ch) is written. */
+void MotionTransform(const uint32 *src, uint32 *dst, int cw, int ch, const MotionXf &xf, uint32 bg);
+/* Spores: a spreader blasts them in every direction, like arrows, each drawn with the glyph of its flight's direction (src/Magic.cpp). */
+void SporeBlast(Map &m, Thing *from, Thing *victim);
+/* The SDL terminal clears what it drew when the motion stops. Posix: no-op. */
+void TermMotionClear();
 
 #endif

@@ -72,6 +72,7 @@ INCURSION_FALL_CHAIN_SKIP	pre-registry	-
 INCURSION_FAST_PROBE	inc-rst61	names a file; an expensive entry point logs itself there and exits 3
 INCURSION_FEAR_DUR_PROBE	pre-registry	-
 INCURSION_FIELD_VALUES	pre-registry	-
+INCURSION_FIERY_ROOM	inc-jw0hw	effect reel probe: generate levels until one holds the Fiery Prison room, stand beside its curtain of flame, log seen and lit squares (tools/keys/fiery-room.keys)
 INCURSION_FOLLOWER_PROBE	pre-registry	-
 INCURSION_FORCE_DAMAGE_ROLL	pre-registry	-
 INCURSION_FORCE_PURSUE	inc-zm6li	forces the single RouteProbe pursuer to pursue its target (RouteProbe checks only)
@@ -82,6 +83,7 @@ INCURSION_FRAMES	inc-jw0hw	names a directory; the SDL build runs windowless on a
 INCURSION_GENITEM_FORCE	pre-registry	-
 INCURSION_GLORY_PROBE	pre-registry	-
 INCURSION_GOWITH_PROBE	pre-registry	-
+INCURSION_GRADE_PROBE	inc-jw0hw	probe: lights each graded effect on one square and prints the light around it (tools/check_effect_light_grade.sh)
 INCURSION_GRAVESTONE_PROBE	pre-registry	-
 INCURSION_GREAT_BLOW_FORCE	pre-registry	-
 INCURSION_GROW_NOROOM_PROBE	pre-registry	-
@@ -112,6 +114,7 @@ INCURSION_LEGEND_LORE_PROBE	pre-registry	-
 INCURSION_LEVELUP_PROBE	pre-registry	-
 INCURSION_LEVITATE_CHASM	pre-registry	-
 INCURSION_LIGHT_PROBE	pre-registry	-
+INCURSION_LIGHT_TABLE	inc-jw0hw	path of the effect-light table the reel probe and render script read; tools/check_effect_light_table.sh sets it for RED runs
 INCURSION_LIGHT_TRAP_PROBE	pre-registry	-
 INCURSION_LOF_FORCE_ROLL	pre-registry	-
 INCURSION_LOF_FORCE_SAVE	pre-registry	-
@@ -159,6 +162,7 @@ INCURSION_QUIET_PROBE	pre-registry	-
 INCURSION_RANGED_ILLUSION_PROBE	pre-registry	-
 INCURSION_READ_LIGHT_PROBE	pre-registry	-
 INCURSION_RECORD_CHAR	inc-10v7f	file to record the creation decisions to as a .char text
+INCURSION_REEL_SCENE_OFF	inc-jw0hw	effect reel probe places no creatures, corpses or items for its effect to act on (tools/check_effect_reel_scenes.sh --red)
 INCURSION_REMOVE_PROBE	pre-registry	-
 INCURSION_RENAMED_EXTRA	pre-registry	-
 INCURSION_RETIRED_EXTRA	pre-registry	-
@@ -220,6 +224,8 @@ INCURSION_TRUE_ILLUSION_SPELL	pre-registry	-
 INCURSION_UNDEAD_MOUNT_PROBE	pre-registry	-
 INCURSION_V1_RAW	pre-registry	-
 INCURSION_WAKE_PROBE	pre-registry	-
+INCURSION_WALL_LOAD	inc-jw0hw	effect reel probe: log the wall squares, standing lights and lit squares of a loaded Wall of Fire level (tools/check_effect_motion.sh W3)
+INCURSION_WALL_SAVE	inc-jw0hw	effect reel probe: leave the Wall of Fire standing and stop, so the keys can save the level (tools/check_effect_motion.sh W3)
 INCURSION_WATER_WALKING_PROBE	pre-registry	-
 INCURSION_WEAPONTYPE_PROBE	pre-registry	-
 INCURSION_WROUGHT_HARDNESS_PROBE	pre-registry	-

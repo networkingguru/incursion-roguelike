@@ -368,10 +368,15 @@ private:
     struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor, infra; bool remembered, ice, lit; };
     LitCell *litCells = NULL, *litSaved = NULL;
     uint32 ticks_light_last = 0;
+    std::vector<int32> motionCells;   /* cells DrawMotion moved at the last draw: the next flush repaints them clean */
+    uint32 motionLast = 0xffffffffu;
+    bool MotionFrame(uint32 now);
     void LitAlloc();
     void LitPaint(int32 idx);
 public:
     void DrawAuras(SDL_Surface *scr);
+    void DrawMotion(SDL_Surface *scr);
+    void MotionClear();
     bool CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch);
 private:
     bool LightFrame(uint32 now);
@@ -1301,13 +1306,15 @@ bool libtcodTerm::LightFrame(uint32 now) {
 	return true;
 }
 
-/* inc-jw0hw: the aura circles. Each circle is (rad + 0.5) cells in radius,
-   centered on its cell, 2 px wide, and drawn over the finished console only on
-   cells the player sees now (drawn lit this frame AND in the map's own
-   Visibility), so a wall in view takes the circle and a cell behind it does
-   not. Nothing is cached. The covered cells are dirtied so libtcod repaints
-   them before the next draw and the circle does not smear. */
-#define AURA_TINT_K 0.05f   /* one aura's tint: about the old 0.12 blend on a mid-gray floor */
+/* inc-jw0hw: the aura tint. Each aura fills a circle of (rad + 0.5) cells in
+   radius, centered on its cell, with a solid semi-transparent tint of its color
+   (alpha AURA_TINT_ALPHA) and no outline. It is drawn over the finished console
+   only on cells the player sees now (drawn lit this frame AND in the map's own
+   Visibility), so a wall in view takes the tint and a cell behind it does not.
+   Overlapping auras blend in turn, so their colors layer. Nothing is cached. The
+   covered cells are dirtied so libtcod repaints them before the next draw and the
+   tint does not smear. */
+#define AURA_TINT_ALPHA 0.30f   /* one aura's opacity over the pixel under it */
 void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0)
 		return;
@@ -1336,8 +1343,7 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 		if (y0 < 0) y0 = 0;
 		if (x1 > scr->w - 1) x1 = scr->w - 1;
 		if (y1 > scr->h - 1) y1 = scr->h - 1;
-		const float lineHalf = 1.0f;
-		{	/* where each circle really is, for tools/check_aura_circle.sh; one line per aura per change, with the aura's map cell */
+		{	/* where each aura really is, for tools/check_aura_circle.sh; one line per aura per change, with the aura's map cell */
 			static int lastX[16], lastY[16], lastR[16], seen[16];
 			if (i < 16 && (!seen[i] || ccx != lastX[i] || ccy != lastY[i] || (int)(R + 0.5f) != lastR[i])) {
 				seen[i] = 1; lastX[i] = ccx; lastY[i] = ccy; lastR[i] = (int)(R + 0.5f);
@@ -1355,11 +1361,7 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 				if (cx >= sizeX) continue;
 				const float dx = (float)(px - ccx), dy = (float)(py - ccy);
 				const float dn = sqrtf(dx * dx + dy * dy);
-				float a = 0.0f;
-				bool tint = false;   /* the interior ADDS its color, so overlapping auras sum */
-				if (fabsf(dn - R) <= lineHalf) a = 0.9f;
-				else if (dn < R) tint = true;
-				if (a == 0.0f && !tint) continue;
+				if (dn >= R) continue;
 				const LitCell &lc = litCells[cy * sizeX + cx];
 				if (!lc.lit || !m->InBounds(lc.mx, lc.my) ||
 				    !(m->At(lc.mx, lc.my).Visibility & VI_VISIBLE))
@@ -1371,16 +1373,10 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 				        : (pix[0] | pix[1] << 8 | pix[2] << 16));
 				Uint8 r, g, b;
 				SDL_GetRGB(v, scr->format, &r, &g, &b);
-				if (tint) {
-					const float k = AURA_TINT_K;
-					r = (Uint8)fminf(255.0f, r + nr * k + 0.5f);
-					g = (Uint8)fminf(255.0f, g + ng * k + 0.5f);
-					b = (Uint8)fminf(255.0f, b + nb * k + 0.5f);
-				} else {
-					r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
-					g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
-					b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
-				}
+				const float a = AURA_TINT_ALPHA;
+				r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
+				g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
+				b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
 				v = SDL_MapRGB(scr->format, r, g, b);
 				if (bpp == 4) *(Uint32 *)pix = v;
 				else if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
@@ -1390,8 +1386,8 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 				}
 			}
 		}
-		/* ponytail: dirties the whole bounding box each draw; a ring of cells
-		   would repaint less. Ceiling: one box per aura per frame. */
+		/* ponytail: dirties the whole bounding box each draw, and the tint
+		   fills it anyway. Ceiling: one box per aura per frame. */
 		int cx0 = x0 / g_fontW, cy0 = y0 / g_fontH;
 		int cx1 = x1 / g_fontW, cy1 = y1 / g_fontH;
 		if (cx1 >= sizeX) cx1 = sizeX - 1;
@@ -1399,6 +1395,85 @@ void libtcodTerm::DrawAuras(SDL_Surface *scr) {
 		TCOD_console_set_dirty(cx0, cy0, cx1 - cx0 + 1, cy1 - cy0 + 1);
 	}
 	if (lock) SDL_UnlockSurface(scr);
+}
+
+/* inc-jw0hw (Phase 5): the shake and the dance. Drawn over the finished console like the aura tint: each square the motion names
+   copies its cell's pixels and draws them again moved 1 to 3 pixels, and mirrored for a dance, inside the same cell; the strip
+   the move uncovers takes the cell's own background (its top-left pixel). The cells are dirtied, so the next flush repaints
+   them clean. The frame is NowMs() / 33, the recorder's virtual clock when it records. The picks (MotionPick) use no game RNG.
+   ponytail: a glyph that touches the cell's top-left pixel gives a wrong strip color. Ceiling: one-pixel flecks of that color.
+   Upgrade path: take LightGlow(lc.bi, L), the cell's real background. */
+static inline Uint32 MotionGetPix(SDL_Surface *scr, int px, int py, int bpp) {
+	Uint8 *pix = (Uint8 *)scr->pixels + py * scr->pitch + px * bpp;
+	if (bpp == 4) return *(Uint32 *)pix;
+	return SDL_BYTEORDER == SDL_BIG_ENDIAN ? (Uint32)(pix[0] << 16 | pix[1] << 8 | pix[2])
+	                                       : (Uint32)(pix[0] | pix[1] << 8 | pix[2] << 16);
+}
+static inline void MotionPutPix(SDL_Surface *scr, int px, int py, int bpp, Uint32 v) {
+	Uint8 *pix = (Uint8 *)scr->pixels + py * scr->pitch + px * bpp;
+	if (bpp == 4) { *(Uint32 *)pix = v; return; }
+	if (SDL_BYTEORDER == SDL_BIG_ENDIAN) { pix[0] = (Uint8)(v >> 16); pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)v; }
+	else { pix[0] = (Uint8)v; pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)(v >> 16); }
+}
+
+void libtcodTerm::DrawMotion(SDL_Surface *scr) {
+	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0 || !MotionActive())
+		return;
+	const int bpp = scr->format->BytesPerPixel;
+	if (bpp != 3 && bpp != 4)
+		return;
+	Map *m = p->m;
+	const bool lock = SDL_MUSTLOCK(scr) != 0;
+	if (lock && SDL_LockSurface(scr) != 0)
+		return;
+	const uint32 frame = NowMs() / 33;
+	std::vector<uint32> src((size_t)g_fontW * g_fontH), dst((size_t)g_fontW * g_fontH);
+	motionCells.clear();
+	for (int i = 0; i < MotionCount(); i++) {
+		int16 mx, my; uint8 mode;
+		int px, py, cw, ch;
+		if (!MotionSquare(i, mx, my, mode) || !CellPixel(mx, my, px, py, cw, ch))
+			continue;
+		if (cw != g_fontW || ch != g_fontH || px < 0 || py < 0 || px + cw > scr->w || py + ch > scr->h)
+			continue;
+		if (!m->InBounds(mx, my) || !(m->At(mx, my).Visibility & VI_VISIBLE))
+			continue;
+		const int sx = px / g_fontW, sy = py / g_fontH;
+		if (sx >= sizeX || sy >= sizeY)
+			continue;
+		for (int y = 0; y < ch; y++)
+			for (int x = 0; x < cw; x++)
+				src[(size_t)y * cw + x] = MotionGetPix(scr, px + x, py + y, bpp);
+		MotionTransform(&src[0], &dst[0], cw, ch, MotionPick(frame, i), src[0]);
+		for (int y = 0; y < ch; y++)
+			for (int x = 0; x < cw; x++)
+				MotionPutPix(scr, px + x, py + y, bpp, dst[(size_t)y * cw + x]);
+		TCOD_console_set_dirty(sx, sy, 1, 1);
+		motionCells.push_back(sy * sizeX + sx);
+	}
+	if (lock) SDL_UnlockSurface(scr);
+}
+
+/* The motion has stopped: repaint the cells it moved, now. */
+void libtcodTerm::MotionClear() {
+	if (motionCells.empty() || !litCells)
+		return;
+	for (size_t i = 0; i < motionCells.size(); i++)
+		TCOD_console_set_dirty(motionCells[i] % sizeX, motionCells[i] / sizeX, 1, 1);
+	motionCells.clear();
+	Update();
+}
+
+/* A shake or dance needs a flush each frame, or a wait that draws nothing else would freeze it. */
+bool libtcodTerm::MotionFrame(uint32 now) {
+	if (!MotionActive() || Mode != MO_PLAY || !litCells)
+		return false;
+	const uint32 f = now / 33;
+	if (f == motionLast)
+		return false;
+	motionLast = f;
+	Update();
+	return true;
 }
 
 bool libtcodTerm::CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
@@ -1416,7 +1491,11 @@ bool TermCellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
 }
 
 static void AuraDrawAll(SDL_Surface *screen) {
-	if (AT1) AT1->DrawAuras(screen);
+	if (AT1) { AT1->DrawAuras(screen); AT1->DrawMotion(screen); }
+}
+
+void TermMotionClear() {
+	if (AT1) AT1->MotionClear();
 }
 
 /* One 33 ms virtual step: light tick, repaint, present, save the frame. It
@@ -1464,7 +1543,8 @@ void libtcodTerm::SleepTicking(int16 milli) {
 		TCOD_sys_sleep_milli(step);
 		uint32 now = TCOD_sys_elapsed_milli();
 		done = now - start;
-		LightFrame(now);
+		if (!LightFrame(now))
+			MotionFrame(now);   /* inc-jw0hw: a shake or dance moves on every frame */
 	}
 }
 
@@ -2242,7 +2322,9 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
             }
           
         ticks1 = NowMs();
-        if (LightFrame(ticks1)) {
+        const bool lightMoved = LightFrame(ticks1);
+        const bool motionMoved = !lightMoved && MotionFrame(ticks1);   /* inc-jw0hw: a dance goes on while the game waits for a key */
+        if (lightMoved || motionMoved) {
             ticks_idle_last = ticks1;
         } else if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
             BlinkCursor();

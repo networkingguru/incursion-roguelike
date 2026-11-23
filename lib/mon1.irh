@@ -2451,7 +2451,7 @@ Monster "ettercap" : MA_SPIDER, MA_BEAST, MA_HOMINID
   }
 
 Effect "Ettercap Web" : EA_TERRAFORM
-  { SC_ARC; Base: 100; Cost: 10; Level: 1; Flags: EF_SPECABIL;
+  { Flags: EF_FORM_RINGS; SC_ARC; Base: 100; Cost: 10; Level: 1; Flags: EF_SPECABIL;
     Purpose: EP_ATTACK | AIM_AT_ENEMY | EP_FOIL_PURSUIT | EP_CURSE |
              EP_ESCAPE; 
     cval: WHITE; 

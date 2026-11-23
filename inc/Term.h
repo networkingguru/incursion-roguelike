@@ -334,6 +334,8 @@ struct CharSheet {
            sSpiritual;
 };
                                    
+void StandingWallStopAll();   /* inc/EffectLight.h */
+
 class Term {
     friend class Map;
 
@@ -476,7 +478,7 @@ public:
     virtual void ShowTime() = 0;
 
     /* Rendering the Map (Term.Cpp) */
-    virtual void SetMap(Map *_m) { m = _m; gr = m->Grid; } 
+    virtual void SetMap(Map *_m) { StandingWallStopAll(); m = _m; gr = m->Grid; }   /* inc-jw0hw: a new map rebuilds its wall lights at the next repaint */ 
     virtual Map* getMap() { return m; }
     virtual void ShowMap()=0;
     virtual void ShowMapOverview()=0;

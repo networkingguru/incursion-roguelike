@@ -507,7 +507,7 @@ Feature "trap" : T_TRAP
 
 AI_TRAP Effect "bloodroot dart trap" : EA_BLAST
   { cval: POISON_C; xval: AD_PIERCE; pval: 1d4+1; sval: REF;
-    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT; Level: 1;
+    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT, EF_DART; Level: 1;
     On Event MSG_BLASTNAME "dart",
     EV_MAGIC_STRIKE {
       hObj it;
@@ -664,7 +664,7 @@ AI_TRAP Effect "stinking cloud trap" : EA_GENERIC
   }
 
 AI_TRAP Effect "pit trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 1; sval: REF; Flags: EF_MUNDANE, EF_PERMANANT; 
+  { Flags: EF_FORM_FALL; cval: TERRA_C; Level: 1; sval: REF; Flags: EF_MUNDANE, EF_PERMANANT; 
     xval: TERRA_FLOOR; rval: $"pit"; aval: AR_GLOBE; lval: 1; 
     On Event MSG_CAST 
       "The ground falls away!" /
@@ -812,7 +812,7 @@ AI_TRAP Effect "javelin trap" : EA_BLAST
   }
 
 AI_TRAP Effect "small trapdoor trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 2; sval: REF; Flags: EF_MUNDANE; 
+  { Flags: EF_FORM_FALL; cval: TERRA_C; Level: 2; sval: REF; Flags: EF_MUNDANE; 
     xval: TERRA_FLOOR; rval: $"chasm"; aval: AR_GLOBE; lval: 1; 
     On Event MSG_CAST "The ground falls away!",
     POST(EV_EFFECT) {
@@ -839,7 +839,7 @@ AI_TRAP Effect "blue whinnis needle trap" : EA_GENERIC
 
 AI_TRAP Effect "arsenic dart trap" : EA_BLAST
   { cval: POISON_C; xval: AD_PIERCE; pval: 2d4+2; sval: REF;
-    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT; Level: 2;
+    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT, EF_DART; Level: 2;
     On Event MSG_BLASTNAME "dart",
     EV_MAGIC_STRIKE {
       hObj it;
@@ -875,7 +875,7 @@ AI_TRAP Effect "tripping chain trap" : EA_BLAST
   }
 
 AI_TRAP Effect "caltrop trap" : EA_TERRAFORM
-  { cval: MOTION_C; Level: 2; sval: REF; Flags: EF_PERMANANT;
+  { Flags: EF_FORM_SCATTER; cval: MOTION_C; Level: 2; sval: REF; Flags: EF_PERMANANT;
     xval: TERRA_FLOOR; rval: $"bed of spikes"; aval: AR_GLOBE; lval: 3; 
     On Event MSG_CAST "Spikes rises up from the ground!"; 
     Flags: EF_MUNDANE;
@@ -1059,7 +1059,7 @@ AI_TRAP Effect "holding trap" : EA_INFLICT
   }
 
 AI_TRAP Effect "inflict serious wounds trap" : EA_BLAST
-  { cval: NECRO_C; Level: 4;  
+  { cval: NECRO_C; Level: 4;  Flags: EF_GRADE_2;
     pval: 3d8+3; xval: AD_NECR; sval: WILL; } 
 
 AI_TRAP Effect "cursing trap" : EA_GENERIC
@@ -1092,13 +1092,13 @@ AI_TRAP Effect "withering trap" : EA_DRAIN
       "Tiny needles pierce the <EVictim>!"; }
 
 AI_TRAP Effect "water trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 4; sval: REF; Flags: EF_REPEAT, EF_MUNDANE;
+  { Flags: EF_FORM_RINGS; cval: TERRA_C; Level: 4; sval: REF; Flags: EF_REPEAT, EF_MUNDANE;
     xval: TERRA_FLOOR; rval: $"deep water"; aval: AR_GLOBE; lval: 4; 
     On Event MSG_CAST "Water sprays up from the trap!"; 
   }
 
 AI_TRAP Effect "large trapdoor trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 4; sval: REF; Flags: EF_MUNDANE; 
+  { Flags: EF_FORM_FALL; cval: TERRA_C; Level: 4; sval: REF; Flags: EF_MUNDANE; 
     xval: TERRA_FLOOR; rval: $"chasm"; aval: AR_GLOBE;
     lval: 2; 
     On Event MSG_CAST
@@ -1112,7 +1112,7 @@ AI_TRAP Effect "large trapdoor trap" : EA_TERRAFORM
 
 AI_TRAP Effect "terinav root dart trap" : EA_BLAST
   { cval: POISON_C; xval: AD_PIERCE; pval: 4d4+4; sval: REF;
-    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT; Level: 4;
+    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_REPEAT, EF_DART; Level: 4;
     On Event MSG_BLASTNAME "dart",
     EV_MAGIC_STRIKE {
       hObj it;
@@ -1186,7 +1186,7 @@ AI_TRAP Effect "major disruption trap" : EA_DRAIN
     On Event MSG_BLASTNAME "blast of rending force"; }
 
 AI_TRAP Effect "inflict critical wounds trap" : EA_BLAST
-  { cval: NECRO_C; Level: 5;  
+  { cval: NECRO_C; Level: 5;  Flags: EF_GRADE_3;
     pval: 4d8+4; xval: AD_NECR; sval: WILL; } 
 
 AI_TRAP Effect "falling boulder trap" : EA_BLAST
@@ -1204,13 +1204,13 @@ AI_TRAP Effect "falling boulder trap" : EA_BLAST
   }
 
 AI_TRAP Effect "thornwall trap" : EA_TERRAFORM
-  { cval: MOTION_C; Level: 5; sval: REF;
+  { Flags: EF_FORM_GROW; cval: MOTION_C; Level: 5; sval: REF;
     xval: TERRA_FLOOR; rval: $"thorn wall"; aval: AR_GLOBE; lval: 3; 
     On Event MSG_CAST "Thorns rises up from the ground!"; 
   }
 
 AI_TRAP Effect "chill water trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 5; sval: REF; 
+  { Flags: EF_FORM_RINGS; cval: TERRA_C; Level: 5; sval: REF; 
     xval: TERRA_FLOOR; rval: $"deep water"; aval: AR_GLOBE; lval: 4; 
     On Event MSG_CAST "Water rises up from the trap!"; 
     On Event EV_MAGIC_HIT {
@@ -1219,11 +1219,11 @@ AI_TRAP Effect "chill water trap" : EA_TERRAFORM
   } 
 
 AI_TRAP Effect "fireball trap" : EA_BLAST
-  { cval: ELEMENTAL_C; Level: 5; aval: AR_GLOBE; lval: 4; 
+  { cval: COL_FIRE; Level: 5; aval: AR_GLOBE; lval: 4; Flags: EF_BLAST_RINGS;
     pval: 8d6; xval: AD_FIRE; sval: REF; } 
 
 AI_TRAP Effect "ungol dust cloud trap" : EA_BLAST
-  { cval: POISON_C; Level: 5; 
+  { Flags: EF_FORM_BILLOW; cval: POISON_C; Level: 5; 
     aval: AR_GLOBE; lval: 5; Flags: EF_MUNDANE; 
     On Event EV_MAGIC_HIT {
       ThrowDmgEff(EV_DAMAGE,AD_POIS,3d6,"ungol dust cloud trap",$"ungol dust",EVictim,EVictim,NULL,NULL);
@@ -1256,7 +1256,7 @@ AI_TRAP Effect "id moss needle trap" : EA_GENERIC
   }
      
 AI_TRAP Effect "reanimation trap" : EA_GENERIC
-  { tval: T_CORPSE; cval: MISC_C; Level: 5;
+  { Flags: EF_FORM_RISE; tval: T_CORPSE; cval: MISC_C; Level: 5;
     Flags: EF_LIM_ITYPE, EF_EVIL, EF_AFFECTS_ITEMS, EF_ITEMS_ONLY; 
     aval: AR_GLOBE; lval: 6; 
     On Event POST(EV_EFFECT) {      
@@ -1304,15 +1304,15 @@ AI_TRAP Effect "reanimation trap" : EA_GENERIC
 
 AI_TRAP Effect "flame strike trap" : EA_BLAST
   { cval: ELEMENTAL_C; xval: AD_FIRE; pval: 9d6; sval: REF partial;
-    Level: 6; On Event MSG_BLASTNAME "flame strike"; }
+    Flags: EF_PILLAR; Level: 6; On Event MSG_BLASTNAME "flame strike"; }
 
 AI_TRAP Effect "major lightning bolt trap" : EA_BLAST
   { cval: ELEMENTAL_C; xval: AD_ELEC; pval: 10d6; sval: REF partial;
-    Level: 6; On Event MSG_BLASTNAME "lightning bolt"; }
+    Flags: EF_GRADE_1; Level: 6; On Event MSG_BLASTNAME "lightning bolt"; }
 
 AI_TRAP Effect "wyvern venom dart trap" : EA_BLAST
   { cval: POISON_C; xval: AD_PIERCE; pval: 6d4+6; sval: REF;
-    Flags: /*EF_ATTACK,*/ EF_MUNDANE; Level: 6;
+    Flags: /*EF_ATTACK,*/ EF_MUNDANE, EF_DART; Level: 6;
     On Event MSG_BLASTNAME "dart",
     EV_MAGIC_STRIKE {
       hObj it;
@@ -1354,7 +1354,7 @@ AI_TRAP Effect "hexing trap" : EA_GENERIC
 /************* LEVEL 7 TRAPS *****************/
 
 AI_TRAP Effect "burnt othur vapor trap" : EA_BLAST
-  { cval: POISON_C; Level: 7; sval: FORT; 
+  { Flags: EF_FORM_BILLOW; cval: POISON_C; Level: 7; sval: FORT; 
     aval: AR_GLOBE; lval: 5; Flags: EF_MUNDANE; 
     On Event EV_MAGIC_HIT {
       ThrowDmgEff(EV_DAMAGE,AD_POIS,3d6,"burnt othur vapor trap",$"burnt othur fumes",EVictim,EVictim,NULL,NULL);
@@ -1368,7 +1368,7 @@ AI_TRAP Effect "burnt othur vapor trap" : EA_BLAST
   }
 
 AI_TRAP Effect "caustic water trap" : EA_TERRAFORM
-  { cval: TERRA_C; Level: 7; sval: REF; Flags: EF_MUNDANE;
+  { Flags: EF_FORM_RINGS; cval: TERRA_C; Level: 7; sval: REF; Flags: EF_MUNDANE;
     xval: TERRA_FLOOR; rval: $"deep water"; aval: AR_GLOBE; lval: 5; 
     On Event MSG_CAST "Water rises up from the trap!"; 
     On Event EV_MAGIC_HIT {
@@ -1380,7 +1380,7 @@ AI_TRAP Effect "caustic water trap" : EA_TERRAFORM
 /************* LEVEL 8 TRAPS *****************/
 
 AI_TRAP Effect "insanity mist vapor trap" : EA_BLAST
-  { cval: POISON_C; Level: 8; sval: FORT; 
+  { Flags: EF_FORM_BILLOW; cval: POISON_C; Level: 8; sval: FORT; 
     aval: AR_GLOBE; lval: 8; Flags: EF_MUNDANE; 
     On Event EV_MAGIC_HIT {
       ThrowDmgEff(EV_DAMAGE,AD_POIS,3d6,"insanity mist trap",$"insanity mist",EVictim,EVictim,NULL,NULL);

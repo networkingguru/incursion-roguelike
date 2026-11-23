@@ -1410,7 +1410,7 @@ Effect "Mud Spray" : EA_BLAST
   {
     aval: AR_BEAM; lval: 2; cval: BROWN; qval: Q_TAR|AIM_AT_ENEMY;
     xval: AD_BLND; pval: 2d4; Purpose: EP_ATTACK;
-    Flags: EF_ATTACK, EF_MUNDANE, EF_SPECABIL;
+    Flags: EF_ATTACK, EF_MUNDANE, EF_SPECABIL, EF_FLASH_STRUCK;
     Desc: "A muckdweller can produce a pressurized spray of mud by
       swinging their tail, using this directed jet to blind larger
       creatures. The muckdweller must roll to hit when using this
