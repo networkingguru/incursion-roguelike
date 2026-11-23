@@ -174,12 +174,41 @@ bool HideRoarLive(Creature *c) {
     return elapsed < HIDE_ROAR_ROUNDS;
 }
 
+/* inc-6lwjk: a watcher keeps at most HIDE_NOTE_MAX HK_SPOT_RESULT notes. Before
+   a new one is stored, the note for the farthest hider (or a hider that is gone)
+   is erased, so a pit of hiders cannot push one creature's status list past the
+   engine cap of 256. An erased note only means that pair rolls again. Evidence:
+   Observed, winged snake held 126 notes on seed 40 of dive-depth-10. */
+static void hcEvictFarNote(Creature *c) {
+    int n = 0, worst = -1;
+    hObj worstH = 0;
+    StatiIterNature(c, TRIED)
+        if (S->Val == HK_SPOT_RESULT) {
+            n++;
+            Creature *h = isValidHandle(S->h) ? oCreature(S->h) : NULL;
+            const int d = (h && h->m == c->m && h->x != -1)
+                ? dist(c->x, c->y, h->x, h->y) : 10000;
+            if (d > worst) { worst = d; worstH = S->h; }
+        }
+    StatiIterEnd(c)
+    if (n < HIDE_NOTE_MAX) return;
+    StatiIterNature(c, TRIED)
+        if (S->Val == HK_SPOT_RESULT && S->h == worstH) {
+            Stati_RemoveInline(S, c);
+            StatiIterBreakout(c, return)
+        }
+    StatiIterEnd(c)
+}
+
 void HideSetKey(Creature *c, int16 key, Thing *src, int16 mag) {
     if (!c) return;
     if (c->HasStati(TRIED, key, src))
         c->SetStatiMag(TRIED, key, src, mag);
-    else
+    else {
+        if (key == HK_SPOT_RESULT)
+            hcEvictFarNote(c);
         c->GainPermStati(TRIED, src, SS_MISC, key, mag);
+    }
 }
 
 void HideClearKey(Creature *c, int16 key, Thing *src) {
