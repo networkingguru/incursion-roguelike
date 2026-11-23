@@ -586,6 +586,59 @@ void Creature::TrueSightProbe() {
     theGame->PlayMode = wasInPlay;
 }
 
+/* inc-pd5xn: the largest Dist at which Perceives(t) can return nonzero for
+   a thing on this creature's own map. Every range Perceives reads, taken from
+   the code, not from field names (line numbers as of this commit):
+     "Dist > 30" return (820) caps every range below except DETECTING Mag
+       (790), DETECTING_TYPE Mag (795) and TRACKING Mag (769), which are
+       tested before it and are not capped.
+     SightRange: visual box max(SightRange,BlindRange) (921). The light,
+       infra and true-sight tests (LightRange 996, InfraRange 1004,
+       TrueSightRange; ShadowRange is never read) only remove or add bits
+       inside that box, so they add no range.
+     BlindRange (856, 916), TremorRange (840), PercepRange with the
+       PERCEPTION stati (868), TelepRange (895).
+     ScentRange only while ENGULFED (904); ENGULFED skips the visual,
+       tremor, blind and perception tests.
+     Shared sight: a player's HAS_ANIMAL and a monster's ANIMAL_COMPANION
+       perceive through their own Perceives (875, 889).
+     A player's DWARVEN_FOCUS and HAS_ANIMAL are PER_TRACK | PER_TELE out to
+       30 (881). OPT_WIZ_SIGHT (883, player only, Dist < 30) is not counted. */
+int16 Creature::LongestSenseRange() {
+    static int16 depth = 0;
+    int16 r = 0;
+    if (HasStati(ENGULFED)) {
+        r = max((int16)TelepRange, (int16)ScentRange);
+    } else {
+        r = max((int16)max(SightRange, BlindRange), (int16)TremorRange);
+        r = max(r, (int16)TelepRange);
+        if (GetStatiVal(PERCEPTION))
+            r = max(r, (int16)PercepRange);
+    }
+    if (r > 30)
+        r = 30;
+    StatiIterNature(this, DETECTING)
+        if (S->Mag > r) r = S->Mag;
+    StatiIterEnd(this)
+    StatiIterNature(this, DETECTING_TYPE)
+        if (S->Mag > r) r = S->Mag;
+    StatiIterEnd(this)
+    StatiIterNature(this, TRACKING)
+        if (S->Mag > r) r = S->Mag;
+    StatiIterEnd(this)
+    if (isPlayer() && (GetStatiObj(DWARVEN_FOCUS) || GetStatiObj(HAS_ANIMAL)))
+        r = max(r, (int16)30);
+    if (!depth) {
+        depth = 1;
+        Creature *comp = isPlayer() ? (Creature *)GetStatiObj(HAS_ANIMAL)
+                                    : (Creature *)GetStatiObj(ANIMAL_COMPANION);
+        if (comp && !comp->isDead())
+            r = max(r, comp->LongestSenseRange());
+        depth = 0;
+    }
+    return r;
+}
+
 // If 'assertLOS' is true, we are sure that 'this' can see the square that
 // 't' is standing on ... but 't' might still be hiding or invisible or
 // something. 

@@ -340,3 +340,9 @@ public:
   void          SanitizeLoadedTargets();
 } TargetSystem;
 
+/* inc-pd5xn: see src/Target.cpp. */
+void GatherInSenseRange(Creature *me, int R, bool applyFiSize,
+                        std::vector<Thing*> &out);
+void ForgetPerceivedLastTurn(hObj h);
+FILE *RescanProbeLog(void);
+

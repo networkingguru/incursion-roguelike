@@ -386,6 +386,57 @@ static void RouteProbe(Map *m, Player *p) {
     fclose(f);
 }
 
+/* Mode R: a sealed, lit, cleared straight corridor of INCURSION_RUNTO_LEN
+   squares (5..60, default 30) at a fixed origin (INCURSION_RUNTO_AT="x,y",
+   default 5,5), the player on its west end, and one sealed one-square pocket
+   two rows south of the corridor's midpoint. The scene does not read the
+   player's start square or the seed.
+   Serves tools/check_rescan_trigger.sh, inc-pd5xn. */
+static void RunToStageR(Map *m, Player *p) {
+    int ox = 5, oy = 5, len = 30, x, y;
+    const char *e = getenv("INCURSION_RUNTO_LEN"), *at = getenv("INCURSION_RUNTO_AT");
+    rID wall = FIND("Dungeon Wall"), floor_ = FIND("Floor");
+    if (e && *e) len = atoi(e);
+    if (len < 5) len = 5;
+    if (len > 60) len = 60;
+    if (at && *at && sscanf(at, "%d,%d", &ox, &oy) != 2) {
+        RunToProbe("stage failed reason=bounds\n");
+        return;
+    }
+    if (!wall || !floor_) {
+        RunToProbe("stage failed reason=resources\n");
+        return;
+    }
+    if (!m->InBounds(ox - 1, oy - 3) || !m->InBounds(ox + len + 1, oy + 3)) {
+        RunToProbe("stage failed reason=bounds\n");
+        return;
+    }
+    int pkx = ox + len / 2, pky = oy + 2;
+    for (x = ox - 1; x <= ox + len + 1; x++)
+        for (y = oy - 3; y <= oy + 3; y++) {
+            Thing *t, *nx;
+            for (t = oThing(m->At(x, y).Contents); t; t = nx) {
+                nx = oThing(t->Next);
+                if (t == p) continue;
+                t->Remove(true);
+            }
+            m->WriteTerra(x, y, wall);
+        }
+    for (x = ox; x <= ox + len; x++)
+        m->WriteTerra(x, oy, floor_);
+    m->WriteTerra(pkx, pky, floor_);
+    for (x = ox - 1; x <= ox + len + 1; x++)
+        for (y = oy - 3; y <= oy + 3; y++) {
+            bool open = (y == oy && x >= ox && x <= ox + len) || (x == pkx && y == pky);
+            if (open) m->At(x, y).Lit = true;
+            m->At(x, y).Memory = m->At(x, y).Glyph;
+            m->Update(x, y);
+        }
+    p->PlaceAt(m, ox, oy);
+    RunToProbe("stage mode=R origin=%d,%d len=%d pocket=%d,%d player=%d,%d\n",
+               ox, oy, len, pkx, pky, (int)p->x, (int)p->y);
+}
+
 /* Build a sealed box around the player, once, when the overview map first
    opens: a one-square-wide corridor running east, ten squares long, with one
    hazard on its fifth square. Mode T a found armed trap, D deep water, S a corridor
@@ -404,6 +455,10 @@ void RunToStage(Map *m, Player *p) {
     px = p->x; py = p->y; hx = px + 5;
     if (mode[0] == 'M') {
         RunToStageM(m, p);
+        return;
+    }
+    if (mode[0] == 'R') {
+        RunToStageR(m, p);
         return;
     }
     if (!strchr("TDS", mode[0]) ||

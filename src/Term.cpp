@@ -2029,7 +2029,6 @@ look_again:
 
     if (t->isMonster()) {
         p->JournalNoteMonster((Monster *)t);
-        ((Monster *)t)->ts.Retarget((Creature *)t); // ww: help out the AI
     }
 
     {

@@ -1,0 +1,29 @@
+# inc-pd5xn: load the Point Buy warrior, then make the rescan scene.
+@while "more --" SPACE
+@until "HP:" ESC
+w
+y
+@choose "Genocide Everything"
+l o
+ESC ESC
+.
+@dump:rescan-corridor
+w
+@choose "Wizard Mode Switches"
+DOWN*9
+SPACE
+ESC
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "vrock"
+RIGHT*30
+@dump:rescan-summon-cursor
+ENTER
+@until "HP:" ESC
+w
+@choose "Wizard Mode Switches"
+DOWN*9
+SPACE
+ESC
+@dump:rescan-summoned

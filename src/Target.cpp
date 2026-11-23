@@ -5,6 +5,8 @@
  */
 
 #include "Incursion.h"
+#include <vector>
+#include <algorithm>
 
 /**************************************************************************\
  * HostilityWhy
@@ -1365,6 +1367,90 @@ void TargetSystem::ForgetOrders(Creature *me, int ofType)
   }
 }
 
+/* inc-pd5xn: every creature and item on me's map within Chebyshev distance R,
+   in the order a square walk (dx, dy, then Contents chain position) visits
+   them. Map::Things is walked once instead of (2R+1)^2 squares. A square under
+   an FI_SIZE field is walked square-wise, since FirstAt also returns the
+   field's creator there. applyFiSize keeps the Retarget test for such
+   squares, inc-8lh6h. */
+void GatherInSenseRange(Creature *me, int R, bool applyFiSize,
+                        std::vector<Thing*> &out)
+{
+  struct Cand { long key; Thing *t; };
+  std::vector<Cand> c;
+  Map *m = me->m;
+  const int x0 = me->x, y0 = me->y;
+  struct Rc { int x0, y0, x1, y1; };
+  std::vector<Rc> rc;
+  for (int i = 0; m->Fields[i]; i++)
+    if (m->Fields[i]->FType & FI_SIZE) {
+      Field *f = m->Fields[i];
+      Rc r = { max(f->cx - f->rad, x0 - R), max(f->cy - f->rad, y0 - R),
+               min(f->cx + f->rad, x0 + R), min(f->cy + f->rad, y0 + R) };
+      if (r.x0 <= r.x1 && r.y0 <= r.y1)
+        rc.push_back(r);
+    }
+  auto special = [&](int x, int y) {
+    for (size_t i = 0; i < rc.size(); i++)
+      if (x >= rc[i].x0 && x <= rc[i].x1 && y >= rc[i].y0 && y <= rc[i].y1)
+        return true;
+    return false;
+  };
+  auto sqkey = [&](int x, int y) { return (long)(x - x0 + R) * 4096L + (y - y0 + R); };
+
+  for (int i = 0; m->Things[i]; i++) {
+    Thing *t = oThing(m->Things[i]);
+    if (!t || !(t->isCreature() || t->isItem()))
+      continue;
+    if (t->m != m)
+      continue;
+    int x = t->x, y = t->y;
+    if (abs(x - x0) > R || abs(y - y0) > R || !m->InBounds(x, y))
+      continue;
+    if (special(x, y))
+      continue;
+    long pos = 0;
+    Thing *p = oThing(m->At(x, y).Contents);
+    for (; p && p != t; p = oThing(p->Next))
+      pos++;
+    if (!p)
+      continue;
+    Cand k = { sqkey(x, y) * 65536L + pos, t };
+    c.push_back(k);
+  }
+  if (!rc.empty()) {
+    std::vector<long> sq;
+    for (size_t i = 0; i < rc.size(); i++)
+      for (int x = rc[i].x0; x <= rc[i].x1; x++)
+        for (int y = rc[i].y0; y <= rc[i].y1; y++)
+          if (m->InBounds(x, y))
+            sq.push_back(sqkey(x, y) * 65536L);
+    std::sort(sq.begin(), sq.end());
+    sq.erase(std::unique(sq.begin(), sq.end()), sq.end());
+    for (size_t i = 0; i < sq.size(); i++) {
+      int x = (int)(sq[i] / 65536L / 4096L) + x0 - R;
+      int y = (int)(sq[i] / 65536L % 4096L) + y0 - R;
+      if (applyFiSize && m->FieldAt(x, y, FI_SIZE)) {
+        Creature *fc = m->FCreatureAt(x, y);
+        if (!fc || fc->x != x || fc->x != y)
+          continue;
+      }
+      long pos = 0;
+      for (Thing *it = m->FirstAt(x, y); it; it = m->NextAt(x, y), pos++) {
+        if (!it->isCreature() && !it->isItem())
+          continue;
+        Cand k = { sq[i] + pos, it };
+        c.push_back(k);
+      }
+    }
+  }
+  std::stable_sort(c.begin(), c.end(),
+    [](const Cand &a, const Cand &b) { return a.key < b.key; });
+  out.clear();
+  for (size_t i = 0; i < c.size(); i++)
+    out.push_back(c[i].t);
+}
+
 void TargetSystem::Retarget(Creature *me, bool force)
 {
   if (!this) return; 
@@ -1388,51 +1474,39 @@ void TargetSystem::Retarget(Creature *me, bool force)
   memcpy(targets,t,sizeof(Target) * tCount);
   count = tCount; 
 
-#define MAX_TARG_DIST   18      // Julian's knob
-
   if (me->HasStati(ENGULFER)) {
     RateAsTarget(me,me->GetStatiObj(ENGULFER),targets[count]);
     if (targets[count].priority)
       count++;
     }
 
-  for (int dx = -MAX_TARG_DIST; dx <= MAX_TARG_DIST; dx++) 
-    for (int dy = -MAX_TARG_DIST; dy <= MAX_TARG_DIST; dy++) {
-      int xx = me->x + dx;
-      int yy = me->y + dy; 
-      if (!me->m)
-        continue;
-      if (!me->m->InBounds(xx,yy))
-        continue; 
-        
-      /* Count creatures with size fields exactly once. */
-      if (me->m->FieldAt(xx,yy,FI_SIZE))
-        if (me->m->FCreatureAt(xx,yy)->x != xx ||
-            me->m->FCreatureAt(xx,yy)->x != yy)
-          continue;
-      for (Thing * it = me->m->FirstAt(xx,yy);it;it=me->m->NextAt(xx,yy)) {
-        if (!it->isCreature() && !it->isItem()) continue;
+  /* inc-pd5xn: a monster rates what it can perceive, out to its longest
+     sense range. */
+  std::vector<Thing*> cand;
+  if (me->m)
+    GatherInSenseRange(me, me->LongestSenseRange(), true, cand);
+  for (size_t ci = 0; ci < cand.size(); ci++) {
+    Thing *it = cand[ci];
 
-        /* targets[] is a 44KB stack array and this loop covers 37x37 squares,
-           counting every item as well as every creature. Nothing bounded it:
-           RateAsTarget writes at targets[count] before the priority test, so
-           the first write past the end happens the moment count reaches the
-           limit -- a stack smash with no log and no assert. */
-        if (count >= (int)(sizeof(targets)/sizeof(targets[0]))) {
+    /* targets[] is a 44KB stack array; RateAsTarget writes at targets[count]
+       before the priority test, so the list must be bounded here. */
+    if (count >= (int)(sizeof(targets)/sizeof(targets[0]))) {
 #ifdef RETARGET_PROBE
-          Error("RETARGET_PROBE: target list full at %d, square (%d,%d)",
-            count, xx, yy);
+      Error("RETARGET_PROBE: target list full at %d, square (%d,%d)",
+        count, (int)it->x, (int)it->y);
 #endif
-          goto FullList;
-        }
+      goto FullList;
+    }
 
-        RateAsTarget(me,it,targets[count]);
+    if (it->isItem() && !me->Perceives(it))
+      continue;
 
-        if (targets[count].priority <= 0) continue;
+    RateAsTarget(me,it,targets[count]);
 
-        count++;
-      }
-    } 
+    if (targets[count].priority <= 0) continue;
+
+    count++;
+  }
 
 FullList:
   qsort(targets, count, sizeof(targets[0]), TargetSort);
@@ -1456,6 +1530,21 @@ FullList:
     j++; 
   } 
   tCount = i; 
+
+  if (me->isMonster())
+    if (FILE *pf = RescanProbeLog()) {
+      String list;
+      for (int k = 0; k < tCount; k++) {
+        Thing *th = t[k].GetThingOrNULL();
+        list += Format("%s%d:%s@%d,%d", k ? ";" : "", (int)t[k].type,
+            th ? (const char*)th->Name(0) : "-", th ? (int)th->x : -1,
+            th ? (int)th->y : -1);
+      }
+      fprintf(pf, "R %ld M %s h=%lu force=%d n=%d targets=%s\n",
+          (long)theGame->Turn, (const char*)me->Name(0),
+          (unsigned long)me->myHandle, force ? 1 : 0, tCount,
+          list.GetLength() ? (const char*)list : "");
+    }
 
   /*
   if (getLeader())

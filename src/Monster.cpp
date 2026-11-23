@@ -29,6 +29,38 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+
+/* inc-pd5xn: what each monster perceived on its previous turn, sorted
+   handles. Transient: never saved, so a loaded monster rescans once. Held
+   outside Monster because Monster's size is pinned by the save layout. */
+static std::unordered_map<hObj, std::vector<hObj> > PerceivedLastTurn;
+
+void ForgetPerceivedLastTurn(hObj h) { PerceivedLastTurn.erase(h); }
+
+/* inc-pd5xn: INCURSION_RESCAN_PROBE appends to logs/rescan-probe.log; NULL
+   when the variable is unset. */
+FILE *RescanProbeLog(void)
+  {
+    static int on = -1;
+    static FILE *f = NULL;
+    if (on < 0)
+      {
+        on = getenv("INCURSION_RESCAN_PROBE") ? 1 : 0;
+        if (on)
+          {
+            char path[1024];
+            snprintf(path, sizeof(path), "%slogs/rescan-probe.log",
+                (const char*)T1->IncursionDirectory);
+            f = fopen(path, "a");
+            if (f)
+              setvbuf(f, NULL, _IOLBF, 0);
+          }
+      }
+    return f;
+  }
 #ifdef REUSE_SELFCHECK
 #include "SelfCheckTerm.h"
 #endif
@@ -369,16 +401,41 @@ void Monster::ChooseAction()
 
   StateFlags &= ~(MS_CASTING|MS_STILL_CAST);
 
-  /* This is a theoretically unnecessary kludge added after a hostile
-     wight seemed unable to spot my character Jan 21 2007, causing the
-     system to retarget more regularly. */
-  for (int16 xx=x-6;xx<=x+6;xx++)
-    for (int16 yy=y-6;yy<=y+6;yy++)
-      if (m->InBounds(xx,yy) && m->At(xx,yy).Contents)
-        for (c = m->FCreatureAt(xx,yy);c;c=m->NCreatureAt(xx,yy))
-          if (isHostileTo(c) && Perceives(c))
-            if (!ts.hasTargetThing(c))
-              ts.Retarget(this);
+  /* inc-pd5xn: a monster rescans when it perceives something new since its
+     previous turn, within its own longest sense range. */
+  {
+    std::vector<Thing*> near;
+    GatherInSenseRange(this, LongestSenseRange(), false, near);
+    std::vector<hObj> &prev = PerceivedLastTurn[myHandle];
+    std::vector<hObj> cur;
+    bool fresh = false;
+    FILE *pf = RescanProbeLog();
+    String newList;
+    for (size_t i = 0; i < near.size(); i++) {
+      Thing *it = near[i];
+      if (it == this || !Perceives(it))
+        continue;
+      cur.push_back(it->myHandle);
+      if (!std::binary_search(prev.begin(), prev.end(), it->myHandle)) {
+        fresh = true;
+        if (pf)
+          newList += Format("%s%s@%d,%d", newList.GetLength() ? "," : "",
+              (const char*)it->Name(0), (int)it->x, (int)it->y);
+      }
+    }
+    std::sort(cur.begin(), cur.end());
+    prev.swap(cur);
+    if (pf) {
+      Player *pl = theGame->GetPlayer(0);
+      fprintf(pf, "T %ld M %s h=%lu at=%d,%d range=%d seen=%d fresh=%d new=%s\n",
+          (long)theGame->Turn, (const char*)Name(0), (unsigned long)myHandle,
+          (int)x, (int)y, (int)LongestSenseRange(),
+          (pl && pl->Perceives(this)) ? 1 : 0, fresh ? 1 : 0,
+          newList.GetLength() ? (const char*)newList : "");
+    }
+    if (fresh)
+      ts.Retarget(this);
+  }
 
   if (HasStati(CHARMED,CH_COMPEL))
     StatiIterNature(this,CHARMED)
@@ -496,6 +553,11 @@ void Monster::ChooseAction()
 #define sdist(vx,vy,tx,ty) max(MYABS(vx - tx),MYABS(vy - ty))
 
   if (ts.shouldRetarget) ts.Retarget(this,true);
+
+  /* inc-pd5xn: INCURSION_RESCAN_HOLD -- a monster rescans, then takes no action. */
+  { static int hold = -1;
+    if (hold < 0) hold = getenv("INCURSION_RESCAN_HOLD") ? 1 : 0;
+    if (hold) { Timeout += 15; return; } }
 
 RestartTargetLoop:
   for (i=0; i<ts.tCount; i++) {

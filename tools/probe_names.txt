@@ -170,6 +170,8 @@ INCURSION_RECORD_CHAR	inc-10v7f	file to record the creation decisions to as a .c
 INCURSION_REEL_SCENE_OFF	inc-jw0hw	effect reel probe places no creatures, corpses or items for its effect to act on (tools/check_effect_reel_scenes.sh --red)
 INCURSION_REMOVE_PROBE	pre-registry	-
 INCURSION_RENAMED_EXTRA	pre-registry	-
+INCURSION_RESCAN_HOLD	inc-pd5xn	monsters run the rescan trigger and Retarget, then take no action; for tools/check_rescan_trigger.sh
+INCURSION_RESCAN_PROBE	inc-pd5xn	logs/rescan-probe.log: per monster turn what it newly perceives, and each monster Retarget result
 INCURSION_RETIRED_EXTRA	pre-registry	-
 INCURSION_REVERIE_PROBE	pre-registry	-
 INCURSION_RIDER_PROBE	pre-registry	-
@@ -179,6 +181,8 @@ INCURSION_ROUTE_OPT	pre-registry	-
 INCURSION_ROUTE_PROBE	pre-registry	-
 INCURSION_ROUTE_TURNS	pre-registry	-
 INCURSION_ROUTE_UNSEEN	pre-registry	-
+INCURSION_RUNTO_AT	inc-pd5xn	INCURSION_RUNTO_STAGE=R corridor origin x,y (default 5,5); for tools/check_rescan_trigger.sh
+INCURSION_RUNTO_LEN	inc-pd5xn	INCURSION_RUNTO_STAGE=R corridor length (default 30, clamp 5..60); for tools/check_rescan_trigger.sh
 INCURSION_RUNTO_PROBE	pre-registry	-
 INCURSION_RUNTO_SKILL_ROLL	pre-registry	-
 INCURSION_RUNTO_STAGE	pre-registry	-
