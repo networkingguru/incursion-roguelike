@@ -48,6 +48,7 @@
 #include <dirent.h>
 #include <fnmatch.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 
 #include "Incursion.h"
@@ -484,9 +485,21 @@ static char glyph_to_ascii(Glyph g) {
 *                              main() Function                                *
 \*****************************************************************************/
 
-/* SIGALRM, so a game that stops asking for keys still ends. Only write() and
-   _exit() are safe to call from a signal handler, so the message is a fixed
-   string and the log line is left to the harness. */
+/* SIGPROF, so a game that stops asking for keys still ends. The timer counts
+   CPU time of this process (user + system), not wall time, so other processes
+   sharing the CPUs cannot trip it; a loop between key reads still burns CPU
+   and does (inc-sbx6t). Only write() and _exit() are safe to call from a
+   signal handler, so the message is a fixed string and the log line is left
+   to the harness. */
+static unsigned watchdogS = DEFAULT_TIMEOUT_S;
+
+static void ArmWatchdog(unsigned seconds) {
+    struct itimerval it;
+    memset(&it, 0, sizeof(it));
+    it.it_value.tv_sec = seconds;
+    setitimer(ITIMER_PROF, &it, NULL);
+}
+
 static void OnTimeout(int sig) {
     const char msg[] = "incursion: watchdog timeout, no key read in time\n";
     ssize_t ignored = write(2, msg, sizeof(msg) - 1);
@@ -700,8 +713,11 @@ int main(int argc, char *argv[]) {
     /* The watchdog guards an unattended run. A person sitting at a terminal
        is allowed to think for as long as they like. */
     if (timeout && (forceHeadless || !isatty(0))) {
-        signal(SIGALRM, OnTimeout);
-        alarm(timeout);
+        if (getenv("INCURSION_WATCHDOG_S") && atoi(getenv("INCURSION_WATCHDOG_S")) > 0)
+            timeout = (unsigned)atoi(getenv("INCURSION_WATCHDOG_S"));
+        watchdogS = timeout;
+        signal(SIGPROF, OnTimeout);
+        ArmWatchdog(watchdogS);
     }
 
     /* Anything that runs at this point should not use the display. -dump
@@ -1788,7 +1804,7 @@ ScriptKey posixTerm::NextKey() {
             keyNext++;
             keysRead++;
             if (!useCurses)
-                alarm(DEFAULT_TIMEOUT_S);
+                ArmWatchdog(watchdogS);
             return k;
         }
 
@@ -1838,18 +1854,26 @@ ScriptKey posixTerm::NextKey() {
 
         keysRead++;
         if (!useCurses)
-            alarm(DEFAULT_TIMEOUT_S);
+            ArmWatchdog(watchdogS);
         return k;
     }
 
     keysRead++;
     k = keys[keyNext++];
 
-    /* The watchdog measures the gap between keystrokes, not the whole run: a
+    /* The watchdog measures the CPU time between keystrokes, not the whole run: a
        long session of real play is fine, a game that stops asking is not. It
        is never armed when a person is at the keyboard. */
     if (!useCurses)
-        alarm(DEFAULT_TIMEOUT_S);
+        ArmWatchdog(watchdogS);
+
+    /* inc-sbx6t probe: from key read N on, spin between key reads, so the
+       watchdog's red path can be checked (tools/check_watchdog_cpu.sh). */
+    {
+        const char *wp = getenv("INCURSION_WATCHDOG_PROBE");
+        if (wp && *wp && keysRead >= atoi(wp))
+            for (volatile unsigned long spin = 0; ; spin++) { }
+    }
     return k;
 }
 
