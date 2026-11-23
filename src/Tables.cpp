@@ -2034,7 +2034,8 @@ TextVal QualityDescs[] = {
     "higher magical plus. It also deals triple damage to inanimate objects like chests and doors (but not golems or magical constructs)." },
   { WQ_ENERGY,
     "A brilliant energy weapon phases cleanly through any inanimate matter and thus automatically bypasses a victim's armour. "
-    "It deals normal damage to truly inaimate objects like chests and doors." },
+    "It deals normal damage to truly inaimate objects like chests and doors. "
+    "It sheds a steady blue light as bright as a torch." },
   { WQ_DISTANCE, "A weapon of distance has its range increment doubled." },
   { WQ_SPEED, "A weapon of speed grants you a +50~ magic bonus to your attack speed (or a +25~ bonus if it is your off-hand weapon)." },
   { WQ_ACCURACY, "A weapon of accuracy strikes true, granting an additional +4 circumstance "

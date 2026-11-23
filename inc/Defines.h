@@ -3959,6 +3959,7 @@ typedef signed int        hObj;
 #define COL_CRIMSON  30 /* inc-jw0hw: Sanguine Touch */
 #define COL_DARKRED  31 /* inc-jw0hw: Dance of Ruin */
 #define COL_SUNYELLOW 32 /* inc-jw0hw: Circlet of Blasting, warm sunlight */
+#define COL_AZURE    33 /* inc-as123: a lawful weapon's hit */
 // end family: col
 // family: limn stored ordinal i16
 
