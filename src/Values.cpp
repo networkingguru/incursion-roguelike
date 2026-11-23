@@ -1657,10 +1657,9 @@ Restart:
         SightRange = max(12,15+Mod(A_WIS)*3) + AbilityLevel(CA_SHARP_SENSES)*2;
 
         LightRange = EInSlot(SL_LIGHT) ? EInSlot(SL_LIGHT)->GetLightRange() : 0;
-        if (InSlot(SL_WEAPON) && InSlot(SL_WEAPON)->HasQuality(WQ_GLOWING))
-            LightRange = max(LightRange,InSlot(SL_WEAPON)->GetPlus()*3);
-        if (InSlot(SL_READY) && InSlot(SL_READY)->HasQuality(WQ_GLOWING))
-            LightRange = max(LightRange,InSlot(SL_READY)->GetPlus()*3);
+        /* inc-as123: every lit held weapon widens the sight range; the light map lights each one separately. */
+        LightRange = max(LightRange,LightHeldRadius(this,InSlot(SL_WEAPON)));
+        LightRange = max(LightRange,LightHeldRadius(this,InSlot(SL_READY)));
         if (LightRange)
             LightRange += AbilityLevel(CA_LOWLIGHT);
 

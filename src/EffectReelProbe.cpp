@@ -17,8 +17,14 @@
 #define protected public   /* Term::QueuedChar (answers a script prompt) and Term::XOff/YOff (the map view), as EffectLightProbe does */
 #include "Incursion.h"
 #undef protected
+#include "Light.h"
+#include "EffectLight.h"
 
 extern int16 Silence;
+extern bool isExchange;
+extern void LOFSetForcedRoll(int8 r);
+extern void LOFSetForcedSaveThrowRoll(int8 r);
+extern void LOFClearForcedSaveThrowRoll();
 extern Trap *SkullTrapPlace(Player *pl, Map *mp, rID trapR, rID skull, rID skullSpell, int x, int y);
 
 extern void (*PutGlyphProbeHook)(int16 x, int16 y, bool remembered, uint16 vis);
@@ -410,10 +416,10 @@ bool IsReelKind(TEffect &te, const char **kind) {
 const char *LightClass(int16 colour, char *buf, size_t n) {
     static const char *rows[] = { "fire", "cold", "magic", "necro", "elec", "rainbow", "light",
         "poison", "acid", "disint", "petri", "poly", "sonic", "silvery", "crimson", "darkred",
-        "sunyellow" };
+        "sunyellow", "azure" };
     static const char *pal[] = { "BLACK", "BLUE", "GREEN", "CYAN", "RED", "PURPLE", "BROWN", "GREY",
         "SHADOW", "AZURE", "EMERALD", "SKYBLUE", "PINK", "MAGENTA", "YELLOW", "WHITE" };
-    if (colour >= COL_FIRE && colour <= COL_SUNYELLOW) return rows[colour - COL_FIRE];
+    if (colour >= COL_FIRE && colour <= COL_AZURE) return rows[colour - COL_FIRE];
     if (colour > 0 && colour < 16) { snprintf(buf, n, "cval:%s", pal[colour]); return buf; }
     return "random";
 }
@@ -529,6 +535,315 @@ void FieryRoomProbe(Player *pl) {
     Error("FIERY_ROOM seen %d lit %d standing %d", seen, lit, StandingWallCount());
 }
 
+/* inc-as123 (Phase 4): the weapon clips. A held light, a hit flash or a flight light does not come from an effect, so the effect list
+   cannot name it; this list is the reel's own, each clip keyed "Weapon <held|hit|flight> <what>" with a row in the light table. The
+   weapon's light is whatever the engine decides (LightHeldColour, LightMissileOf, WeaponHitColour); the clip only sets the scene. */
+// no-family
+enum { WM_HELD, WM_HIT, WM_FLIGHT };
+enum { WK_ANY, WK_GOOD, WK_EVIL, WK_LAWFUL, WK_CHAOTIC, WK_NEUTRAL, WK_UNDEAD };
+// end no-family
+struct WClip {
+    const char *key; int mode;
+    const char *item; int q, plus; const char *eff;   /* held: the weapon; hit: a long sword with quality q; flight: the missile with quality q */
+    bool torch, monster, nls;                         /* held: a torch too; a hobgoblin holds it; the activation status stands */
+    bool burst, crit; int ak, vk, saveRoll, dtype;    /* hit: burst quality, crit, actor and victim kind, forced save roll, extra damage type */
+    const char *launcher; int lq; bool seeds;         /* flight: the launcher and its quality; fire seeds (no light in flight, a wide flash) */
+};
+WClip WHeld(const char *key, const char *item, int q, int plus, const char *eff, bool torch = false, bool monster = false, bool nls = false) {
+    WClip c = { key, WM_HELD, item, q, plus, eff, torch, monster, nls, false, false, 0, 0, 0, 0, NULL, -1, false };
+    return c;
+}
+WClip WHit(const char *key, int q, bool burst, bool crit, int ak, int vk, int save, int dtype) {
+    WClip c = { key, WM_HIT, "long sword", q, -1, NULL, false, false, false, burst, crit, ak, vk, save, dtype, NULL, -1, false };
+    return c;
+}
+WClip WFlight(const char *key, const char *missile, int mq, const char *launcher, bool seeds = false) {
+    WClip c = { key, WM_FLIGHT, missile, mq, -1, NULL, false, false, false, false, false, 0, 0, 0, seeds ? AD_FIRE : 0, launcher, -1, seeds };
+    return c;
+}
+std::vector<WClip> WeaponClips() {
+    std::vector<WClip> v;
+    v.push_back(WHeld("Weapon held flaming long sword", "long sword", WQ_FLAMING, 0, NULL));
+    v.push_back(WHeld("Weapon held flame blade", "flame blade;weapon", -1, -1, NULL));
+    v.push_back(WHeld("Weapon held produced flame", "produced flame", -1, -1, NULL));
+    v.push_back(WHeld("Weapon held glowing long sword", "long sword", WQ_GLOWING, 2, NULL));
+    v.push_back(WHeld("Weapon held Sunblade", "short sword", -1, -1, "Sunblade"));
+    v.push_back(WHeld("Weapon held Quickblade", "rapier", -1, -1, "Quickblade"));
+    v.push_back(WHeld("Weapon held Sword of the Planes", "long sword", -1, -1, "Sword of the Planes"));
+    v.push_back(WHeld("Weapon held Nine Lives Stealer", "long sword", -1, -1, "Nine Lives Stealer", false, true, true));   /* an evil weapon: a hobgoblin holds it, as the priest would lose levels */
+    v.push_back(WHeld("Weapon held torch and Sunblade", "short sword", -1, -1, "Sunblade", true));
+    v.push_back(WHeld("Weapon held monster flaming sword", "long sword", WQ_FLAMING, 0, NULL, false, true));
+    v.push_back(WHit("Weapon hit flaming", WQ_FLAMING, false, false, WK_ANY, WK_ANY, 0, AD_FIRE));
+    v.push_back(WHit("Weapon hit frost", WQ_FROST, false, false, WK_ANY, WK_ANY, 0, AD_COLD));
+    v.push_back(WHit("Weapon hit shocking", WQ_SHOCKING, false, false, WK_ANY, WK_ANY, 0, AD_ELEC));
+    v.push_back(WHit("Weapon hit soul-drinking", WQ_SOULDRINK, false, false, WK_ANY, WK_ANY, 0, AD_NECR));
+    v.push_back(WHit("Weapon hit flaming burst critical", WQ_FLAMING, true, true, WK_ANY, WK_ANY, 0, AD_FIRE));
+    v.push_back(WHit("Weapon hit holy", WQ_HOLY, false, false, WK_GOOD, WK_EVIL, 0, AD_HOLY));
+    v.push_back(WHit("Weapon hit lawful", WQ_LAWFUL, false, false, WK_LAWFUL, WK_CHAOTIC, 0, AD_LAWF));
+    v.push_back(WHit("Weapon hit chaotic", WQ_CHAOTIC, false, false, WK_CHAOTIC, WK_LAWFUL, 0, AD_CHAO));
+    v.push_back(WHit("Weapon hit balance", WQ_BALANCE, false, false, WK_NEUTRAL, WK_NEUTRAL, 0, AD_MAGC));
+    v.push_back(WHit("Weapon hit unholy", WQ_UNHOLY, false, false, WK_EVIL, WK_GOOD, 0, AD_EVIL));
+    v.push_back(WHit("Weapon hit disruption kill", WQ_DISRUPTION, false, false, WK_ANY, WK_UNDEAD, 1, AD_HOLY));   /* its flash is holy white */
+    v.push_back(WFlight("Weapon flight flaming dagger", "dagger", WQ_FLAMING, NULL));
+    v.push_back(WFlight("Weapon flight flaming arrow", "sheaf arrow", WQ_FLAMING, "short bow"));
+    v.push_back(WFlight("Weapon flight fire seeds", "fire seeds", -1, NULL, true));
+    v.push_back(WFlight("Weapon flight produced flame", "produced flame", -1, NULL));
+    return v;
+}
+
+/* One weapon item the clip names, made as the game makes it: its effect (if any) builds it, then plus and quality are set directly. */
+Item *WMake(Creature *src, const char *base, int q, int plus, const char *eff) {
+    Item *it = Item::Create(FIND(base));
+    if (!it) { Error("REEL_ERROR weapon item %s is missing", base); return NULL; }
+    if (eff) {
+        it->eID = FIND(eff);
+        if (!it->eID) { Error("REEL_ERROR weapon effect %s is missing", eff); return NULL; }
+        it->Initialize(false);
+    }
+    if (plus >= 0) it->Plus = (int8)plus;
+    if (q >= 0) it->GainPermStati(EXTRA_QUALITY, src, SS_MISC, (int16)q, 0, 0);
+    return it;
+}
+
+bool WWield(Creature *c, Item *it, int slot) {
+    const bool wasPlay = theGame->PlayMode;
+    if (!c->isPlayer()) {   /* a monster's slot is read off its inventory list; out of play, an opposed alignment drains no levels */
+        theGame->PlayMode = false;
+        it->Remove(false);
+        c->GainItem(it, true);
+    }
+    Silence = 1;
+    isExchange = true;
+    if (c->InSlot(slot) != it) ThrowVal(EV_WIELD, slot, c, NULL, it);
+    isExchange = false;
+    Silence = 0;
+    theGame->PlayMode = wasPlay;
+    c->CalcValues();
+    return c->InSlot(slot) == it;
+}
+
+void WStrip(Creature *c, int slot) {
+    Item *it = c->InSlot(slot);
+    if (!it) return;
+    EventInfo t; t.Clear(); t.EActor = c; t.EItem = it; t.EParam = slot;
+    Silence = 1;
+    c->TakeOff(t);
+    Silence = 0;
+    it->Remove(true);
+}
+
+/* The player's own sight: whatever the weapon gives, and no infravision or shadow sight. */
+void WRefresh(Player *pl) {
+    pl->CalcValues();
+    pl->InfraRange = pl->ShadowRange = 0;
+    pl->CalcVision();
+    Refresh(pl);
+}
+
+int WLitCount(Map *mp) {
+    int n = 0;
+    for (int y = 0; y < mp->SizeY(); ++y)
+        for (int x = 0; x < mp->SizeX(); ++x)
+            if (LightLitAt((int16)x, (int16)y)) ++n;
+    return n;
+}
+
+bool WKindFits(Creature *c, int kind) {
+    switch (kind) {
+        case WK_GOOD: return c->isMType(MA_GOOD);
+        case WK_EVIL: return c->isMType(MA_EVIL);
+        case WK_LAWFUL: return c->isMType(MA_LAWFUL);
+        case WK_CHAOTIC: return c->isMType(MA_CHAOTIC);
+        case WK_NEUTRAL: return c->isMType(MA_NEUTRAL) && !c->isMType(MA_GOOD) && !c->isMType(MA_EVIL) && !c->isMType(MA_LAWFUL) && !c->isMType(MA_CHAOTIC);
+        case WK_UNDEAD: return c->isMType(MA_UNDEAD);
+    }
+    return true;
+}
+
+/* The first generated monster of the kind that gives no light of its own where it stands, placed at (x, y); NULL when none. */
+Monster *WSpawn(Map *mp, Player *pl, int kind, int x, int y) {
+    Module *mod = theGame->Modules[0];
+    int tries = 0;
+    for (int idx = 0; idx < mod->szMon && tries < 80; ++idx) {
+        TMonster &t = mod->QMon[idx];
+        if (t.HasFlag(M_NOGEN)) continue;
+        Monster *m = new Monster(mod->MonsterID((uint16)idx));
+        m->mHP = m->cHP = 500;
+        m->CalcValues();
+        if (!WKindFits(m, kind)) { delete m; continue; }
+        ++tries;
+        m->PlaceAt(mp, x, y, true);
+        Refresh(pl);
+        if (WLitCount(mp) == 0) return m;
+        m->Remove(true);
+    }
+    return NULL;
+}
+
+/* The light class of a color the engine decided: a COL_* row's name, or rgb:<r>,<g>,<b> when no row has it. */
+const char *WClassOfRGB(LightRGB c, char *buf, size_t n) {
+    for (int col = COL_FIRE; col <= COL_AZURE; ++col) {
+        const LightRGB r = LightEffectColour((int16)col);
+        if (r.r == c.r && r.g == c.g && r.b == c.b) return LightClass((int16)col, buf, n);
+    }
+    snprintf(buf, n, "rgb:%d,%d,%d", (int)c.r, (int)c.g, (int)c.b);
+    return buf;
+}
+
+/* The engine's light decision for a weapon clip: the light class, NULL when the clip lights nothing. The held and flight light come from LightHeldColour and
+   LightMissileOf on the clip's own item; a hit flash from WeaponHitColour on the clip's damage type. */
+const char *WClass(Player *pl, const WClip &w, char *buf, size_t n) {
+    LightRGB c;
+    if (w.mode == WM_HIT || w.seeds) {
+        const int16 col = WeaponHitColour((int16)w.dtype);
+        return col ? LightClass(col, buf, n) : NULL;
+    }
+    Item *it = WMake(pl, w.item, w.q, w.plus, w.eff);
+    if (!it) return NULL;
+    bool lit;
+    if (w.mode == WM_HELD) {
+        if (w.nls) pl->GainPermStati(EFF_FLAG1, it, SS_ENCH, 0, 0, FIND("Nine Lives Stealer"), 7);
+        lit = LightHeldColour(pl, it, c);
+        if (w.nls) pl->RemoveEffStati(FIND("Nine Lives Stealer"));
+    } else {
+        Item *bow = w.launcher ? WMake(pl, w.launcher, w.lq, -1, NULL) : NULL;
+        int16 col;
+        lit = LightMissileOf(it, bow, col, c);
+        if (bow) bow->Remove(true);
+    }
+    it->Remove(true);
+    return lit ? WClassOfRGB(c, buf, n) : NULL;
+}
+
+int gWFlight;
+void WFlightHook(int kind, int16, int16, Glyph) { if (kind == ES_FLIGHT) ++gWFlight; }
+
+void WeaponTableList(Player *pl, int &shown) {
+    const std::vector<WClip> clips = WeaponClips();
+    for (size_t i = 0; i < clips.size(); ++i) {
+        char cls[40];
+        const char *name = WClass(pl, clips[i], cls, sizeof cls);
+        Error("LIGHT %s\t%s\t%s", clips[i].key, name ? "LIT" : "UNLIT", name ? name : "-");
+        ++shown;
+    }
+}
+
+/* One scene per weapon clip, in a dark room, the player stripped of light and weapons. Held: the holder (the player, or a hobgoblin) walks 8 squares
+   east, so the light moves over the floor. Hit: the weapon's quality strikes a victim, as Weapon::QualityDmgSingle does for a hit. Flight: the
+   player throws or fires at a victim 10 squares east, the attack roll forced to a hit. */
+void WeaponReel(Player *pl, Map *mp, rID floor, rID wall, const char *only, const std::vector<TableRow> &table, int &count) {
+    const std::vector<WClip> clips = WeaponClips();
+    for (size_t n = 0; n < clips.size(); ++n) {
+        const WClip &w = clips[n];
+        if (!WantedByFilter(only, w.key) && !WantedByFilter(only, "Weapons")) continue;
+        const TableRow *row = NULL;
+        for (size_t k = 0; k < table.size(); ++k)
+            if (table[k].key == w.key) row = &table[k];
+        if (row && row->nothing) { Error("REEL_SKIP %s shows nothing by the table", w.key); continue; }
+        const bool bright = !row || row->glow != "LIT";
+        if (!row) Error("REEL_ROOM_NOROW %s has no table row; room treated as UNLIT", w.key);
+        BuildRoom(mp, pl, floor, wall, bright);
+        Error("REEL_ROOM %d %s %s", count + 1, w.key, bright ? "bright" : "dark");
+        LightFlashClearAll();
+        WStrip(pl, SL_LIGHT); WStrip(pl, SL_WEAPON); WStrip(pl, SL_READY);
+        pl->mHP = pl->cHP = 30000;
+        Monster *hold = NULL, *a = NULL, *v = NULL;
+        Item *it = NULL, *bow = NULL;
+        int hx = PX;
+        if (w.mode == WM_HELD) {
+            if (w.monster) {
+                hold = new Monster(FIND("hobgoblin"));
+                hold->mHP = hold->cHP = 500;
+                hold->CalcValues();
+                hx = PX + 3;
+                hold->PlaceAt(mp, hx, PY, true);
+            }
+            Creature *holder = hold ? (Creature *)hold : (Creature *)pl;
+            it = WMake(holder, w.item, w.q, w.plus, w.eff);
+            if (!it || !WWield(holder, it, SL_WEAPON)) { Error("REEL_ERROR weapon clip %s: the weapon did not go into the hand", w.key); continue; }
+            if (w.torch) {
+                Item *tr = WMake(pl, "torch", -1, -1, NULL);
+                if (tr) WWield(pl, tr, SL_LIGHT);
+            }
+            if (w.nls) { holder->GainPermStati(EFF_FLAG1, it, SS_ENCH, 0, 0, FIND("Nine Lives Stealer"), 7); holder->CalcValues(); }
+        } else {
+            pl->GainPermStati(TRUE_SIGHT, pl, SS_MISC, 30, 0, 0);   /* the victim is seen in the dark without lighting a square */
+            if (w.mode == WM_HIT) {
+                a = WSpawn(mp, pl, w.ak, AIMX - 2, PY);
+                v = a ? WSpawn(mp, pl, w.vk, AIMX + 1, PY) : NULL;
+                it = WMake(pl, "long sword", w.q, -1, NULL);
+                if (it && w.burst) it->GainPermStati(EXTRA_QUALITY, pl, SS_MISC, (int16)WQ_BURST, 0, 0);
+            } else {
+                v = WSpawn(mp, pl, WK_ANY, PX + 10, PY);
+                if (w.launcher) bow = WMake(pl, w.launcher, w.lq, -1, NULL);
+                it = WMake(pl, w.item, w.q, -1, NULL);
+            }
+            if (!it || !v || (w.mode == WM_HIT && !a) || (w.launcher && !bow)) {
+                Error("REEL_ERROR weapon clip %s: item %p victim %p actor %p launcher %p", w.key, (void *)it, (void *)v, (void *)a, (void *)bow);
+                continue;
+            }
+            v->mHP = v->cHP = 500;
+        }
+        WRefresh(pl);
+        ++count;
+        const std::string clip = Sanitize(w.key);
+        char cname[200];
+        snprintf(cname, sizeof cname, "%03d-%s", count, clip.c_str());
+        Error("REEL %d %s weapon", count, w.key);
+        Error("REEL_KEY %d %s", count, w.key);
+        ViewLog(pl, w.key, "before");
+        FrameClip(cname);
+        pl->MyTerm->StopWatch(300);
+        if (w.mode == WM_HELD) {
+            Creature *holder = hold ? (Creature *)hold : (Creature *)pl;
+            for (int i = 1; i <= 8; ++i) {
+                holder->PlaceAt(mp, hx + i, PY, true);
+                WRefresh(pl);
+                pl->MyTerm->StopWatch(250);
+            }
+            Error("REEL_WEAPON_HELD %s lightrange %d radius %d lit %d", w.key, (int)holder->LightRange, (int)LightHeldRadius(holder, it), WLitCount(mp));
+            pl->MyTerm->StopWatch(500);
+        } else if (w.mode == WM_HIT) {
+            EventInfo e; e.Clear();
+            e.EActor = a; e.EVictim = v; e.ETarget = v; e.EItem = it;
+            e.isCrit = w.crit; e.vDmg = 10;
+            const hObj vh = v->myHandle;
+            if (w.saveRoll) LOFSetForcedSaveThrowRoll((int8)w.saveRoll);
+            gTfLit = 0;
+            TargetFlashHook = TfHook;
+            Silence = 1;
+            ((Weapon *)it)->QualityDmgSingle(e, w.q);
+            Silence = 0;
+            TargetFlashHook = NULL;
+            LOFClearForcedSaveThrowRoll();
+            Creature *vv = oCreature(vh);
+            Refresh(pl);
+            pl->MyTerm->StopWatch(700);
+            Error("REEL_WEAPON_HIT %s flashes %d xdmg %d died %d", w.key, gTfLit, (int)e.xDmg, (!vv || vv->isDead()) ? 1 : 0);
+        } else {
+            const int hp0 = (int)v->cHP;
+            gWFlight = 0; gTfLit = 0;
+            LOFSetForcedRoll(20);
+            EffectStepHook = WFlightHook;
+            TargetFlashHook = TfHook;
+            Silence = 1;
+            Throw(EV_RATTACK, pl, v, bow, it);
+            Silence = 0;
+            EffectStepHook = NULL;
+            TargetFlashHook = NULL;
+            LOFSetForcedRoll(0);
+            const int hit = (int)v->cHP < hp0 ? 1 : 0;
+            Refresh(pl);
+            pl->MyTerm->StopWatch(700);
+            Error("REEL_WEAPON_FLIGHT %s steps %d flashes %d hit %d", w.key, gWFlight, gTfLit, hit);
+        }
+        if (bow) bow->Remove(true);
+        pl->RemoveStati(TRUE_SIGHT);
+        pl->mHP = pl->cHP = 30000;
+        ViewLog(pl, w.key, "after");
+    }
+}
+
 } /* namespace */
 
 /* inc-jw0hw: hooks INCURSION_EFFECT_REEL, INCURSION_EFFECT_LIGHT_TABLE, INCURSION_WALL_LOAD and INCURSION_FIERY_ROOM. */
@@ -621,6 +936,7 @@ void EffectReelProbe(Player *pl) {
                   d.lit ? LightClass(d.colour, buf, sizeof buf) : "-");
             ++shown;
         }
+        WeaponTableList(pl, shown);
         Error("LIGHT_DONE %d", shown);
         return;
     }
@@ -1369,6 +1685,7 @@ void EffectReelProbe(Player *pl) {
         }
         ViewLog(pl, nm, "after-idle");
     }
+    WeaponReel(pl, mp, floor, wall, only, table, count);
     Error("REEL_DONE %d", count);
 
     LightFlashClearAll();

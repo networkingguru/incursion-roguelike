@@ -356,7 +356,7 @@ uint8 BlastColourSets[] = {
  /* COL_CRIMSON */ PINK, RED, PINK, RED,
  /* COL_DARKRED */ RED, RED, RED, SHADOW,
  /* COL_SUNYELLOW */ YELLOW, YELLOW, WHITE, YELLOW,
-                   0,0,0,0,
+ /* COL_AZURE */   AZURE, SKYBLUE, AZURE, BLUE,
                    0,0,0,0 };
 
 
@@ -2578,7 +2578,7 @@ static Glyph PatternPickGlyph()
 
 static int16 PatternPickColour(int16 col)
   {
-    if (col <= 0 || col == COL_RAINBOW || col > COL_SUNYELLOW)
+    if (col <= 0 || col == COL_RAINBOW || col > COL_AZURE)
       return PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
     if (col < 16)
       return col;
@@ -3640,15 +3640,22 @@ EvReturn Magic::AGlobe(EventInfo &e)
         return DONE;
     }
 
+    /* upstream: a strike that takes a thing off the map shifts every later entry of m->Things down one slot, so a
+       walk by index skipped the next thing (plain control flow, no platform dependence). Observed (effect reel,
+       Animate Objects: 3 of 6 floor items skipped). inc-jve92, inc-etic. Not sent. */
+    std::vector<hObj> hit;
     MapIterate(m,t,i)
-        if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius) {
-            e.ETarget = t;
-            e.efNum = (int8)_efNum;
-            if (t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE))
-              ;
-            else 
-              ReThrow(EV_MAGIC_STRIKE,e); 
-          }
+        if (dist(t->x,t->y,cx,cy) <= (int16)e.vRadius &&
+            !(t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE)))
+          hit.push_back(t->myHandle);
+    for (size_t k = 0; k < hit.size(); k++) {
+        t = (Thing*)theRegistry->GetQuiet(hit[k]);
+        if (!t || t->m != m || dist(t->x,t->y,cx,cy) > (int16)e.vRadius)
+          continue;
+        e.ETarget = t;
+        e.efNum = (int8)_efNum;
+        ReThrow(EV_MAGIC_STRIKE,e);
+      }
     FormationFinish();   /* inc-jw0hw (Phase 5): the corpses the strikes raised stand up one at a time */
     return DONE;
   }

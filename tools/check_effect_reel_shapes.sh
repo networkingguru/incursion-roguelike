@@ -15,6 +15,9 @@
 #   H7 Unholy Blight: lit in the necromantic color, and its glyphs are that color (not shadow)
 #   H8 Cloudkill: lit in the poison color; its burst is fog glyphs in the poison colors, not blast glyphs
 #   H9 Mud Spray: the struck kobold flashes (the target flash runs)
+#   W1 each held-weapon clip: the holder sees by the weapon (sight range above 0, a held radius above 0) and the light map lights squares
+#   W2 each weapon-hit clip: exactly one target flash runs, and the hit deals extra damage (the disruption kill deals none and kills)
+#   W3 each weapon-flight clip: the weapon flies 3 or more squares and hits; exactly one impact flash runs (fire seeds, a thrown produced flame, flaming dagger and arrow)
 # fact: character -- fixture xsummon-priest-seed5-opt0822
 # fact: settings -- options-2026-08-22.dat
 # fact: a placed creature's saving throw -- INCURSION_FORCE_SAVE_ROLL=1 (a natural 1 fails every save)
@@ -24,13 +27,16 @@
 # fact: the colors a burst or globe takes -- BlastColourSets rows read in the same run (REEL_COLSET), not constants of the check
 # fact: the random pick among a ball's three glyph colors -- the check accepts any of the set's three (cosmetic_random only)
 # fact: which wall a dart trap's dart comes from -- DartFlightPlan is a pure function of the map and the victim's square; the check asserts the plan for fixed squares of the fixed room
+# fact: the weapon clips' hit and flight rolls -- the probe forces them (LOFSetForcedRoll 20, LOFSetForcedSaveThrowRoll 1 for the disruption kill); no roll decides them
+# fact: the weapon clips' items, holder and victims -- made by the probe (Item::Create, qualities set directly; the first generated monster of the kind that lights no square); no roll decides them
+# RED (W1-W3): make LightHeldRadius return 0 (W1 fails), or drop the FlashStruck call in WeaponHitFlash (W2 fails), or drop the produced-flame FlashSquare in Creature::RAttack (W3 fails).
 # Exit 0 PASS, 1 FAIL, 2 INCONCLUSIVE (no build, no fixture, no REEL_DONE).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 OPTIONS=tools/fixtures/options-2026-08-22.dat
 FIXTURE=xsummon-priest-seed5-opt0822
-ONLY="Force Missiles,Flame Strike,flame strike trap,fireball trap,Pyrotechnics,tanglefoot bag,bloodroot dart trap,arsenic dart trap,terinav root dart trap,wyvern venom dart trap,Unholy Blight,Cloudkill,Mud Spray"
+ONLY="Force Missiles,Flame Strike,flame strike trap,fireball trap,Pyrotechnics,tanglefoot bag,bloodroot dart trap,arsenic dart trap,terinav root dart trap,wyvern venom dart trap,Unholy Blight,Cloudkill,Mud Spray,Weapons"
 [ -x ./incursion-headless ] || { echo "INCONCLUSIVE: ./incursion-headless is missing. Run: BACKEND=posix ./build_macos.sh"; exit 2; }
 LOAD="$(tools/fixture_cache.sh "$FIXTURE" | tail -n 1)" || { echo "INCONCLUSIVE: tools/fixture_cache.sh could not build $FIXTURE."; exit 2; }
 [ -f "$LOAD" ] || LOAD="$FIXTURE"
@@ -173,6 +179,26 @@ add("H8 Cloudkill", bool(d) and d[0][2] == 1 and d[0][3] == 23 and len(bu) >= 5 
 c = "Mud Spray"
 h = hooks(c)
 add("H9 Mud Spray flash", h[2] >= 1, "target flashes %d (need 1+)" % h[2])
+
+# W1-W3 the weapon clips (inc-as123)
+def wlines(tag, pat):
+    out = {}
+    for m in re.finditer(r"REEL_WEAPON_%s (Weapon .*?) %s" % (tag, pat), log):
+        out[m.group(1)] = tuple(int(v) for v in m.groups()[1:])
+    return out
+held = wlines("HELD", r"lightrange (\d+) radius (\d+) lit (\d+)")
+hits = wlines("HIT", r"flashes (\d+) xdmg (-?\d+) died (\d)")
+flights = wlines("FLIGHT", r"steps (\d+) flashes (\d+) hit (\d)")
+bad_held = ["%s: lightrange %d radius %d lit %d" % ((k,) + v) for k, v in held.items() if v[0] <= 0 or v[1] <= 0 or v[2] <= 0]
+add("W1 held weapons", len(held) == 10 and not bad_held, "%d held clips (need 10); those without sight, radius or lit squares: %s" % (len(held), bad_held or "none"))
+bad_hit = []
+for k, v in hits.items():
+    kill = k.endswith("disruption kill")
+    if v[0] != 1 or (v[1] > 0) == kill or (v[2] == 1) != kill:
+        bad_hit.append("%s: flashes %d xdmg %d died %d" % ((k,) + v))
+add("W2 weapon hits", len(hits) == 11 and not bad_hit, "%d hit clips (need 11); wrong ones: %s" % (len(hits), bad_hit or "none"))
+bad_fl = ["%s: steps %d flashes %d hit %d" % ((k,) + v) for k, v in flights.items() if v[0] < 3 or v[1] != 1 or v[2] != 1]
+add("W3 weapon flights", len(flights) == 4 and not bad_fl, "%d flight clips (need 4); wrong ones: %s" % (len(flights), bad_fl or "none"))
 
 bad = 0
 for i, ok, text in res:

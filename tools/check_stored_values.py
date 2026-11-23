@@ -18,7 +18,11 @@ every STORED family of the tree it FAILS (exit 1), naming family, name, both
 values and file:line, when:
   1. a base name's value differs in the tree;
   2. a base name is absent from the tree, unless tools/retired_values.txt lists
-     it (rows `<family> <NAME> <value>`);
+     it (rows `<family> <NAME> <value>`), or unless master added it after the
+     branch split: a name that the merge base of HEAD and --base does not hold
+     in that family cannot have been deleted by the branch. The same holds for
+     a whole stored family the merge base lacks. Only rule 2 reads the merge
+     base; every other rule compares with the base's tip;
   3. a tree-only name's value equals a value that a base name or a retired
      value holds in the same family (shape bits: the bits overlap);
   4. a name's value does not fit the width of the family (u8 0..255, i8
@@ -93,6 +97,7 @@ Exit:  0 clean   1 a stored value changed, collided or does not fit   2 unmeasur
 
 # fact: the base tree -- a git ref read with `git archive`; default master, re-read on every run
 # fact: define and enumerator values -- the compiler at the posix flags of build_macos.sh; no game run, no seed
+# fact: the merge base -- `git merge-base HEAD <ref>`, re-read on every run; no randomness
 # fact: family, class, shape, width -- the marks in inc/ and src/ of each tree; no randomness
 # fact: retired values -- tools/retired_values.txt, a tracked file
 """
@@ -351,8 +356,12 @@ def bound_problems(fam, t, b):
     return out
 
 
-def compare(base, tree, problems, retired):
-    """base, tree: load_families results. Return (FAIL lines, names compared)."""
+def compare(base, tree, problems, retired, split_names=None):
+    """base, tree: load_families results. Return (FAIL lines, names compared).
+    split_names: {family: set of names} the merge base holds, or None. A base name
+    that the merge base lacks is new on the base: its absence is not a deletion."""
+    def added_after_split(fam, name):
+        return split_names is not None and name not in split_names.get(fam, ())
     out = ["FAIL: " + (p[6:] if p.startswith("FAIL: ") else p) for p in problems]
     ncomp = 0
     anywhere = {}  # name -> member, over every family of the tree
@@ -370,6 +379,8 @@ def compare(base, tree, problems, retired):
                         continue
                     ncomp += 1
                     now = anywhere.get(m[0])
+                    if now is None and added_after_split(fam, m[0]):
+                        continue
                     out.append("FAIL: family %s %s = %d (base %s) is stored on the base but "
                                "the tree %s. Fix: keep it in a stored family, or list it in "
                                "tools/retired_values.txt"
@@ -419,7 +430,7 @@ def compare(base, tree, problems, retired):
                 elif now[1] != b[1]:
                     out.append("FAIL: family %s %s changed: base %d (%s), tree %d (%s)"
                                % (fam, name, b[1], where(b), now[1], where(now)))
-            elif name not in ret:
+            elif name not in ret and not added_after_split(fam, name):
                 out.append("FAIL: family %s %s = %d (base %s) is gone from the tree. "
                            "Fix: keep the name, or list it in tools/retired_values.txt"
                            % (fam, name, b[1], where(b)))
@@ -576,6 +587,27 @@ def extract_base(ref, dest, root=None):
         raise Unmeasured("cannot extract base %s: %s" % (ref, t.stderr.decode()[-300:]))
 
 
+def merge_base_names(ref, root=None):
+    """{family: set of names} of the merge base of HEAD and ref. Raises Unmeasured
+    when git cannot name or extract it: the exemption is never granted blind."""
+    root = root or ROOT
+    try:
+        r = subprocess.run(["git", "-C", root, "merge-base", "HEAD", ref],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        raise Unmeasured("git is not installed, so the merge base with %s cannot be read" % ref)
+    sha = r.stdout.strip()
+    if r.returncode != 0 or not sha:
+        raise Unmeasured("cannot find the merge base of HEAD and %s: %s" % (ref, r.stderr.strip()))
+    tmp = tempfile.mkdtemp(prefix="stored_split.")
+    try:
+        extract_base(sha, tmp, root)
+        fams, _ignored = read_families(tmp, False)
+        return {f: {m[0] for m in d["members"]} for f, d in fams.items()}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 ARRAY_SITES = ({}, {})  # (base, tree) FIELD_ARRAY sites of the last measure() call
 
 
@@ -609,7 +641,8 @@ def measure(ref, root=None, use_compiler=True, retired_path=None):
 def run(ref):
     try:
         base, tree, problems, retired, kept = measure(ref, ROOT, True, RETIRED)
-        msgs, ncomp = compare(base, tree, problems, retired)
+        split = merge_base_names(ref, ROOT)
+        msgs, ncomp = compare(base, tree, problems, retired, split)
         grows_names = {g for d in tree.values() if d["class"] == "stored" for g in d["grows"]}
         arr, nsites, nfrozen = array_problems(ARRAY_SITES[0], ARRAY_SITES[1], grows_names)
         msgs += arr
@@ -797,10 +830,14 @@ def selftest():
             f.write(text)
         return d
 
-    def go(base_text, tree_text, retired=None):
+    def go(base_text, tree_text, retired=None, split_text=None):
         base, _ = read_families(tree_of(base_text), False)
         tree, problems = read_families(tree_of(tree_text), True)
-        msgs, _n = compare(base, tree, problems, retired or {})
+        split = None
+        if split_text is not None:
+            sf, _ = read_families(tree_of(split_text), False)
+            split = {f: {m[0] for m in d["members"]} for f, d in sf.items()}
+        msgs, _n = compare(base, tree, problems, retired or {}, split)
         print("  %s" % (("RED   " + msgs[0][:100]) if msgs else "GREEN"))
         return (1 if msgs else 0), "\n".join(msgs)
     try:
@@ -961,6 +998,22 @@ def selftest():
         assert c == 1 and "A_X" in m and "A_Y" in m and "stored on the base" in m, (c, m)
         assert go(b, fam("stati", "#define A_X 1\n#define A_Y 2\n", "internal"),
                   {"stati": [("A_X", 1), ("A_Y", 2)]})[0] == 0
+        # rule 2 and the merge base: a name master added after the split is not a deletion
+        sp = fam("stati", "#define A_X 1\n")                       # the tree's base at the split
+        mb = fam("stati", "#define A_X 1\n#define A_Y 2\n")      # master's tip adds A_Y
+        c, m = go(mb, sp, split_text=sp)                           # (a)
+        assert c == 0, (c, m)
+        c, m = go(mb, sp, split_text=mb)                           # (b) A_Y was at the split
+        assert c == 1 and "A_Y = 2" in m and "is gone" in m, (c, m)
+        c, m = go(mb, sp)                                          # no merge base: old behavior
+        assert c == 1 and "is gone" in m, (c, m)
+        c, m = go(mb, sp + fam("stati", "#define A_Z 2\n"), split_text=sp)   # (c) rule 3 stays on the tip
+        assert c == 1 and "tree-only A_Z = 2" in m and "reuses the value of A_Y" in m, (c, m)
+        newf = fam("fresh", "#define N_X 1\n")                    # a whole family master added
+        c, m = go(b + newf, b, split_text=b)                       # class-drop path: tree lacks it
+        assert c == 0, (c, m)
+        c, m = go(b + newf, b, split_text=b + newf)
+        assert c == 1 and "N_X" in m and "no longer has it" in m, (c, m)
         # an unclassified family in the tree
         c, m = go(b, "// family: stati\n#define A_X 1\n#define A_Y 2\n// end family: stati\n")
         assert c == 1 and "has no class" in m, (c, m)
@@ -1023,6 +1076,13 @@ def selftest():
                 raise AssertionError("a missing ref must be unmeasured")
             except Unmeasured:
                 pass
+            assert merge_base_names("master") == {"stati": {"A_X", "A_Y"}}  # HEAD is master here
+            try:
+                merge_base_names("no-such-ref")
+                raise AssertionError("no merge base must be unmeasured")
+            except Unmeasured:
+                pass
+            assert run("no-such-ref") == 2   # run() on the throwaway repo: exit 2, never a pass
         finally:
             ROOT = keep
         # rule 12: a saved array's count is a `grows` limit, or frozen against the base (gap 8)

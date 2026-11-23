@@ -5,6 +5,8 @@
 # through tools/headless.sh, once with INCURSION_EFFECT_LIGHT_OFF=1, joins each
 # clip's two frame sets into one side-by-side mp4 (tools/frames_to_video.sh
 # --pair), and writes logs/effect-reel/<date>/index.html with a video per clip.
+# inc-as123: after the effects come 25 weapon clips (a held light, a hit flash, a flight light), keyed "Weapon held|hit|flight ..." in the table;
+# --only Weapons renders just those.
 #   tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames]
 #   tools/render_effect_reel.sh --selftest   (no build: fabricated BMP frames prove the map-area identical-frames check)
 # A clip whose light-on frames have an identical map area (sidebar, messages, status line ignored) fails the run, unless its row in
