@@ -491,6 +491,7 @@ class Creature: public Thing, public Magic
       uint16 Perceives(Thing*, bool assertLOS);
       uint16 Perceives(Thing* t) { return Perceives(t, false); } 
       int16 TrueSightRange();
+      int16 LongestSenseRange();
       void TrueSightProbe();
       virtual bool isThreatened(bool perceived_only=true);
       virtual rID getGod() { return 0; }

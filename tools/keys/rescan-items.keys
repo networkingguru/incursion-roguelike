@@ -1,0 +1,37 @@
+# inc-pd5xn: the same floor dagger hidden by a wall, then revealed.
+@include setup-gnome-warrior-wis3-pickaxe-seed1-opt0822.keys
+w
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*8
+SPACE
+DOWN
+SPACE
+ESC
+RIGHT*15
+DOWN*2
+i
+b
+d
+@expect "Weapon Hand  :Empty"
+ESC
+@dump:rescan-hidden-drop
+UP*2
+LEFT*15
+w
+@choose "Monster Summoning"
+@choose "Demons"
+@choose "vrock"
+RIGHT*15 ENTER
+@until "HP:" ESC
+.*3
+@dump:rescan-hidden-rated
+w
+@choose "Change terrain type"
+RIGHT*15 DOWN ENTER
+@expect "[e] Floor"
+e
+.*3
+@dump:rescan-revealed-rated
+@quit
