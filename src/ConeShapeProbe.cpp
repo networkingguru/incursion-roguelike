@@ -381,6 +381,7 @@ void GradeOpen(const char *cs, Map *mp, const Res &R, int px, int ax, int ay,
 } /* namespace */
 
 void ConeShapeProbe(Player *pl) {
+    /* inc-epzc0: the cone check (tools/check_cone_shape.sh) turns this on. */
     if (!getenv("INCURSION_CONE_PROBE"))
         return;
     if (!pl || !pl->m || pl->m->SizeX() < 44 || pl->m->SizeY() < 34) {
