@@ -790,6 +790,12 @@ void Game::Play() {
     extern void HideSearchProbe(Player *pl);
     HideSearchProbe(pp);
 
+    /* inc-6lwjk: a watcher's spot-result notes stay bounded. Off unless
+       INCURSION_HIDE_NOTE_PROBE is set. See src/HideNoteProbe.cpp and
+       tools/check_hide_note_cap.sh. */
+    extern void HideNoteProbe(Player *pl);
+    HideNoteProbe(pp);
+
     /* inc-9622: opt-in lost-enemy/heard-noise reproduction. */
     extern void LostEnemyProbe(Player *pl);
     LostEnemyProbe(pp);
