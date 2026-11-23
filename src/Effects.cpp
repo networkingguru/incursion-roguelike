@@ -634,7 +634,7 @@ NotImmune:
         theGame->StopTime(e.EVictim);
 
     StatiIterNature(e.EVictim,e.EMagic->xval)
-        if (S->eID == e.eID && S->Val == e.EMagic->yval)
+        if (S->eID == e.eID && (S->Val == e.EMagic->yval || e.EMagic->xval == ILLUMINATED))
             e.Terse = true; 
     StatiIterEnd(e.EVictim)
 

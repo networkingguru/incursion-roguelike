@@ -2716,6 +2716,8 @@ Option OptionList[] = {
       "too dim to see is still too dim to see at 'Brightest', and a square "
       "bright enough to give away a hiding character still gives you away at "
       "'Darkest'." },
+  { OPT_AURA_CIRCLES, "Aura Circles", "SHOW/HIDE", 1, 0, 0,
+      "__Some spells, abilities and creatures surround an area with an aura that changes what happens inside it. This option draws a thin circle in the aura's color around each aura you can see, with a faint tint inside it. The circle gives no light: a dark square inside an aura stays dark. 'Hide' removes the circles and changes nothing else. The text-only display never draws them." },
 
 /* Tactical Options */
 #if 0

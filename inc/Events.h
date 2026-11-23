@@ -204,6 +204,20 @@ struct EventInfo {
         memset(this,0,sizeof(EventInfo));
     }
     void SetParam(int16 n,Thing *t) { p[n].t = t; }
+    /* inc-jw0hw: script-callable effect light (src/EffectLight.cpp). One at a
+       time: Begin, Square once per drawn square, Hold in place of the glyph
+       hold, Struck per creature hit, End before any hit resolves. */
+    void LightBegin();
+    void LightSquare(int16 x, int16 y, Glyph g);
+    void LightColour(int16 col);
+    void LightHold(int16 ms);
+    void LightRise(int16 ms);
+    void LightStruck(Thing *t);
+    void LightEnd();
+    /* inc-jw0hw: a standing pattern on creature t (see StandingPatternStart): glyphs and light that keep changing, in color set col
+       (0: this effect's cval), until PatternStop, or until t no longer holds status `stati` from this effect (0: no such test). */
+    void PatternStand(Thing *t, int16 radius, int16 col, int16 stati);
+    void PatternStop(Thing *t);
 
     uint16 Event;
     EvParam p[5];

@@ -2018,7 +2018,7 @@ AI_WAND Effect "Dehydration" : EA_BLAST
   { SC_THA; Cost: 5; pval: (PLUS_1PER1)d8; Purpose: EP_ATTACK;
     qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BEAM; cval: BROWN;
     tval: MA_LIVING; Purpose: EP_ATTACK; xval: AD_NORM;
-    Flags: EF_LIM_MTYPE, EF_NEEDS_PLUS, EF_AUTOID; 
+    Flags: EF_LIM_MTYPE, EF_NEEDS_PLUS, EF_AUTOID, EF_GLOW; 
     sval: FORT partial; Level: PLUS_2PER1_ADD2;
     On Event MSG_BLASTNAME "thin amber bolt",
       EV_MAGIC_HIT {
@@ -2043,7 +2043,7 @@ AI_WAND Effect "Shards" : EA_BLAST
   {
     SC_EVO; Cost: 10; Purpose: EP_ATTACK;
     qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BEAM; cval: WHITE;
-    Flags: EF_NEEDS_PLUS, EF_AUTOID; sval: REF partial;
+    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_NO_GLOW; sval: REF partial;
     On Event MSG_BLASTNAME "spray of glass shards";
     xval: AD_SLASH; pval: (PLUS_2PER1)d10;
     Level: PLUS_3PER1_ADD1;
@@ -2099,7 +2099,7 @@ AI_WAND Effect "Life Stealing" : EA_BLAST
   { 
     SC_NEC; Cost: 10; Purpose: EP_ATTACK; tval: MA_LIVING;
     qval: Q_TAR | Q_LOC | Q_DIR; aval: AR_BURST; lval: 3; cval: COL_NECRO;
-    Flags: EF_STRIKEID, EF_NEEDS_PLUS, EF_LIM_MTYPE; sval: REF partial;
+    Flags: EF_STRIKEID, EF_NEEDS_PLUS, EF_LIM_MTYPE, EF_GLOW; sval: REF partial;
     xval: AD_VAMP; pval: (PLUS_1PER1)d6; Level: PLUS_3PER1_ADD1;
     On Event MSG_BLASTNAME "ball of dark energy";
     // upstream: the Wand of Life Stealing (ball) Desc stated a flat "1d6 points of necromantic damage" with no per-plus, yet the EA_BLAST damage is coded pval (PLUS_1PER1)d6 with EF_NEEDS_PLUS -- 1d6 per magical plus -- so the damage SCALES with the wand plus and never has a fixed value; 1d6 holds only at +1. The sibling Wand of Life Stealing (bolt) states "per plus" correctly. The flat prose ships on Win32 with the original data, misdescribing the item there too; it is prose in an item declaration, not a port artefact. The CODE is correct and unchanged -- pval (PLUS_1PER1)d6 stays. Traced (prose-only, no in-play value changes, so no gameplay observation applies); inc-tek.8.8 / PA-08-F60; not sent.
@@ -2281,7 +2281,7 @@ AI_WAND Effect "Cleansing Light" : EA_BLAST
   {      
     SC_EVO; SC_NAT; Cost: 10; Purpose: EP_ATTACK; qval: Q_TAR|Q_DIR|Q_LOC;
     aval: AR_CHAIN; cval: COL_COLD; Level: PLUS_3PER1_ADD1;
-    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_BLIND_PROMPT;
+    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_BLIND_PROMPT, EF_GLOW;
     /* upstream: base-code defect, not a port artefact. The constant, the
        description and the balance comment are all shared game data, so the
        same disagreement exists on Win32, with the original typedefs, on the
@@ -2343,7 +2343,7 @@ AI_WAND Effect "Soul Flaying" : EA_BLAST
     SC_WEA; Cost: 10; Purpose: EP_ATTACK; qval: Q_TAR|Q_DIR|Q_LOC;
     aval: AR_BALL; cval: COL_SILVERY; lval: 5;
     xval: AD_DAWI; pval: (PLUS_1PER1)d4; sval: WILL partial;
-    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_BLIND_PROMPT;   
+    Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_BLIND_PROMPT, EF_GLOW;   
     Level: PLUS_3PER1_ADD3;
     On Event
       MSG_BLASTNAME
@@ -3932,7 +3932,7 @@ AI_BOOTS Effect "Elvenkind;boots" : EA_GRANT
       Silently skill rating equal to thrice their magical plus."; }
 
 AI_BOOTS Effect "Thunder" : EA_INFLICT
-  { SC_ARC; Level: 3;
+  { Flags: EF_SHAKE_GLOBE; SC_ARC; Level: 3;
     aval: AR_GLOBE; lval: 6; qval: Q_LOC;
     xval: PRONE; sval: REF; cval: BROWN;
     On Event EV_ISTARGET {
@@ -5902,7 +5902,7 @@ AI_HELM Effect "Lesser Helm of Brilliance" : EA_GENERIC
 
 
 AI_HEADBAND Effect "Circlet of Blasting" : EA_BLAST
-  { SC_EVO; qval: Q_DIR|Q_TAR; Level: PLUS_3PER1;	cval: YELLOW;
+  { SC_EVO; qval: Q_DIR|Q_TAR; Level: PLUS_3PER1;	cval: COL_SUNYELLOW;
     xval: AD_SUNL; pval: 5d8; tval: MA_LIVING;
     Flags: EF_ATTACK, EF_LIM_MTYPE, EF_ACTIVATE, EF_ACTIVATE2,
       EF_ACTIVATE3, EF_NAMEONLY, EF_7PERDAY; aval: AR_BEAM; }

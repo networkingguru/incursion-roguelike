@@ -7483,6 +7483,13 @@ AfterEffects:
 #ifdef DISPEL_EVIL_PROBE
     DispelEvilProbeNote(e, "before");
 #endif
+    /* inc-jw0hw: a landed touch flashes its target, before the strike. */
+    {
+      const EffectValues *tv = TEFF(e.eID)->Vals(ii);
+      Thing *hitTarget = e.EVictim;
+      EffectLight::FlashStruck(e.EVictim->m, tv->cval, EL_MISSILE,
+          tv->eval == EA_BLAST ? tv->xval : 0, TEFF(e.eID), &hitTarget, 1);
+    }
     ReThrow(EV_MAGIC_STRIKE,e);
 #ifdef DISPEL_EVIL_PROBE
     /* Read before Fight.cpp's own decrement below, which would remove
@@ -9325,6 +9332,9 @@ WoundIgnored:
                                                 xID = Candidates[random((int16)n)];
                                             if (e.EVictim->HasEffStati(POISONED,xID))
                                                 break;
+                                            /* inc-jw0hw (Phase 5): a spreader's spores blast out from it, whether or not the victim saves */
+                                            if (TEFF(xID)->HasFlag(EF_SPORES) && e.EActor->m)
+                                                SporeBlast(*e.EActor->m, e.EActor, e.EVictim);
                                             if (e.saveDC == 0)
                                                 e.saveDC = TEFF(xID)->ef.sval;
                                             if (!e.EVictim->SavingThrow(FORT,e.saveDC)) {

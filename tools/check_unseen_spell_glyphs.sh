@@ -25,8 +25,8 @@
 # fact: missile users, their squares, their number -- placed by the probe at fixed squares (five in A, five in B: halflings and a bugbear); their slings and javelins come from the monster definitions
 # fact: hostility -- the probe makes every caster hostile to every other (TurnHostileTo) and counts 132 of 132 hostile pairs before it grades
 # fact: the player's view -- the probe counts room squares seen or in line of sight before it grades; both must be 0
-# fact: whether a caster casts -- the check reports the effect squares reached in A and in B; it exits 2 when no spell reached A, and exits 2 when none reached B
-# fact: whether a missile user fires -- the check reports the squares missiles flew over in A and in B; it exits 2 when no missile flew in A or none in B
+# fact: whether a caster casts -- the probe forces one Magic Missile (EV_EFFECT, as a monster's cast runs it) per area from a placed caster at a fixed target, and the check exits 2 unless each FORCED kind=spell line reports ok=1 (its own effect squares reached)
+# fact: whether a missile user fires -- the probe forces one missile (Throw EV_RATTACK, as ACT_RATTACK/ACT_THROW run it) per area from a placed missile user at a fixed target, and the check exits 2 unless each FORCED kind=missile line reports ok=1 (its own squares flown over)
 # fact: the seed -- decides rolls and the casters' choices, not the setup; the check uses the invariant "no draw on an unseen square" and reports its own seed
 # Exit 0 NOT REPRODUCED (no draw on an unseen square, and spells reached the room),
 #      1 REPRODUCED (a draw on an unseen closed-room square) or the positive
@@ -68,6 +68,13 @@ if [ -z "$setup" ] || grep -q 'UNSEEN_GLYPH: INCONCLUSIVE' "$RUN_DIR/unseen-glyp
     exit 2
 fi
 echo "$setup"
+for fk in "missile area=A" "missile area=B" "spell area=A" "spell area=B"; do
+    if ! grep -q "UNSEEN_GLYPH: FORCED kind=$fk ok=1" "$RUN_DIR/unseen-glyph.lines"; then
+        echo "INCONCLUSIVE: the forced control ($fk) did not run or reached no square."
+        grep 'UNSEEN_GLYPH: FORCED' "$RUN_DIR/unseen-glyph.lines"
+        exit 2
+    fi
+done
 
 L="$RUN_DIR/unseen-glyph.lines"
 effects="$(grep -c 'UNSEEN_GLYPH: EFFECT-AT.*area=A' "$L")"

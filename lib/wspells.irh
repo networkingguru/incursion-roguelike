@@ -675,7 +675,7 @@ Potion / Wizard / Scroll Spell "Mending" : EA_GENERIC
   }
 
 Wizard / Druid Spell "Wall of Fog" : EA_TERRAFORM
-  { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
+  { Flags: EF_FORM_BILLOW; SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
     xval: TERRA_FLOOR; rval: $"fog"; Flags: EF_DMIN;
     Desc: "Conjures a curtain of fog useful for, among other things,
@@ -1075,9 +1075,12 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
           {                                                           \
             ETerm->PutGlyph(EActor->x + vx,                           \
                             EActor->y + vy,                           \
-                            GLYPH_VALUE(GLYPH_BULK, PINK));           \
+                            GLYPH_VALUE(247, PINK));                  \
+            e.LightSquare(EActor->x + vx,EActor->y + vy,              \
+                          GLYPH_VALUE(247, PINK));                    \
             h = EMap->FCreatureAt(EActor->x + vx,EActor->y + vy);      \
           }                                                       
+      e.LightBegin();
       h1 = NULL; h2 = NULL; h3 = NULL;
       if (DirX(e.EDir) && DirY(e.EDir)) {
         HIT_SPOT(DirX(e.EDir),DirY(e.EDir),h1)
@@ -1095,6 +1098,7 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
         HIT_SPOT(-1,DirY(e.EDir),h3)
         }
       else {
+        e.LightEnd();
         e.SetParam(1,EActor);
         ReThrow(EV_MAGIC_STRIKE,e);
         e.isSomething = true;
@@ -1103,9 +1107,13 @@ Wizard / Scroll Spell "Force Bolt" : EA_BLAST
       if ((EActor != NULL && EActor->isPlayer()) || 
           (EVictim != NULL && EVictim->isPlayer())) { 
         ETerm->TermUpdate();
-        ETerm->StopWatch(500);
+        e.LightHold(500);
         ETerm->RefreshMap();
       } 
+      if (h1) e.LightStruck(h1);
+      if (h2) e.LightStruck(h2);
+      if (h3) e.LightStruck(h3);
+      e.LightEnd();
       if (h1) {
         e.SetParam(1,h1);                                      
         ReThrow(EV_MAGIC_STRIKE,e);                           
@@ -1161,7 +1169,7 @@ Wizard / Scroll Spell "Floating Disc" : EA_INFLICT
 Wizard / Scroll Spell "Chromatic Orb" : EA_GENERIC
   { SC_ILL | SC_ARC | SC_LIGHT; Base: SP_MEDIUM; Cost: 0; Level: 1; qval: Q_TAR | Q_DIR;
     Purpose: /* EP_ATTACK (VS_GENERAL) | */ EP_PLAYER_ONLY; // ww: can be removed when julian fixes the 'default' bug
-    cval: COL_RAINBOW; Flags: EF_ATTACK, EF_VARMANA; aval: AR_BOLT;
+    cval: COL_RAINBOW; Flags: EF_ATTACK, EF_VARMANA, EF_GLOW, EF_COLOR_PATTERN; aval: AR_BOLT;
     int32 ch, i;
     On Event EV_EFFECT {
       i = e.vCasterLev;
@@ -1302,7 +1310,7 @@ Wizard Spell "Colour Spray" : EA_GENERIC
   {
     SC_ILL|SC_EVO|SC_LIGHT; Base: SP_MEDIUM; Cost: 3; Level: 1; 
     qval: Q_DIR | Q_TAR;
-    Purpose: EP_ATTACK (VS_GENERAL); Flags: EF_HARDSAVE4; 
+    Purpose: EP_ATTACK (VS_GENERAL); Flags: EF_HARDSAVE4, EF_GLOW, EF_COLOR_PATTERN; 
     cval: COL_RAINBOW; aval: AR_BEAM; sval: REF;
     On Event EV_ISTARGET {
 	  if (!ETarget->isCreature())
@@ -2077,7 +2085,7 @@ Wizard Spell "Glitterdust" : EA_INFLICT
     Purpose: EP_CURSE | AIM_AT_SELF; Flags: EF_CASTER_IMMUNE, EF_DROUND;
     aval: AR_BALL; lval: 1; cval: COL_RAINBOW; xval: BLIND; }
   and EA_INFLICT {
-    aval: AR_BALL; lval: 1; xval: ILLUMINATED; pval: +1; 
+    aval: AR_BALL; lval: 1; xval: ILLUMINATED; yval: COL_SUNYELLOW; pval: +1; 
     On Event EV_MAGIC_HIT {
       EVictim->RemoveStati(INVIS); 
       EVictim->Reveal(false); 
@@ -2129,7 +2137,7 @@ Wizard / Scroll Spell "Passwall" : EA_TRAVEL
   }
 
  Wizard / Priest / Druid Spell "Wind Wall" : EA_TERRAFORM
-  { SC_ARC|SC_AIR; Base: SP_EASY; Cost: 3; Level: 2; lval: 6;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_AIR; Base: SP_EASY; Cost: 3; Level: 2; lval: 6;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DROUND;
     rval: $"strong updraft"; qval: Q_DIR;
     Purpose: EP_COUNTER | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
@@ -2155,7 +2163,7 @@ Terrain "strong updraft"
   }
 
  Wizard / Scroll Spell "Web" : EA_TERRAFORM
-  { SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2; Flags: EF_D10MIN;
+  { Flags: EF_FORM_RINGS; SC_ARC; Base: SP_HARD; Cost: 4; Level: 2; aval: AR_GLOBE; lval : 2; Flags: EF_D10MIN;
     xval: TERRA_OPEN; rval: $"webbing"; qval: Q_LOC|Q_TAR; cval: GREY;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY; sval: NOSAVE;
 	  Desc: "Creates a mass of sticky webbing that holds enemies
@@ -2205,7 +2213,7 @@ Wizard / Scroll Spell "Spirit Net" : EA_GENERIC
   }
 
 Wizard Spell "Wall of Doors" : EA_GENERIC
-  { SC_ARC; Base: SP_EASY; Cost: 8; Level: 2; lval: 6; qval: Q_DIR;
+  { Flags: EF_FORM_SWEEP; SC_ARC; Base: SP_EASY; Cost: 8; Level: 2; lval: 6; qval: Q_DIR;
     aval: AR_BARRIER; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_CURSE | EP_BARRIER | AIM_AT_ENEMY;
     Desc: "Conjures a solid barrier made out of wooden doors, displacing
@@ -2310,7 +2318,7 @@ Wizard / Druid / Scroll Spell "Pyrotechnics" : EA_GENERIC
   }
 
 0 Effect "Pyrotechnics;blast" : EA_BLAST
-  { aval: AR_GLOBE; lval: 2; cval: RED;
+  { aval: AR_GLOBE; lval: 2; cval: RED; Flags: EF_BLAST_RINGS;
     xval: AD_FIRE; pval: 3d8; }
 and EA_BLAST
   { aval: AR_GLOBE; lval: 2; cval: RED;
@@ -2327,7 +2335,7 @@ and EA_BLAST
     
 0 Effect "Pyrotechnics;flash" : EA_BLAST
   { cval: COL_RAINBOW; lval: 4; aval: AR_GLOBE;
-    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE;
+    xval: AD_BLND; pval: 1d4+1; Flags: EF_CASTER_IMMUNE, EF_GLOW, EF_FIREWORKS;
     On Event PRE(EV_MAGIC_HIT) {
       if (EVictim->HasMFlag(M_LIGHT_AVERSE))
         if (!EVictim->SavingThrow(WILL,e.saveDC, 
@@ -2962,8 +2970,8 @@ Wizard / Scroll Spell "Mirror Image" : EA_INFLICT
 
 Wizard / Scroll Spell "Hypnotic Pattern" : EA_INFLICT
   { SC_ILL; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_LOC;
-    aval: AR_GLOBE; cval: YELLOW; lval: 2; sval: WILL;
-    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL;
+    aval: AR_GLOBE; cval: COL_RAINBOW; lval: 2; sval: WILL;
+    xval: PARALYSIS; yval: PARA_HYPNOTIZED; Flags: EF_MENTAL, EF_GLOW, EF_COLOR_PATTERN;
     Purpose: EP_CURSE (VS_MENTAL);
     On Event EV_ISTARGET {
       if (!EVictim->isCreature())
@@ -3130,7 +3138,7 @@ Wizard Spell "Aura of Death" : EA_INFLICT
    other mind-control spells. */
 Wizard Spell "Scare" : EA_BLAST
   { SC_NEC; SC_COLD; SC_ILL; Base: SP_EASY; Cost: 4; Level: 2; sval: WILL;
-    aval: AR_CHAIN; lval: 12; cval: CYAN; tval: MA_ENEMIES;
+    aval: AR_CHAIN; lval: 12; cval: COL_NECRO; tval: MA_ENEMIES;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE; qval: Q_TAR;
     xval: AD_COLD; pval: 2d4;
     Flags: EF_MENTAL, EF_LIM_MTYPE, EF_BLIND_PROMPT, EF_FEAR; 
@@ -3612,11 +3620,11 @@ Wizard Spell "Transposition" : EA_GENERIC
   }      
   
  Wizard Spell "Mana Theft" : EA_BLAST
-  { 
+  { cval: COL_MAGIC; 
     SC_WEA; Base: SP_HARD; Cost: 5; Level: 2; 
     aval: AR_TOUCH; lval: LEVEL_2PER1; Purpose: EP_CURSE; 
     xval: AD_SPE1; pval: (LEVEL_1PER1)d8; sval: WILL;
-    Flags: EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_PARTIAL;
+    Flags: EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_PARTIAL, EF_GLOW;
     Desc: "By casting this spell, you turn your body into a natural
       conduit for magical energies, allowing you to steal the mana
       of other creatures with a successful touch attack. Your touch
@@ -3996,7 +4004,7 @@ Terrain "strange rune"
 
 
 Wizard / Druid / Scroll Spell "Wall of Ice" : EA_TERRAFORM
-  { SC_ARC|SC_COLD; Base: SP_EASY; Cost: 6; Level: 3; lval: 6; qval: Q_DIR;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_COLD; Base: SP_EASY; Cost: 6; Level: 3; lval: 6; qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
     rval: $"ice wall"; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_FOIL_PURSUIT | EP_ESCAPE | EP_BARRIER | AIM_AT_ENEMY;
@@ -4624,7 +4632,7 @@ Effect "Flame Arrow;augment" : EA_GENERIC
 
 Wizard  Spell "Icelance" : EA_BLAST
   { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 6; Level: 3; sval: NOSAVE;
-    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK; Flags: EF_ATTACK;
+    xval: AD_COLD; pval: 5d6; Purpose: EP_ATTACK; Flags: EF_ATTACK, EF_NO_GLOW;
     aval: AR_BOLT; qval: Q_DIR | Q_TAR; cval: COL_COLD; 
     Desc: "This spell fires a magical lance of ice at a target of the caster's
     choosing.  A successful ranged touch attack inflicts 5-30 points of
@@ -4990,7 +4998,7 @@ Wizard Spell "Adamant Facade" : EA_INFLICT
  Wizard / Scroll Spell "Major Drain" : EA_BLAST
   { SC_NEC; Base: SP_EASY; Cost: 6; Level: 3; xval: AD_NECR; 
     Purpose: EP_ATTACK | EP_FIX_TROUBLE (TROUBLE_INJURY); cval: WHITE;
-    pval: (LEVEL_SCALED)d4; sval: NOSAVE; 
+    pval: (LEVEL_SCALED)d4; sval: NOSAVE; Flags: EF_GRADE_1;
     qval: Q_TAR; aval: AR_BOLT;
     Desc: "With this spell, the wizard drains the life and vital force from
       a target and adds it to his own. The target creature suffers 1d4
@@ -5201,7 +5209,7 @@ Wizard Spell "Skull Trap" : EA_GENERIC
 AI_TRAP Effect "skull trap;trap" : EA_BLAST
   {
     Desc: "A grinning human skull lies on the ground here.";
-    Flags: EF_NOGEN, EF_EVIL; SC_NEC;
+    Flags: EF_NOGEN, EF_EVIL, EF_GLOW, EF_WAVES; SC_NEC;
     On Event PRE(EV_EFFECT) {
       hObj hCaster;
       
@@ -5223,8 +5231,19 @@ AI_TRAP Effect "skull trap;trap" : EA_BLAST
         APrint(e,"The skull explodes!");
       return NOTHING;
       },
-    MSG_CAST 
-      "The skull rises from the ground, spins... and <12>*screams*<7>!";
+    MSG_CAST {
+      APrint(e,"The skull rises from the ground, spins... and <12>*screams*<7>!");
+      e.Terse = true;
+      /* inc-jw0hw: the skull's eyes glow red, rising for one second until the globe's fire light takes over */
+      if (GetHandle(EItem)) {
+        e.LightBegin();
+        e.LightColour(COL_CRIMSON);
+        e.LightSquare(EItem->x,EItem->y,EItem->Image);
+        e.LightRise(1000);
+        e.LightEnd();
+        }
+      return NOMSG;
+      };
     aval: AR_GLOBE; lval: 6; cval: RED; xval: AD_SONI; pval: 2d6;
   }
 and EA_INFLICT
@@ -5740,7 +5759,7 @@ Wizard Spell "Aura of Abjuration" : EA_INFLICT
 /* --ARCANA 4-- */
 
 Wizard / Druid / Scroll Spell "Solid Fog" : EA_TERRAFORM
-  { SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC; sval: NOSAVE;
+  { Flags: EF_FORM_BILLOW; SC_ARC|SC_AIR|SC_WATER; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC; sval: NOSAVE;
     Purpose: EP_CURSE | EP_FOIL_PURSUIT | AIM_AT_ENEMY; Flags: EF_DMIN;
     xval: TERRA_OPEN; rval: $"solid fog bank"; aval: AR_GLOBE; lval: 4;
     Desc: "Creates a bank of solid fog. Solid fog reduces movement to 15~
@@ -5760,7 +5779,7 @@ Wizard / Druid / Scroll Spell "Transmute Rock to Mud" : EA_TERRAFORM
       "The rock collapses into thick mud!"; }
 
 Wizard Spell "Tremor" : EA_DRAIN
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; 
+  { Flags: EF_SHAKE_GLOBE; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; 
     aval: AR_GLOBE; lval: 6; qval: Q_LOC;
     xval: AD_TRIP; sval: REF + 10; cval: BROWN;
     Purpose: EP_CURSE;
@@ -5790,7 +5809,7 @@ and EA_BLAST
   { xval: AD_BLUNT; pval: 2d12; }
 
 Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
-  { SC_EVO|SC_FIRE; Base: SP_EASY; Cost: 8; Level: 4; lval: 6; 
+  { Flags: EF_FORM_SWEEP, EF_GLOW; cval: COL_FIRE; SC_EVO|SC_FIRE; Base: SP_EASY; Cost: 8; Level: 4; lval: 6; 
     qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_DLONG;
     rval: $"curtain of flame"; pval: 2d6 + (LEVEL_MAX20);
@@ -5806,12 +5825,12 @@ Wizard / Druid / Scroll Spell "Wall of Fire" : EA_TERRAFORM
         }
       APrint(e,"A <Res> flares into existance!",e.rval);
       return NOTHING; };
-    Desc: "Creates a curtain of violet flames which causes (2d6
+    Desc: "Creates a curtain of red flames which causes (2d6
       + caster level) points of fire damage to any creature
       which passes through it."; }
 
 Terrain "curtain of flame"
-  { Image: magenta ';'; Mat:MAT_MINERAL; /* The *floor* */
+  { Image: red ';'; Mat:MAT_MINERAL; /* The *floor* */
     Flags: TF_SPECIAL, TF_SHOWNAME, TF_WARN;
     Constants:
       /* inc-1xr3 phase 2j: the curtain's per-step damage is the caster's
@@ -6347,7 +6366,7 @@ Wizard Spell "Fire Charm" : EA_INFLICT
 Wizard  Spell "Force Missiles" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_EASY; Cost: 7; Level: 4; sval: NOSAVE; 
     xval: AD_MAGC; pval: (LEVEL_2PER3)d4; 
-    Purpose: EP_ATTACK;
+    Purpose: EP_ATTACK; Flags: EF_GLOW;
     aval: AR_BOLT; qval: Q_TAR; cval: COL_MAGIC;
     Desc: "This spell creates a brilliant globe of magical energy that
     streaks forth from the caster's hand to unerringly strike its target,
@@ -7450,7 +7469,7 @@ Wizard Spell "Mooncloak" : EA_INFLICT
       rounds -- literally, they are moonstruck. The bolt hits
       a single creature and requires a ranged attack roll to
       successfully impact.";
-    xval: ILLUMINATED; pval +1;
+    xval: ILLUMINATED; yval: COL_SILVERY; pval +1;
     Flags: EF_ACTIVATE3, EF_ACTIVATE2, EF_ONCEONLY, EF_ATTACK, EF_PROTECTS_ITEMS;
   }
 and EA_BLAST
@@ -7518,7 +7537,7 @@ Wizard / Scroll Spell "Cloudkill" : EA_BLAST
     lval: 2; 
     xval: AD_TOXI; pval: (LEVEL_SCALED)d4; aval: AR_BALL;
     cval: COL_POISON;	Purpose: EP_ATTACK; sval: FORT;
-    Flags: EF_PARTIAL, EF_LIM_MTYPE, EF_GLYPH_FOG, EF_CASTER_IMMUNE; 
+    Flags: EF_PARTIAL, EF_LIM_MTYPE, EF_GLYPH_FOG, EF_CASTER_IMMUNE, EF_GLOW; 
     tval: MA_BREATHER;
 		On Event POST(EV_MAGIC_HIT) {
 		  if (e.Immune || EVictim->isDead())
@@ -7538,7 +7557,7 @@ Wizard / Scroll Spell "Cloudkill" : EA_BLAST
 	}
 
 Wizard / Druid / Priest  Spell "Wall of Stone" : EA_TERRAFORM
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 10; Level: 5; lval: 10; qval: Q_DIR;
+  { Flags: EF_FORM_SWEEP; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 10; Level: 5; lval: 10; qval: Q_DIR;
     xval: TERRA_OPEN; aval: AR_BARRIER; Flags: EF_PERMANANT;
     rval: $"dungeon wall"; pval: 2d6 + (LEVEL_MAX20); 
     Purpose: EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER|AIM_AT_ENEMY;
@@ -7872,7 +7891,7 @@ Wizard / Scroll Spell "Cone of Cold" : EA_BLAST
   { SC_EVO|SC_COLD; Base: SP_MEDIUM; Cost: 10; Level: 5; aval: AR_BEAM; qval: Q_DIR;
     xval: AD_COLD; lval: 7; sval: REF partial; pval: (LEVEL_SCALED)d8;
     Purpose: EP_ATTACK (VS_COLD); cval: AZURE; 
-		On Event MSG_BLASTNAME "cone of cold"; Flags: EF_COMMON;
+		On Event MSG_BLASTNAME "cone of cold"; Flags: EF_COMMON, EF_NO_GLOW;
     Desc: "Projects a cone of numbing frost out in a direction you
 		  select, inflicting 1d8 points of damage per caster level, scaled
 			after 9th level."; }
@@ -9274,10 +9293,10 @@ your body awakens unharmed.
  */
 
 Wizard Spell "Othello's Irresistable Dance" : EA_INFLICT
-  { SC_ENC; Base: SP_MEDIUM; Cost: 75; Level: 8; tval: MA_HUMANOID;
+  { Flags: EF_DANCE; SC_ENC; Base: SP_MEDIUM; Cost: 75; Level: 8; tval: MA_HUMANOID;
     Purpose: EP_CURSE (VS_MENTAL); qval: Q_LOC; 
     aval: AR_GLOBE; cval: EMERALD; lval: 30;
-    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_MENTAL;
+    Flags: EF_LIM_MTYPE, EF_SHOWNAME, EF_MENTAL, EF_CASTER_IMMUNE;
     On Event MSG_STATINAME "Dancing" / "Dan";
     On Event EV_CALC_EFFECT {
       e.vDuration = ApplyDurationMetamagic(RoundsToUnits(1d4+1), e.MM, 0);

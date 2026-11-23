@@ -139,10 +139,41 @@ static bool g_logoLoadAttempted = false;
 static bool g_logoRendererRegistered = false;
 static bool g_wasShown = false;
 
+/* inc-jw0hw: frame recorder. With INCURSION_FRAMES=<dir> the game runs on a
+   virtual clock that advances only through RecAdvance(), so a clip renders
+   with no real waiting. NowMs() is the one clock read in this file. */
+static bool g_rec = false;
+static bool g_recInit = false;
+static uint32 g_virtMs = 0;
+static std::string g_recDir, g_recClip = "default";
+static unsigned g_recFrame = 0;
+static void RecMkdir(const std::string &d) {
+#ifdef _WIN32
+    _mkdir(d.c_str());
+#else
+    mkdir(d.c_str(), 0777);
+#endif
+}
+static bool RecOn() {
+    if (!g_recInit) {
+        const char *d = getenv("INCURSION_FRAMES");
+        g_rec = d && d[0];
+        if (g_rec) g_recDir = d;
+        g_recInit = true;
+    }
+    return g_rec;
+}
+static uint32 NowMs() {
+    return RecOn() ? g_virtMs : (uint32)TCOD_sys_elapsed_milli();
+}
+
+static void AuraDrawAll(SDL_Surface *screen);   /* defined after libtcodTerm */
+
 extern "C" {
 static void LogoRenderCB(void* vsurf) {
     SDL_Surface* screen = (SDL_Surface*)vsurf;
     g_lastFrame = screen;
+    AuraDrawAll(screen);   /* inc-jw0hw: before the logo's early return */
     if (!g_logo || !screen) return;
     bool show = g_titleLogoActive;
     if (show) {
@@ -337,10 +368,21 @@ private:
     struct LitCell { Glyph g; int16 mx, my, fi, bi; float floor, infra; bool remembered, ice, lit; };
     LitCell *litCells = NULL, *litSaved = NULL;
     uint32 ticks_light_last = 0;
+    std::vector<int32> motionCells;   /* cells DrawMotion moved at the last draw: the next flush repaints them clean */
+    uint32 motionLast = 0xffffffffu;
+    bool MotionFrame(uint32 now);
     void LitAlloc();
     void LitPaint(int32 idx);
+public:
+    void DrawAuras(SDL_Surface *scr);
+    void DrawMotion(SDL_Surface *scr);
+    void MotionClear();
+    bool CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch);
+private:
     bool LightFrame(uint32 now);
     void SleepTicking(int16 milli);
+    void RecStep();
+    void RecAdvance(uint32 ms);
     int oldResX, oldResY;
     String debugText;
     /* File I/O Stuff */
@@ -1106,7 +1148,7 @@ void libtcodTerm::Redraw() {
 
 void libtcodTerm::CursorOn() {
     showCursor = true;
-    ticks_blink_last = TCOD_sys_elapsed_milli();
+    ticks_blink_last = NowMs();
     ocx = ocy = 0;
 }
 
@@ -1211,7 +1253,20 @@ void libtcodTerm::LitPaint(int32 idx) {
 	LightRGB base = lc.ice ? LIGHT_ICE_BASE : LightPaletteRGB(lc.fi);
 	LightRGB fg = lc.remembered ? LightMemoryBase(base, lc.floor, explored)
 	                            : LightShadeBase(base, L, lc.floor);
+	/* inc-jw0hw: an effect glyph on a square its flash lights takes that
+	   square's ramp color at full value. */
+	LightRGB eg;
+	if (!lc.remembered && LightEffectGlyphAt(lc.mx, lc.my, eg))
+		fg = eg;
 	LightRGB bg = LightGlow(lc.bi, L);
+	/* inc-jw0hw: a limned creature's glyph takes its glow color, over a tinted background. */
+	LightRGB limnFg, limnBg;
+	if (!lc.remembered && LightLimnAt(lc.mx, lc.my, limnFg, limnBg)) {
+		fg = limnFg;
+		if (limnBg.r > bg.r) bg.r = limnBg.r;
+		if (limnBg.g > bg.g) bg.g = limnBg.g;
+		if (limnBg.b > bg.b) bg.b = limnBg.b;
+	}
 	LightRGB fogc;
 	if (LightFogAt(lc.mx, lc.my, fogc))
 		{ fg = LightFogMix(fg, fogc, L); bg = LightFogMix(bg, fogc, L); }
@@ -1228,7 +1283,7 @@ void libtcodTerm::LitAlloc() {
 	delete[] litCells; delete[] litSaved;
 	litCells = new LitCell[(int32)sizeX * sizeY]();
 	litSaved = new LitCell[(int32)sizeX * sizeY]();
-	ticks_light_last = TCOD_sys_elapsed_milli() - LIGHT_TICK_MS;
+	ticks_light_last = NowMs() - LIGHT_TICK_MS;
 }
 
 /* One shimmer frame: advance the noise, re-shade every cell still flagged
@@ -1251,7 +1306,233 @@ bool libtcodTerm::LightFrame(uint32 now) {
 	return true;
 }
 
+/* inc-jw0hw: the aura tint. Each aura fills a circle of (rad + 0.5) cells in
+   radius, centered on its cell, with a solid semi-transparent tint of its color
+   (alpha AURA_TINT_ALPHA) and no outline. It is drawn over the finished console
+   only on cells the player sees now (drawn lit this frame AND in the map's own
+   Visibility), so a wall in view takes the tint and a cell behind it does not.
+   Overlapping auras blend in turn, so their colors layer. Nothing is cached. The
+   covered cells are dirtied so libtcod repaints them before the next draw and the
+   tint does not smear. */
+#define AURA_TINT_ALPHA 0.30f   /* one aura's opacity over the pixel under it */
+void libtcodTerm::DrawAuras(SDL_Surface *scr) {
+	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0)
+		return;
+	if (p->Opt(OPT_AURA_CIRCLES) == AURA_CIRCLES_HIDE)
+		return;
+	const int32 nAura = LightAuraCount();
+	const int bpp = scr->format->BytesPerPixel;
+	if (!nAura || (bpp != 3 && bpp != 4))
+		return;
+	Map *m = p->m;
+	const bool lock = SDL_MUSTLOCK(scr) != 0;
+	if (lock && SDL_LockSurface(scr) != 0)
+		return;
+	for (int32 i = 0; i < nAura; i++) {
+		int16 ax, ay, rad; LightRGB c; float noise;
+		if (!LightAuraAt(i, ax, ay, rad, c, noise))
+			continue;
+		/* A true pixel circle: cells are g_fontW x g_fontH, so the radius is
+		   counted in pixels (mean cell size), not per axis. */
+		const float R = (rad + 0.5f) * (g_fontW + g_fontH) / 2.0f;
+		const int ccx = (ax - XOff + Windows[WIN_MAP].Left) * g_fontW + g_fontW / 2;
+		const int ccy = (ay - YOff + Windows[WIN_MAP].Top) * g_fontH + g_fontH / 2;
+		int x0 = (int)floorf(ccx - R - 2.0f), x1 = (int)ceilf(ccx + R + 2.0f);
+		int y0 = (int)floorf(ccy - R - 2.0f), y1 = (int)ceilf(ccy + R + 2.0f);
+		if (x0 < 0) x0 = 0;
+		if (y0 < 0) y0 = 0;
+		if (x1 > scr->w - 1) x1 = scr->w - 1;
+		if (y1 > scr->h - 1) y1 = scr->h - 1;
+		{	/* where each aura really is, for tools/check_aura_circle.sh; one line per aura per change, with the aura's map cell */
+			static int lastX[16], lastY[16], lastR[16], seen[16];
+			if (i < 16 && (!seen[i] || ccx != lastX[i] || ccy != lastY[i] || (int)(R + 0.5f) != lastR[i])) {
+				seen[i] = 1; lastX[i] = ccx; lastY[i] = ccy; lastR[i] = (int)(R + 0.5f);
+				if (getenv("INCURSION_AURA_SCENE"))
+					Error("AURA_DRAWN: %d %d %d %d %d", ccx, ccy, lastR[i], (int)ax, (int)ay);
+			}
+		}
+		const float nr = c.r * noise, ng = c.g * noise, nb = c.b * noise;
+		for (int py = y0; py <= y1; py++) {
+			const int cy = py / g_fontH;
+			if (cy >= sizeY) continue;
+			Uint8 *row = (Uint8 *)scr->pixels + py * scr->pitch;
+			for (int px = x0; px <= x1; px++) {
+				const int cx = px / g_fontW;
+				if (cx >= sizeX) continue;
+				const float dx = (float)(px - ccx), dy = (float)(py - ccy);
+				const float dn = sqrtf(dx * dx + dy * dy);
+				if (dn >= R) continue;
+				const LitCell &lc = litCells[cy * sizeX + cx];
+				if (!lc.lit || !m->InBounds(lc.mx, lc.my) ||
+				    !(m->At(lc.mx, lc.my).Visibility & VI_VISIBLE))
+					continue;
+				Uint8 *pix = row + px * bpp;
+				Uint32 v = bpp == 4 ? *(Uint32 *)pix
+				    : (SDL_BYTEORDER == SDL_BIG_ENDIAN
+				        ? (pix[0] << 16 | pix[1] << 8 | pix[2])
+				        : (pix[0] | pix[1] << 8 | pix[2] << 16));
+				Uint8 r, g, b;
+				SDL_GetRGB(v, scr->format, &r, &g, &b);
+				const float a = AURA_TINT_ALPHA;
+				r = (Uint8)(r * (1.0f - a) + nr * a + 0.5f);
+				g = (Uint8)(g * (1.0f - a) + ng * a + 0.5f);
+				b = (Uint8)(b * (1.0f - a) + nb * a + 0.5f);
+				v = SDL_MapRGB(scr->format, r, g, b);
+				if (bpp == 4) *(Uint32 *)pix = v;
+				else if (SDL_BYTEORDER == SDL_BIG_ENDIAN) {
+					pix[0] = (Uint8)(v >> 16); pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)v;
+				} else {
+					pix[0] = (Uint8)v; pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)(v >> 16);
+				}
+			}
+		}
+		/* ponytail: dirties the whole bounding box each draw, and the tint
+		   fills it anyway. Ceiling: one box per aura per frame. */
+		int cx0 = x0 / g_fontW, cy0 = y0 / g_fontH;
+		int cx1 = x1 / g_fontW, cy1 = y1 / g_fontH;
+		if (cx1 >= sizeX) cx1 = sizeX - 1;
+		if (cy1 >= sizeY) cy1 = sizeY - 1;
+		TCOD_console_set_dirty(cx0, cy0, cx1 - cx0 + 1, cy1 - cy0 + 1);
+	}
+	if (lock) SDL_UnlockSurface(scr);
+}
+
+/* inc-jw0hw (Phase 5): the shake and the dance. Drawn over the finished console like the aura tint: each square the motion names
+   copies its cell's pixels and draws them again moved 1 to 3 pixels, and mirrored for a dance, inside the same cell; the strip
+   the move uncovers takes the cell's own background (its top-left pixel). The cells are dirtied, so the next flush repaints
+   them clean. The frame is NowMs() / 33, the recorder's virtual clock when it records. The picks (MotionPick) use no game RNG.
+   ponytail: a glyph that touches the cell's top-left pixel gives a wrong strip color. Ceiling: one-pixel flecks of that color.
+   Upgrade path: take LightGlow(lc.bi, L), the cell's real background. */
+static inline Uint32 MotionGetPix(SDL_Surface *scr, int px, int py, int bpp) {
+	Uint8 *pix = (Uint8 *)scr->pixels + py * scr->pitch + px * bpp;
+	if (bpp == 4) return *(Uint32 *)pix;
+	return SDL_BYTEORDER == SDL_BIG_ENDIAN ? (Uint32)(pix[0] << 16 | pix[1] << 8 | pix[2])
+	                                       : (Uint32)(pix[0] | pix[1] << 8 | pix[2] << 16);
+}
+static inline void MotionPutPix(SDL_Surface *scr, int px, int py, int bpp, Uint32 v) {
+	Uint8 *pix = (Uint8 *)scr->pixels + py * scr->pitch + px * bpp;
+	if (bpp == 4) { *(Uint32 *)pix = v; return; }
+	if (SDL_BYTEORDER == SDL_BIG_ENDIAN) { pix[0] = (Uint8)(v >> 16); pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)v; }
+	else { pix[0] = (Uint8)v; pix[1] = (Uint8)(v >> 8); pix[2] = (Uint8)(v >> 16); }
+}
+
+void libtcodTerm::DrawMotion(SDL_Surface *scr) {
+	if (!scr || !litCells || Mode != MO_PLAY || !p || !p->m || g_fontW <= 0 || g_fontH <= 0 || !MotionActive())
+		return;
+	const int bpp = scr->format->BytesPerPixel;
+	if (bpp != 3 && bpp != 4)
+		return;
+	Map *m = p->m;
+	const bool lock = SDL_MUSTLOCK(scr) != 0;
+	if (lock && SDL_LockSurface(scr) != 0)
+		return;
+	const uint32 frame = NowMs() / 33;
+	std::vector<uint32> src((size_t)g_fontW * g_fontH), dst((size_t)g_fontW * g_fontH);
+	motionCells.clear();
+	for (int i = 0; i < MotionCount(); i++) {
+		int16 mx, my; uint8 mode;
+		int px, py, cw, ch;
+		if (!MotionSquare(i, mx, my, mode) || !CellPixel(mx, my, px, py, cw, ch))
+			continue;
+		if (cw != g_fontW || ch != g_fontH || px < 0 || py < 0 || px + cw > scr->w || py + ch > scr->h)
+			continue;
+		if (!m->InBounds(mx, my) || !(m->At(mx, my).Visibility & VI_VISIBLE))
+			continue;
+		const int sx = px / g_fontW, sy = py / g_fontH;
+		if (sx >= sizeX || sy >= sizeY)
+			continue;
+		for (int y = 0; y < ch; y++)
+			for (int x = 0; x < cw; x++)
+				src[(size_t)y * cw + x] = MotionGetPix(scr, px + x, py + y, bpp);
+		MotionTransform(&src[0], &dst[0], cw, ch, MotionPick(frame, i), src[0]);
+		for (int y = 0; y < ch; y++)
+			for (int x = 0; x < cw; x++)
+				MotionPutPix(scr, px + x, py + y, bpp, dst[(size_t)y * cw + x]);
+		TCOD_console_set_dirty(sx, sy, 1, 1);
+		motionCells.push_back(sy * sizeX + sx);
+	}
+	if (lock) SDL_UnlockSurface(scr);
+}
+
+/* The motion has stopped: repaint the cells it moved, now. */
+void libtcodTerm::MotionClear() {
+	if (motionCells.empty() || !litCells)
+		return;
+	for (size_t i = 0; i < motionCells.size(); i++)
+		TCOD_console_set_dirty(motionCells[i] % sizeX, motionCells[i] / sizeX, 1, 1);
+	motionCells.clear();
+	Update();
+}
+
+/* A shake or dance needs a flush each frame, or a wait that draws nothing else would freeze it. */
+bool libtcodTerm::MotionFrame(uint32 now) {
+	if (!MotionActive() || Mode != MO_PLAY || !litCells)
+		return false;
+	const uint32 f = now / 33;
+	if (f == motionLast)
+		return false;
+	motionLast = f;
+	Update();
+	return true;
+}
+
+bool libtcodTerm::CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
+	if (g_fontW <= 0 || g_fontH <= 0) return false;
+	const int sx = mx - XOff + Windows[WIN_MAP].Left, sy = my - YOff + Windows[WIN_MAP].Top;
+	if (sx < Windows[WIN_MAP].Left || sx > Windows[WIN_MAP].Right ||
+	    sy < Windows[WIN_MAP].Top || sy > Windows[WIN_MAP].Bottom)
+		return false;
+	px = sx * g_fontW; py = sy * g_fontH; cw = g_fontW; ch = g_fontH;
+	return true;
+}
+
+bool TermCellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch) {
+	return AT1 && AT1->CellPixel(mx, my, px, py, cw, ch);
+}
+
+static void AuraDrawAll(SDL_Surface *screen) {
+	if (AT1) { AT1->DrawAuras(screen); AT1->DrawMotion(screen); }
+}
+
+void TermMotionClear() {
+	if (AT1) AT1->MotionClear();
+}
+
+/* One 33 ms virtual step: light tick, repaint, present, save the frame. It
+   saves even when LightFrame would not fire (Fast mode, no lit cell). */
+void libtcodTerm::RecStep() {
+	g_virtMs += 33;
+	if (Mode == MO_PLAY && p && StandingPatternFrame(g_virtMs) && p->UpdateMap)
+		RefreshMap();   /* inc-jw0hw: a standing pattern picks again on the virtual clock too */
+	if (litCells && Mode == MO_PLAY) {
+		LightTick(g_virtMs);
+		const int32 n = (int32)sizeX * sizeY;
+		for (int32 i = 0; i < n; i++)
+			if (litCells[i].lit)
+				LitPaint(i);
+		ticks_light_last = g_virtMs;
+	}
+	Update();
+	if (!g_lastFrame) return;
+	std::string dir = g_recDir + "/" + g_recClip;
+	RecMkdir(g_recDir);
+	RecMkdir(dir);
+	char name[64];
+	snprintf(name, sizeof name, "/f%05u.bmp", g_recFrame++);
+	std::string path = dir + name;
+	TCOD_sys_save_bitmap((void*)g_lastFrame, path.c_str());
+}
+
+void libtcodTerm::RecAdvance(uint32 ms) {
+	for (uint32 done = 0; done < ms; done += 33)
+		RecStep();
+}
+
 void libtcodTerm::SleepTicking(int16 milli) {
+	if (RecOn()) {
+		RecAdvance(milli > 0 ? (uint32)milli : 0u);
+		return;
+	}
 	const uint32 start = TCOD_sys_elapsed_milli();
 	const uint32 total = (milli > 0) ? (uint32)milli : 0u;
 	uint32 done = 0;
@@ -1262,7 +1543,8 @@ void libtcodTerm::SleepTicking(int16 milli) {
 		TCOD_sys_sleep_milli(step);
 		uint32 now = TCOD_sys_elapsed_milli();
 		done = now - start;
-		LightFrame(now);
+		if (!LightFrame(now))
+			MotionFrame(now);   /* inc-jw0hw: a shake or dance moves on every frame */
 	}
 }
 
@@ -1330,7 +1612,15 @@ void libtcodTerm::StopWatch(int16 milli) {
 }
 
 uint32 libtcodTerm::GetElapsedMilli() {
-    return TCOD_sys_elapsed_milli();
+    return NowMs();
+}
+
+/* inc-jw0hw: names the clip the recorder writes to; no-op when not recording. */
+void FrameClip(const char *name) {
+    if (!RecOn() || !name || !name[0]) return;
+    g_recClip = name;
+    g_recFrame = 0;
+    RecMkdir(g_recDir);
 }
 
 int32 libtcodTerm::ConvertChar(Glyph g, char **out) {
@@ -1744,7 +2034,7 @@ void libtcodTerm::Initialize() {
     p = NULL;
     m = NULL;
     isHelp = false;
-    ticks_idle_last = TCOD_sys_elapsed_milli();
+    ticks_idle_last = NowMs();
     ActionsSinceLastAutoSave = 0;
     cx = cy = 0;
     showCursor = false;
@@ -1959,10 +2249,10 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
     Update();
     activeWin = wn;
     cx = ox; cy = oy;
-    ticks_last = TCOD_sys_elapsed_milli();
+    ticks_last = NowMs();
 
     for(;;) {
-		uint32 ticks0 = TCOD_sys_elapsed_milli(), ticks1;
+		uint32 ticks0 = NowMs(), ticks1;
         ScriptKey scriptKey;
         bool injecting = false;
         TCOD_key_t tcodKey = TCOD_key_t();
@@ -1989,13 +2279,13 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
 
         if (!keyQueue.empty() && keyIndex >= keyQueue.size() &&
                 !scriptAborted &&
-                (!pauseUntil || TCOD_sys_elapsed_milli() >= pauseUntil)) {
+                (!pauseUntil || NowMs() >= pauseUntil)) {
             this->ShutDown();
             exit(0);
         }
 
         if (Scripting()) {
-            uint32 now = TCOD_sys_elapsed_milli();
+            uint32 now = NowMs();
             if (pauseUntil && now < pauseUntil) {
                 tcodKey = TCOD_key_t();
             } else {
@@ -2020,6 +2310,8 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
             }
         }
 
+        if (Mode == MO_PLAY)
+            StandingPatternFrame(NowMs());   /* inc-jw0hw: a standing pattern keeps changing while the game waits for a key */
         if (Mode == MO_PLAY && p->UpdateMap)
             RefreshMap();
 
@@ -2029,8 +2321,10 @@ int16 libtcodTerm::GetCharCmdImpl(KeyCmdMode mode) {
                 ShowStatus();
             }
           
-        ticks1 = TCOD_sys_elapsed_milli();
-        if (LightFrame(ticks1)) {
+        ticks1 = NowMs();
+        const bool lightMoved = LightFrame(ticks1);
+        const bool motionMoved = !lightMoved && MotionFrame(ticks1);   /* inc-jw0hw: a dance goes on while the game waits for a key */
+        if (lightMoved || motionMoved) {
             ticks_idle_last = ticks1;
         } else if (showCursor && ticks1 > ticks_blink_last + CURSOR_BLINK_MS) {
             BlinkCursor();
@@ -2071,8 +2365,12 @@ CtrlBreak:
             if (litCells && Mode == MO_PLAY && !showCursor && LightMode(p) == LIGHT_SHIMMER
                     && ticks_next > ticks_light_last + LIGHT_TICK_MS)
                 ticks_next = ticks_light_last + LIGHT_TICK_MS;
-            if (ticks_next > ticks1)
-                TCOD_sys_sleep_milli(ticks_next - ticks1);
+            if (ticks_next > ticks1) {
+                if (RecOn() && !keyQueue.empty())
+                    RecAdvance(ticks_next - ticks1);   // virtual idle: advances the clock, saves frames
+                else
+                    TCOD_sys_sleep_milli(ticks_next - ticks1);
+            }
 
             /* Allow clearing the message window ONLY if we aren't
                repeating keys, i.e., holding down arrow to run. In
@@ -2109,7 +2407,7 @@ CtrlBreak:
             ClearMsgOK = false;
         }
         
-        ticks_blink_last = TCOD_sys_elapsed_milli();
+        ticks_blink_last = NowMs();
         /* A key repaints the screen anyway, so restart the idle tick from
            here rather than firing a redundant repaint straight after it. */
         ticks_idle_last = ticks_blink_last;

@@ -39,6 +39,7 @@
 
 #include "Incursion.h"
 #include "HideCheck.h"
+#include <memory>
 
 /* inc-8vxk6: opt-in dead-target oracle hooks; see FieldDeadTargetProbe. */
 void FieldDeadTargetKill(EventInfo &e);
@@ -352,6 +353,9 @@ uint8 BlastColourSets[] = {
  /* COL_POLY */    PINK, PINK, RED, MAGENTA,
  /* COL_SONIC */   GREY, WHITE, WHITE, BROWN,
  /* COL_SILVERY */ WHITE, GREY, WHITE, SKYBLUE, 
+ /* COL_CRIMSON */ PINK, RED, PINK, RED,
+ /* COL_DARKRED */ RED, RED, RED, SHADOW,
+ /* COL_SUNYELLOW */ YELLOW, YELLOW, WHITE, YELLOW,
                    0,0,0,0,
                    0,0,0,0 };
 
@@ -819,6 +823,825 @@ static void SelfAimProbe(const char *fmt, ...) {
     fflush(f);
 }
 
+/* forward declarations for the Phase 2 helpers below (defined further down this file) */
+bool PossiblyPause(Term *T1, int x, int y, int timeout);
+extern void (*BallRingHook)(int ring, int ntaken, const int16 *tx, const int16 *ty,
+    int ndrawn, const int16 *dx, const int16 *dy, int waitMs);
+
+/* inc-jw0hw: where the last bolt segment of an effect struck. A ball segment that follows it in the same effect bursts
+   there and does not fly again (Force Missiles). Set when the bolt ends, cleared when an effect starts and when a ball takes it. */
+static struct { bool valid; rID eID; hObj actor; int16 x, y; int8 efNum; } LastBolt = { false, 0, 0, 0, 0, 0 };
+
+static bool LastBoltTake(EventInfo &e, int16 &x, int16 &y)
+  {
+    if (!LastBolt.valid || LastBolt.eID != e.eID || !e.EActor ||
+        LastBolt.actor != e.EActor->myHandle || LastBolt.efNum >= e.efNum)
+      return false;
+    x = LastBolt.x; y = LastBolt.y;
+    LastBolt.valid = false;
+    return true;
+  }
+
+/* inc-jw0hw: a burst of glyphs over a circle of squares, ring by ring, as a ball draws it; the light follows each ring and holds
+   at the end. The glyph is a blast glyph, or a fog glyph for an effect flagged EF_GLYPH_FOG. The caller ends the light.
+   Draws nothing in the area where the player has no line of sight. */
+static void BurstRings(Map &m, TEffect *te, EffectLight &fx, int16 cx, int16 cy, int16 radius, int16 Color)
+  {
+    Overlay &o = m.ov;
+    const int16 gid = (te && te->HasFlag(EF_GLYPH_FOG)) ? GLYPH_FOG : GLYPH_BLAST;
+    int16 DrawX[160], DrawY[160];
+    bool anyDrawn = false;
+    o.Activate();
+    if (BallRingHook) {
+      int16 bcx = cx, bcy = cy;
+      BallRingHook(-2, 1, &bcx, &bcy, 0, NULL, NULL, 0);
+      }
+    for (int16 ring = 0; ring <= radius; ring++) {
+      int nDraw = 0, nTaken = 0;
+      for (int16 x = cx - radius; x <= cx + radius; x++)
+        for (int16 y = cy - radius; y <= cy + radius; y++) {
+          if (!m.InBounds(x,y) || dist(cx,cy,x,y) != ring || m.At(x,y).Solid)
+            continue;
+          nTaken++;
+          if (PossiblyPause(T1,x,y,0) && nDraw < 160) {
+            const Glyph g = GLYPH_VALUE(gid, BlastColourSets[Color * 4 + 1 + random(3)]);
+            o.AddGlyph(x,y,g);
+            if (EffectStepHook) EffectStepHook(ES_BURST, x, y, g);
+            DrawX[nDraw] = x; DrawY[nDraw] = y;
+            fx.Light(x,y);
+            nDraw++;
+            }
+          }
+      o.ShowGlyphs();
+      if (nDraw) {
+        fx.Refresh();
+        fx.Wait(70);
+        anyDrawn = true;
+        }
+      if (BallRingHook)
+        BallRingHook(ring, min(nTaken,160), NULL, NULL, nDraw, DrawX, DrawY, nDraw ? 70 : 0);
+      }
+    if (BallRingHook)
+      BallRingHook(-1, 0, NULL, NULL, 0, NULL, NULL, anyDrawn ? 300 : 0);
+    if (anyDrawn)
+      fx.Hold(300);
+    o.DeActivate();
+    if (anyDrawn)
+      T1->ShowMap();
+  }
+
+/* inc-jw0hw (Phase 4a): the formation of an environment effect. The effect's squares appear in batches in an order, with a
+   short wait between batches, as the thing really forms: water floods ring by ring, spikes pop up at random, the ground falls
+   away from its center, caltrops scatter, fog billows. Only the drawing is ordered. The game writes the same squares at the
+   same moment as before, and the glyphs drawn here are an overlay that goes when the real terrain or field takes over.
+   Only cosmetic_random() chooses, so no gameplay roll moves. A creature's square draws nothing: the creature keeps its glyph.
+   An order is a flag on the effect (EF_FORM_*), never a spell name. To add an order, add an enum value, a flag in
+   Defines.h/ConstNam.h, a case in FormOrderOf, FormationBatches and FormTiming. Phase 4b added growth (FORM_CLUMP, FORM_GROW)
+   and the sweep of a wall's line (FORM_SWEEP); a wall's line is drawn by FormationBarrier, a caltrop's flight by FormationFling,
+   and a fall's changed squares by FormationMask and FormationFinish. */
+// family: form internal
+enum { FORM_NONE = 0, FORM_RINGS, FORM_POP, FORM_FALL, FORM_SCATTER, FORM_BILLOW, FORM_SWEEP, FORM_CLUMP, FORM_GROW, FORM_RISE };
+// end family: form
+struct FormSq { int16 x, y; };
+typedef std::vector<FormSq> FormBatch;
+
+/* Test hook. batch >= 0: a batch of n squares has been drawn (first is its first drawn glyph, drawn how many showed);
+   -1: the whole formation is on show; -2: the overlay is gone. */
+void (*FormationHook)(int order, int batch, int n, const int16 *xs, const int16 *ys, Glyph first, int drawn,
+    int16 cx, int16 cy, int16 radius, rID terrain) = NULL;
+
+static int FormOrderOf(TEffect *te)
+  {
+    if (!te) return FORM_NONE;
+    if (te->HasFlag(EF_FORM_RINGS))   return FORM_RINGS;
+    if (te->HasFlag(EF_FORM_POP))     return FORM_POP;
+    if (te->HasFlag(EF_FORM_FALL))    return FORM_FALL;
+    if (te->HasFlag(EF_FORM_SCATTER)) return FORM_SCATTER;
+    if (te->HasFlag(EF_FORM_BILLOW))  return FORM_BILLOW;
+    if (te->HasFlag(EF_FORM_SWEEP))   return FORM_SWEEP;
+    if (te->HasFlag(EF_FORM_CLUMP))   return FORM_CLUMP;
+    if (te->HasFlag(EF_FORM_GROW))    return FORM_GROW;
+    if (te->HasFlag(EF_FORM_RISE))    return FORM_RISE;
+    return FORM_NONE;
+  }
+
+static void FormShuffle(FormBatch &v, size_t from)
+  {
+    for (size_t i = v.size(); i > from + 1; i--) {
+      const size_t j = from + (size_t)cosmetic_random((int16)(i - from));
+      const FormSq t = v[i-1]; v[i-1] = v[j]; v[j] = t;
+      }
+  }
+
+static int FormCheb(const FormSq &a, const FormSq &b)
+  {
+    return max(abs(a.x - b.x), abs(a.y - b.y));
+  }
+
+/* Growth: `seeds` squares come first, one per batch, each at least 2 squares (4 where the area allows) from every square grown
+   so far; then every batch adds one square that borders a grown square, so each seed swells into a clump. A square that
+   borders nothing grown (the area has a gap) starts a new seed. */
+static void FormGrowth(const FormBatch &sq, size_t seeds, std::vector<FormBatch> &out)
+  {
+    const size_t n = sq.size();
+    std::vector<char> done(n, 0);
+    std::vector<int> touch(n, 0);
+    size_t left = n;
+    for (size_t s = 0; s < seeds && left; s++) {
+      std::vector<size_t> ok;
+      for (int gap = 4; gap >= 2 && ok.empty(); gap--)
+        for (size_t j = 0; j < n; j++) {
+          bool far = !done[j];
+          for (size_t k = 0; k < out.size() && far; k++)
+            if (FormCheb(sq[j], out[k][0]) < gap)
+              far = false;
+          if (far)
+            ok.push_back(j);
+          }
+      if (ok.empty())
+        break;
+      const size_t i = ok[(size_t)cosmetic_random((int16)ok.size())];
+      done[i] = 1; left--;
+      FormBatch b; b.push_back(sq[i]); out.push_back(b);
+      for (size_t j = 0; j < n; j++)
+        if (!done[j] && FormCheb(sq[i], sq[j]) <= 1)
+          touch[j]++;
+      }
+    while (left) {
+      std::vector<size_t> edge;
+      for (size_t j = 0; j < n; j++)
+        if (!done[j] && touch[j])
+          edge.push_back(j);
+      if (edge.empty())
+        for (size_t j = 0; j < n; j++)
+          if (!done[j])
+            edge.push_back(j);
+      const size_t i = edge[(size_t)cosmetic_random((int16)edge.size())];
+      done[i] = 1; left--;
+      FormBatch b; b.push_back(sq[i]); out.push_back(b);
+      for (size_t j = 0; j < n; j++)
+        if (!done[j] && FormCheb(sq[i], sq[j]) <= 1)
+          touch[j]++;
+      }
+  }
+
+static void FormationBatches(int order, int16 cx, int16 cy, FormBatch sq, std::vector<FormBatch> &out)
+  {
+    out.clear();
+    if (sq.empty())
+      return;
+    if (order == FORM_CLUMP || order == FORM_GROW) {
+      size_t seeds = order == FORM_GROW ? 2 : sq.size() / 10;
+      if (order == FORM_CLUMP)
+        seeds = seeds < 2 ? 2 : seeds > 5 ? 5 : seeds;
+      FormGrowth(sq, seeds > sq.size() ? sq.size() : seeds, out);
+      return;
+      }
+    if (order == FORM_SWEEP) {   /* the squares come in line order: one section per batch */
+      for (size_t i = 0; i < sq.size(); i++) {
+        FormBatch b; b.push_back(sq[i]); out.push_back(b);
+        }
+      return;
+      }
+    if (order == FORM_RINGS || order == FORM_BILLOW) {
+      for (int16 ring = 0; ring <= 40; ring++) {
+        FormBatch b;
+        for (size_t i = 0; i < sq.size(); i++)
+          if (dist(cx,cy,sq[i].x,sq[i].y) == ring)
+            b.push_back(sq[i]);
+        if (!b.empty())
+          out.push_back(b);
+        }
+      return;
+      }
+    if (order == FORM_FALL) {
+      size_t best = 0;   /* the center first: the square nearest it */
+      for (size_t i = 1; i < sq.size(); i++)
+        if (dist(cx,cy,sq[i].x,sq[i].y) < dist(cx,cy,sq[best].x,sq[best].y))
+          best = i;
+      const FormSq t = sq[0]; sq[0] = sq[best]; sq[best] = t;
+      FormShuffle(sq, 1);
+      }
+    else if (order == FORM_SCATTER) {
+      /* thrown outward: nearer squares tend to come first, with enough jitter that the order is scattered */
+      std::vector<int> key(sq.size());
+      for (size_t i = 0; i < sq.size(); i++)
+        key[i] = dist(cx,cy,sq[i].x,sq[i].y) * 2 + cosmetic_random(5);
+      for (size_t i = 1; i < sq.size(); i++)
+        for (size_t j = i; j > 0 && key[j-1] > key[j]; j--) {
+          const int kt = key[j]; key[j] = key[j-1]; key[j-1] = kt;
+          const FormSq st = sq[j]; sq[j] = sq[j-1]; sq[j-1] = st;
+          }
+      }
+    else
+      FormShuffle(sq, 0);   /* FORM_POP, FORM_RISE */
+    const size_t per = order == FORM_SCATTER ? 2 : 1;
+    for (size_t i = 0; i < sq.size(); i += per) {
+      FormBatch b;
+      for (size_t k = i; k < i + per && k < sq.size(); k++)
+        b.push_back(sq[k]);
+      out.push_back(b);
+      }
+  }
+
+static void FormTiming(int order, size_t nBatches, int &waitMs, int &holdMs)
+  {
+    const int n = nBatches ? (int)nBatches : 1;
+    holdMs = 150;
+    switch (order) {
+      case FORM_RINGS:   waitMs = 90; break;
+      case FORM_BILLOW:  waitMs = 110; holdMs = 250; break;
+      case FORM_POP:     waitMs = max(8, min(60, 1000 / n)); break;
+      case FORM_FALL:    waitMs = max(10, min(80, 1000 / n)); break;
+      case FORM_CLUMP:
+      case FORM_GROW:    waitMs = max(15, min(70, 1500 / n)); break;
+      case FORM_SWEEP:   waitMs = max(30, min(80, 1200 / n)); break;
+      case FORM_RISE:    waitMs = 250; holdMs = 250; break;   /* a corpse stands up about each quarter second */
+      default:           waitMs = max(10, min(60, 700 / n)); break;   /* FORM_SCATTER */
+      }
+  }
+
+/* The glyph a square of the formation draws: img as given, or, with colourSet (a cval), the fog colors of that set. */
+static Glyph FormGlyph(Glyph img, int16 colourSet)
+  {
+    if (colourSet < 0)
+      return img;
+    return GLYPH_VALUE(GLYPH_ID_VALUE(img), colourSet >= 16 ?
+        BlastColourSets[colourSet * 4 + 1 + cosmetic_random(3)] : colourSet);
+  }
+
+/* A caltrop trap throws its caltrops from the center of the trap: each flies, with the tool glyph, along a straight line to the
+   square it lands on, two start at each step, and several are in the air at once. A landed caltrop shows the terrain's glyph.
+   The test hook gets each flight step as phase -3 (n: which caltrop, xs/ys: where it is, drawn: its step) and each landing
+   as an ordinary batch. */
+static void FormationFling(Map &m, int order, int16 cx, int16 cy, int16 radius, const std::vector<FormBatch> &batches,
+    Glyph img, rID terrain, int waitMs, int holdMs)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    Overlay &o = m.ov;
+    struct Caltrop { int16 x, y; int len, launched; bool seen; };
+    std::vector<Caltrop> c;
+    std::vector<FormSq> landed;
+    std::vector<Glyph> landedGlyph;
+    int landings = 0;
+    bool anyDrawn = false;
+    const Glyph flying = GLYPH_TOOL | GLYPH_FORE(GREY);
+    for (size_t b = 0; b < batches.size(); b++)
+      for (size_t i = 0; i < batches[b].size(); i++) {
+        Caltrop k = { batches[b][i].x, batches[b][i].y, 0, (int)b, false };
+        k.len = max(1, max(abs(k.x - cx), abs(k.y - cy)));
+        k.seen = PossiblyPause(T1,k.x,k.y,0);
+        c.push_back(k);
+        }
+    if (c.empty())
+      return;
+    o.Activate();
+    const int lastTick = (int)batches.size() + 6;
+    for (int tick = 0; tick <= lastTick; tick++) {
+      o.DeActivate();
+      o.Activate();
+      for (size_t i = 0; i < landed.size(); i++)
+        o.AddGlyph(landed[i].x, landed[i].y, landedGlyph[i]);
+      bool drew = false;
+      for (size_t i = 0; i < c.size(); i++) {
+        const int step = tick - c[i].launched + 1;   /* the first step is the tick after the launch */
+        if (step < 1 || step > c[i].len)
+          continue;
+        const int16 x = (int16)(cx + (int)floor((double)(c[i].x - cx) * step / c[i].len + 0.5));
+        const int16 y = (int16)(cy + (int)floor((double)(c[i].y - cy) * step / c[i].len + 0.5));
+        if (FormationHook)
+          FormationHook(order, -3, (int)i, &x, &y, flying, step - 1, cx, cy, radius, terrain);
+        if (step == c[i].len) {   /* it lands */
+          const int16 lx = c[i].x, ly = c[i].y;
+          const bool show = c[i].seen && !m.FCreatureAt(lx,ly);
+          if (show) {
+            FormSq ls = { lx, ly };
+            landed.push_back(ls);
+            landedGlyph.push_back(img);
+            o.AddGlyph(lx, ly, img);
+            anyDrawn = true;
+            }
+          if (FormationHook)
+            FormationHook(order, landings, 1, &lx, &ly, show ? img : 0, show ? 1 : 0, cx, cy, radius, terrain);
+          landings++;
+          }
+        else if (c[i].seen) {
+          o.AddGlyph(x, y, flying);
+          drew = true;
+          }
+        }
+      if (drew || tick < (int)batches.size()) {
+        o.ShowGlyphs();
+        pl->UpdateMap = 1;
+        T1->ShowMap();
+        T1->StopWatch((int16)waitMs);
+        }
+      }
+    if (anyDrawn)
+      T1->StopWatch((int16)holdMs);
+    if (FormationHook)
+      FormationHook(order, -1, landings, NULL, NULL, 0, anyDrawn ? 1 : 0, cx, cy, radius, terrain);
+    o.DeActivate();
+    if (anyDrawn)
+      T1->ShowMap();
+    if (FormationHook)
+      FormationHook(order, -2, 0, NULL, NULL, 0, 0, cx, cy, radius, terrain);
+  }
+
+/* masked: every square of sq already carries a mask on the overlay (FormationMask: the glyph the screen shows now), and the game
+   has written the squares since. Each batch takes the masks off, so the real terrain shows one batch at a time; the squares the
+   game did not change have lost their masks and are not in sq. */
+static void FormationPlay(Map &m, int order, int16 cx, int16 cy, int16 radius, const FormBatch &sq,
+    Glyph img, int16 colourSet, rID terrain, bool clearAtEnd, bool masked = false, TEffect *glow = NULL)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    Overlay &o = m.ov;
+    std::vector<FormBatch> batches;
+    /* inc-jw0hw (Phase 6b): a wall whose effect glows lights each square from the batch that draws it; the light ends with the
+       formation, and the terrain sweep that follows lights the same squares as its standing wall. */
+    std::unique_ptr<EffectLight> glowFx;
+    int waitMs, holdMs;
+    bool anyDrawn = false;
+    if (!pl || pl->Opt(OPT_ANIMATION) == 2 || sq.empty()) {
+      if (masked)
+        o.DeActivate();
+      return;
+      }
+    FormationBatches(order, cx, cy, sq, batches);
+    FormTiming(order, batches.size(), waitMs, holdMs);
+    if (order == FORM_SCATTER) {
+      FormationFling(m, order, cx, cy, radius, batches, img, terrain, waitMs, holdMs);
+      return;
+      }
+    if (!masked)
+      o.Activate();
+    if (glow && !masked && EffectLightDecide(glow, 0).lit) {
+      glowFx.reset(new EffectLight(&m, WHITE, EL_AREA, 0, glow));
+      glowFx->Stand(true);
+      }
+    for (size_t b = 0; b < batches.size(); b++) {
+      int16 xs[256], ys[256];
+      int n = 0, drawn = 0;
+      Glyph first = 0;
+      for (size_t i = 0; i < batches[b].size() && n < 256; i++) {
+        const int16 x = batches[b][i].x, y = batches[b][i].y;
+        xs[n] = x; ys[n] = y; n++;
+        if (masked) {
+          if (!o.IsGlyphAt(x,y))
+            continue;
+          o.RemoveGlyph(x,y);
+          m.Update(x,y);
+          if (!drawn) first = order == FORM_RISE && m.FCreatureAt(x,y) ? m.FCreatureAt(x,y)->Image : m.At(x,y).Glyph;   /* a risen corpse shows the undead's glyph */
+          drawn++;
+          continue;
+          }
+        if (m.FCreatureAt(x,y) || !PossiblyPause(T1,x,y,0))
+          continue;
+        const Glyph g = FormGlyph(img, colourSet);
+        o.AddGlyph(x,y,g);
+        if (glowFx) glowFx->Light(x,y);
+        if (!drawn) first = g;
+        drawn++;
+        }
+      if (FormationHook)
+        FormationHook(order, (int)b, n, xs, ys, first, drawn, cx, cy, radius, terrain);
+      if (drawn) {
+        o.ShowGlyphs();
+        pl->UpdateMap = 1;
+        T1->ShowMap();
+        T1->StopWatch((int16)waitMs);
+        anyDrawn = true;
+        }
+      }
+    if (anyDrawn)
+      T1->StopWatch((int16)holdMs);
+    if (FormationHook)
+      FormationHook(order, -1, (int)sq.size(), NULL, NULL, 0, anyDrawn ? 1 : 0, cx, cy, radius, terrain);
+    o.DeActivate();
+    if (anyDrawn && clearAtEnd)
+      T1->ShowMap();
+    if (FormationHook)
+      FormationHook(order, -2, 0, NULL, NULL, 0, 0, cx, cy, radius, terrain);
+  }
+
+/* Would Magic::Terraform (src/Effects.cpp) write this square? The same test, so the formation shows the squares the game
+   changes and no others. */
+static bool TerraformApplies(Map &m, EffectValues *ev, int16 x, int16 y)
+  {
+    TTerrain *ct = TTER(m.TerrainAt(x,y));
+    switch (ev->xval) {
+      case TERRA_EMPTY: if (m.SolidAt(x,y) || m.FCreatureAt(x,y)) return false; break;
+      case TERRA_ROCK: {
+        const int i = ct->Material;
+        if (i != MAT_GRANITE && i != MAT_MAGMA && i != MAT_QUARTZ && i != MAT_MINERAL) return false;
+        if (!m.SolidAt(x,y)) return false;
+        break; }
+      case TERRA_ALL: break;
+      case TERRA_FLOOR:
+        if (m.SolidAt(x,y) || (GLYPH_ID_VALUE(m.At(x,y).Glyph) != GLYPH_FLOOR && GLYPH_ID_VALUE(m.At(x,y).Glyph) != GLYPH_FLOOR2))
+          return false;
+        break;
+      case TERRA_OPEN: if (m.SolidAt(x,y)) return false; break;
+      case TERRA_CLOSED: if (!m.SolidAt(x,y)) return false; break;
+      case TERRA_WATER: if (!ct->HasFlag(TF_WATER)) return false; break;
+      case TERRA_CHASM: if (ct->Material != MAT_EMPTYNESS) return false; break;
+      case TERRA_BRIDGE:
+        if (!m.FallAt(x,y) && !ct->HasFlag(TF_DEEP_LIQ)) return false;
+        break;
+      }
+    return TTER(ev->rval) != ct;   /* Terraform writes nothing where the terrain already is the result */
+  }
+
+/* A fall (EF_FORM_FALL) shows only the squares the game really changes, and the game's own loop decides them: it writes the
+   area in raster order and stops writing once the creature that sprang the trap has fallen off the map (a trapdoor), so the
+   squares after that creature's keep their floor. FormationMask runs before the loop: it puts the glyph the screen shows now on
+   every square the game may change, so the writes show nothing yet. FormationFinish runs after the loop: it takes the mask off
+   the squares the game left alone, then off the changed squares one batch at a time, so the new terrain appears in the order. */
+static struct {
+  bool on; Map *m; int16 cx, cy, radius; rID terrain; FormBatch sq; std::vector<rID> before; bool rise;
+  } gFormMask = { false, NULL, 0, 0, 0, 0, FormBatch(), std::vector<rID>(), false };
+
+/* A corpse lies on the square. */
+static bool CorpseAt(Map &m, int16 x, int16 y)
+  {
+    for (Thing *t = m.FirstAt(x,y); t; t = m.NextAt(x,y))
+      if (t->isItem() && t->isType(T_CORPSE))
+        return true;
+    return false;
+  }
+
+static void FormationMask(Map &m, int16 cx, int16 cy, int16 radius, const FormBatch &sq, rID terrain)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!pl || pl->Opt(OPT_ANIMATION) == 2)
+      return;
+    gFormMask.on = false; gFormMask.rise = false;
+    gFormMask.sq.clear(); gFormMask.before.clear();
+    m.ov.Activate();
+    for (size_t i = 0; i < sq.size(); i++) {
+      if (!PossiblyPause(T1,sq[i].x,sq[i].y,0))
+        continue;
+      m.ov.AddGlyph(sq[i].x, sq[i].y, T1->GetGlyph(sq[i].x, sq[i].y));
+      gFormMask.sq.push_back(sq[i]);
+      gFormMask.before.push_back(m.TerrainAt(sq[i].x, sq[i].y));
+      }
+    gFormMask.on = true; gFormMask.m = &m;
+    gFormMask.cx = cx; gFormMask.cy = cy; gFormMask.radius = radius; gFormMask.terrain = terrain;
+  }
+
+static void FormationFinish()
+  {
+    if (!gFormMask.on)
+      return;
+    gFormMask.on = false;
+    Map &m = *gFormMask.m;
+    Player *pl = theGame->GetPlayer(0);
+    FormBatch changed;
+    for (size_t i = 0; i < gFormMask.sq.size(); i++) {
+      const FormSq s = gFormMask.sq[i];
+      if (gFormMask.rise ? (!CorpseAt(m, s.x, s.y) && m.FCreatureAt(s.x, s.y) != NULL)   /* the corpse is gone and a creature stands there */
+          : (m.TerrainAt(s.x, s.y) == gFormMask.terrain && gFormMask.before[i] != gFormMask.terrain))
+        changed.push_back(s);
+      else if (pl && pl->m == &m) {
+        m.ov.RemoveGlyph(s.x, s.y);   /* the game left this square alone: its mask shows what the screen showed */
+        m.Update(s.x, s.y);
+        }
+      }
+    if (!pl || pl->m != &m || changed.empty()) {
+      m.ov.DeActivate();
+      return;
+      }
+    FormationPlay(m, gFormMask.rise ? FORM_RISE : FORM_FALL, gFormMask.cx, gFormMask.cy, gFormMask.radius, changed, 0, -1, gFormMask.terrain, false, true);
+  }
+
+/* A globe with a formation order (EF_FORM_*): a terraform part draws its terrain's glyph on each square the game will
+   change; any other part (a vapor trap) draws fog glyphs in its cval colors, and clears them at the end. */
+static void FormationGlobe(EventInfo &e, int16 cx, int16 cy)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    EffectValues *ev = e.EMagic;
+    const bool terra = ev->eval == EA_TERRAFORM;
+    Glyph img; int16 colourSet = -1;
+    rID terrain = 0;
+    FormBatch sq;
+    if (terra) {
+      TTerrain *tt = TTER(ev->rval);
+      if (!ev->rval || !tt)
+        return;
+      terrain = ev->rval;
+      img = tt->Type == T_TFEATURE ? TFEAT(ev->rval)->Image : tt->Image;
+      }
+    else {
+      img = GLYPH_FOG;
+      colourSet = ev->cval ? ev->cval : GREY;
+      }
+    for (int16 x = cx - e.vRadius; x <= cx + e.vRadius; x++)
+      for (int16 y = cy - e.vRadius; y <= cy + e.vRadius; y++) {
+        if (!m->InBounds(x,y) || dist(cx,cy,x,y) > e.vRadius)
+          continue;
+        if (terra ? !TerraformApplies(*m, ev, x, y) : m->At(x,y).Solid)
+          continue;
+        FormSq s = { x, y };
+        sq.push_back(s);
+        }
+    if (terra && FormOrderOf(te) == FORM_FALL) {
+      FormationMask(*m, cx, cy, (int16)e.vRadius, sq, terrain);   /* shown after the game's writes, over the squares it really changed */
+      return;
+      }
+    FormationPlay(*m, FormOrderOf(te), cx, cy, (int16)e.vRadius, sq, img, colourSet, terrain, !terra);
+  }
+
+/* A field that makes a fog bank (FI_FOG, or EF_GLYPH_FOG) billows outward from its source before the field takes over. */
+static void FormationFieldAt(Map *m, int16 tx, int16 ty, int16 radius, Glyph g)
+  {
+    FormBatch sq;
+    if (!m || m->isGenerating() || !PossiblyPause(T1,tx,ty,0))
+      return;
+    for (int16 x = tx - radius; x <= tx + radius; x++)
+      for (int16 y = ty - radius; y <= ty + radius; y++)
+        if (m->InBounds(x,y) && dist(tx,ty,x,y) <= radius && !m->At(x,y).Solid) {
+          FormSq s = { x, y };
+          sq.push_back(s);
+          }
+    FormationPlay(*m, FORM_BILLOW, tx, ty, radius, sq, g, -1, 0, false);
+  }
+
+static void FormationField(EventInfo &e, int16 tx, int16 ty, Glyph g)
+  {
+    FormationFieldAt(e.EActor->m, tx, ty, (int16)e.vRadius, g);
+  }
+
+/* inc-jw0hw: a script that makes a fog field itself (a thunderbeast's own cloud, lib/mon1.irh) calls Map::NewField. Map::NewField
+   calls this for an FI_FOG field, so the cloud billows as a cast fog does. AField sets the suppression: it has already billowed
+   its own fog, and Creature::PlaceAt (src/Display.cpp) sets it while it re-creates the fields a creature carries to a new level. */
+int FormationFieldSuppress = 0;
+void FormationScriptFog(Map *m, int16 x, int16 y, int16 radius, Glyph g)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (FormationFieldSuppress || !m || m->isGenerating() || !pl || pl->m != m)
+      return;
+    FormationFieldAt(m, x, y, radius, g);
+  }
+
+/* A barrier (AR_BARRIER) with a formation order: its line forms in that order before the game writes it. The line is the one
+   Magic::ABarrier walks: the square in front of the caster, then outward both ways along the line until a solid square. A
+   terraform wall draws its terrain's glyph where Terraform would write it; a wall of doors draws a door on every open square.
+   Sweep order runs from the far end of one side to the far end of the other; rings and billow run outward from the middle.
+   Returns true when a formation played. */
+static bool FormationBarrier(EventInfo &e, int16 sx, int16 sy)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    EffectValues *ev = e.EMagic;
+    const int order = FormOrderOf(te);
+    const bool terra = ev->eval == EA_TERRAFORM;
+    Glyph img; rID terrain = 0;
+    if (!order || !m || m->isGenerating() || !PossiblyPause(T1,sx,sy,0))
+      return false;
+    if (terra) {
+      TTerrain *tt = TTER(ev->rval);
+      if (!ev->rval || !tt)
+        return false;
+      terrain = ev->rval;
+      img = tt->Type == T_TFEATURE ? TFEAT(ev->rval)->Image : tt->Image;
+      }
+    else
+      img = GLYPH_VALUE((e.EDir == NORTH || e.EDir == SOUTH) ? GLYPH_HDOOR : GLYPH_VDOOR, BROWN);
+    /* the line: side 1 runs the way ABarrier's first walker goes, side 2 the other; each stops at a solid square */
+    FormBatch side1, side2, sq;
+    for (int16 x = sx, y = sy; m->InBounds(x,y) && !m->SolidAt(x,y); x += DirY[e.EDir], y += DirX[e.EDir]) {
+      FormSq s = { x, y };
+      side1.push_back(s);
+      }
+    for (int16 x = sx - DirY[e.EDir], y = sy - DirX[e.EDir]; m->InBounds(x,y) && !m->SolidAt(x,y);
+         x -= DirY[e.EDir], y -= DirX[e.EDir]) {
+      FormSq s = { x, y };
+      side2.push_back(s);
+      }
+    for (size_t i = side2.size(); i > 0; i--)
+      sq.push_back(side2[i-1]);
+    for (size_t i = 0; i < side1.size(); i++)
+      sq.push_back(side1[i]);
+    if (terra) {
+      FormBatch kept;
+      for (size_t i = 0; i < sq.size(); i++)
+        if (TerraformApplies(*m, ev, sq[i].x, sq[i].y))
+          kept.push_back(sq[i]);
+      sq = kept;
+      }
+    if (sq.empty())
+      return false;
+    const int16 radius = (int16)max(side1.size(), side2.size());
+    FormationPlay(*m, order, sx, sy, radius, sq, img, -1, terrain, false, false, terra ? te : NULL);
+    return true;
+  }
+
+/* inc-jw0hw: a pillar falls from the top of the view onto a square: a short streak of glyphs with a point of light on its head.
+   The light ends when the pillar lands. */
+static void PillarFall(Map &m, EventInfo &e, TEffect *te, int16 Color, int16 tx, int16 ty)
+  {
+    Overlay &o = m.ov;
+    const int16 top = max((int16)0, (int16)T1->OffsetY());
+    if (ty < top || !PossiblyPause(T1,tx,ty,0))
+      return;
+    std::unique_ptr<EffectLight> fx(new EffectLight(&m, Color, EL_MISSILE, e.DType, te));
+    o.Activate();
+    for (int16 y = top; y <= ty; y++) {
+      Glyph head = 0;
+      for (int16 k = 0; k < 3 && y - k >= top; k++) {
+        const Glyph g = (k ? '|' : GLYPH_BLAST) | GLYPH_FORE(BlastColourSets[Color * 4 + (k ? 1 + random(3) : 0)]);
+        o.AddGlyph(tx, y - k, g);
+        if (!k) head = g;
+        }
+      o.ShowGlyphs();
+      fx->MoveTo(tx, y);
+      fx->Refresh();
+      if (EffectStepHook) EffectStepHook(ES_PILLAR, tx, y, head);
+      fx->Wait(35);
+      o.DeActivate();
+      o.Activate();
+      }
+    fx->End();
+    fx.reset();
+    o.DeActivate();
+    T1->ShowMap();
+  }
+
+/* inc-jw0hw (Phase 5): one victim's motion. The creature at (x, y) shakes for `ms`, as the earth bites it. The player must see the
+   square. The SDL build moves the pixels (MotionStart, inc/EffectLight.h); the text terminal only waits. */
+static void MotionPlayOne(int16 x, int16 y, uint8 mode, int16 ms)
+  {
+    if (!PossiblyPause(T1,x,y,0))
+      return;
+    const uint8 md = mode;
+    MotionStart(&x, &y, &md, 1);
+    T1->StopWatch(ms);
+    MotionStop();
+    T1->RefreshMap();
+    T1->Update();
+  }
+
+/* inc-jw0hw (Phase 5): spores. A spreader's attack (Creature::Damage, AD_POIS, src/Fight.cpp) whose poison carries EF_SPORES blasts them: they fly from the spreader in every direction, like arrows, each drawn with the glyph of its flight's
+   direction: '-' along a row, '|' along a column, '\\' and '/' on the diagonals. Eight flights follow the compass lines to
+   SPORE_RANGE squares or the first solid square, and one more flies to the victim. Several are in the air at once, each at its own
+   square in turn; a creature's square keeps its glyph. No light: spores are material. The test hook gets each glyph that shows. */
+// no-family
+static const int SPORE_RANGE = 4;
+// end no-family
+void (*SporeHook)(int id, int step, int16 x, int16 y, int16 dx, int16 dy, Glyph g) = NULL;
+
+static int SporeChar(int dx, int dy)
+  {
+    const int ax = abs(dx), ay = abs(dy);
+    if (ay * 2 <= ax) return '-';
+    if (ax * 2 <= ay) return '|';
+    return (dx > 0) == (dy > 0) ? '\\' : '/';
+  }
+
+void SporeBlast(Map &m, Thing *from, Thing *victim)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!pl || pl->Opt(OPT_ANIMATION) == 2 || !from || from->m != &m)
+      return;
+    struct Flight { std::vector<FormSq> sq; int16 dx, dy; Glyph g; };
+    std::vector<Flight> fl;
+    static const int DX[8] = { 1, 1, 0, -1, -1, -1, 0, 1 }, DY[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    for (int d = 0; d < 8; d++) {
+      Flight f; f.dx = (int16)DX[d]; f.dy = (int16)DY[d];
+      f.g = GLYPH_VALUE(SporeChar(f.dx, f.dy), GREEN);
+      for (int i = 1; i <= SPORE_RANGE; i++) {
+        const int16 x = (int16)(from->x + DX[d] * i), y = (int16)(from->y + DY[d] * i);
+        if (!m.InBounds(x,y) || m.SolidAt(x,y))
+          break;
+        FormSq q = { x, y }; f.sq.push_back(q);
+        }
+      if (!f.sq.empty()) fl.push_back(f);
+      }
+    if (victim && victim->m == &m && victim != from) {   /* the flight to the victim, along the straight line to it */
+      Flight f; f.dx = (int16)(victim->x - from->x); f.dy = (int16)(victim->y - from->y);
+      f.g = GLYPH_VALUE(SporeChar(f.dx, f.dy), GREEN);
+      const int n = max(abs(f.dx), abs(f.dy));
+      for (int i = 1; i <= n; i++) {
+        const int16 x = (int16)(from->x + (int)floor((double)f.dx * i / n + 0.5));
+        const int16 y = (int16)(from->y + (int)floor((double)f.dy * i / n + 0.5));
+        if (!m.InBounds(x,y) || m.SolidAt(x,y))
+          break;
+        FormSq q = { x, y }; f.sq.push_back(q);
+        }
+      if (!f.sq.empty()) fl.push_back(f);
+      }
+    if (fl.empty() || !PossiblyPause(T1,from->x,from->y,0))
+      return;
+    Overlay &o = m.ov;
+    size_t longest = 0;
+    for (size_t k = 0; k < fl.size(); k++)
+      longest = max(longest, fl[k].sq.size());
+    o.Activate();
+    for (size_t step = 0; step < longest; step++) {
+      o.DeActivate();
+      o.Activate();
+      for (size_t k = 0; k < fl.size(); k++) {
+        if (step >= fl[k].sq.size())
+          continue;
+        const int16 x = fl[k].sq[step].x, y = fl[k].sq[step].y;
+        const bool shown = !m.FCreatureAt(x,y) && PossiblyPause(T1,x,y,0);
+        if (shown)
+          o.AddGlyph(x, y, fl[k].g);
+        if (SporeHook)   /* glyph 0: the flight is on this square, but a creature stands there and keeps its glyph */
+          SporeHook((int)k, (int)step, x, y, fl[k].dx, fl[k].dy, shown ? fl[k].g : 0);
+        }
+      o.ShowGlyphs();
+      pl->UpdateMap = 1;
+      T1->ShowMap();
+      T1->StopWatch(60);
+      }
+    o.DeActivate();
+    T1->ShowMap();
+  }
+
+/* inc-jw0hw: a thrown item flies from the thrower to the square it lands on. ponytail: one glyph (the tool glyph) for every thrown
+   effect; the item is gone by the time its script runs, so it names no image. Upgrade: an image field on the effect. */
+static void ThrownFlight(Map &m, EventInfo &e, int16 tx, int16 ty)
+  {
+    Overlay &o = m.ov;
+    const int16 sx = e.EActor->x, sy = e.EActor->y;
+    const int n = max(abs(tx - sx), abs(ty - sy));
+    if (n < 1 || !PossiblyPause(T1,tx,ty,0))
+      return;
+    const Glyph g = GLYPH_TOOL | GLYPH_FORE(BROWN);
+    o.Activate();
+    for (int i = 1; i <= n; i++) {
+      const int16 x = (int16)(sx + (int)floor((double)(tx - sx) * i / n + 0.5));
+      const int16 y = (int16)(sy + (int)floor((double)(ty - sy) * i / n + 0.5));
+      if (m.At(x,y).Solid)
+        break;
+      o.AddGlyph(x, y, g);
+      if (EffectStepHook) EffectStepHook(ES_THROWN, x, y, g);
+      o.ShowGlyphs();
+      T1->StopWatch(35);
+      o.DeActivate();
+      o.Activate();
+      }
+    o.DeActivate();
+    T1->ShowMap();
+  }
+
+/* inc-jw0hw: where a trap's dart comes from. The squares of the flight, the source first and the square next to the victim
+   last, in a straight line from the nearest wall: a flight of 1 to 3 squares. With no wall within 3 squares the flight
+   starts 3 squares away, toward the nearest wall. Returns the count, and the direction the dart flies in dxs, dys. */
+int DartFlightPlan(Map *m, int16 vx, int16 vy, int16 *px, int16 *py, int max_n, int16 *dxs, int16 *dys)
+  {
+    /* north, east, south, west, then the diagonals: at one distance a straight wall wins */
+    static const int8 DX[8] = { 0, 1, 0, -1, 1, 1, -1, -1 }, DY[8] = { -1, 0, 1, 0, -1, 1, 1, -1 };
+    int dir = 0, wall = 3;
+    bool found = false;
+    for (int d = 1; d <= 60 && !found; d++)
+      for (int k = 0; k < 8 && !found; k++) {
+        const int x = vx + DX[k] * d, y = vy + DY[k] * d;
+        if (!m->InBounds(x,y) || m->At(x,y).Solid) {
+          dir = k; wall = d; found = true;
+          }
+        }
+    const int len = min(wall, 3);
+    int n = 0;
+    for (int d = len; d >= 1 && n < max_n; d--) {
+      px[n] = (int16)(vx + DX[dir] * d); py[n] = (int16)(vy + DY[dir] * d);
+      n++;
+      }
+    if (dxs) *dxs = -DX[dir];
+    if (dys) *dys = -DY[dir];
+    return n;
+  }
+
+/* inc-jw0hw: a trap's dart flies the plan's squares to the victim, with the thrown-weapon glyph and no light. */
+static void DartFlight(Map &m, int16 vx, int16 vy)
+  {
+    int16 px[3], py[3], ddx = 0, ddy = 0;
+    if (!PossiblyPause(T1,vx,vy,0))
+      return;
+    const int n = DartFlightPlan(&m, vx, vy, px, py, 3, &ddx, &ddy);
+    const rID dartR = FIND("dart");
+    const Glyph col = dartR ? (TITEM(dartR)->Image & GLYPH_COLOUR_MASK) : GLYPH_FORE(GREEN);
+    Glyph g;
+    if (ddx == 0) g = ddy < 0 ? GLYPH_ARROW_UP : GLYPH_ARROW_DOWN;
+    else if (ddy == 0) g = ddx > 0 ? GLYPH_ARROW_RIGHT : GLYPH_ARROW_LEFT;
+    else g = ((ddx < 0) == (ddy < 0)) ? '\\' : '/';
+    g |= col;
+    Overlay &o = m.ov;
+    o.Activate();
+    for (int i = 0; i < n; i++) {
+      o.AddGlyph(px[i], py[i], g);
+      if (EffectStepHook) EffectStepHook(ES_DART, px[i], py[i], g);
+      o.ShowGlyphs();
+      T1->StopWatch(35);
+      o.DeActivate();
+      o.Activate();
+      }
+    o.DeActivate();
+    T1->ShowMap();
+  }
+
   EvReturn Magic::MagicEvent(EventInfo &e) {
       EvReturn r; Thing *t; int16 i;
       bool FieldDone = false,
@@ -925,6 +1748,7 @@ Nothing:
       }
 
 
+      LastBolt.valid = false;   /* inc-jw0hw: a ball takes only the bolt of its own effect */
       while (e.EMagic = te->Vals(e.efNum)) {
 //SkipLoop:
 
@@ -1055,6 +1879,25 @@ Nothing:
               /* Globes don't *inherently* give away your pos. */
               r = AGlobe(e); break;
           case AR_NONE:
+              /* inc-jw0hw: a targeted blast with no stroke shows only the target flash. */
+              if (e.EMagic->eval == EA_BLAST && e.EVictim && e.EVictim->isCreature()) {
+                  Thing *stroke = e.EVictim;
+                  /* inc-jw0hw: a dart trap's dart flies from the wall; a pillar trap's pillar falls and bursts around the victim. */
+                  if (te->HasFlag(EF_DART))
+                      DartFlight(*e.EMap, e.EVictim->x, e.EVictim->y);
+                  if (te->HasFlag(EF_PILLAR)) {
+                      PillarFall(*e.EMap, e, te, e.EMagic->cval, e.EVictim->x, e.EVictim->y);
+                      EffectLight burst(e.EMap, e.EMagic->cval, EL_AREA, e.DType, te);
+                      BurstRings(*e.EMap, te, burst, e.EVictim->x, e.EVictim->y, 1, e.EMagic->cval);
+                      burst.Tail();
+                      burst.End();
+                  }
+                  EffectLight::FlashStruck(e.EMap, e.EMagic->cval, EL_MISSILE,
+                      e.DType, te, &stroke, 1);
+                  /* inc-jw0hw (Phase 5): the earth bites its victim, who shakes */
+                  if (te->HasFlag(EF_SHAKE_VICTIM))
+                      MotionPlayOne(e.EVictim->x, e.EVictim->y, MOT_SHAKE, e.EActor && e.EActor->isPlayer() ? 750 : 250);
+              }
               r = ReThrow(EV_MAGIC_STRIKE,e); 
               break;
           case AR_POISON:
@@ -1616,6 +2459,637 @@ EvReturn Magic::MagicHit(EventInfo &e) {
 
 /* inc-lmw4: set only by AreaRadiusProbe (src/AreaRadiusProbe.cpp). */
 void (*AreaProbeXYHook)(int16,int16) = NULL;
+void (*GlobeGlyphHook)(int16,int16,Glyph,Glyph) = NULL;
+/* Test hook: the effect clock before and after a plain globe's hold, and its light life. */
+void (*GlobeHoldHook)(float fromMs, float toMs, float lifeMs) = NULL;
+/* Test hook: each step of a barrier sweep, after the squares of that step are placed. */
+void (*WallSweepHook)(void) = NULL;
+
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called each time a fireworks
+   square changes shape: stage 0 small, 1 full, 2 burst, 3 gone; g is the glyph
+   drawn (0 for gone). */
+void (*FireworksHook)(int16 x, int16 y, int stage, float clockMs, Glyph g) = NULL;
+
+/* The fireworks of a globe flagged EF_FIREWORKS: the center grows from a dot to
+   a star to a flower and goes; ring r starts when ring r-1 reaches its star, and
+   its squares point away from the center. A square's light is born with its ring. */
+static Glyph FireworksShape(int16 dx, int16 dy, int stage)
+  {
+    int16 id;
+    if (stage == 0)
+      id = 250;                                   /* CP437 middle dot */
+    else if (!dx && !dy)
+      id = stage == 1 ? '*' : 15;                 /* star, then the CP437 sun */
+    else if (stage == 2)
+      id = '*';                                   /* a spark */
+    else {
+      const int16 ax = abs(dx), ay = abs(dy);
+      if (ay * 2 <= ax)      id = '-';
+      else if (ax * 2 <= ay) id = '|';
+      else if ((dx > 0) == (dy > 0)) id = '\\';   /* screen y grows downward */
+      else                   id = '/';
+    }
+    return (Glyph)id;
+  }
+
+static void GlobeFireworks(EventInfo &e, EffectLight &fx, int16 cx, int16 cy)
+  {
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    const int16 R = (int16)e.vRadius;
+    const int16 stageMs = (int16)max(40, 900 / (R + 3));  /* ~900 ms, first dot to last gone */
+    const int cv = e.EMagic->cval;
+    int16 x, y;
+    bool seen[33][33];
+    memset(seen, 0, sizeof(seen));
+    if (R > 16)
+      return;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y))
+          seen[x-(cx-R)][y-(cy-R)] = PossiblyPause(T1,x,y,0);
+    o.Activate();
+    float clk = 0.0f;
+    for (int k = 0; k <= R + 3; k++) {
+      o.DeActivate();
+      o.Activate();
+      for (x = cx-R; x <= cx+R; x++)
+        for (y = cy-R; y <= cy+R; y++) {
+          const int16 r = dist(cx,cy,x,y);
+          if (r > R || !m->InBounds(x,y) || !seen[x-(cx-R)][y-(cy-R)])
+            continue;
+          const int stage = k - r;
+          if (stage == 0)
+            fx.Light(x,y);
+          if (stage < 0 || stage > 2)
+            continue;
+          const int16 col = cv >= 16 ?
+              BlastColourSets[cv * 4 + 1 + (x + y + stage) % 3] : cv;
+          o.AddGlyph(x,y, GLYPH_VALUE(FireworksShape(x-cx,y-cy,stage), col));
+          }
+      o.ShowGlyphs();
+      fx.Refresh();
+      if (FireworksHook)
+        for (x = cx-R; x <= cx+R; x++)
+          for (y = cy-R; y <= cy+R; y++) {
+            const int16 r = dist(cx,cy,x,y);
+            const int stage = k - r;
+            if (r > R || !m->InBounds(x,y) || !seen[x-(cx-R)][y-(cy-R)] ||
+                stage < 0 || stage > 3)
+              continue;
+            FireworksHook(x,y,stage,clk, stage == 3 ? 0 : FireworksShape(x-cx,y-cy,stage));
+            }
+      if (k <= R + 2) {
+        fx.Wait(stageMs);
+        clk += stageMs;
+        }
+      }
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called once per pick: the
+   square, the glyph and its palette color, and the effect clock in ms. */
+void (*PatternHook)(int16 x, int16 y, Glyph g, int16 colour, float clockMs) = NULL;
+
+/* The color pattern of an effect flagged EF_COLOR_PATTERN (Hypnotic Pattern, Colour
+   Spray, Chromatic Orb): every square it draws shows a random symbol in a random
+   color and picks again each 100 ms of the effect's own clock. The square's light
+   takes the color of its glyph; its age on the cooling ramp does not restart. Only
+   cosmetic_random() chooses, so no gameplay roll moves. */
+static const Glyph PatternGlyphs[] = { '~', '*', '+', '=', '%', '&', '^', 15 };
+static const int16 PatternColours[] = { RED, GREEN, AZURE, SKYBLUE, PINK, MAGENTA, YELLOW, PURPLE };
+// no-family
+static const float PATTERN_REPICK_MS = 100.0f;
+// end no-family
+
+static bool PatternOn(TEffect *te)
+  {
+    Player *p = theGame->GetPlayer(0);
+    return te && te->HasFlag(EF_COLOR_PATTERN) && p && p->Opt(OPT_ANIMATION) != 2;
+  }
+
+/* One pick of the pattern's pool, shared by the traveling pattern and the standing one. A glyph first, then a color: col 0 and
+   COL_RAINBOW take the full pool of eight, any other COL_* set one of its four, a palette color itself. */
+static Glyph PatternPickGlyph()
+  {
+    return PatternGlyphs[cosmetic_random(sizeof(PatternGlyphs)/sizeof(PatternGlyphs[0]))];
+  }
+
+static int16 PatternPickColour(int16 col)
+  {
+    if (col <= 0 || col == COL_RAINBOW || col > COL_SUNYELLOW)
+      return PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
+    if (col < 16)
+      return col;
+    return BlastColourSets[col * 4 + cosmetic_random(4)];
+  }
+
+struct ColorPattern
+  {
+    struct Sq { int16 x, y; float last; Glyph g; int16 col; };
+    EffectLight &fx; Overlay &o; std::vector<Sq> sq;
+    ColorPattern(EffectLight &f, Overlay &ov) : fx(f), o(ov) {}
+    void Add(int16 x, int16 y)
+      {
+        Sq s; s.x = x; s.y = y; s.last = 0.0f; s.g = 0; s.col = 0;
+        sq.push_back(s);
+        Pick(sq.back());
+      }
+    void Pick(Sq &s)
+      {
+        s.g = PatternPickGlyph();
+        s.col = PatternPickColour(0);
+        s.last = fx.Clock();
+        fx.SetCellColour(s.x, s.y, s.col);
+        if (PatternHook) PatternHook(s.x, s.y, s.g, s.col, s.last);
+      }
+    void Draw()
+      {
+        o.DeActivate();
+        o.Activate();
+        for (size_t i = 0; i < sq.size(); i++)
+          o.AddGlyph(sq[i].x, sq[i].y, GLYPH_VALUE(sq[i].g, sq[i].col));
+        o.ShowGlyphs();
+      }
+    /* A bolt shows one square at a time; a beam keeps the squares it has drawn. */
+    void Square(int16 x, int16 y, bool replace)
+      {
+        if (replace) sq.clear();
+        Add(x, y);
+        Draw();
+      }
+    void Wait(int16 ms)
+      {
+        while (ms > 0) {
+          const int16 step = ms > 33 ? 33 : ms;
+          fx.Wait(step);
+          ms -= step;
+          bool again = false;
+          for (size_t i = 0; i < sq.size(); i++)
+            if (fx.Clock() - sq[i].last >= PATTERN_REPICK_MS) { Pick(sq[i]); again = true; }
+          if (again) { Draw(); fx.Redraw(); }
+          }
+      }
+  };
+
+static void GlobePattern(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int16 hold)
+  {
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    ColorPattern pat(fx, o);
+    int16 x, y;
+    for (x = cx-e.vRadius; x <= cx+e.vRadius; x++)
+      for (y = cy-e.vRadius; y <= cy+e.vRadius; y++)
+        if (dist(cx,cy,x,y) <= e.vRadius && m->InBounds(x,y) && PossiblyPause(T1,x,y,0)) {
+          fx.Light(x,y);
+          pat.Add(x,y);
+          }
+    o.Activate();
+    pat.Draw();
+    fx.Refresh();
+    fx.SetGlyphTime(hold);
+    pat.Wait(hold);
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
+
+/* inc-jw0hw: the standing pattern (inc/EffectLight.h). ponytail: a table of 8 patterns, enough for the creatures a screen
+   shows at once; a ninth start returns false. Upgrade path: a std::vector with no cap, once a use needs more than 8. A pattern
+   keeps no overlay between repaints: ShowMap fills it in StandingPatternPrepare and StandingPatternDone switches it off, so an
+   effect that owns the overlay (Active at Prepare) is never wiped and a save never holds a pattern's glyphs. */
+// no-family
+static const int SP_MAX = 8, SP_RADIUS_MAX = 8;
+static const uint32 SP_REPICK_MS = 100;
+// end no-family
+struct SPSq { int16 x, y; Glyph g; int16 col; };
+struct StandPat
+  {
+    hObj anchor; rID owner; int16 radius, col, stati;
+    EffectLight *fx; std::vector<SPSq> sq;
+    uint32 last; bool clocked;
+  };
+static std::vector<StandPat> SP;
+static bool SPOwn = false;   /* StandingPatternPrepare switched the overlay on and Done must switch it off */
+static int SPDepth = 0;      /* ShowMap calls nest: a monster seen for the first time makes Map::Update repaint the whole map from inside it */
+
+static Creature *SPAnchor(const StandPat &p)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!pl || !pl->m || pl->Opt(OPT_ANIMATION) == 2 || !theRegistry->Exists(p.anchor))
+      return NULL;
+    Thing *t = oThing(p.anchor);
+    if (!t || !t->isCreature() || ((Creature*)t)->isDead() || t->m != pl->m || t->x < 0)
+      return NULL;
+    if (p.stati && !t->HasEffStati(p.stati, p.owner))
+      return NULL;
+    return (Creature*)t;
+  }
+
+static void SPEnd(StandPat &p)
+  {
+    if (p.fx) { p.fx->End(); delete p.fx; p.fx = NULL; }
+  }
+
+static void SPRepick(StandPat &p)
+  {
+    for (size_t i = 0; i < p.sq.size(); i++) {
+      p.sq[i].g = PatternPickGlyph();
+      p.sq[i].col = PatternPickColour(p.col);
+      }
+  }
+
+bool StandingPatternStart(Thing *anchor, int16 radius, int16 col, rID owner, int16 stati)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!anchor || !anchor->isCreature() || !pl || pl->Opt(OPT_ANIMATION) == 2 || radius < 1)
+      return false;
+    StandingPatternStop(anchor, owner);
+    if ((int)SP.size() >= SP_MAX)
+      return false;
+    StandPat p;
+    p.anchor = anchor->myHandle; p.owner = owner; p.radius = radius > SP_RADIUS_MAX ? SP_RADIUS_MAX : radius;
+    p.col = col; p.stati = stati; p.fx = NULL; p.last = 0; p.clocked = false;
+    SP.push_back(p);
+    pl->UpdateMap = 1;
+    T1->RefreshMap();
+    return true;
+  }
+
+void StandingPatternStop(Thing *anchor, rID owner)
+  {
+    bool any = false;
+    for (size_t i = 0; i < SP.size(); ) {
+      if (anchor && SP[i].anchor == anchor->myHandle && (!owner || SP[i].owner == owner)) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        any = true;
+        }
+      else
+        i++;
+      }
+    Player *pl = theGame->GetPlayer(0);
+    if (any && pl) {
+      pl->UpdateMap = 1;
+      T1->RefreshMap();   /* the squares show the true map at once */
+      }
+  }
+
+void StandingPatternStopAll()
+  {
+    for (size_t i = 0; i < SP.size(); i++)
+      SPEnd(SP[i]);
+    SP.clear();
+    StandingWallStopAll();
+  }
+
+int StandingPatternCount()
+  {
+    return (int)SP.size();
+  }
+
+int StandingPatternSquares(int16 *x, int16 *y, Glyph *g, int16 *col, int max)
+  {
+    int n = 0;
+    for (size_t i = 0; i < SP.size(); i++)
+      for (size_t k = 0; k < SP[i].sq.size() && n < max; k++, n++) {
+        x[n] = SP[i].sq[k].x; y[n] = SP[i].sq[k].y; g[n] = SP[i].sq[k].g; col[n] = SP[i].sq[k].col;
+        }
+    return n;
+  }
+
+static void StandingWallPrepare(Map *m);
+
+/* inc-jw0hw (Phase 5): a creature holds the Dancing status when one of its statuses came from an effect with EF_DANCE. */
+static bool HoldsDance(Creature *c)
+  {
+    StatiIter(c)
+      if (S->Nature != WEP_SKILL && S->eID) {
+        Resource *r = theGame->Get(S->eID);
+        if (r && r->isType(T_TEFFECT) && ((TEffect*)r)->HasFlag(EF_DANCE)) StatiIterBreakout(c,return true)
+        }
+    StatiIterEnd(c)
+    return false;
+  }
+
+/* At each repaint: the creatures the player sees that hold the Dancing status dance where they stand now, and none dances once
+   the status ends. Only the drawing moves. */
+static void DancersPrepare(Map *m, Player *pl)
+  {
+    std::vector<int16> xs, ys;
+    if (pl->m == m && pl->Opt(OPT_ANIMATION) != 2 && !m->isGenerating()) {
+      Thing *t; int i;
+      MapIterate(m, t, i) {
+        if (!t->isCreature() || t->x < 0 || !m->InBounds(t->x, t->y) || ((Creature*)t)->isDead())
+          continue;
+        if (!(m->At(t->x, t->y).Visibility & VI_VISIBLE) || !HoldsDance((Creature*)t))
+          continue;
+        xs.push_back(t->x); ys.push_back(t->y);
+        }
+      }
+    MotionDancers(xs.empty() ? NULL : &xs[0], ys.empty() ? NULL : &ys[0], (int)xs.size());
+  }
+
+void StandingPatternPrepare(Map *m)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    SPDepth++;
+    if (m && pl) {
+      StandingWallPrepare(m);
+      DancersPrepare(m, pl);
+      }
+    if (SP.empty() || !m || !pl)
+      return;
+    Overlay &o = m->ov;
+    const bool glyphs = !o.Active;   /* Done switches the overlay off, so an Active one belongs to an effect that is drawing */
+    if (glyphs) { o.Activate(); SPOwn = true; }
+    for (size_t i = 0; i < SP.size(); ) {
+      Creature *c = SPAnchor(SP[i]);
+      if (!c || c->m != m) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        continue;
+        }
+      StandPat &p = SP[i++];
+      if (!p.fx) {
+        p.fx = new EffectLight(m, WHITE, EL_MISSILE);
+        p.fx->Stand();
+        }
+      p.fx->ClearCells();
+      std::vector<SPSq> was(p.sq);
+      p.sq.clear();
+      for (int16 x = c->x - p.radius; x <= c->x + p.radius; x++)
+        for (int16 y = c->y - p.radius; y <= c->y + p.radius; y++) {
+          if (dist(c->x, c->y, x, y) > p.radius || !m->InBounds(x, y) || !p.fx->Sees(x, y))
+            continue;
+          SPSq s; s.x = x; s.y = y; s.g = 0; s.col = 0;
+          for (size_t k = 0; k < was.size(); k++)
+            if (was[k].x == x && was[k].y == y) s = was[k];
+          if (!s.g) { s.g = PatternPickGlyph(); s.col = PatternPickColour(p.col); }
+          p.sq.push_back(s);
+          p.fx->Light(x, y);
+          p.fx->SetCellColour(x, y, s.col);
+          /* a creature keeps its glyph on its own square; a big one's body squares (its size field) take the pattern */
+          Creature *host = m->FCreatureAt(x, y);
+          if (glyphs && !(host && host->x == x && host->y == y))
+            o.AddGlyph(x, y, GLYPH_VALUE(s.g, s.col));
+          }
+      }
+  }
+
+/* inc-jw0hw (Phase 5): the standing wall lights. See inc/EffectLight.h. */
+struct StandWall { Map *m; rID terrain; EffectLight *fx; std::vector<FormSq> sq; bool forming; };   /* forming: the wall's sweep still adds squares */
+static std::vector<StandWall> SW;
+static Map *SWScanned = NULL;   /* the map whose standing walls were last looked for in the map itself; StopAll forgets it */
+
+static void SWEnd(StandWall &w)
+  {
+    if (w.fx) { w.fx->End(); delete w.fx; w.fx = NULL; }
+  }
+
+bool StandingWallStart(Map *m, rID terrain, const int16 *xs, const int16 *ys, int n, TEffect *te)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (!m || !pl || pl->Opt(OPT_ANIMATION) == 2 || n < 1 || !te || !EffectLightDecide(te, 0).lit)
+      return false;
+    StandWall w; w.m = m; w.terrain = terrain; w.forming = false; w.fx = new EffectLight(m, WHITE, EL_AREA, 0, te);
+    w.fx->Stand(true);
+    for (int i = 0; i < n; i++) {
+      FormSq q = { xs[i], ys[i] }; w.sq.push_back(q);
+      }
+    SW.push_back(w);
+    pl->UpdateMap = 1;
+    return true;
+  }
+
+int StandingWallCount() { return (int)SW.size(); }
+
+/* inc-jw0hw (Phase 6b): a wall that forms square by square lights each square from the frame it forms. The first square starts the
+   standing wall; the next squares join it until StandingWallEndForming. A sweep that places no square leaves no wall. */
+static void StandingWallAdd(Map *m, rID terrain, int16 x, int16 y, TEffect *te)
+  {
+    for (size_t i = 0; i < SW.size(); i++)
+      if (SW[i].forming && SW[i].m == m && SW[i].terrain == terrain) {
+        FormSq q = { x, y }; SW[i].sq.push_back(q);
+        Player *pl = theGame->GetPlayer(0);
+        if (pl) pl->UpdateMap = 1;
+        return;
+        }
+    if (StandingWallStart(m, terrain, &x, &y, 1, te))
+      SW.back().forming = true;
+  }
+
+static void StandingWallEndForming(Map *m, rID terrain)
+  {
+    for (size_t i = 0; i < SW.size(); i++)
+      if (SW[i].m == m && SW[i].terrain == terrain)
+        SW[i].forming = false;
+  }
+
+void StandingWallStopAll()
+  {
+    for (size_t i = 0; i < SW.size(); i++)
+      SWEnd(SW[i]);
+    SW.clear();
+    SWScanned = NULL;
+  }
+
+/* A load or a map entry keeps no wall light, so the walls are found again in the map: every square that holds the terrain of a
+   glowing barrier effect (Wall of Fire) is a wall square, whatever cast it. Squares a standing wall already covers are skipped. */
+static void StandingWallRebuild(Map *m)
+  {
+    for (int ms = 0; ms < MAX_MODULES; ms++) {
+      Module *mod = Game::Modules[ms];
+      if (!mod)
+        continue;
+      for (int32 j = 0; j < mod->szEff; j++) {
+        TEffect *te = TEFF(mod->EffectID((uint16)j));
+        if (!te || te->ef.eval != EA_TERRAFORM || te->ef.aval != AR_BARRIER || !te->ef.rval || !EffectLightDecide(te, 0).lit)
+          continue;
+        std::vector<int16> xs, ys;
+        for (int16 x = 0; x < m->SizeX(); x++)
+          for (int16 y = 0; y < m->SizeY(); y++) {
+            if (m->TerrainAt(x, y) != te->ef.rval)
+              continue;
+            bool have = false;
+            for (size_t i = 0; i < SW.size() && !have; i++)
+              if (SW[i].m == m)
+                for (size_t k = 0; k < SW[i].sq.size(); k++)
+                  if (SW[i].sq[k].x == x && SW[i].sq[k].y == y) { have = true; break; }
+            if (!have) { xs.push_back(x); ys.push_back(y); }
+          }
+        if (!xs.empty())
+          StandingWallStart(m, te->ef.rval, &xs[0], &ys[0], (int)xs.size(), te);
+        }
+      }
+  }
+
+/* ShowMap's light pass: each wall keeps the squares that still hold its terrain, and lights those the player sees. */
+static void StandingWallPrepare(Map *m)
+  {
+    Player *pl = theGame->GetPlayer(0);
+    if (pl && pl->m == m && m != SWScanned && !m->isGenerating() && pl->Opt(OPT_ANIMATION) != 2) {
+      SWScanned = m;
+      StandingWallRebuild(m);
+      }
+    for (size_t i = 0; i < SW.size(); ) {
+      StandWall &w = SW[i];
+      if (!pl || pl->m != w.m || pl->Opt(OPT_ANIMATION) == 2) {
+        SWEnd(w); SW.erase(SW.begin() + i);
+        continue;
+        }
+      if (w.m != m) { i++; continue; }
+      std::vector<FormSq> kept;
+      for (size_t k = 0; k < w.sq.size(); k++)
+        if (m->InBounds(w.sq[k].x, w.sq[k].y) && m->TerrainAt(w.sq[k].x, w.sq[k].y) == w.terrain)
+          kept.push_back(w.sq[k]);
+      w.sq = kept;
+      if (kept.empty()) {
+        SWEnd(w); SW.erase(SW.begin() + i);
+        continue;
+        }
+      w.fx->ClearCells();
+      for (size_t k = 0; k < kept.size(); k++)
+        w.fx->Light(kept[k].x, kept[k].y);
+      i++;
+      }
+  }
+
+bool StandingPatternDrawsAt(int16 x, int16 y, Glyph g)
+  {
+    for (size_t i = 0; i < SP.size(); i++)
+      for (size_t k = 0; k < SP[i].sq.size(); k++)
+        if (SP[i].sq[k].x == x && SP[i].sq[k].y == y && GLYPH_ID_VALUE(SP[i].sq[k].g) == GLYPH_ID_VALUE(g))
+          return true;
+    return false;
+  }
+
+void StandingPatternDone(Map *m)
+  {
+    if (SPDepth > 0)
+      SPDepth--;
+    if (SPDepth == 0 && SPOwn && m) {
+      m->ov.Active = false;
+      SPOwn = false;
+      }
+  }
+
+bool StandingPatternFrame(uint32 nowMs)
+  {
+    bool again = false;
+    Player *pl = theGame->GetPlayer(0);
+    if (SP.empty() || !pl)
+      return false;
+    for (size_t i = 0; i < SP.size(); ) {
+      if (!SPAnchor(SP[i])) {
+        SPEnd(SP[i]);
+        SP.erase(SP.begin() + i);
+        again = true;
+        continue;
+        }
+      StandPat &p = SP[i++];
+      if (!p.clocked) { p.last = nowMs; p.clocked = true; }
+      else if (nowMs - p.last >= SP_REPICK_MS) { SPRepick(p); p.last = nowMs; again = true; }
+      }
+    if (again)
+      pl->UpdateMap = 1;
+    return again;
+  }
+
+void StandingPatternRepick()
+  {
+    Player *pl = theGame->GetPlayer(0);
+    for (size_t i = 0; i < SP.size(); i++)
+      SPRepick(SP[i]);
+    if (!SP.empty() && pl)
+      pl->UpdateMap = 1;
+  }
+
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called after each rain step's
+   refresh. stage 0: a falling glyph shows at (x,y). 1: a drop lands; its square's light
+   is born; g is the landing glyph, 0 on a creature's square. 2: the landing glyph is
+   gone. 3: the step ends (x and y are -1). clockMs is the effect clock. */
+void (*RainHook)(int stage, int16 x, int16 y, Glyph g, float clockMs) = NULL;
+
+/* The rain of a globe flagged EF_RAIN (Dance of Ruin): one drop per square the player
+   sees. A drop starts at a random 40 ms step of the hold, up to 3 rows above its square
+   (lower where a square above is unseen, out of bounds or solid), falls one row a step,
+   lands as '*' for 120 ms and lights its square at the landing. The color comes from
+   cval, never the damage type. A creature keeps its own glyph. Only cosmetic_random()
+   chooses. */
+static void GlobeRain(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int16 hold)
+  {
+    struct Drop { int16 x, y, rows, start; };
+    const int16 stepMs = 40, landSteps = 3, maxRows = 3;
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    Player *pl = theGame->GetPlayer(0);
+    const int16 R = (int16)e.vRadius;
+    const int cv = e.EMagic->cval;
+    const int16 col = cv >= 16 ? BlastColourSets[cv * 4] : cv;
+    int16 x, y;
+    if (R > 16 || !pl || pl->Opt(OPT_ANIMATION) == 2)
+      return;
+    const int16 slots = max(1, (hold - (maxRows + landSteps) * stepMs) / stepMs);
+    std::vector<Drop> drops;
+    int last = 0;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y) && PossiblyPause(T1,x,y,0)) {
+          Drop d; d.x = x; d.y = y; d.rows = 0;
+          while (d.rows < maxRows) {
+            const int16 ay = y - d.rows - 1;
+            if (!m->InBounds(x,ay) || m->At(x,ay).Solid || !PossiblyPause(T1,x,ay,0))
+              break;
+            d.rows++;
+            }
+          d.start = (int16)cosmetic_random(slots);
+          drops.push_back(d);
+          if (d.start + d.rows + landSteps > last)
+            last = d.start + d.rows + landSteps;
+          }
+    for (int s = 0; s <= last; s++) {
+      o.DeActivate();
+      o.Activate();
+      for (size_t i = 0; i < drops.size(); i++) {
+        const Drop &d = drops[i];
+        const int rel = s - d.start;
+        if (rel < 0 || rel >= d.rows + landSteps)
+          continue;
+        if (rel == d.rows)
+          fx.Light(d.x,d.y);
+        const int16 gy = rel < d.rows ? d.y - d.rows + rel : d.y;
+        if (!m->FCreatureAt(d.x,gy))
+          o.AddGlyph(d.x,gy, GLYPH_VALUE(rel < d.rows ? '|' : '*', col));
+        }
+      o.ShowGlyphs();
+      fx.Refresh();
+      if (RainHook) {
+        for (size_t i = 0; i < drops.size(); i++) {
+          const Drop &d = drops[i];
+          const int rel = s - d.start;
+          if (rel < 0 || rel > d.rows + landSteps)
+            continue;
+          const int16 gy = rel < d.rows ? d.y - d.rows + rel : d.y;
+          const bool host = m->FCreatureAt(d.x,gy) != NULL;
+          if (rel < d.rows && !host)
+            RainHook(0, d.x, gy, '|', fx.Clock());
+          else if (rel == d.rows)
+            RainHook(1, d.x, d.y, host ? 0 : '*', fx.Clock());
+          else if (rel == d.rows + landSteps)
+            RainHook(2, d.x, d.y, 0, fx.Clock());
+          }
+        RainHook(3, -1, -1, 0, fx.Clock());
+        }
+      if (s < last)
+        fx.Wait(stepMs);
+      }
+    o.DeActivate();
+    T1->RefreshMap();
+    T1->Update();
+  }
+
 /* inc-az4d2: set only by BallShapeProbe (src/BallShapeProbe.cpp). ring -2
    opens the ball fill (taken[0] is its center), ring >= 0 closes one ring,
    ring -1 is the final hold. waitMs is what the ring asks StopWatch for. */
@@ -1777,6 +3251,163 @@ static void HDPoolProbe(const char *fmt, ...)
     fflush(f);
 }
 
+/* inc-jw0hw: test hook, NULL unless a probe sets it. Called for each square of a
+   wave: after each ring's wait with the glyph on show, and once with g 0 when the
+   wave's glyphs go. clockMs is that wave's own clock. */
+void (*WaveHook)(int wave, int16 x, int16 y, Glyph g, float clockMs) = NULL;
+/* Called when a wave's ring reaches a struck creature's square and its flash starts. */
+void (*WaveFlashHook)(int wave, int16 x, int16 y) = NULL;
+
+/* The waves of a globe flagged EF_WAVES: one per EA_BLAST part whose damage type
+   has a wave glyph, in part order. Rings move out from the center, 10 ms apiece;
+   each square shows the glyph and lights on its own type's ramp, and a creature
+   the ring reaches starts its own flash on that ramp; the glyphs hold
+   60 ms and go, and the next wave starts as they go while this wave's light
+   cools. Only data picks the waves; a type with no row here, or that does not
+   glow (sonic), makes none. */
+struct WaveSpec { int16 dtype; Glyph glyph; int16 col; };
+static const WaveSpec WaveSpecs[] = {
+  { AD_FIRE, 247, PINK },     /* CP437 double tilde, as Burning Hands */
+  { AD_NECR, 177, SHADOW },   /* CP437 medium shade */
+};
+
+static const WaveSpec *WaveFor(int16 dtype)
+  {
+    for (size_t i = 0; i < sizeof(WaveSpecs)/sizeof(WaveSpecs[0]); i++)
+      if (WaveSpecs[i].dtype == dtype)
+        return &WaveSpecs[i];
+    return NULL;
+  }
+
+/* a wait of `ms` for wave light fx while the other lights (cooling, or this wave's struck flash) age */
+static void WaveWait(EffectLight &fx, const std::vector<EffectLight*> &ages, int16 ms)
+  {
+    while (ms > 0) {
+      const int16 step = ms > 33 ? 33 : ms;
+      for (size_t i = 0; i < ages.size(); i++)
+        ages[i]->Age(step);
+      fx.Wait(step);
+      ms -= step;
+      }
+  }
+
+/* The creatures a globe strikes: the set its struck flash lights. */
+static int16 GlobeStruck(EventInfo &e, int16 cx, int16 cy, Thing **struck, int16 cap)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    Thing *t; int16 i, n = 0;
+    MapIterate(m,t,i)
+      if (t->isCreature() && n < cap &&
+          dist(t->x,t->y,cx,cy) <= (int16)e.vRadius &&
+          !(t == e.EActor && te && te->HasFlag(EF_CASTER_IMMUNE)))
+        struck[n++] = t;
+    return n;
+  }
+
+static void GlobeWaves(EventInfo &e, int16 cx, int16 cy)
+  {
+    TEffect *te = TEFF(e.eID);
+    Map *m = e.EActor->m;
+    Overlay &o = m->ov;
+    Player *pl = theGame->GetPlayer(0);
+    const int16 R = (int16)e.vRadius;
+    const int16 ringMs = 10, holdMs = 60;   /* a ring step and the hold after the last ring */
+    const float waveLife = 1.5f * (float)((R + 1) * ringMs + holdMs);   /* the light cools within the wave's own glyph time */
+    int16 x, y;
+    bool seen[33][33];
+    memset(seen, 0, sizeof(seen));
+    if (R > 16 || !pl || pl->Opt(OPT_ANIMATION) == 2)
+      return;
+    for (x = cx-R; x <= cx+R; x++)
+      for (y = cy-R; y <= cy+R; y++)
+        if (dist(cx,cy,x,y) <= R && m->InBounds(x,y))
+          seen[x-(cx-R)][y-(cy-R)] = PossiblyPause(T1,x,y,0);
+    Thing *struck[128];
+    const int16 nStruck = GlobeStruck(e, cx, cy, struck, 128);
+    std::vector<EffectLight*> cool;
+    int wave = 0;
+    for (int8 n = 0; te->Vals(n); n++) {
+      const EffectValues *ev = te->Vals(n);
+      const WaveSpec *ws = ev->eval == EA_BLAST ? WaveFor(ev->xval) : NULL;
+      if (!ws)
+        continue;
+      EffectLight *fx = new EffectLight(m, e.EMagic->cval, EL_AREA, ev->xval, te);
+      fx->SetLife(waveLife);
+      EffectLight *tf = NULL;   /* the struck creatures' flash on this wave's ramp, started as the ring reaches each */
+      std::vector<EffectLight*> ages(cool);
+      std::vector<int16> sx, sy;
+      bool host[33][33];   /* a struck creature's square: it keeps its own glyph, which takes the flash's color */
+      bool drawn = false;
+      memset(host, 0, sizeof(host));
+      o.Activate();
+      for (int16 ring = 0; ring <= R; ring++) {
+        bool ringHad = false;
+        for (int16 k = 0; k < nStruck; k++)
+          if (dist(cx,cy,struck[k]->x,struck[k]->y) == ring) {
+            if (!tf) {
+              tf = new EffectLight(m, e.EMagic->cval, EL_AREA, ev->xval, te, true);
+              ages.push_back(tf);
+              }
+            if (tf->LightStruck(struck[k]->x, struck[k]->y)) {
+              host[struck[k]->x-(cx-R)][struck[k]->y-(cy-R)] = true;
+              ringHad = true;
+              if (WaveFlashHook)
+                WaveFlashHook(wave, struck[k]->x, struck[k]->y);
+              }
+            }
+        for (x = cx-R; x <= cx+R; x++)
+          for (y = cy-R; y <= cy+R; y++)
+            if (dist(cx,cy,x,y) == ring && m->InBounds(x,y) && seen[x-(cx-R)][y-(cy-R)]) {
+              ringHad = true;
+              fx->Light(x,y);
+              if (host[x-(cx-R)][y-(cy-R)])
+                continue;
+              o.AddGlyph(x,y, GLYPH_VALUE(ws->glyph, ws->col));
+              sx.push_back(x); sy.push_back(y);
+              }
+        if (!ringHad)
+          continue;
+        drawn = true;
+        o.ShowGlyphs();
+        fx->Refresh();
+        WaveWait(*fx, ages, ringMs);
+        if (WaveHook)
+          for (size_t i = 0; i < sx.size(); i++)
+            WaveHook(wave, sx[i], sy[i], ws->glyph, fx->Clock());
+        }
+      if (drawn) {
+        WaveWait(*fx, ages, holdMs);
+        if (WaveHook)
+          for (size_t i = 0; i < sx.size(); i++)
+            WaveHook(wave, sx[i], sy[i], ws->glyph, fx->Clock());
+        }
+      o.DeActivate();
+      fx->GlyphsOff();
+      fx->Redraw();
+      if (WaveHook)
+        for (size_t i = 0; i < sx.size(); i++)
+          WaveHook(wave, sx[i], sy[i], 0, fx->Clock());
+      for (size_t i = 0; i < cool.size(); i++) {   /* the previous wave's lights finish cooling */
+        cool[i]->Tail(false);
+        cool[i]->End();
+        delete cool[i];
+        }
+      cool.clear();
+      cool.push_back(fx);
+      if (tf)
+        cool.push_back(tf);
+      wave++;
+      }
+    for (size_t i = 0; i < cool.size(); i++) {
+      cool[i]->Tail(i > 0);
+      cool[i]->End();
+      delete cool[i];
+      }
+    T1->RefreshMap();
+    T1->Update();
+  }
+
 EvReturn Magic::AGlobe(EventInfo &e)
   {
     Map *m; Thing *t; Glyph g;
@@ -1797,21 +3428,113 @@ EvReturn Magic::AGlobe(EventInfo &e)
       e.vRange /= 2;
     */
     
+    /* inc-jw0hw: a thrown effect (a bag) shows its flight before it bursts. */
+    if (m && !m->isGenerating() && te && te->HasFlag(EF_THROWN))
+      ThrownFlight(*m, e, cx, cy);
+
     /* Do Highlight Effect */
-    if (m && (!m->isGenerating()) && e.EMagic->cval && PossiblyPause(T1,cx,cy,0)) {
+    if (m && (!m->isGenerating()) && (e.EMagic->cval || FormOrderOf(te)) && PossiblyPause(T1,cx,cy,0)) {
+      /* inc-jw0hw: the globe lights its area; the light ends before any hit. */
+      if (te && te->HasFlag(EF_WAVES))
+        GlobeWaves(e, cx, cy);
+      else if (FormOrderOf(te) == FORM_RISE) {
+        /* Phase 5: every corpse the effect will raise shows its corpse glyph until the game has raised it; then each stands up as
+           undead, one at a time in a random order (FormationFinish). The squares masked are the engine's own target set. */
+        FormBatch sq;
+        Thing *ot = e.ETarget; Creature *ov = e.EVictim;
+        MapIterate(m,t,i)
+          if (t->isItem() && !((Item*)t)->Owner() && dist(cx,cy,t->x,t->y) <= e.vRadius && m->InBounds(t->x,t->y)) {
+            e.ETarget = t;
+            if (isTarget(e,t)) {
+              FormSq q = { t->x, t->y }; sq.push_back(q);
+              }
+            }
+        e.ETarget = ot; e.EVictim = ov;
+        FormationMask(*m, cx, cy, (int16)e.vRadius, sq, 0);
+        gFormMask.rise = true;
+        }
+      else if (FormOrderOf(te))
+        FormationGlobe(e, cx, cy);   /* Phase 4a: the area forms in an order, with no recolor and no light */
+      else {
+      EffectLight fx(m, e.EMagic->cval, EL_AREA, e.DType, te);
+      if (te && te->HasFlag(EF_FIREWORKS))
+        GlobeFireworks(e, fx, cx, cy);
+      else if (PatternOn(te))
+        GlobePattern(e, fx, cx, cy, e.EActor->isPlayer() ? 750 : 250);
+      else if (te && te->HasFlag(EF_RAIN))
+        GlobeRain(e, fx, cx, cy, e.EActor->isPlayer() ? 750 : 250);
+      else if (te && te->HasFlag(EF_BLAST_RINGS))
+        BurstRings(*m, te, fx, cx, cy, e.vRadius, e.EMagic->cval);
+      else {
+      for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
+        for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
+          if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
+            fx.Light(x,y);
+      fx.Refresh();   /* before the highlight: ShowMap repaints every cell */
       for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
         for(y = cy-e.vRadius; y <= cy+e.vRadius; y++)
           if ((dist(cx,cy,x,y) <= e.vRadius) && m->InBounds(x,y))
             {
               g = T1->GetGlyph(x,y);
-              g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval);
+              /* upstream: a foreground has COLOUR_BITS (4); a color set (cval >= 16)
+                 spills into the background, on the original glyph layout too.
+                 Observed (Fire Lotus). inc-6dd41; not sent. */
+              Glyph was = g;
+              g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval >= 16 ?
+                    BlastColourSets[e.EMagic->cval * 4] : e.EMagic->cval);
               if (GlyphDrawHook) GlyphDrawHook(3,x,y);
               T1->PutGlyph(x,y,g);
+              if (GlobeGlyphHook) GlobeGlyphHook(x,y,was,T1->GetGlyph(x,y));
             }
       T1->Update();
-      PossiblyPause(T1,cx,cy, e.EActor->isPlayer() ? 1500 : 500);
+      const int16 globeHold = e.EActor->isPlayer() ? 750 : 250;   /* inc-jw0hw: half of the old 1500 / 500 */
+      fx.SetGlyphTime(globeHold);
+      if (PossiblyPause(T1,cx,cy,0)) {
+        /* inc-jw0hw (Phase 5): the things the effect shakes (EF_SHAKE_GLOBE, EF_SHAKE_ITEMS) or makes dance (EF_DANCE) move for the hold.
+           The set is the engine's own: every creature and item in the globe, the items isTarget accepts (a held item shakes its
+           holder's square), the creatures isTarget accepts. */
+        if (te && (te->HasFlag(EF_SHAKE_GLOBE) || te->HasFlag(EF_SHAKE_ITEMS) || te->HasFlag(EF_DANCE))) {
+          std::vector<int16> mxs, mys; std::vector<uint8> mmd;
+          Thing *ot = e.ETarget; Creature *ov = e.EVictim;
+          MapIterate(m,t,i) {
+            if (dist(cx,cy,t->x,t->y) > e.vRadius || !m->InBounds(t->x,t->y) || !fx.Sees(t->x,t->y))
+              continue;
+            if (t->isItem() && ((Item*)t)->Owner())   /* a carried item moves with its carrier's square */
+              continue;
+            bool take = false;
+            uint8 mode = MOT_SHAKE;
+            if (te->HasFlag(EF_SHAKE_GLOBE))
+              take = t->isCreature() || t->isItem();
+            else if (te->HasFlag(EF_DANCE)) {
+              mode = MOT_DANCE;
+              if (t->isCreature()) { e.ETarget = t; take = isTarget(e,t); }
+              }
+            else if (t->isItem()) { e.ETarget = t; take = isTarget(e,t); }
+            if (take) { mxs.push_back(t->x); mys.push_back(t->y); mmd.push_back(mode); }
+            }
+          e.ETarget = ot; e.EVictim = ov;
+          if (!mxs.empty())
+            MotionStart(&mxs[0], &mys[0], &mmd[0], (int)mxs.size());
+          }
+        const float from = fx.Clock();
+        fx.Wait(globeHold);
+        MotionStop();
+        if (GlobeHoldHook) GlobeHoldHook(from, fx.Clock(), fx.Life());
+        }
       T1->RefreshMap();
       T1->Update();
+      }
+      fx.Tail();
+      fx.End();
+      }
+      /* inc-jw0hw: the globe's last stage flashes every creature it strikes,
+         before any hit. */
+      if (!(te && te->HasFlag(EF_WAVES)) && !FormOrderOf(te)) {   /* a wave globe flashed each creature as its waves arrived */
+        Thing *struck[128];
+        const int16 nStruck = GlobeStruck(e, cx, cy, struck, 128);
+        EffectLight::FlashStruck(m, e.EMagic->cval, EL_AREA, e.DType, te,
+            struck, nStruck);
+        }
       }
     
     for(x = cx-e.vRadius; x <= cx+e.vRadius; x++)
@@ -1822,6 +3545,8 @@ EvReturn Magic::AGlobe(EventInfo &e)
             MagicXY(e,x,y);
             e.isFirstBlastXY = false;
           }
+    if (!gFormMask.rise)
+      FormationFinish();   /* inc-jw0hw: a fall shows the squares the loop changed (the dead rise in the strike loop below) */
     e.EXVal = cx; 
     e.EYVal = cy;
 
@@ -1924,6 +3649,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
             else 
               ReThrow(EV_MAGIC_STRIKE,e); 
           }
+    FormationFinish();   /* inc-jw0hw (Phase 5): the corpses the strikes raised stand up one at a time */
     return DONE;
   }
 
@@ -1979,7 +3705,11 @@ EvReturn Magic::ABarrier(EventInfo &e)
         return DONE;
       }
 
+    /* inc-jw0hw (Phase 4b): a wall with a formation order forms in it before the loop writes it; the loop then needs no pause. */
+    const bool formed = FormationBarrier(e, x1, y1);
     stop1 = stop2 = false;
+    /* inc-jw0hw (Phase 6b): a wall of terrain whose effect glows (Wall of Fire) lights each square from the frame it forms. */
+    const bool wallLit = e.EMagic->eval == EA_TERRAFORM && !m->isGenerating() && EffectLightDecide(TEFF(e.eID), 0).lit;
     if (e.MM & MM_ENLARGE)
       lim = max(e.vRadius*2,20);
     else
@@ -1992,6 +3722,7 @@ EvReturn Magic::ABarrier(EventInfo &e)
         else
           {
             MagicXY(e,x1,y1);
+            if (wallLit && m->TerrainAt(x1,y1) == e.EMagic->rval) StandingWallAdd(m, e.EMagic->rval, x1, y1, TEFF(e.eID));
             e.isFirstBlastXY = false;            
             lim--;
           }
@@ -2007,6 +3738,7 @@ EvReturn Magic::ABarrier(EventInfo &e)
         else
           {
             MagicXY(e,x2,y2);
+            if (wallLit && m->TerrainAt(x2,y2) == e.EMagic->rval) StandingWallAdd(m, e.EMagic->rval, x2, y2, TEFF(e.eID));
             e.isFirstBlastXY = false;            
             lim--;
           }
@@ -2019,8 +3751,13 @@ EvReturn Magic::ABarrier(EventInfo &e)
       y1 += DirX[e.EDir];
       x2 -= DirY[e.EDir];
       y2 -= DirX[e.EDir];
+      if (wallLit) {   /* Update only flushes the screen: the light pass runs in ShowMap, so each step repaints to draw the squares formed so far lit */
+        Player *wp = theGame->GetPlayer(0);
+        if (wp && wp->m == m) { wp->UpdateMap = 1; T1->ShowMap(); }
+        }
+      if (WallSweepHook) WallSweepHook();
       T1->Update();
-      if (!PossiblyPause(T1,x1,y1,15)) PossiblyPause(T1,x2,y2,15);
+      if (!formed && !PossiblyPause(T1,x1,y1,15)) PossiblyPause(T1,x2,y2,15);
       /*if (lim <= 0)
         goto LimitBarrier;*/
       }
@@ -2031,6 +3768,8 @@ EvReturn Magic::ABarrier(EventInfo &e)
             t->SetImage();
         } 
       }
+
+    if (wallLit) StandingWallEndForming(m, e.EMagic->rval);
 
     return DONE;
 
@@ -2074,7 +3813,9 @@ EvReturn Magic::AField(EventInfo &e)
     else
       g = GLYPH_FLOOR2;
 
-    g |= GLYPH_FORE(e.EMagic->cval);
+    /* upstream: same 4-bit foreground spill as AGlobe (COL_LIGHT, COL_RAINBOW
+       fields). Traced. inc-6dd41; not sent. */
+    g |= GLYPH_FORE(e.EMagic->cval >= 16 ? BlastColourSets[e.EMagic->cval * 4] : e.EMagic->cval);
 
     tx = e.EXVal ? e.EXVal : e.ETarget ? e.ETarget->x : e.EActor->x;
     ty = e.EYVal ? e.EYVal : e.ETarget ? e.ETarget->y : e.EActor->y;
@@ -2090,6 +3831,10 @@ EvReturn Magic::AField(EventInfo &e)
     else if (e.MM & MM_FOCUS)
       e.vRadius = max(1,e.vRadius/2);
     
+    /* inc-jw0hw (Phase 4a): a fog bank billows outward from its source before the field takes over. */
+    if (!e.isWield && !e.EActor->m->isGenerating() &&
+        ((e.EMagic->rval & FI_FOG) || TEFF(e.eID)->HasFlag(EF_GLYPH_FOG)))
+      FormationField(e, tx, ty, g);
     for(x = tx-e.vRadius; x <= tx+e.vRadius; x++)
       for(y = ty-e.vRadius; y <= ty+e.vRadius; y++)
         if ((dist(tx,ty,x,y) <= e.vRadius) && e.EActor->m->InBounds(x,y))
@@ -2100,8 +3845,10 @@ EvReturn Magic::AField(EventInfo &e)
     e.EXVal = tx; 
     e.EYVal = ty;
 
+    FormationFieldSuppress++;   /* the fog has billowed above; Map::NewField must not billow it again */
     e.EActor->m->NewField(e.EMagic->rval | (e.EMagic->aval == AR_MFIELD ? FI_MOBILE : 0),
         tx,ty,e.vRadius, g, e.vDuration,e.eID,e.EActor);
+    FormationFieldSuppress--;
     /* inc-z1ba: illusory terrain marks its identifiers against the field's
        creator and spell, matching DISB_TERRAIN (src/Creature.cpp). */
     if (e.EMagic->rval & FI_ITERRAIN)
@@ -2221,6 +3968,130 @@ void Magic::BallFill(Map &m, int16 cx, int16 cy, int16 count,
         [](const BallSquare &a, const BallSquare &b) { return a.ring < b.ring; });
   }
 
+/* inc-jw0hw: a lit lightning stroke is drawn as a jagged path. The line walk of
+   ABallBeamBolt is replayed here; the plan only moves the glyph and the light. A
+   drawn square D stays within 1 of its line square L, is exactly 1 from the
+   previous D, sits on L at a creature, at both ends and where no open square is
+   beside the line, and is never solid or the caster's square. Test hook: NULL
+   unless a probe sets it; (-1,-1,-1,-1,0) ends an arc. */
+void (*MeanderHook)(int16 lx, int16 ly, int16 dx, int16 dy, Glyph g) = NULL;
+
+// no-family
+static const int MEANDER_MAX = 160;
+// end no-family
+struct MeanderPlan { int n; int16 lx[MEANDER_MAX], ly[MEANDER_MAX], dx[MEANDER_MAX], dy[MEANDER_MAX]; Glyph g[MEANDER_MAX]; Glyph prev; };
+
+static Glyph MeanderStroke(int dx, int dy)
+  {
+    if (dy == 0) return '-';
+    if (dx == 0) return '|';
+    return ((dx > 0) == (dy > 0)) ? '\\' : '/';   /* screen y grows downward */
+  }
+
+static bool MeanderOpen(Map &m, int x, int y)
+  {
+    Feature *ft;
+    if (!m.InBounds(x,y) || m.At(x,y).Solid)
+      return false;
+    for (ft = m.FFeatureAt(x,y); ft; ft = m.NFeatureAt(x,y))
+      if (ft->Flags & F_SOLID)
+        return false;
+    return true;
+  }
+
+static bool MeanderOpposite(Glyph a, Glyph b)
+  { return (a == '/' && b == '\\') || (a == '\\' && b == '/'); }
+
+/* Picks the drawn square for line square i, then the rest; false when no pick fits. */
+static bool MeanderChoose(MeanderPlan &p, Map &m, Creature *actor, int i, int n, int &budget)
+  {
+    int16 cxs[9], cys[9]; int nc = 0, ox, oy;
+    if (i == n) return true;
+    if (budget-- <= 0) return false;
+    p.dx[i] = p.lx[i]; p.dy[i] = p.ly[i];
+    if (i == 0 || i == n-1 || m.FCreatureAt(p.lx[i],p.ly[i]))
+      cxs[nc] = p.lx[i], cys[nc] = p.ly[i], nc++;
+    else {
+      for (oy = -1; oy <= 1; oy++)
+        for (ox = -1; ox <= 1; ox++) {
+          const int x = p.lx[i] + ox, y = p.ly[i] + oy;
+          if (dist(x,y,p.dx[i-1],p.dy[i-1]) != 1)
+            continue;
+          if (dist(x,y,p.lx[i+1],p.ly[i+1]) > 1 || (x == p.lx[i+1] && y == p.ly[i+1]))
+            continue;
+          if ((ox || oy) && (!MeanderOpen(m,x,y) || (actor && x == actor->x && y == actor->y)))
+            continue;
+          cxs[nc] = x; cys[nc] = y; nc++;
+          }
+      if (!nc) { cxs[0] = p.lx[i]; cys[0] = p.ly[i]; nc = 1; }
+      }
+    while (nc) {
+      const int pick = (nc > 1) ? cosmetic_random(nc) : 0;
+      p.dx[i] = cxs[pick]; p.dy[i] = cys[pick];
+      cxs[pick] = cxs[nc-1]; cys[pick] = cys[nc-1]; nc--;
+      if (i >= 2 && MeanderOpposite(MeanderStroke(p.dx[i-1] - p.dx[i-2], p.dy[i-1] - p.dy[i-2]),
+                                    MeanderStroke(p.dx[i] - p.dx[i-1], p.dy[i] - p.dy[i-1])))
+        continue;
+      /* the first glyph of a chain's later arc follows the last glyph of the arc before it */
+      if (i == 1 && MeanderOpposite(p.prev, MeanderStroke(p.dx[1] - p.dx[0], p.dy[1] - p.dy[0])))
+        continue;
+      if (MeanderChoose(p, m, actor, i+1, n, budget))
+        return true;
+      }
+    return false;
+  }
+
+static void MeanderPlanBuild(MeanderPlan &p, Map &m, Creature *actor, Creature *victim,
+    bool isChain, bool isDir, int dir, int8 dirX, int8 dirY, const Fraction &slope,
+    int16 sx, int16 sy, int16 cx, int16 cy, int distSoFar, int range, int warp, Glyph prevG)
+  {
+    Feature *ft; Fraction test; int i, n = 0;
+    p.n = 0; p.prev = prevG;
+    /* the same stops and the same step as the walk in ABallBeamBolt */
+    while (n < MEANDER_MAX && m.InBounds(cx/2,cy/2)) {
+      if (distSoFar++ >= range)
+        break;
+      bool stop = false;
+      for (ft = m.FFeatureAt(cx/2,cy/2); ft && !stop; ft = m.NFeatureAt(cx/2,cy/2))
+        if (ft->Flags & F_SOLID) {
+          if (warp) warp--; else stop = true;
+          }
+      if (stop)
+        break;
+      if (m.At(cx/2,cy/2).Solid) {
+        if (warp) warp--; else break;
+        }
+      p.lx[n] = cx/2; p.ly[n] = cy/2; n++;
+      if (isDir) {
+        cx += DirX[dir]*2; cy += DirY[dir]*2;
+        }
+      else {
+        test.Set(abs((cy + dirY)-sy), abs((cx + dirX)-sx));
+        if (test > slope) cx += 2 * dirX;
+        else if (test < slope) cy += 2 * dirY;
+        else { cx += 2 * dirX; cy += 2 * dirY; }
+        }
+      if (!m.InBounds(cx/2,cy/2))
+        break;
+      if (isChain && victim && victim->x == cx/2 && victim->y == cy/2)
+        break;
+      }
+    p.n = n;
+    /* inc-jw0hw: back-to-back opposite diagonals ("/" then "\\") never draw; the search
+       picks other squares, and falls back to the line itself when none exist. */
+    int budget = 20000;
+    if (!MeanderChoose(p, m, actor, 0, n, budget))
+      for (i = 0; i < n; i++) { p.dx[i] = p.lx[i]; p.dy[i] = p.ly[i]; }
+    for (i = 0; i < n; i++) {
+      if (n < 2) { p.g[i] = 0; continue; }
+      const int a = (i == 0) ? 0 : i-1, b = (i == 0) ? 1 : i;   /* the step into square i; square 0 takes the step out */
+      p.g[i] = MeanderStroke(p.dx[b] - p.dx[a], p.dy[b] - p.dy[a]);
+      }
+    /* inc-jw0hw: the line itself may turn from the arc before it ("/" then "\\"): a bar sits between them. */
+    if (n >= 2 && MeanderOpposite(p.prev, p.g[0]))
+      p.g[0] = (abs(p.dx[1] - p.dx[0]) >= abs(p.dy[1] - p.dy[0])) ? '-' : '|';
+  }
+
 EvReturn Magic::ABallBeamBolt(EventInfo &e)
 {
   EventInfo eCopy; Feature *ft; Creature *cr;
@@ -2279,6 +4150,19 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
        if (k == tc)                             \
          TargetList[tc++] = t;                  \
        }                                        
+  /* inc-jw0hw: fade the travel's light and end it. Runs before any hit. */
+  #define FINISH_TRAIL                          \
+     if (trail) {                               \
+       pat.reset();                             \
+       if (!isBall) {                           \
+         o.DeActivate();                        \
+         overlayOff = true;                     \
+         T1->ShowMap();                         \
+         trail->Tail();                         \
+         }                                      \
+       trail->End();                            \
+       trail.reset();                           \
+       }
   tc = 0; ti = 0; ac = 0;
 
   if (e.eID) te = TEFF(e.eID);
@@ -2320,6 +4204,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   bool AdjustDone = false;
   Fraction slope, test;
 
+  // inc-jw0hw: a beam or missile lights its path; the light ends before any hit.
+  std::unique_ptr<EffectLight> trail;
+  std::unique_ptr<ColorPattern> pat;   /* inc-jw0hw: set while an EF_COLOR_PATTERN effect travels */
+  bool overlayOff = false;
+  MeanderPlan meander; int meanderAt = 0; bool meanders = false; Glyph meanderPrevG = 0;
   // do we think something happened? 
   bool vis = true; 
     if (!e.EActor->isBlind())
@@ -2340,6 +4229,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
   Thing * possTarget = NULL;
   bool hitSelf = false;
+  int16 boltX = 0, boltY = 0;
   /* inc-s87gl: a bolt with no chosen creature -- candidates on its path,
      the next one to test, the cover penalty, and the one roll's total. */
   Creature *lofCands[1024]; int16 lofCount = 0, lofIdx = 0, lofTotal = 0;
@@ -2349,6 +4239,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   // inc-w91w: a remotely sprung ball/burst starts at the trap, without travel.
   if (e.remoteTrapID && isBall && e.isLoc) {
       sx=cx=e.remoteTrapX*2; sy=cy=e.remoteTrapY*2;
+      goto DoneProject;
+  }
+  /* inc-jw0hw: a ball that follows a bolt in one effect bursts where the bolt struck; it does not fly again. */
+  if (isBall && isProject && LastBoltTake(e, boltX, boltY)) {
+      sx=cx=boltX*2; sy=cy=boltY*2;
       goto DoneProject;
   }
   if (e.EActor->HasStati(ENGULFED))
@@ -2395,6 +4290,15 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
           goto DoneProject;
         }
   
+  /* inc-jw0hw: a pillar (EF_PILLAR) falls onto the target square from the top of the view; no projectile leaves the caster. */
+  if (isBall && te && te->HasFlag(EF_PILLAR)) {
+      const Thing *tt = e.ETarget ? e.ETarget : (e.isLoc ? NULL : e.EVictim);
+      const int16 px = tt ? tt->x : e.EXVal, py = tt ? tt->y : e.EYVal;
+      PillarFall(m, e, te, Color, px, py);
+      sx=cx=px*2; sy=cy=py*2;
+      goto DoneProject;
+  }
+
   if (!isProject)
     { if (dist(e.EActor->x,e.EActor->y,e.EXVal,e.EYVal) > e.vRange)
         return ABORT;
@@ -2465,6 +4369,20 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
 
   // travel! 
+  if (overlayOff) { o.Activate(); overlayOff = false; }
+  if (!hitSelf)
+    trail.reset(new EffectLight(&m, Color, isMulti ? EL_BEAM : EL_MISSILE, e.DType, TEFF(e.eID)));
+  pat.reset();
+  if (!hitSelf && EffectStepHook) EffectStepHook(ES_TRAVEL, e.EActor->x, e.EActor->y, 0);
+  if (trail && !isBall && PatternOn(te))
+    pat.reset(new ColorPattern(*trail, o));
+  meanders = false; meanderAt = 0;
+  if (!hitSelf && isMulti && e.DType == AD_ELEC && EffectLightDecide(TEFF(e.eID), e.DType).lit) {
+    MeanderPlanBuild(meander, m, e.EActor, e.EVictim, isChain, e.isDir, e.EDir, dirX, dirY, slope,
+        sx, sy, cx, cy, distSoFar, e.vRange, WarpCount, meanderPrevG);
+    meanders = meander.n > 0;
+    if (meander.n >= 2) meanderPrevG = meander.g[meander.n-1];
+    }
     while(!hitSelf && m.InBounds(cx/2,cy/2)) {
 
     // are we out of range? 
@@ -2506,16 +4424,38 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     vis = PossiblyPause(T1,cx/2,cy/2,0);
 
 
+    int16 drawX = cx/2, drawY = cy/2; Glyph drawG = g;
+    if (meanders && meanderAt < meander.n && meander.lx[meanderAt] == cx/2 &&
+        meander.ly[meanderAt] == cy/2) {
+      drawX = meander.dx[meanderAt]; drawY = meander.dy[meanderAt];
+      if (meander.g[meanderAt]) drawG = meander.g[meanderAt];
+      }
+    meanderAt++;
+
     if (vis) {
       uint16 colour; 
       if (isBeam) 
         colour = BlastColourSets[(Color * 4)+random(4)];
       else 
         colour = BlastColourSets[Color * 4];
-      o.AddGlyph(cx/2,cy/2, g | GLYPH_FORE(colour));
-      if (GlyphDrawHook) GlyphDrawHook(5,cx/2,cy/2); /* inc-9r189 probe */
-      o.ShowGlyphs();
-      PossiblyPause(T1,cx/2,cy/2,35);
+      if (!pat) o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
+      if (GlyphDrawHook) GlyphDrawHook(5,drawX,drawY); /* inc-9r189 probe */
+      if (EffectStepHook) EffectStepHook(ES_STEP, drawX, drawY, drawG | GLYPH_FORE(colour));
+      if (meanders && MeanderHook) MeanderHook(cx/2,cy/2,drawX,drawY,drawG);
+      if (!pat) o.ShowGlyphs();
+      if (trail) {
+        if (isMulti) trail->Light(drawX,drawY);
+        else trail->MoveTo(cx/2,cy/2);
+        if (pat) pat->Square(drawX,drawY,!isBeam);
+        trail->Refresh();
+        }
+      if (trail) {
+        if (PossiblyPause(T1,cx/2,cy/2,0)) {
+          if (pat) pat->Wait(35);
+          else trail->Wait(35);
+          }
+      } else
+        PossiblyPause(T1,cx/2,cy/2,35);
       if (!isBeam) {
         o.DeActivate();
         o.Activate();
@@ -2685,6 +4625,10 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     }
   OuterBreak:
 
+  if (meanders && MeanderHook) MeanderHook(-1,-1,-1,-1,0);
+  /* inc-jw0hw: the travel is over; fade the light and end it before any hit. */
+  FINISH_TRAIL
+
   if (isChain)
     {
       Thing *t, *best; int16 bdist;
@@ -2754,6 +4698,8 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   
   DoneProject:
 
+  FINISH_TRAIL   /* a leave by goto from the travel loop */
+
   
 
   if (isBall) { 
@@ -2767,6 +4713,8 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
     int16 RingX[160], RingY[160], DrawX[160], DrawY[160];
     bool anyDrawn = false;
+    /* inc-jw0hw: the ball lights ring by ring and ends before any hit. */
+    EffectLight fx(&m, Color, EL_AREA, e.DType, TEFF(e.eID));
     if (BallRingHook) {
       int16 bcx = x, bcy = y;
       BallRingHook(-2, 1, &bcx, &bcy, 0, NULL, NULL, 0);
@@ -2794,16 +4742,20 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         if (nTaken < 160) { RingX[nTaken] = sqx; RingY[nTaken] = sqy; }
         nTaken++;
         if (PossiblyPause(T1,sqx,sqy,0) && nDraw < 160) {
-          o.AddGlyph(sqx,sqy,
-              GLYPH_VALUE(GLYPH_BLAST, BlastColourSets[Color * 4 + 1 + random(3)]));
+          const Glyph ringG = GLYPH_VALUE((te && te->HasFlag(EF_GLYPH_FOG)) ? GLYPH_FOG : GLYPH_BLAST,
+              BlastColourSets[Color * 4 + 1 + random(3)]);
+          o.AddGlyph(sqx,sqy,ringG);
+          if (EffectStepHook) EffectStepHook(ES_BURST, sqx, sqy, ringG);
           DrawX[nDraw] = sqx; DrawY[nDraw] = sqy;
+          fx.Light(sqx,sqy);
           nDraw++;
           }
         }
       first = i;
       o.ShowGlyphs();
       if (nDraw) {
-        T1->StopWatch(70);
+        fx.Refresh();
+        fx.Wait(70);
         anyDrawn = true;
         }
       if (BallRingHook)
@@ -2813,7 +4765,13 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     if (BallRingHook)
       BallRingHook(-1, 0, NULL, NULL, 0, NULL, NULL, anyDrawn ? 300 : 0);
     if (anyDrawn)
-      T1->StopWatch(300);
+      fx.Hold(300);
+    o.DeActivate();
+    if (anyDrawn) {
+      T1->ShowMap();
+      fx.Tail();
+    }
+    fx.End();
     m.UnsetQueue(QUEUE_AREA_EFFECT);
     m.PrintQueue(QUEUE_AREA_EFFECT);
   } else if (!isBeam) {
@@ -2823,6 +4781,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     eCopy.EYVal = cy / 2; 
     MagicXY(eCopy,eCopy.EXVal,eCopy.EYVal);
     } 
+
+  /* inc-jw0hw: the animation's last stage flashes every creature struck; the
+     light ends before any hit below. */
+  EffectLight::FlashStruck(&m, Color, isBall ? EL_AREA : (isMulti ? EL_BEAM : EL_MISSILE),
+      e.DType, TEFF(e.eID), TargetList, tc);
 
   DoHits:
   for (j=0;j!=tc;j++)
@@ -2862,6 +4825,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   o.DeActivate();
   e.EActor->MakeNoise(10);
   e.doVUpdate = true; 
+  /* inc-jw0hw: remember where a bolt struck, for a ball that follows it in this effect. */
+  if (!isBall && !isBeam && e.EActor && !hitSelf) {
+    LastBolt.valid = true; LastBolt.eID = e.eID; LastBolt.actor = e.EActor->myHandle;
+    LastBolt.x = cx/2; LastBolt.y = cy/2; LastBolt.efNum = e.efNum;
+    }
   return DONE;
 }
 

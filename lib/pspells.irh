@@ -50,7 +50,7 @@ Priest Spell "Pain Touch" : EA_INFLICT
 // druids have quite a bit of trouble dealing with "Flame Hobgoblins" and
 // whatnot ...
 Druid Spell "Ice Dagger" : EA_BLAST
-  { SC_EVO|SC_COLD; Base: SP_HARD; Cost: 1; Level: 1; xval: AD_COLD; 
+  { Flags: EF_NO_GLOW; SC_EVO|SC_COLD; Base: SP_HARD; Cost: 1; Level: 1; xval: AD_COLD; 
     Purpose: EP_ATTACK (VS_GENERAL); cval: SKYBLUE;
     pval: (LEVEL_MAX5)d4; sval: REF PARTIAL; lval: 2; 
     qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BALL; 
@@ -1061,17 +1061,23 @@ Druid  Spell "Faerie Fire" : EA_INFLICT
     On Event EV_MAGIC_HIT {    
       hText str;  
       switch(random(5)) {
-        case 0: str = "silver"; break;
-        case 1: str = "violet"; break;
-        case 2: str = "amber"; break;
-        case 3: str = "azure"; break;
-        case 4: str = "crimson"; break;
+        case 0: str = "silver"; e.vVal = COL_SILVERY; break;
+        case 1: str = "violet"; e.vVal = LIMN_VIOLET; break;
+        case 2: str = "amber"; e.vVal = COL_SUNYELLOW; break;
+        case 3: str = "azure"; e.vVal = LIMN_AZURE; break;
+        case 4: str = "crimson"; e.vVal = COL_CRIMSON; break;
         }
       VPrint(e,"You are limned in flickering <hText> light.",
                "The <EVictim> is limned in flickering <hText> light.", str);
       return NOTHING;
+      },
+    POST(EV_MAGIC_HIT) {
+      /* inc-jw0hw: the status exists now; its Val is the glow color. */
+      if (EVictim->isCreature())
+        EVictim->SetEffStatiVal(ILLUMINATED,e.eID,e.vVal);
+      return NOTHING;
       };
-    Flags: EF_SHOWNAME, EF_DMIN;
+    Flags: EF_SHOWNAME, EF_DMIN, EF_GLOW;
   }
 
 Wizard / Druid  Spell "Obscurement" : EA_INFLICT 
@@ -1136,7 +1142,7 @@ Druid / Sorcerer Spell "Pass without Trace" : EA_INFLICT
       by creatures using Scent, Tremorsense or Tracking."; }
 
 Druid Spell "Forest Wall" : EA_TERRAFORM
-  { SC_ARC; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
+  { Flags: EF_FORM_CLUMP; SC_ARC; Base: SP_EASY; Cost: 1; Level: 1; qval: Q_DIR; aval: AR_BARRIER;
     Purpose: EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY (VS_MISSILES);
     xval: TERRA_FLOOR; rval: $"tree"; 
     Desc: "Conjures a sparse wall of trees. The trees obscure vision and
@@ -1543,9 +1549,9 @@ Druid Spell "Detect Elementals" : EA_INFLICT
 // WW: ok, let's make an evil touch attack for the Blood guys
 Effect "Sanguine Touch" : EA_BLAST
   { SC_THA; SC_NEC; Base: SP_TRIVIAL; Cost: 2; Level: 2; aval: AR_TOUCH;
-    Purpose: EP_ATTACK (VS_GENERAL); cval: RED; lval: LEVEL_MIN10;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: COL_CRIMSON; lval: LEVEL_MIN10;
     sval: NOSAVE; xval: AD_NORM; pval: (LEVEL_SCALED)d6; tval: MA_HAS_BLOOD; 
-    Flags: EF_NOTBAD, EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_CANCEL;  }
+    Flags: EF_NOTBAD, EF_LIM_MTYPE, EF_DLONG, EF_SHOWNAME, EF_CANCEL, EF_GLOW;  }
   and EA_BLAST
   { aval: AR_TOUCH; xval: AD_DRCO; pval: (LEVEL_SCALED)d2; 
     sval: FORT PARTIAL; tval: MA_HAS_BLOOD; }
@@ -1573,7 +1579,7 @@ Effect "Sanguine Touch" : EA_BLAST
    3d6 force damage -- the note above is superseded. */
 Druid Spell "Alicorn Lance" : EA_BLAST
   { SC_EVO|SC_FORCE; Base: SP_MEDIUM; Cost: 5; Level: 2; xval: AD_MAGC;
-    Purpose: EP_ATTACK (VS_GENERAL); cval: WHITE; Flags: EF_ATTACK;
+    Purpose: EP_ATTACK (VS_GENERAL); cval: COL_SILVERY; Flags: EF_ATTACK;
     pval: 3d6; qval: Q_DIR|Q_TAR|Q_LOC; aval: AR_BOLT;
     Desc: "This spell creates a silver-hued, partially ethereal lance
     shaped in the form of an alicorn (a unicorn horn).  The spellcaster
@@ -1626,7 +1632,7 @@ Druid Spell "Snowstrike" : EA_BLAST
        creature reliably inside the 1-square blast could not be staged for a
        clean before/after cold reading. Tracking inc-tek.8.7 (PA-07-F7). Not
        sent. */
-    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE;
+    Flags: EF_CASTER_IMMUNE, EF_ALLIES_IMMUNE, EF_NO_GLOW;
     Desc: "Creates an explosive blast of snow that deals (caster level / 2)d4
     points of cold damage to all creatures within a 10 foot (1 square)
     radius. The caster and her allies are immune to the effect."; 
@@ -1987,7 +1993,7 @@ Priest Spell "Holy Summoning II" : EA_SUMMON
 Priest Spell "Inflict Moderate Wounds" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 3; Level: 2; aval: AR_TOUCH;
     xval: AD_NECR; pval: 2d8 + LEVEL_MAX10; cval: BROWN; 
-    Flags: EF_CANCEL, EF_DLONG, EF_NOTBAD; Purpose: EP_ATTACK;
+    Flags: EF_GRADE_1, EF_CANCEL, EF_DLONG, EF_NOTBAD; Purpose: EP_ATTACK;
     On Event EV_CAST
       "Your hands glow with a black aura." /
       "The <EActor>'s hands glow with a black aura.",
@@ -2604,7 +2610,7 @@ Druid Spell "Verdant Aid" : EA_SUMMON
 #endif
 
 Druid Spell "Forestation" : EA_TERRAFORM
-  { SC_WEA; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_LOC; 
+  { Flags: EF_FORM_CLUMP; SC_WEA; Base: SP_EASY; Cost: 4; Level: 2; qval: Q_LOC; 
     Purpose: EP_CURSE | EP_FOIL_PURSUIT | AIM_AT_ENEMY | EP_FIX_TROUBLE (TROUBLE_ENEMIES); /* Flags: EF_DLONG;  */
     xval: TERRA_FLOOR; rval: $"tree"; aval: AR_GLOBE; lval: 4;
     Desc: "Creates a grove of trees to spring up on open ground. The
@@ -3091,7 +3097,7 @@ Priest / Scroll Spell "Create Food and Water" : EA_CREATION
 	}
 
 Druid Spell "Create Water" : EA_TERRAFORM
-  { SC_ARC|SC_WATER; Base: SP_MEDIUM; Cost: 5; Level: 3; qval: Q_LOC;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_WATER; Base: SP_MEDIUM; Cost: 5; Level: 3; qval: Q_LOC;
     xval: TERRA_OPEN; rval: $"deep water"; aval: AR_GLOBE;
     lval: 3; cval: BLUE; Purpose: 
       EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY;
@@ -3210,7 +3216,7 @@ Priest Spell "Imbue with Spell Ability" : EA_INFLICT
 Priest Spell "Inflict Serious Wounds" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 5; Level: 3; aval: AR_TOUCH;
     xval: AD_NECR; pval: 3d8 + LEVEL_MAX15; cval: BROWN;
-    Flags: EF_CANCEL, EF_DLONG, EF_NOTBAD; Purpose: EP_ATTACK;
+    Flags: EF_GRADE_2, EF_CANCEL, EF_DLONG, EF_NOTBAD; Purpose: EP_ATTACK;
     On Event EV_CAST
       "Your hands glow with a black aura." /
       "The <EActor>'s hands glow with a black aura.",
@@ -3382,7 +3388,7 @@ Priest Spell "Ring of Blades" : EA_INFLICT
 Druid Spell "Blight Plants" : EA_BLAST
   { SC_NEC; Base: SP_EASY; Cost: 5; Level: 3; aval: AR_GLOBE; lval: 6;
     xval: AD_NECR; pval: (LEVEL_2PER1)d8; tval: MA_PLANT;
-    Purpose: EP_ATTACK; Flags: EF_LIM_MTYPE;
+    Purpose: EP_ATTACK; Flags: EF_LIM_MTYPE, EF_NO_GLOW;
     Desc: "Withers and destroys plant creatures within 60 feet
       (6 squares) of the caster, inflicting 2d8 points of necromantic
       damage per caster level (no die cap).";
@@ -3410,7 +3416,7 @@ Druid Spell "Dominate Animal" : EA_INFLICT
       to follow you, fight and even die at your behalf."; }
 
 Druid  Spell "Earthmaw" : EA_BLAST
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 6; Level: 3; qval: Q_TAR;
+  { Flags: EF_SHAKE_VICTIM; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 6; Level: 3; qval: Q_TAR;
     xval: AD_BLUNT; pval:(LEVEL_SCALED)d4;
     Flags: EF_ATTACK; Purpose: EP_ATTACK;
     Desc: "Causes the earth or stone floor beneath a victim's
@@ -4149,7 +4155,7 @@ Priest Spell "Holy Summoning IV" : EA_SUMMON
 Priest Spell "Inflict Critical Wounds" : EA_BLAST
   { SC_NEC; Base: SP_TRIVIAL; Cost: 7; Level: 4; aval: AR_TOUCH;
     xval: AD_NECR; pval: 4d8 + LEVEL_MAX20; cval: BROWN;
-    Flags: EF_CANCEL; Purpose: EP_ATTACK;
+    Flags: EF_GRADE_3, EF_CANCEL; Purpose: EP_ATTACK;
     On Event EV_CAST
       "Your hands glow with a black aura." /
       "The <EActor>'s hands glow with a black aura.",
@@ -4347,7 +4353,7 @@ Priest / Scroll Spell "Spell Immunity" : EA_GENERIC
 /* -- DRUID 4 -- */
 
 Druid Spell "Whirlpool" : EA_TERRAFORM
-  { SC_ARC|SC_WATER; Base: SP_HARD; Cost: 8; Level: 4; qval: Q_LOC;
+  { Flags: EF_FORM_RINGS; SC_ARC|SC_WATER; Base: SP_HARD; Cost: 8; Level: 4; qval: Q_LOC;
     xval: TERRA_OPEN; rval: $"turbulent water"; aval: AR_GLOBE;
     lval: 4; cval: BLUE; Purpose: 
       EP_FOIL_PURSUIT | EP_CURSE | AIM_AT_ENEMY;
@@ -4499,7 +4505,7 @@ and EA_INFLICT
   { xval: ADJUST_CIRC; yval: A_AID; pval: -4; sval: FORT; }
 
 Druid Spell "Spike Growth" : EA_TERRAFORM
-  { SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC;
+  { Flags: EF_FORM_POP; SC_ARC|SC_EARTH; Base: SP_EASY; Cost: 8; Level: 4; qval: Q_LOC;
     aval: AR_GLOBE; lval: 6; rval: $"bed of spikes"; sval: NOSAVE;
     xval: TERRA_FLOOR; Purpose: EP_CURSE | EP_FOIL_PURSUIT;
     Desc: "Causes spikes to grow out of the ground in a 60
@@ -4549,7 +4555,7 @@ and EA_INFLICT
 
 Effect "Unholy Blight" : EA_BLAST
   { SC_EVO; Base: SP_MEDIUM; Cost: 8; Level: 4; aval: AR_GLOBE;
-    cval: SHADOW;  qval: Q_LOC;
+    cval: PURPLE;  qval: Q_LOC; Flags: EF_GLOW;
     Purpose: EP_ATTACK; On Event EV_MAGIC_HIT
       "You are defiled by evil energies!" /
       "The <EVictim> is defiled by evil energies!";
@@ -4837,7 +4843,7 @@ Priest / Druid  Spell	"Flame Strike" : EA_BLAST
     cval: RED; 
     xval: AD_FIRE; pval: (LEVEL_SCALED)d6; 
     Flags: EF_PARTIAL, EF_HALF_UNTYPED, EF_CASTER_IMMUNE, EF_NO_BONUS_DMG,
-           EF_COMMON;
+           EF_COMMON, EF_PILLAR;
     aval: AR_BALL; lval: 1; 
     Purpose: EP_ATTACK;
     On Event MSG_BLASTNAME "pillar of flame";
@@ -5106,7 +5112,7 @@ Druid Spell "Commune With Nature" : EA_GENERIC
   }
 
 Druid Spell "Wall of Thorns" : EA_TERRAFORM
-  { SC_ARC; Base: SP_EASY; Cost: 10; Level: 5; qval: Q_TAR; sval: NOSAVE;
+  { Flags: EF_FORM_GROW; SC_ARC; Base: SP_EASY; Cost: 10; Level: 5; qval: Q_TAR; sval: NOSAVE;
     aval: AR_GLOBE; lval: 1; rval: $"thorn wall"; 
     xval: TERRA_OPEN; 
     Purpose: EP_CURSE|EP_FOIL_PURSUIT|EP_ESCAPE|EP_BARRIER | AIM_AT_ENEMY;
@@ -5566,7 +5572,7 @@ Druid Spell "Find the Path" : EA_INFLICT
 
 Priest Spell "Animate Objects" : EA_GENERIC
   {
-    SC_ARC; Base: SP_MEDIUM; Cost: 15; Level: 6; sval: REF + 10;
+    Flags: EF_SHAKE_ITEMS; SC_ARC; Base: SP_MEDIUM; Cost: 15; Level: 6; sval: REF + 10;
     aval: AR_GLOBE; lval: 6; cval: PINK; Purpose: EP_SUMMON;
     Flags: EF_AFFECTS_ITEMS, EF_CASTER_IMMUNE, EF_DLONG;
     Desc: "Casting this spell causes all unattended, inanimate 
@@ -5878,8 +5884,8 @@ Priest / Scroll Spell "Heal;spell" : EA_HEALING
   and EA_HEALING { xval: HEAL_MALADY; yval: PARALYSIS; }
 
 Priest / Scroll Spell "Harm" : EA_BLAST
-  { SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;
-    Flags: EF_CANCEL; Purpose: EP_ATTACK; lval: 1;
+  { cval: COL_NECRO; SC_NEC; Base: SP_TRIVIAL; Cost: 12; Level: 6; aval: AR_TOUCH;
+    Flags: EF_CANCEL, EF_GLOW; Purpose: EP_ATTACK; lval: 1;
     On Event EV_CAST
       "Your hands glow with a black aura." /
       "The <EActor>'s hands glow with a black aura.",

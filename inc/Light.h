@@ -84,6 +84,52 @@ LightRGB LightGlow(int idx, LightRGB L);
 /* Blend a rendered colour toward fog in proportion to arriving light. */
 LightRGB LightFogMix(LightRGB c, LightRGB fog, LightRGB L);
 
+/* Effect light (inc-jw0hw). A flash is one lit AREA: the effect's own squares
+   plus a spill of `reach` squares. It survives LightRebuild. Each flash keeps
+   its own clock in milliseconds, set by spell code, never read from the wall
+   clock. Every effect square stores the clock at which it lit; its color and
+   level follow the flash's cooling ramp by that square's own age, and a spill
+   square takes the age of its nearest effect square. The level scales only the
+   drawn color: vision counts a live flash at full weight whatever its level. */
+// family: light-flash-style internal
+enum { LF_STEADY = 0, LF_FIRE = 1, LF_ARC = 2, LF_RAINBOW = 3 };
+// end family: light-flash-style
+// family: light-flash-ramp internal
+enum { LR_GENERIC = 0, LR_FIRE = 1, LR_DARK = 2, LR_RAINBOW = 3 };
+// end family: light-flash-ramp
+LightRGB LightEffectColour(int16 blastColour);  /* COL_FIRE..COL_SUNYELLOW, or a palette index 0..15 */
+uint8 LightFlashRampFor(int16 blastColour);     /* the LR_* ramp a light color takes */
+int32 LightFlashAdd(LightRGB c, uint8 style, float gain, int16 reach,
+                    uint8 ramp = LR_GENERIC);  /* id >= 0, or -1 when disabled */
+void  LightFlashCell(int32 id, int16 x, int16 y);   /* add one effect square, born at the flash clock */
+void  LightFlashCellColour(int32 id, int16 x, int16 y, LightRGB c); /* inc-jw0hw: this square takes its own base color; its age keeps running */
+bool  LightFlashTintAt(int16 x, int16 y, LightRGB &c);   /* the base color a square was given, or false */
+void  LightFlashMoveTo(int32 id, int16 x, int16 y); /* the area becomes this one square */
+void  LightFlashClearCells(int32 id);               /* inc-jw0hw: the flash lights no square until LightFlashCell adds one */
+void  LightFlashLevel(int32 id, float level);       /* 0..1; render only */
+void  LightFlashSetStyle(int32 id, uint8 style);    /* LF_*: a flash that must not flicker is set steady */
+void  LightFlashSetRise(int32 id, bool on);         /* a rise: base color at full brightness, scaled by the level (see EffectLight::Rise) */
+void  LightFlashRecolour(int32 id, LightRGB c, uint8 style, float gain, uint8 ramp); /* the whole flash takes this color */
+void  LightFlashSetClock(int32 id, float ms);       /* the flash clock; recomposes the frame */
+void  LightFlashSetGrade(int32 id, int grade);      /* inc-jw0hw: grade extra lights of the flash, light k reaching k squares farther */
+void  LightFlashSetLife(int32 id, float ms);        /* how long a square's light lives (default 900) */
+void  LightFlashGlyphs(int32 id, bool shown);       /* the effect's glyphs are on screen */
+bool  LightFlashSpent(int32 id);                    /* every square's age has passed the life */
+void  LightFlashRemove(int32 id);
+void  LightFlashClearAll();
+int32 LightFlashCount();
+bool  LightFlashDisabled();                         /* INCURSION_EFFECT_LIGHT_OFF is set */
+/* The SDL glyph ramp: true when a live flash whose glyphs are shown has an
+   effect square at x,y with level above zero; rgb is that square's ramp color
+   at full value. */
+bool  LightEffectGlyphAt(int16 x, int16 y, LightRGB &rgb);
+/* inc-jw0hw: true on the square of a limned (ILLUMINATED) creature; glyph is its glow color and bg a tint of it, both at the current flicker. */
+bool  LightLimnAt(int16 x, int16 y, LightRGB &glyph, LightRGB &bg);
+
+/* Aura circles (inc-jw0hw): one per modifier or blocker field that gives no light. */
+int32 LightAuraCount();
+bool  LightAuraAt(int32 i, int16 &cx, int16 &cy, int16 &rad, LightRGB &c, float &noise);
+
 /* How the SDL build should draw, from OPT_ANIMATION: None = the classic
    16-colour path, Fast = steady coloured light, Normal/Player = shimmer. */
 enum { LIGHT_LEGACY = 0, LIGHT_STEADY = 1, LIGHT_SHIMMER = 2 };

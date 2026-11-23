@@ -200,6 +200,49 @@ void UnseenGlyphProbe(Player *pl) {
     gPl = pl;
     GlyphDrawHook = Note;
     AreaProbeXYHook = NoteXY;
+    /* Forced controls: one missile shot and one bolt in each area, through the
+       calls a monster's own turn makes (Monster::ChooseAction: ACT_RATTACK /
+       ACT_THROW -> Throw(EV_RATTACK,...), a spell -> ThrowEff(EV_CAST,...); EV_EFFECT here, as SquareBoltProbe does),
+       so the positive controls never depend on an AI choice. Each logs
+       FORCED ... ok=1 only when its own squares were reached. */
+    {
+        const rID mm = FIND("Magic Missile");
+        auto forceMissile = [&](char area, int shooter, int target) {
+            Monster *sh = mn[shooter];
+            int &ctr = (area == 'A') ? gFlyA : gFlyB;
+            const int before = ctr;
+            Item *it = sh->FirstInv();
+            while (it && !it->isType(T_MISSILE)) it = sh->NextInv();
+            EvReturn r = ABORT;
+            if (it) {
+                it = it->TakeOne();
+                r = Throw(EV_RATTACK, sh, mn[target], sh->InSlot(SL_ARCHERY), it);
+            } else {
+                it = sh->FirstInv();
+                while (it && !(TITEM(it->iID)->Group & WG_THROWN)) it = sh->NextInv();
+                if (it) r = Throw(EV_RATTACK, sh, mn[target], NULL, it);
+            }
+            Error("UNSEEN_GLYPH: FORCED kind=missile area=%c ok=%d squares=%d ret=%d",
+                area, ctr > before ? 1 : 0, ctr - before, (int)r);
+        };
+        auto forceSpell = [&](char area, int caster, int target) {
+            int &ctr = (area == 'A') ? gXY : gXYB;
+            const int before = ctr;
+            EvReturn r = ABORT;
+            if (mm) {   /* the effect a monster's cast runs: EV_EFFECT with its spell */
+                EventInfo xe; xe.Clear();
+                xe.EActor = mn[caster]; xe.EVictim = mn[target];
+                xe.eID = mm; xe.isSpell = true; xe.vRange = 20; xe.EMap = mp;
+                r = ReThrow(EV_EFFECT, xe);
+            }
+            Error("UNSEEN_GLYPH: FORCED kind=spell area=%c ok=%d squares=%d ret=%d",
+                area, ctr > before ? 1 : 0, ctr - before, (int)r);
+        };
+        forceMissile('A', 12, 4);
+        forceMissile('B', 20, 11);
+        forceSpell('A', 4, 5);
+        forceSpell('B', 10, 11);
+    }
     theGame->PlayMode = wasInPlay;
 }
 

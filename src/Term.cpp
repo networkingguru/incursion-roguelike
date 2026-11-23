@@ -979,6 +979,7 @@ void TextTerm::ShowMap() {
 
     Check(m, "Null Map in ShowMap?!");
     Color(GREY);
+    StandingPatternPrepare(m);   /* inc-jw0hw: before the light map, so a pattern's light is in it */
     /* Vision reads the light map, so the map must be built first. */
     LightRebuild(m, p);
     if (p->UpdateMap)
@@ -1051,6 +1052,7 @@ void TextTerm::ShowMap() {
 
     if (m->ov.Active)
         m->ov.ShowGlyphs();
+    StandingPatternDone(m);
 }
 
 void TextTerm::AdjustMap(int16 vx, int16 vy,bool newmap) {
@@ -1282,6 +1284,8 @@ Glyph TextTerm::FloorShading(int16 x, int16 y, Glyph g) {
       */
 }
 
+void (*PutGlyphProbeHook)(int16 x, int16 y, bool remembered, uint16 vis) = NULL;   /* inc-jw0hw: set only by src/EffectReelProbe.cpp */
+
 void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
     if(x<XOff || y<YOff || !m)
       return;
@@ -1291,7 +1295,7 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
     if (m->At(x,y).Shade)
       g = FloorShading(x,y,g);
 
-    if (m->At(x,y).hasField && ((g & GLYPH_BACK_MASK) != GLYPH_BACK(WHITE))) {
+    if (m->At(x,y).hasField && ((g & GLYPH_BACK_MASK) != GLYPH_BACK(WHITE)) && !StandingPatternDrawsAt(x,y,g)) {
       g = m->FieldGlyph(x,y,g);
     }
 
@@ -1311,6 +1315,7 @@ void TextTerm::PutGlyph(int16 x, int16 y,Glyph g,uint16 sense) {
        fall through to the unlit path and paint at full brightness. */
     if (LightMode(p) != LIGHT_LEGACY && ((vis & VI_DEFINED) || m->At(x,y).Memory)) {
       bool remembered = !(vis & VI_VISIBLE) || m->At(x,y).Dark;
+      if (PutGlyphProbeHook) PutGlyphProbeHook(x, y, remembered, vis);   /* inc-jw0hw: probe record of the decision */
       /* A defined cell always goes through the light: no light at all is
          the floor brightness, not full colour. Floor cells (TF_SHADE) fall
          further than walls and doors, so a room's walls keep their shape

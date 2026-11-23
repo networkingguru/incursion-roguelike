@@ -877,6 +877,10 @@ void posixTerm::Clear() {
     updated = false;
 }
 
+void FrameClip(const char *) {}   /* inc-jw0hw: no recorder in the posix backend */
+bool TermCellPixel(int16, int16, int &, int &, int &, int &) { return false; }
+void TermMotionClear() {}   /* inc-jw0hw: the posix backend draws no motion */
+
 uint32 posixTerm::GetElapsedMilli() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -1902,6 +1906,8 @@ int16 posixTerm::GetCharCmdImpl(KeyCmdMode mode) {
 
     ox = cx; oy = cy; wn = activeWin;
     if (theGame->InPlay()) {
+        if (Mode == MO_PLAY)
+            StandingPatternRepick();   /* inc-jw0hw: this terminal has no timed redraw: one new pick each time it waits for a key */
         if (p->UpdateMap && Mode == MO_PLAY)
             RefreshMap();
         if (p->statiChanged) {

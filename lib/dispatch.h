@@ -361,7 +361,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         ASSERT(REGS(63) >= 4)
         oMap(h)->MarkAsSeen((int8)STACK(1), (int16)STACK(2), (int16)STACK(3), (int16)STACK(4));
         return;
-    case 475:
+    case 484:
         ASSERT(REGS(63) >= 4)
         REGS(n) = dist((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), (int16)STACK(4));
         return;
@@ -2236,154 +2236,199 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         pe->SetParam((int16)STACK(1), oThing(STACK(2)));
         return;
     case 437:
+        VERIFY(h,T_EVENTINFO,"LightBegin")
+        ASSERT(REGS(63) >= 0)
+        pe->LightBegin();
+        return;
+    case 438:
+        VERIFY(h,T_EVENTINFO,"LightSquare")
+        ASSERT(REGS(63) >= 3)
+        pe->LightSquare((int16)STACK(1), (int16)STACK(2), STACK(3));
+        return;
+    case 439:
+        VERIFY(h,T_EVENTINFO,"LightColour")
+        ASSERT(REGS(63) >= 1)
+        pe->LightColour((int16)STACK(1));
+        return;
+    case 440:
+        VERIFY(h,T_EVENTINFO,"LightHold")
+        ASSERT(REGS(63) >= 1)
+        pe->LightHold((int16)STACK(1));
+        return;
+    case 441:
+        VERIFY(h,T_EVENTINFO,"LightRise")
+        ASSERT(REGS(63) >= 1)
+        pe->LightRise((int16)STACK(1));
+        return;
+    case 442:
+        VERIFY(h,T_EVENTINFO,"LightStruck")
+        ASSERT(REGS(63) >= 1)
+        pe->LightStruck(oThing(STACK(1)));
+        return;
+    case 443:
+        VERIFY(h,T_EVENTINFO,"LightEnd")
+        ASSERT(REGS(63) >= 0)
+        pe->LightEnd();
+        return;
+    case 444:
+        VERIFY(h,T_EVENTINFO,"PatternStand")
+        ASSERT(REGS(63) >= 4)
+        pe->PatternStand(oThing(STACK(1)), (int16)STACK(2), (int16)STACK(3), (int16)STACK(4));
+        return;
+    case 445:
+        VERIFY(h,T_EVENTINFO,"PatternStop")
+        ASSERT(REGS(63) >= 1)
+        pe->PatternStop(oThing(STACK(1)));
+        return;
+    case 446:
         ASSERT(REGS(63) >= 2)
         REGS(n) = isResType(STACK(1), (int16)STACK(2));
         return;
-    case 438:
+    case 447:
         if (RES(h)->Type == T_TDUNGEON || 1)
           { REGS(n) = TDUN(h)->GetConst((int16)STACK(1)); return; }
         Error("Incorrect Resource Type: %s->GetConst",NAME(h));
        break;
-    case 439:
+    case 448:
         if (RES(h)->Type == T_TEFFECT)
           { REGS(n) = TEFF(h)->HasSource((int8)STACK(1)); return; }
         Error("Incorrect Resource Type: %s->HasSource",NAME(h));
        break;
-    case 440:
+    case 449:
         if (RES(h)->Type == T_TEFFECT)
           { REGS(n) = TEFF(h)->HasFlag((int16)STACK(1)); return; }
         Error("Incorrect Resource Type: %s->HasFlag",NAME(h));
        break;
-    case 441:
+    case 450:
         if (RES(h)->Type == T_TTERRAIN)
           { REGS(n) = TTER(h)->TerrainHasFlag((int16)STACK(1)); return; }
         Error("Incorrect Resource Type: %s->TerrainHasFlag",NAME(h));
        break;
-    case 444:
+    case 453:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = GETSTR(-h).Capitalize(STACK(1)!=0);
         return;
-    case 442:
+    case 451:
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = Capitalize(GETSTR(STACK(1)), STACK(2)!=0);
         return;
-    case 445:
+    case 454:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = GETSTR(-h).Replace(GETSTR(STACK(1)), GETSTR(STACK(2)));
         return;
-    case 443:
+    case 452:
         ASSERT(REGS(63) >= 3)
         GETSTR(-1) = Replace(GETSTR(STACK(1)), GETSTR(STACK(2)), GETSTR(STACK(3)));
         return;
-    case 446:
+    case 455:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         GETSTR(-h).Empty();
         return;
-    case 447:
+    case 456:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 1)
         REGS(n) = GETSTR(-h).strchr((int8)STACK(1));
         return;
-    case 448:
+    case 457:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         REGS(n) = GETSTR(-h).GetLength();
         return;
-    case 449:
+    case 458:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         REGS(n) = GETSTR(-h).GetTrueLength();
         return;
-    case 451:
+    case 460:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = GETSTR(-h).Left(STACK(1));
         return;
-    case 450:
+    case 459:
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = Left(GETSTR(STACK(1)), STACK(2));
         return;
-    case 453:
+    case 462:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = GETSTR(-h).Right(STACK(1));
         return;
-    case 452:
+    case 461:
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = Right(GETSTR(STACK(1)), STACK(2));
         return;
-    case 455:
+    case 464:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = GETSTR(-h).Mid(STACK(1), STACK(2));
         return;
-    case 454:
+    case 463:
         ASSERT(REGS(63) >= 3)
         GETSTR(-1) = Mid(GETSTR(STACK(1)), STACK(2), STACK(3));
         return;
-    case 457:
+    case 466:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         GETSTR(-1) = GETSTR(-h).Trim();
         return;
-    case 456:
+    case 465:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = Trim(GETSTR(STACK(1)));
         return;
-    case 459:
+    case 468:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = GETSTR(-h).Upto(GETSTR(STACK(1)));
         return;
-    case 458:
+    case 467:
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = Upto(GETSTR(STACK(1)), GETSTR(STACK(2)));
         return;
-    case 461:
+    case 470:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         GETSTR(-1) = GETSTR(-h).Upper();
         return;
-    case 460:
+    case 469:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = Upper(GETSTR(STACK(1)));
         return;
-    case 463:
+    case 472:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         GETSTR(-1) = GETSTR(-h).Lower();
         return;
-    case 462:
+    case 471:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = Lower(GETSTR(STACK(1)));
         return;
-    case 465:
+    case 474:
         ASSERT(0 > h);
         ASSERT(h > -63);
         ASSERT(REGS(63) >= 0)
         GETSTR(-1) = GETSTR(-h).Decolorize();
         return;
-    case 464:
+    case 473:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = Decolorize(GETSTR(STACK(1)));
         return;
-    case 466:
+    case 475:
         ASSERT(REGS(63) >= 1)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
           if (fp_) {
@@ -2395,7 +2440,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         GETSTR(-1) = Format(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
-    case 467:
+    case 476:
         ASSERT(REGS(63) >= 1)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), false);
           if (fp_) {
@@ -2407,48 +2452,48 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         GETSTR(-1) = XPrint(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
-    case 468:
+    case 477:
         ASSERT(REGS(63) >= 2)
         GETSTR(-1) = Pluralize(GETSTR(STACK(1)), STACK(2));
         return;
-    case 469:
+    case 478:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = NAME(STACK(1));
         return;
-    case 470:
+    case 479:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = DESC(STACK(1));
         return;
-    case 471:
+    case 480:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = SkillName((int16)STACK(1));
         return;
-    case 472:
+    case 481:
         ASSERT(REGS(63) >= 1)
         GETSTR(-1) = DescribeSkill((int16)STACK(1));
         return;
-    case 473:
+    case 482:
         ASSERT(REGS(63) >= 1)
         PrintRect(CAST_RECT(STACK(1)));
         return;
-    case 474:
+    case 483:
         ASSERT(REGS(63) >= 3)
         REGS(n) = WithinRect(CAST_RECT(STACK(1)), (int16)STACK(2), (int16)STACK(3));
         return;
-    case 476:
+    case 485:
         ASSERT(REGS(63) >= 1)
         REGS(n) = random((int16)STACK(1));
         return;
-    case 477:
+    case 486:
         ASSERT(REGS(63) >= 1)
         t = GetHandle(oThing(STACK(1)));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 478:
+    case 487:
         ASSERT(REGS(63) >= 1)
         REGS(n) = isValidHandle(STACK(1));
         return;
-    case 479:
+    case 488:
         ASSERT(REGS(63) >= 3)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
           if (fp_) {
@@ -2465,7 +2510,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         DPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)),
                       VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11));
         return;
-    case 480:
+    case 489:
         ASSERT(REGS(63) >= 3)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
           if (fp_) {
@@ -2482,7 +2527,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         VPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)),
                       VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11));
         return;
-    case 481:
+    case 490:
         ASSERT(REGS(63) >= 4)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
           if (fp_) {
@@ -2505,7 +2550,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         TPrint(*pe, GETSTR(STACK(2)), GETSTR(STACK(3)), GETSTR(STACK(4)),
                       VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10),VSTACK(11),VSTACK(12));
         return;
-    case 482:
+    case 491:
         ASSERT(REGS(63) >= 2)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
           if (fp_) {
@@ -2516,7 +2561,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         APrint(*pe, GETSTR(STACK(2)),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
         return;
-    case 483:
+    case 492:
         ASSERT(REGS(63) >= 2)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(2)), false);
           if (fp_) {
@@ -2527,11 +2572,11 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         SinglePrintXY(*pe, GETSTR(STACK(2)),
                       VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9),VSTACK(10));
         return;
-    case 484:
+    case 493:
         ASSERT(REGS(63) >= 1)
         REGS(n) = ResourceLevel(STACK(1));
         return;
-    case 485:
+    case 494:
         ASSERT(REGS(63) >= 1)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
           if (fp_) {
@@ -2542,7 +2587,7 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         Error(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
-    case 486:
+    case 495:
         ASSERT(REGS(63) >= 1)
         { const char* fp_ = ScriptFormatProblem(GETSTR(STACK(1)), true);
           if (fp_) {
@@ -2551,232 +2596,232 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         Fatal(GETSTR(STACK(1)),
                       VSTACK(2),VSTACK(3),VSTACK(4),VSTACK(5),VSTACK(6),VSTACK(7),VSTACK(8),VSTACK(9));
         return;
-    case 487:
+    case 496:
         ASSERT(REGS(63) >= 1)
         REGS(n) = DirX((int16)STACK(1));
         return;
-    case 488:
+    case 497:
         ASSERT(REGS(63) >= 1)
         REGS(n) = DirY((int16)STACK(1));
         return;
-    case 489:
+    case 498:
         ASSERT(REGS(63) >= 2)
         REGS(n) = ResourceHasFlag(STACK(1), (int16)STACK(2));
         return;
-    case 490:
+    case 499:
         ASSERT(REGS(63) >= 2)
         REGS(n) = mID_isMType(STACK(1), STACK(2));
         return;
-    case 491:
+    case 500:
         ASSERT(REGS(63) >= 1)
         REGS(n) = PoisonDC(STACK(1));
         return;
-    case 492:
+    case 501:
         ASSERT(REGS(63) >= 1)
         REGS(n) = XCRtoCR(STACK(1));
         return;
-    case 493:
+    case 502:
         ASSERT(REGS(63) >= 1)
         REGS(n) = XCR((int16)STACK(1));
         return;
-    case 494:
+    case 503:
         ASSERT(REGS(63) >= 0)
         SetSilence();
         return;
-    case 495:
+    case 504:
         ASSERT(REGS(63) >= 0)
         UnsetSilence();
         return;
-    case 496:
+    case 505:
         ASSERT(REGS(63) >= 2)
         SetETarget(*pe, oThing(STACK(2)));
         return;
-    case 497:
+    case 506:
         ASSERT(REGS(63) >= 2)
         SetEVictim(*pe, oCreature(STACK(2)));
         return;
-    case 498:
+    case 507:
         ASSERT(REGS(63) >= 2)
         SetEActor(*pe, oCreature(STACK(2)));
         return;
-    case 499:
+    case 508:
         ASSERT(REGS(63) >= 2)
         SetEItem(*pe, oItem(STACK(2)));
         return;
-    case 500:
+    case 509:
         ASSERT(REGS(63) >= 2)
         SetEItem2(*pe, oItem(STACK(2)));
         return;
-    case 501:
+    case 510:
         ASSERT(REGS(63) >= 0)
         REGS(n) = nCandidates();
         return;
-    case 502:
+    case 511:
         ASSERT(REGS(63) >= 1)
         REGS(n) = GetCandidate((int16)STACK(1));
         return;
-    case 503:
+    case 512:
         ASSERT(REGS(63) >= 1)
         AddCandidate(STACK(1));
         return;
-    case 504:
+    case 513:
         ASSERT(REGS(63) >= 0)
         REGS(n) = RandCandidate();
         return;
-    case 505:
+    case 514:
         ASSERT(REGS(63) >= 0)
         ClearCandidates();
         return;
-    case 506:
+    case 515:
         ASSERT(REGS(63) >= 5)
         REGS(n) = Throw((int16)STACK(1), oObject(STACK(2)), oObject(STACK(3)), oObject(STACK(4)), oObject(STACK(5)));
         return;
-    case 507:
+    case 516:
         ASSERT(REGS(63) >= 7)
         REGS(n) = ThrowXY((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)), oObject(STACK(7)));
         return;
-    case 508:
+    case 517:
         ASSERT(REGS(63) >= 6)
         REGS(n) = ThrowVal((int16)STACK(1), (int16)STACK(2), oObject(STACK(3)), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)));
         return;
-    case 509:
+    case 518:
         ASSERT(REGS(63) >= 6)
         REGS(n) = ThrowDir((int16)STACK(1), (int8)STACK(2), oObject(STACK(3)), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)));
         return;
-    case 510:
+    case 519:
         ASSERT(REGS(63) >= 6)
         REGS(n) = ThrowEff((int16)STACK(1), STACK(2), oObject(STACK(3)), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)));
         return;
-    case 511:
+    case 520:
         ASSERT(REGS(63) >= 7)
         REGS(n) = ThrowEffDir((int16)STACK(1), STACK(2), (int8)STACK(3), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)), oObject(STACK(7)));
         return;
-    case 512:
+    case 521:
         ASSERT(REGS(63) >= 8)
         REGS(n) = ThrowEffXY((int16)STACK(1), STACK(2), (int16)STACK(3), (int16)STACK(4), oObject(STACK(5)), oObject(STACK(6)), oObject(STACK(7)), oObject(STACK(8)));
         return;
-    case 513:
+    case 522:
         ASSERT(REGS(63) >= 7)
         REGS(n) = ThrowLoc((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), oObject(STACK(4)), oObject(STACK(5)), oObject(STACK(6)), oObject(STACK(7)));
         return;
-    case 514:
+    case 523:
         ASSERT(REGS(63) >= 8)
         REGS(n) = ThrowDmg((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), GETSTR(STACK(4)), oObject(STACK(5)), oObject(STACK(6)), oObject(STACK(7)), oObject(STACK(8)));
         return;
-    case 515:
+    case 524:
         ASSERT(REGS(63) >= 6)
         REGS(n) = ThrowTerraDmg((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), GETSTR(STACK(4)), oObject(STACK(5)), STACK(6));
         return;
-    case 516:
+    case 525:
         ASSERT(REGS(63) >= 9)
         REGS(n) = ThrowDmgEff((int16)STACK(1), (int16)STACK(2), (int16)STACK(3), GETSTR(STACK(4)), STACK(5), oObject(STACK(6)), oObject(STACK(7)), oObject(STACK(8)), oObject(STACK(9)));
         return;
-    case 517:
+    case 526:
         ASSERT(REGS(63) >= 2)
         REGS(n) = ReThrow((int16)STACK(1), *pe);
         return;
-    case 518:
+    case 527:
         ASSERT(REGS(63) >= 3)
         REGS(n) = RedirectEff(*pe, STACK(2), (int16)STACK(3));
         return;
-    case 519:
+    case 528:
         ASSERT(REGS(63) >= 1)
         t = CreateItem(STACK(1));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 520:
+    case 529:
         ASSERT(REGS(63) >= 1)
         t = CreateMonster(STACK(1));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 521:
+    case 530:
         ASSERT(REGS(63) >= 1)
         t = CreateFeature(STACK(1));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 522:
+    case 531:
         ASSERT(REGS(63) >= 1)
         t = CreateDoor(STACK(1));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 523:
+    case 532:
         ASSERT(REGS(63) >= 1)
         t = CreatePortal(STACK(1));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 524:
+    case 533:
         ASSERT(REGS(63) >= 2)
         t = CreateTrap(STACK(1), STACK(2));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 525:
+    case 534:
         ASSERT(REGS(63) >= 4)
         t = GenDungeonItem((uint16)STACK(1), STACK(2), (int16)STACK(3), (int8)STACK(4));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 526:
+    case 535:
         ASSERT(REGS(63) >= 4)
         t = GenChestItem((uint16)STACK(1), STACK(2), (int16)STACK(3), (int8)STACK(4));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 527:
+    case 536:
         ASSERT(REGS(63) >= 2)
         t = InitShopkeeper(STACK(1), STACK(2));
         REGS(n) = t ? t->myHandle : 0;
         return;
-    case 528:
+    case 537:
         ASSERT(REGS(63) >= 0)
         SystemBreak();
         return;
-    case 529:
+    case 538:
         ASSERT(REGS(63) >= 1)
         REGS(n) = effectGivesStati(STACK(1));
         return;
-    case 530:
+    case 539:
         ASSERT(REGS(63) >= 1)
         REGS(n) = MMFeatLevels(STACK(1));
         return;
-    case 531:
+    case 540:
         ASSERT(REGS(63) >= 3)
         REGS(n) = LevelAdjust((int16)STACK(1), (int16)STACK(2), (int16)STACK(3));
         return;
-    case 532:
+    case 541:
         ASSERT(REGS(63) >= 0)
         REGS(n) = LastSkillCheckResult();
         return;
-    case 533:
+    case 542:
         ASSERT(REGS(63) >= 4)
         SetPVal(*pe, (int16)STACK(2), (int16)STACK(3), (int16)STACK(4));
         return;
-    case 534:
+    case 543:
         ASSERT(REGS(63) >= 1)
         REGS(n) = RoundsToUnits((int16)STACK(1));
         return;
-    case 535:
+    case 544:
         ASSERT(REGS(63) >= 1)
         REGS(n) = RestockShopDaily(oCreature(STACK(1)));
         return;
-    case 536:
+    case 545:
         ASSERT(REGS(63) >= 3)
         REGS(n) = ApplyDurationMetamagic(STACK(1), STACK(2), STACK(3)!=0);
         return;
-    case 537:
+    case 546:
         ASSERT(REGS(63) >= 3)
         REGS(n) = AutoStackIntoPack(oCreature(STACK(1)), oItem(STACK(2)), STACK(3)!=0);
         return;
-    case 538:
+    case 547:
         ASSERT(REGS(63) >= 1)
         REGS(n) = DTypeTakesHP((int16)STACK(1));
         return;
-    case 539:
+    case 548:
         ASSERT(REGS(63) >= 1)
         REGS(n) = QualityIsWeapon((int16)STACK(1));
         return;
-    case 540:
+    case 549:
         ASSERT(REGS(63) >= 1)
         REGS(n) = QualityIsArmor((int16)STACK(1));
         return;
-    case 541:
+    case 550:
         ASSERT(REGS(63) >= 0)
         REGS(n) = QualityMaxNumber();
         return;

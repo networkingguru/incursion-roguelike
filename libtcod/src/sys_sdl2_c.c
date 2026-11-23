@@ -266,6 +266,14 @@ static SDL_Surface *create_surface(int width, int height, bool with_alpha) {
 
 static void create_window(int w, int h, bool fullscreen) {
 	Uint32 winflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+	/* inc-jw0hw: INCURSION_FRAMES records frames with no window: hidden, no
+	   OpenGL, software renderer. Unset, the flags above apply unchanged. */
+	const char *frames_env = getenv("INCURSION_FRAMES");
+	const bool no_window = frames_env && frames_env[0];
+	if (no_window) {
+		winflags = SDL_WINDOW_HIDDEN;
+		TCOD_ctx.renderer = TCOD_RENDERER_SDL;
+	}
 #if defined(TCOD_ANDROID)
 	/* Android should always be fullscreen. */
 	TCOD_ctx.fullscreen = fullscreen = true;
@@ -335,7 +343,7 @@ static void create_window(int w, int h, bool fullscreen) {
 		}
 		if ( window == NULL ) TCOD_fatal_nopar("SDL : cannot create window");
 	}
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	renderer = SDL_CreateRenderer(window, -1, no_window ? SDL_RENDERER_SOFTWARE : SDL_RENDERER_ACCELERATED);
 	if ( renderer == NULL ) TCOD_fatal_nopar("SDL : cannot create renderer");
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 }

@@ -282,6 +282,14 @@ typedef struct WViewListElt {
 
 extern KeySetItem StandardKeySet[]; 
 
+/* inc-jw0hw: names the frame-recorder clip (INCURSION_FRAMES); a no-op in the
+   posix backend and when recording is off. */
+void FrameClip(const char *name);
+/* inc-jw0hw: the top-left pixel and the size of the console cell that shows map
+   square (mx,my), for the aura-circle check. False in the posix backend and
+   when the square is off the map window. */
+bool TermCellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch);
+
 /* inc-7v2i: a defense bonus a resource adds inside each strike (script
    e.vDef += ...), which the stored defense does not hold. The resource names
    its own sheet line with MSG_DEFNOTE; Val is the constant bonus, and Variable
@@ -326,6 +334,8 @@ struct CharSheet {
            sSpiritual;
 };
                                    
+void StandingWallStopAll();   /* inc/EffectLight.h */
+
 class Term {
     friend class Map;
 
@@ -468,7 +478,7 @@ public:
     virtual void ShowTime() = 0;
 
     /* Rendering the Map (Term.Cpp) */
-    virtual void SetMap(Map *_m) { m = _m; gr = m->Grid; } 
+    virtual void SetMap(Map *_m) { StandingWallStopAll(); m = _m; gr = m->Grid; }   /* inc-jw0hw: a new map rebuilds its wall lights at the next repaint */ 
     virtual Map* getMap() { return m; }
     virtual void ShowMap()=0;
     virtual void ShowMapOverview()=0;

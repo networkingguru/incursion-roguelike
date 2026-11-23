@@ -83,6 +83,7 @@ long  array_index(long x,long y);
 #include "Item.h"
 #include "Feature.h"
 #include "Light.h"
+#include "EffectLight.h"
 #include "Term.h"
 #include "Inline.h"
 #include "CreationSource.h"

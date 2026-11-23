@@ -3741,7 +3741,35 @@ typedef signed int        hObj;
 #define EF_DMIN       111  /* 5 * casterlevel units */
 #define EF_D10MIN     112  /* 50 * casterlevel units */
 #define EF_DHOUR      113  /* 300 * casterlevel units */
-#define EF_LAST       114
+#define EF_GLOW       114  /* inc-jw0hw: the effect glows although its damage type does not */
+#define EF_NO_GLOW    115  /* inc-jw0hw: the effect does not glow although its damage type does */
+#define EF_FIREWORKS  116  /* inc-jw0hw: a globe plays the fireworks animation, not a recolor */
+#define EF_COLOR_PATTERN 117 /* inc-jw0hw: the effect draws random glyphs in random colors, not a recolor */
+#define EF_WAVES      118  /* inc-jw0hw: a globe plays one wave of glyphs per EA_BLAST part, not a recolor */
+#define EF_RAIN       119  /* inc-jw0hw: a globe plays falling glyphs onto each square, not a recolor */
+#define EF_PILLAR     120  /* inc-jw0hw: the area falls onto the target from the top of the view; no projectile */
+#define EF_BLAST_RINGS 121 /* inc-jw0hw: a globe draws rings of blast glyphs over its area, as a ball does, not a recolor */
+#define EF_THROWN     122  /* inc-jw0hw: a globe's item flies from the thrower to the target square before it bursts */
+#define EF_DART       123  /* inc-jw0hw: a trap's dart flies 1-3 squares from the nearest wall to the victim, with no light */
+#define EF_FLASH_STRUCK 124 /* inc-jw0hw: the creatures this effect strikes flash although the effect gives no light */
+#define EF_GRADE_1    125  /* inc-jw0hw: a lit effect one grade above its basic one: one extra light, reach + 1 */
+#define EF_GRADE_2    126  /* inc-jw0hw: two grades above basic: two extra lights, reach + 1 and + 2 */
+#define EF_GRADE_3    127  /* inc-jw0hw: three grades above basic: three extra lights, reach + 1, + 2 and + 3 */
+#define EF_FORM_RINGS 128  /* inc-jw0hw: the area forms ring by ring from its center (water floods, webs spread) */
+#define EF_FORM_POP   129  /* inc-jw0hw: the area forms one random square after another */
+#define EF_FORM_FALL  130  /* inc-jw0hw: the area falls away one random square at a time, center first */
+#define EF_FORM_SCATTER 131 /* inc-jw0hw: the area forms in a scattered order, outward from the center, as if thrown */
+#define EF_FORM_BILLOW 132 /* inc-jw0hw: the area fills with fog glyphs that billow outward from the source */
+#define EF_FORM_SWEEP 133  /* inc-jw0hw: a wall's line forms one section at a time, from one end to the other */
+#define EF_FORM_CLUMP 134  /* inc-jw0hw: the area grows in clumps: a few scattered seeds, then clusters around them */
+#define EF_FORM_GROW  135  /* inc-jw0hw: the area grows from a seed or two and spreads to its neighbors */
+#define EF_SHAKE_GLOBE 136 /* inc-jw0hw: every creature and item inside the globe shakes while the effect plays */
+#define EF_SHAKE_VICTIM 137 /* inc-jw0hw: the one victim shakes while the effect plays */
+#define EF_SHAKE_ITEMS 138 /* inc-jw0hw: the items the effect will affect shake while it plays */
+#define EF_DANCE      139  /* inc-jw0hw: the creatures the effect affects dance: they shake, flip and spin */
+#define EF_FORM_RISE  140  /* inc-jw0hw: each corpse the effect raises stands up as undead, one at a time in random order */
+#define EF_SPORES     141  /* inc-jw0hw: spores fly from the caster in every direction, drawn with arrow glyphs */
+#define EF_LAST       142
 // end family: ef
 // family: ea internal
 
@@ -3928,7 +3956,17 @@ typedef signed int        hObj;
 #define COL_POLY     27
 #define COL_SONIC    28
 #define COL_SILVERY  29
+#define COL_CRIMSON  30 /* inc-jw0hw: Sanguine Touch */
+#define COL_DARKRED  31 /* inc-jw0hw: Dance of Ruin */
+#define COL_SUNYELLOW 32 /* inc-jw0hw: Circlet of Blasting, warm sunlight */
 // end family: col
+// family: limn stored ordinal i16
+
+/* inc-jw0hw: light colors of an ILLUMINATED status (its Val) that no COL_* or
+   palette color gives. Val also takes a COL_* row or a palette color. */
+#define LIMN_VIOLET  64
+#define LIMN_AZURE   65
+// end family: limn
 // family: fi stored bits u32 field-of Map.Fields.Element.FType
 
 /* Field types are sorted in order of glyph
@@ -4753,6 +4791,9 @@ typedef signed int        hObj;
    own OPT_GEN_* name, and add one branch to MigrateOptions. Never renumber an
    existing generation, and never lower OPT_GEN_CURRENT. */
 #define OPT_SETTINGS_GEN        437
+/* inc-jw0hw: 0 shows the aura circles, 1 hides them. 0 is the shown value so
+   every older Options.Dat keeps its meaning and OPT_SETTINGS_GEN does not move. */
+#define OPT_AURA_CIRCLES        438
 // end family: opt
 // family: opt_gen stored ordinal i8 at-of Player.Options[OPT_SETTINGS_GEN]
 #define OPT_GEN_NONE            0   /* written before this field existed */
@@ -4760,6 +4801,10 @@ typedef signed int        hObj;
 #define OPT_GEN_AUTO_TERMS      2   /* added OPT_AUTO_TERMS */
 #define OPT_GEN_CURRENT         2  /* alias of OPT_GEN_AUTO_TERMS */
 // end family: opt_gen
+// family: val_aura_circles stored ordinal i8 at-of Player.Options[OPT_AURA_CIRCLES]
+#define AURA_CIRCLES_SHOW       0
+#define AURA_CIRCLES_HIDE       1
+// end family: val_aura_circles
 // family: opt stored ordinal u16 bound OPT_LAST grows OPT_LAST block 100
 
 

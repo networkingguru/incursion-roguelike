@@ -1,0 +1,8 @@
+# Clear spell messages, complete a loaded-session turn, then quit.
+# Oracle: EFFECT_LIGHT lines in the isolated run errors.log.
+SPACE*400
+ESC*20
+
+s
+
+@quit
