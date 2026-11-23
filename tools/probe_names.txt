@@ -95,6 +95,7 @@ INCURSION_HDPOOL_PROBE	pre-registry	-
 INCURSION_HIDE_DIST_PROBE	pre-registry	-
 INCURSION_HIDE_GOD_PROBE	pre-registry	-
 INCURSION_HIDE_MOD_PROBE	pre-registry	-
+INCURSION_HIDE_NOTE_PROBE	inc-6lwjk	a watcher's spot-result notes stay bounded (tools/check_hide_note_cap.sh)
 INCURSION_HIDE_PAIRS_PROBE	pre-registry	-
 INCURSION_HIDE_PROBE	pre-registry	-
 INCURSION_HIDE_ROLL_PROBE	pre-registry	-
