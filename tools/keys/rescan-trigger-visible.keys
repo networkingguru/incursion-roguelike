@@ -1,0 +1,16 @@
+# inc-pd5xn: fixed scene, run with RESCAN_HOLD and RUNTO_STAGE=R.
+@include setup-gnome-warrior-wis3-pickaxe-seed1-opt0822.keys
+# Same game turns; only the player's Wizard Sight differs.
+w
+@choose "Wizard Mode Switches"
+DOWN*9
+SPACE
+ESC
+.*3
+RIGHT*6
+.*3
+@dump:rescan-range24
+RIGHT*12
+.*3
+@dump:rescan-visible
+@quit

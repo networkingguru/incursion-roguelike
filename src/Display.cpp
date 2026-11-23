@@ -2090,6 +2090,8 @@ void Thing::Remove(bool isDelete, bool keepMobileFields) {
 
     if (isCreature() && isDelete)
         thisc->FocusCheck(NULL);
+    if (Type == T_MONSTER && isDelete)
+        ForgetPerceivedLastTurn(myHandle);
 
     if (HasStati(ENGULFED)) {
         Thing *en = GetStatiObj(ENGULFED);
