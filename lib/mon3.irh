@@ -2669,6 +2669,8 @@ Monster "bloodsucker" : MA_JELLY
       drains vitality from its victims and it can project a ray that
       chills the blood of its enemies. It can detect creatures with blood
       within 120 feet (12 squares)."; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "stone jelly" : MA_JELLY, MA_ELEMENTAL
@@ -3218,6 +3220,8 @@ Monster "giant slug" : MA_VERMIN, MA_ABERRATION
       colouration, with a pale white underbelly. As with their
       more mundane counterparts, salt is a terrible poison to
       giant slugs.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "giant blue beetle" : MA_VERMIN
@@ -3265,6 +3269,8 @@ Monster "giant crustacean" : MA_VERMIN
       crustacean, it has a 50~ chance of ignoring additional 
       damage from a sneak attack and is immune to critical 
       hits.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   } 
   
 Monster "cave cricket" : MA_VERMIN

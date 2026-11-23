@@ -3806,6 +3806,22 @@ OvercomeNausea:
             }
         }
         te->ef.lval = 3 + e.EActor->ChallengeRating()/2;
+        /* "Breath Weapon" is one shared TEffect rewritten on every use (pval, lval,
+           xval above), so aval is rewritten too: a cone only when this breather's
+           constant says so, else the line the resource declares. The constant
+           lives on the monster or on any template it wears. */
+        te->ef.aval = AR_BREATH;
+        if (e.AType == A_BREA || e.AType == A_BRE2) {
+            int16 shapeConst = (e.AType == A_BREA) ? BREATH_SHAPE : BREATH2_SHAPE;
+            bool cone = TMON(e.EActor->tmID)->GetConst(shapeConst) == (uint32)AR_CONE;
+            if (!cone)
+                StatiIterNature(e.EActor,TEMPLATE)
+                    if (TTEM(S->eID)->GetConst(shapeConst) == (uint32)AR_CONE)
+                        cone = true;
+                StatiIterEnd(e.EActor)
+            if (cone)
+                te->ef.aval = AR_CONE;
+        }
         e.vRange = te->ef.lval;
         e.DType = te->ef.xval = ta->DType;
         e.isNAttack = true;
@@ -8182,7 +8198,7 @@ EvReturn Creature::Damage(EventInfo &e) {
 
         /* Allowance for clipping people with area spells for tactical reasons. */
         coll = false;
-        if (e.EMagic && (e.EMagic->aval == AR_BALL || e.EMagic->aval == AR_BEAM || e.EMagic->aval == AR_BREATH || e.EMagic->aval == AR_GLOBE || e.EMagic->aval == AR_CHAIN)) {
+        if (e.EMagic && (e.EMagic->aval == AR_BALL || e.EMagic->aval == AR_CONE || e.EMagic->aval == AR_BEAM || e.EMagic->aval == AR_BREATH || e.EMagic->aval == AR_GLOBE || e.EMagic->aval == AR_CHAIN)) {
             mag = max(1, mag/2);
             coll = true;
         }

@@ -260,6 +260,8 @@ Monster "gold dragon" : MA_DRAGON, MA_FIRE
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +3;
   }
 
@@ -309,6 +311,8 @@ Monster "silver dragon" : MA_DRAGON, MA_AIR
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +6;  
   }
 
@@ -343,6 +347,7 @@ Monster "bronze dragon" : MA_DRAGON, MA_WATER, MA_AIR
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC -6;
   }
 
@@ -377,6 +382,7 @@ Monster "copper dragon" : MA_DRAGON, MA_EARTH
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +0;
   }
   
@@ -403,16 +409,17 @@ Monster "brass dragon" : MA_DRAGON, MA_FIRE
       M_HOARD, M_FLYER, M_FIRE, M_SOLITARY, M_DESERT, M_PLAINS;
     Spells: $"friends", /*$"insatiable thirst",*/ $"create water", $"summon nature's ally iii",
             $"earthmaw", $"control winds", $"summon djinni";
-    On Event MSG_BLASTNAME "cone of frost" /
-                           "cloud of paralyzing gas";
+    On Event MSG_BLASTNAME "line of fire" /
+                           "cone of sleep gas";
     Lists:
       * SPELL_LIST
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +3;
   }
-  
+
 Effect "Summon Djinni" : EA_SUMMON
   { 
     SC_WEA; rval: $"djinni"; pval: 8; Cost: 32; Purpose: EP_SUMMON;
@@ -454,6 +461,8 @@ Monster "steel dragon" : MA_DRAGON, MA_EARTH
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +3;
   }
 
@@ -488,6 +497,8 @@ Monster "mercury dragon" : MA_DRAGON, MA_FIRE, MA_AIR
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
+      * BREATH2_SHAPE AR_CONE,
       * DRAGON_FEAR_DC -3;
   }
 
@@ -551,6 +562,7 @@ Monster "white dragon" : MA_DRAGON
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
       * DRAGON_FEAR_DC -3;
   }
 
@@ -593,6 +605,7 @@ Monster "red dragon" : MA_DRAGON
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
       * DRAGON_FEAR_DC 0;
   }
 
@@ -802,6 +815,7 @@ Monster "green dragon" : MA_DRAGON
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
       * DRAGON_FEAR_DC +3;
   }
       
@@ -844,6 +858,7 @@ Monster "yellow dragon" : MA_DRAGON
           ALL_SPELLS_FROM_SOURCE(AI_WIZARDRY)
           ALL_SPELLS_FROM_SOURCE(AI_THEURGY);
     Constants:
+      * BREATH_SHAPE AR_CONE,
       * DRAGON_FEAR_DC -6;
   }
 
@@ -967,6 +982,8 @@ Monster "shadow ur-dragon" : MA_DRAGON, MA_VERMIN
       },
     MSG_SPECABIL
       "They are immune to pure magic damage."; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "brilliant ur-dragon" : MA_DRAGON, MA_VERMIN
@@ -1031,6 +1048,8 @@ Monster "brilliant ur-dragon" : MA_DRAGON, MA_VERMIN
       a few rounds. In addition, the illumination does 1d6 points of
       sunlight damage. Brilliant Ur-Dragons are always illuminated like
       a manifesting elf and can never hide in shadows."; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "shattering ur-dragon" : MA_DRAGON, MA_VERMIN
@@ -1091,6 +1110,8 @@ Monster "shattering ur-dragon" : MA_DRAGON, MA_VERMIN
     ur-dragons are not particularly hardy themselves, but the thought of
     losing precious items makes many opponents avoid them."; 
     On Event MSG_BLASTNAME "cone of shattering vibrations";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "plant ur-dragon" : MA_DRAGON, MA_SYLVAN, MA_VERMIN
@@ -1157,6 +1178,8 @@ Monster "plant ur-dragon" : MA_DRAGON, MA_SYLVAN, MA_VERMIN
     However, it is their ability to summon powerful plants that makes them
     truly dangerous.";
     On Event MSG_BLASTNAME "cone of vegetable toxins";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "water ur-dragon" : MA_DRAGON, MA_VERMIN
@@ -1217,6 +1240,8 @@ Monster "water ur-dragon" : MA_DRAGON, MA_VERMIN
     appear to have their bodies formed from a combination of scales and
     slime. They are the only ur-dragons that slowly regenerate over time."; 
     On Event MSG_BLASTNAME "cone of caustic water";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 /*** Weimer: Other Dragons (Krynn-ish) ***/
@@ -1405,6 +1430,8 @@ Template "half-red dragon" : TM_DESCENT for MA_NLIVING
         return -1;
       return 0;
     } ; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 /* Wes, you CREATED the drakes, so feel free to change this back
@@ -1442,6 +1469,8 @@ Monster "blast drake" : MA_REPTILIAN
     using their breath weapon as they close, then flailing at a target with
     bite, claws, and tail, breathing as frequently as possible.";
     On Event MSG_BLASTNAME "sonic shriek";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "caustic drake" : MA_REPTILIAN
@@ -1469,6 +1498,8 @@ Monster "caustic drake" : MA_REPTILIAN
     using their breath weapon as they close, then flailing at a target with
     bite, claws, and tail, breathing as frequently as possible.";
     On Event MSG_BLASTNAME "caustic blast";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "flame drake" : MA_REPTILIAN
@@ -1496,6 +1527,8 @@ Monster "flame drake" : MA_REPTILIAN
     using their breath weapon as they close, then flailing at a target with
     bite, claws, and tail, breathing as frequently as possible.";
     On Event MSG_BLASTNAME "fiery blast";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "force drake" : MA_REPTILIAN
@@ -1534,6 +1567,8 @@ Monster "force drake" : MA_REPTILIAN
     MSG_SPECABIL
       "They absorb magical force attacks (like Magic Missiles) and 
        are healed by them, rather than taking damage."; 
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "wyvern" : MA_REPTILIAN
@@ -1614,6 +1649,8 @@ Monster "dragon turtle" : MA_MYTHIC, MA_REPTILIAN
       40 feet in length, with draconic features added. It possesses
       terrible strength, legendary fortitude and an irascible
       temperment.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "dragonne" : MA_MYTHIC, MA_BEAST, MA_REPTILIAN
@@ -2546,6 +2583,8 @@ Monster "fire toad" : MA_BEAST, MA_REPTILIAN
       them great reflexes, but also makes them always hungry. They
       most often live near volcanos or other sources of intense
       natural heat.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "spitting frog" : MA_BEAST, MA_REPTILIAN
@@ -3147,6 +3186,8 @@ Monster "winged snake" : MA_SNAKE, MA_BEAST, MA_SYLVAN
       alternate name, spark snakes.";
     On Event MSG_BLASTNAME
       "shower of sparks";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 
@@ -4757,6 +4798,8 @@ Monster "winter wolf" : MA_DOG, MA_BEAST
       of meat, winter wolves sometimes work as freelance assassins for the
       druidic circles. Winter wolves appear as sleek white wolves the size
       of a Clydesdale.";
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 Monster "worg" : MA_DOG, MA_BEAST
@@ -4827,6 +4870,8 @@ Monster "senmurv" : MA_DOG, MA_BEAST, MA_AVIAN
         EActor->Image = GLYPH_VALUE('f', c);
       return NOTHING;
       };
+    Constants:
+      * BREATH_SHAPE AR_CONE;
   }
 
 

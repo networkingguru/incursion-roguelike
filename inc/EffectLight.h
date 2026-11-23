@@ -20,6 +20,8 @@ enum { EL_AREA = 0, EL_BEAM = 1, EL_MISSILE = 2 };
 /* Test hook, NULL unless a probe sets it. Called at EL_LIT after each Refresh,
    at EL_HOLD before the hold, and at EL_END after the flash is removed. */
 extern void (*EffectLightHook)(int phase);
+/* inc-epzc0: test hook, called with each positive wait the effect clock takes. */
+extern void (*EffectWaitHook)(int ms);
 
 /* inc-jw0hw (Phase 2): test hook for the pieces an effect draws. kind says which, x,y the square, g the glyph with its color
    (0 when none). ES_TRAVEL: a projectile starts to fly (x,y the caster). ES_STEP: it shows on a square. ES_PILLAR: a falling

@@ -4321,7 +4321,9 @@ typedef signed int        hObj;
 #define WARN_DC_FROM_MAP      152 /* Terrain: If set, the warning DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_DC (i.e. max(WARN_DC, TerraDC)). */
 #define WARN_SAVE_DC_FROM_MAP 153 /* Terrain: If set, the warning save DC is the map's TerraDC at the tested square (via Map::GetTerraDC), not lower than WARN_SAVE_DC (i.e. max(WARN_SAVE_DC, TerraDC)). */
 #define WARN_DMG_FROM_MAP     154 /* Terrain: If set, the warning damage is the map's TerraDmg at the tested square (via Map::GetTerraDmg), overriding the WARN_DMG_NUM/SIDES/BONUS dice. */
-#define LAST_DUNCONST         155
+#define BREATH_SHAPE          155 /* Monster: AR_CONE makes the first breath (A_BREA) a cone; absent leaves it a line (AR_BREATH). Spits never read it. */
+#define BREATH2_SHAPE         156 /* Monster: As BREATH_SHAPE, for the second breath (A_BRE2). */
+#define LAST_DUNCONST         157
 // end family: const_id
 // family: msg internal
 

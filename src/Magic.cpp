@@ -415,6 +415,7 @@ bool Magic::isTarget(EventInfo &_e, Thing *t) {
         if (e.EMagic->aval != AR_BOLT &&
             e.EMagic->aval != AR_BEAM &&
             e.EMagic->aval != AR_BALL &&
+            e.EMagic->aval != AR_CONE &&
             e.EMagic->aval != AR_RAY &&
             e.EMagic->aval != AR_BURST &&
             e.EMagic->aval != AR_CHAIN &&
@@ -1850,6 +1851,7 @@ Nothing:
           case AR_CHAIN:
           case AR_BALL:
           case AR_BURST:
+          case AR_CONE:
               e.EActor->Reveal(true);
               // r = ABolt(e); break;
               r = ABallBeamBolt(e); break;
@@ -3968,6 +3970,165 @@ void Magic::BallFill(Map &m, int16 cx, int16 cy, int16 count,
         [](const BallSquare &a, const BallSquare &b) { return a.ring < b.ring; });
   }
 
+/* inc-epzc0: true when offset (dx,dy) lies within 45 degrees of aim (ax,ay),
+   the 45 degree edge included: dot > 0 and cos^2 >= 1/2, in integers. */
+static bool ConeAngleOK(int dx, int dy, int ax, int ay)
+  {
+    const int dot = dx*ax + dy*ay;
+    return dot > 0 && 2*dot*dot >= (dx*dx + dy*dy)*(ax*ax + ay*ay);
+  }
+
+/* inc-epzc0: squares of a cone of whole length L (never the source): inside
+   the ball's disc test and within 45 degrees of aim (ax,ay). */
+int16 Magic::ConeDiscCount(int L, int ax, int ay)
+  {
+    int n = 0;
+    for (int x = -L - 1; x <= L + 1; x++)
+      for (int y = -L - 1; y <= L + 1; y++)
+        if (4*(x*x + y*y) <= (2*L + 1)*(2*L + 1) && ConeAngleOK(x, y, ax, ay))
+          n++;
+    return (int16)n;
+  }
+
+/* inc-epzc0: the cone's volume, as BallVolume: Enlarge doubles, Focus divides
+   by 3, then it snaps to the nearest whole-length cone count (a tie takes the
+   larger). The count depends on the aim, so the caller passes it; the default
+   is an axis aim. */
+int16 Magic::ConeVolume(EventInfo &e, int16 lval, int ax, int ay)
+  {
+    const int r = lval < 0 ? 0 : lval;
+    const int base = ConeDiscCount(r, ax, ay);
+    const int want3 = (e.MM & MM_ENLARGE) ? 6*base :
+                      (e.MM & MM_FOCUS)   ? base : 3*base;
+    int best = base, bestDiff = abs(3*base - want3);
+    for (int rr = 0; rr < 100; rr++) {
+      const int c = ConeDiscCount(rr, ax, ay);
+      const int diff = abs(3*c - want3);
+      if (diff <= bestDiff) { best = c; bestDiff = diff; }
+      if (3*c > want3 && diff > bestDiff)
+        break;
+      }
+    return (int16)best;
+  }
+
+/* inc-epzc0: the cone's squares, grouped by BallBand from the source. Stage 1
+   floods best-first by d^2 from the source and takes only in-cone squares
+   (inside the length disc, within 45 degrees of the aim line; this leaves out
+   the source), whole shells while they fit. Stage 2 runs only if stage 1 ran
+   out of reachable cone squares with count left: it takes the open squares
+   next to the taken set (the source and unreached cone squares included), by
+   the least d^2 to a stage-1 square (to the source if stage 1 took none),
+   whole shells while they fit. The length L is derived from count: the first
+   whole length whose cone holds count squares (exact for a ConeVolume count). */
+void Magic::ConeFill(Map &m, int16 sx0, int16 sy0, int16 tx, int16 ty,
+    int16 count, std::vector<BallSquare> &out)
+  {
+    out.clear();
+    const int ax = tx - sx0, ay = ty - sy0;
+    int L = 0;
+    while (L < 100 && ConeDiscCount(L, ax, ay) < count)
+      L++;
+    const int sx = m.SizeX();
+    std::vector<char> seen(sx * m.SizeY(), 0);
+    struct Fr { int x, y, d2; };
+    std::vector<Fr> frontier, shell, cand; // cand: open, found, not in the cone flood
+    seen[sy0*sx + sx0] = 1;
+    int taken = 0;
+    int16 wesCount = 0; // no infinite loops
+    auto inCone = [&](int nx, int ny) {
+      const int dx = nx - sx0, dy = ny - sy0;
+      return 4*(dx*dx + dy*dy) <= (2*L + 1)*(2*L + 1) &&
+          ConeAngleOK(dx, dy, ax, ay);
+      };
+    // expand(): record the 8 neighbors of (x,y) as BallFill does; open ones
+    // go to the frontier when in the cone (stage 1), else to cand.
+    auto expand = [&](int x, int y, bool stage1) {
+      for (int j = 0; j != 8; j++) {
+        const int nx = x + DirX[j], ny = y + DirY[j];
+        if (!m.InBounds(nx,ny) || seen[ny*sx + nx])
+          continue;
+        seen[ny*sx + nx] = 1;
+        BallSquare n = { (int16)nx, (int16)ny,
+            BallBand(nx - sx0, ny - sy0), 1 };
+        if (!m.At(nx,ny).Solid) {
+          n.kind = 0;
+          for (Feature *ft=m.FFeatureAt(nx,ny);ft;ft=m.NFeatureAt(nx,ny))
+            if (ft->Flags & F_SOLID) { n.kind = 2; break; }
+          }
+        if (n.kind == 0) {
+          Fr f = { nx, ny, (nx-sx0)*(nx-sx0) + (ny-sy0)*(ny-sy0) };
+          (stage1 && inCone(nx, ny) ? frontier : cand).push_back(f);
+          }
+        else
+          out.push_back(n);
+        }
+      };
+    expand(sx0, sy0, true);
+    Fr src = { sx0, sy0, 0 };
+    cand.push_back(src);
+    bool fits = true;
+    while (!frontier.empty() && wesCount++ < 5000) {
+      int d = frontier[0].d2;
+      for (size_t i = 1; i < frontier.size(); i++)
+        if (frontier[i].d2 < d) d = frontier[i].d2;
+      shell.clear();
+      std::vector<Fr> rest;
+      for (size_t i = 0; i < frontier.size(); i++)
+        (frontier[i].d2 == d ? shell : rest).push_back(frontier[i]);
+      if (taken + (int)shell.size() > count)
+        { fits = false; break; }
+      frontier.swap(rest);
+      for (size_t k = 0; k < shell.size(); k++) {
+        const Fr s = shell[k];
+        BallSquare t = { (int16)s.x, (int16)s.y,
+            BallBand(s.x - sx0, s.y - sy0), 0 };
+        out.push_back(t);
+        taken++;
+        expand(s.x, s.y, true);
+        }
+      }
+    if (fits && taken < count) {
+      std::vector<Fr> cone; // the stage-1 squares
+      for (size_t i = 0; i < out.size(); i++)
+        if (out[i].kind == 0) { Fr f = { out[i].x, out[i].y, 0 }; cone.push_back(f); }
+      if (cone.empty()) cone.push_back(src);
+      auto key = [&](Fr &f) {
+        int best = 1 << 30;
+        for (size_t i = 0; i < cone.size(); i++) {
+          const int dx = f.x - cone[i].x, dy = f.y - cone[i].y;
+          if (dx*dx + dy*dy < best) best = dx*dx + dy*dy;
+          }
+        f.d2 = best;
+        };
+      for (size_t i = 0; i < cand.size(); i++) key(cand[i]);
+      // frontier is empty here (stage 1 ran dry), so cand is the whole list
+      while (!cand.empty() && wesCount++ < 5000) {
+        int d = cand[0].d2;
+        for (size_t i = 1; i < cand.size(); i++)
+          if (cand[i].d2 < d) d = cand[i].d2;
+        shell.clear();
+        std::vector<Fr> rest;
+        for (size_t i = 0; i < cand.size(); i++)
+          (cand[i].d2 == d ? shell : rest).push_back(cand[i]);
+        if (taken + (int)shell.size() > count)
+          break;
+        cand.swap(rest);
+        for (size_t k = 0; k < shell.size(); k++) {
+          const Fr s = shell[k];
+          BallSquare t = { (int16)s.x, (int16)s.y,
+              BallBand(s.x - sx0, s.y - sy0), 0 };
+          out.push_back(t);
+          taken++;
+          const size_t before = cand.size();
+          expand(s.x, s.y, false);
+          for (size_t i = before; i < cand.size(); i++) key(cand[i]);
+          }
+        }
+      }
+    std::stable_sort(out.begin(), out.end(),
+        [](const BallSquare &a, const BallSquare &b) { return a.ring < b.ring; });
+  }
+
 /* inc-jw0hw: a lit lightning stroke is drawn as a jagged path. The line walk of
    ABallBeamBolt is replayed here; the plan only moves the glyph and the light. A
    drawn square D stays within 1 of its line square L, is exactly 1 from the
@@ -4092,6 +4253,28 @@ static void MeanderPlanBuild(MeanderPlan &p, Map &m, Creature *actor, Creature *
       p.g[0] = (abs(p.dx[1] - p.dx[0]) >= abs(p.dy[1] - p.dy[0])) ? '-' : '|';
   }
 
+/* inc-epzc0: the squares a cone effect strikes, from the caster's square. The
+   aim is the target square, or source + 8 x direction for a direction effect
+   (an aim equal to the source gives an empty cone). Strike and prediction both
+   call this, so they cannot differ. */
+static void ConeStrikeFill(EventInfo &e, Map &m, std::vector<BallSquare> &out)
+  {
+    const int16 sx = e.EActor->x, sy = e.EActor->y;
+    int16 tx = sx, ty = sy;
+    if (e.isDir && e.EDir != CENTER)   /* first: MagicEvent sets ETarget to the caster for a direction cast */
+      { tx = sx + 8*DirX[e.EDir]; ty = sy + 8*DirY[e.EDir]; }
+    else if (e.ETarget)
+      { tx = e.ETarget->x; ty = e.ETarget->y; }
+    else if (e.isLoc)
+      { tx = e.EXVal; ty = e.EYVal; }
+    else if (e.EVictim)
+      { tx = e.EVictim->x; ty = e.EVictim->y; }
+    /* inc-epzc0: no lval means length 5, the floor a wand beam gets (max(5,vRange) in ABallBeamBolt). */
+    const int16 len = e.EMagic->lval ? e.EMagic->lval : 5;
+    Magic::ConeFill(m, sx, sy, tx, ty,
+        Magic::ConeVolume(e, len, tx - sx, ty - sy), out);
+  }
+
 EvReturn Magic::ABallBeamBolt(EventInfo &e)
 {
   EventInfo eCopy; Feature *ft; Creature *cr;
@@ -4099,6 +4282,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   static Thing* TargetList[128], *ArcList[64];
   bool isBeam, isMulti, isChain, isBall,
        isProject, wasEngulfed;
+  bool isCone = false;   /* inc-epzc0: a ball-shaped strike from the caster's square */
 
   if (!e.EActor->m)
     return ABORT;
@@ -4139,6 +4323,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         isBeam = false; isMulti = false;
         isChain = false; isBall = true;
         isProject = false;
+       break;        
+      case AR_CONE:
+        isBeam = false; isMulti = false;
+        isChain = false; isBall = true;
+        isProject = false; isCone = true;
        break;        
     }
 
@@ -4237,7 +4426,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
 
   wasEngulfed = false;
   // inc-w91w: a remotely sprung ball/burst starts at the trap, without travel.
-  if (e.remoteTrapID && isBall && e.isLoc) {
+  if (e.remoteTrapID && isBall && !isCone && e.isLoc) {
       sx=cx=e.remoteTrapX*2; sy=cy=e.remoteTrapY*2;
       goto DoneProject;
   }
@@ -4267,6 +4456,10 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     }
   
   
+  /* inc-epzc0: a cone starts at the caster; it has no flight. */
+  if (isCone)
+    goto DoneProject;
+
   // if you're intentionally striking yourself, skip the travel phase
   if ((e.isLoc && (e.EXVal == e.EActor->x && e.EYVal == e.EActor->y)) || 
       (e.isDir && (e.EDir == CENTER)) || 
@@ -4709,7 +4902,10 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     m.SetQueue(QUEUE_AREA_EFFECT);
 
     std::vector<BallSquare> fill;
-    BallFill(m, x, y, BallVolume(e, e.EMagic->lval), fill);
+    if (isCone)
+      ConeStrikeFill(e, m, fill);   /* x,y is the caster's square: sx=cx at the top */
+    else
+      BallFill(m, x, y, BallVolume(e, e.EMagic->lval), fill);
 
     int16 RingX[160], RingY[160], DrawX[160], DrawY[160];
     bool anyDrawn = false;
@@ -4849,6 +5045,26 @@ void Magic::PredictVictimsOfBallBeamBolt(EventInfo &e,
     WarpCount = max(2,3+e.EActor->Mod(A_INT));
   else
     WarpCount = 0;
+
+  /* inc-epzc0: a cone is the strike's own fill; no walk. */
+  if (e.EMagic && e.EMagic->aval == AR_CONE) {
+    std::vector<BallSquare> fill;
+    ConeStrikeFill(e, *(e.EActor->m), fill);
+    for (size_t i = 0; i < fill.size(); i++) {
+      if (fill[i].kind != 0)
+        continue;
+      for (Thing *t=e.EActor->m->FirstAt(fill[i].x,fill[i].y);t;
+                  t=e.EActor->m->NextAt(fill[i].x,fill[i].y))
+        if (t->isCreature()) {
+          bool dup = false;
+          for (int16 v = 0; v < numVic; v++)
+            if (victim[v] == (Creature *)t) dup = true;
+          if (!dup)
+            victim[numVic++] = (Creature *)t;
+          }
+      }
+    return;
+  }
 
   // where do we start? 
   int16 sx, sy, cx, cy; 

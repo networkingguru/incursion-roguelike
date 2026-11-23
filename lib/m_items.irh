@@ -1898,7 +1898,7 @@ AI_WAND Effect "Fire Bolts" : EA_BLAST
    Extra +2, Save 0 == +1. */ 
 AI_WAND Effect "Ice;wand" : EA_BLAST
   { SC_EVO; Cost: 5; xval: AD_COLD; pval: (PLUS_1PER1)d8;
-    sval: REF Partial; qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_BEAM; 
+    sval: REF Partial; qval: Q_DIR | Q_TAR | Q_LOC; aval: AR_CONE; 
     Purpose: EP_ATTACK; Level: PLUS_2PER1_ADD2; sval: REF partial;
     cval: SKYBLUE; On Event MSG_BLASTNAME "frigid blast";
     Flags: EF_NEEDS_PLUS, EF_AUTOID, EF_AFFECTS_ITEMS;
@@ -6467,13 +6467,13 @@ AI_HORN Effect "Panic" : EA_INFLICT
 AI_HORN Effect "Blasting" : EA_BLAST
   { SC_EVO; xval: AD_SONI; pval: (PLUS_1PER1)d12; qval: Q_EQU; 
     Level: PLUS_2PER1;
-    aval: AR_BEAM; cval: WHITE; lval: 8; Purpose: EP_ATTACK;
+    aval: AR_CONE; cval: WHITE; lval: 8; Purpose: EP_ATTACK;
     Flags: EF_AFFECTS_ITEMS, EF_ACTIVATE, 
            EF_NEEDS_PLUS, EF_AUTOID, EF_SOUND, EF_7PERDAY;
     qval: Q_DIR|Q_TAR; 
     On Event MSG_BLASTNAME "cone of deafening sound"; }
 and EA_INFLICT
-  { xval: STUNNED; sval: FORT; aval: AR_BEAM; 
+  { xval: STUNNED; sval: FORT; aval: AR_CONE; lval: 8;
     Desc: "When blown (activated), this horn created a destructive
             blast of sound that inflicts 1d12 points of sonic damage per
             magical plus to everything it strikes, potentially stunning

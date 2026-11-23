@@ -2678,7 +2678,7 @@ AI_TATTOO Effect "Dragon" : EA_BLAST
       },
     MSG_BLASTNAME
       "gout of flame";
-    aval: AR_BEAM; cval: RED; sval: REF partial; Flags: EF_ACTIVATE;
+    aval: AR_CONE; lval: 6; cval: RED; sval: REF partial; Flags: EF_ACTIVATE;
     xval: AD_FIRE;  
   }
   

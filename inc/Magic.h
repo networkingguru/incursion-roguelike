@@ -23,6 +23,14 @@ class Magic
       static int16 BallVolume(EventInfo &e, int16 lval);
       static void BallFill(Map &m, int16 cx, int16 cy, int16 count,
           std::vector<BallSquare> &out);
+      // inc-epzc0: the squares a cone strikes, in band order. Nothing is
+      // drawn or struck. The aim line runs (sx,sy) to (tx,ty). ConeDiscCount
+      // is the cone's square count for a whole length L and aim vector
+      // (ax,ay); ConeVolume snaps Enlarge/Focus to such a count.
+      static int16 ConeDiscCount(int L, int ax, int ay);
+      static int16 ConeVolume(EventInfo &e, int16 lval, int ax = 1, int ay = 0);
+      static void ConeFill(Map &m, int16 sx, int16 sy, int16 tx, int16 ty,
+          int16 count, std::vector<BallSquare> &out);
       // The Area-Effect Functions
       // ww: folded into one, now ...
       /*

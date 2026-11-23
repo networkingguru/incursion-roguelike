@@ -553,6 +553,10 @@ void Game::Play() {
        BallShapeProbe (src/BallShapeProbe.cpp). */
     extern void BallShapeProbe(Player *pl);
     BallShapeProbe(pp);
+    /* inc-epzc0: off unless INCURSION_CONE_PROBE is set. See
+       ConeShapeProbe (src/ConeShapeProbe.cpp). */
+    extern void ConeShapeProbe(Player *pl);
+    ConeShapeProbe(pp);
     /* inc-jw0hw: off unless INCURSION_EFFECT_LIGHT_PROBE is set. See
        EffectLightProbe (src/EffectLightProbe.cpp). */
     extern void EffectLightProbe(Player *pl);

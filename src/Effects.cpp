@@ -352,6 +352,7 @@ SkipSave:
         bdesc = Lookup(CloudNames,e.DType);
         break;
         case AR_BREATH:
+        case AR_CONE: /* inc-epzc0: a cone without its own blast name reads as a breath */
         bdesc = Lookup(BreathNames,e.DType);
         break;
         default:

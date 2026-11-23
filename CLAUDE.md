@@ -17,7 +17,13 @@ INCURSION_LOAD=tools/fixtures/chars/lizardfolk-monk-seed1.sav \
     tools/headless.sh tools/keys/load-char-sheet.keys 1   # ...from a frozen character
 tools/nightly_verify.sh --record        # freeze what already fails
 tools/nightly_verify.sh --compare       # did this work break anything that passed?
+tools/render_effect_reel.sh --only <names>   # a video per effect, light off beside light on (needs both builds)
 ```
+
+Show Brian how a visible effect looks with `tools/render_effect_reel.sh`. It
+writes an `index.html` with one video per effect. Run from a bead worktree, it
+writes to `~/Scripts/Incursion/docs/evidence/<bead>/reel-<date>/`, which
+outlives the worktree. `tools/README.md` §6, Instruments, gives the details.
 
 Never run the binary directly. `tools/headless.sh` gives a run its own `save/`
 and `logs/`, so an unattended session cannot destroy a real character.
