@@ -238,6 +238,7 @@ INCURSION_WATCHDOG_PROBE	inc-sbx6t	from key read N on, the headless game spins b
 INCURSION_WATCHDOG_S	inc-sbx6t	headless watchdog limit in CPU seconds, replacing the 300 s default (tools/check_watchdog_cpu.sh)
 INCURSION_WATER_WALKING_PROBE	pre-registry	-
 INCURSION_WEAPONTYPE_PROBE	pre-registry	-
+INCURSION_WEAPON_LIGHT_PROBE	inc-as123	weapon light probe (tools/check_weapon_light.sh)
 INCURSION_WROUGHT_HARDNESS_PROBE	pre-registry	-
 INCURSION_WROUGHT_METAL_PROBE	pre-registry	-
 INCURSION_XPDRAIN_PROBE	pre-registry	-

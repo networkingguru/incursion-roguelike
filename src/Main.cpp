@@ -557,6 +557,10 @@ void Game::Play() {
        EffectLightProbe (src/EffectLightProbe.cpp). */
     extern void EffectLightProbe(Player *pl);
     EffectLightProbe(pp);
+    /* inc-as123: off unless INCURSION_WEAPON_LIGHT_PROBE is set. See
+       WeaponLightProbe (src/WeaponLightProbe.cpp). */
+    extern void WeaponLightProbe(Player *pl);
+    WeaponLightProbe(pp);
     /* inc-jw0hw: off unless INCURSION_EFFECT_REEL is set. See
        EffectReelProbe (src/EffectReelProbe.cpp). */
     extern void EffectReelProbe(Player *pl);

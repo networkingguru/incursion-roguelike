@@ -11,6 +11,9 @@
 # counts per kind. The probe logs one REEL line or one REEL_SKIP line per effect
 # (a skip names a prompt the reel cannot answer). The posix build runs the probe
 # with no recorder: FrameClip does nothing and StopWatch waits 0.
+# inc-as123 (Phase 4): the weapon clips (a held light, a hit flash, a flight light) are not effects, so no text count in program.i lists
+# them. The probe logs one "REEL <n> Weapon ... weapon" line for each; the check counts them against the "Weapon " rows of the light
+# table and fails when the two differ, so a clip with no row or a row with no clip goes red.
 # RED: remove AR_GLOBE from IsReelKind in src/EffectReelProbe.cpp, rebuild; the
 # globe counts differ and the check FAILs.
 # fact: the effect list -- read from lib/program.i at run time, and from the loaded module by the probe; no fixed number
@@ -18,6 +21,7 @@
 # fact: settings -- options-2026-08-22.dat
 # fact: Pyrotechnics forms -- counted from the RedirectEff(e,$"Pyrotechnics;...") answers in lib/program.i at run time; no fixed number
 # fact: breath damage types -- read from the monster attack lines in lib/program.i at run time; no fixed number
+# fact: the weapon clips -- listed by the probe (WeaponClips in src/EffectReelProbe.cpp) and counted against the table's "Weapon " rows at run time; no fixed number
 # fact: effect scripts that prompt -- the probe skips them by name and logs REEL_SKIP; the check counts each skip as listed
 # Exit 0 PASS, 1 FAIL, 2 INCONCLUSIVE (no build, no fixture, no REEL_DONE).
 set -uo pipefail
@@ -56,10 +60,10 @@ if ! grep -aq ' REEL_DONE ' "$log" 2>/dev/null; then
     exit 2
 fi
 
-python3 -I - "$ROOT/lib/program.i" "$log" <<'PY'
+python3 -I - "$ROOT/lib/program.i" "$log" "$ROOT/tools/fixtures/effect-light-table.tsv" <<'PY'
 import re, sys, collections
 
-prog, log = sys.argv[1], sys.argv[2]
+prog, log, table = sys.argv[1], sys.argv[2], sys.argv[3]
 lines = open(prog, encoding="latin-1").read().split("\n")
 hdr = re.compile(r'^(?:\d+ / )*(?:\d+ )?(Spell|Effect|Poison|Disease) "(.*)" : (\d+)')
 top = re.compile(r'^(?:\d+ / )*(?:\d+ )?([A-Z][a-z]+) "')
@@ -156,9 +160,14 @@ if deficit != probe["skipped"]:
     bad.append("skips (kinds missing from the probe: %d, skips logged: %d)" % (deficit, probe["skipped"]))
 if total_text != total_probe:
     bad.append("total")
+weapons_probe = len(re.findall(r'  REEL \d+ Weapon .* weapon$', open(log, encoding="latin-1").read(), re.M))
+weapons_table = len([1 for ln in open(table, encoding="utf-8") if ln.startswith("Weapon ")])
+print("weapon  %10d  %11d   (table rows, probe clips)" % (weapons_table, weapons_probe))
+if weapons_probe != weapons_table or weapons_probe == 0:
+    bad.append("weapon clips (probe %d, table rows %d)" % (weapons_probe, weapons_table))
 if bad:
     print("FAIL: the probe's list differs from the text count in: " + ", ".join(bad))
     sys.exit(1)
-print("PASS: the reel lists every blast, globe, aura field, wall, color pattern and breath type in lib/program.i.")
+print("PASS: the reel lists every blast, globe, aura field, wall, color pattern and breath type in lib/program.i, and a clip for each weapon row of the light table.")
 PY
 exit $?
