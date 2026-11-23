@@ -531,6 +531,7 @@ void FieryRoomProbe(Player *pl) {
 
 } /* namespace */
 
+/* inc-jw0hw: hooks INCURSION_EFFECT_REEL, INCURSION_EFFECT_LIGHT_TABLE, INCURSION_WALL_LOAD and INCURSION_FIERY_ROOM. */
 void EffectReelProbe(Player *pl) {
     const bool tableMode = getenv("INCURSION_EFFECT_LIGHT_TABLE") != NULL;
     if (getenv("INCURSION_WALL_LOAD") && pl && pl->m) { WallLoadProbe(pl); return; }

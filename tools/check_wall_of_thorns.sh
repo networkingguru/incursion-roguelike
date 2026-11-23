@@ -5,21 +5,23 @@
 # (5-square) one it used to advertise. Under the inc-lmw4 `dist <= e.vRadius`
 # test, Magic::AGlobe fills each square with dist(cx,cy,x,y) <= e.vRadius, and
 # vRadius is lval (1), so the wall is still 3x3.
+# fact: the Wall of Thorns block -- read as text from lib/pspells.irh (or $SOURCE); no game run, no seed, no roll
+# fact: the description's diameter and lval -- the same text block; nothing else is read
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SOURCE="${SOURCE:-lib/pspells.irh}"
-# Anchor on the effect header followed immediately by its "{ SC_ARC" line so the
+# Anchor on the effect header followed immediately by its "{ SC_ARC" line (an optional "Flags: ...;" may precede SC_ARC) so the
 # commented-out list entry of the same name is not matched; the `want` flag is
 # set only by the header and cleared on the very next line unless that line is
 # the brace, so header and brace must be adjacent. Extraction ends after the
 # first printed line whose closing brace sits at end of line (covers both the
 # one-line `"; }` and a lone `  }`).
 block="$(awk '
-  want && /^  \{ SC_ARC/ { start=1 }
-  want && !/^  \{ SC_ARC/ { want=0 }
+  want && /^  \{ (Flags: [^;]*; )?SC_ARC/ { start=1 }
+  want && !/^  \{ (Flags: [^;]*; )?SC_ARC/ { want=0 }
   start { print; if (/\}[[:space:]]*$/) exit }
   /^Druid Spell "Wall of Thorns" : EA_TERRAFORM$/ { want=1 }
 ' "$SOURCE")"

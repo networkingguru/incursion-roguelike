@@ -2462,7 +2462,7 @@ void EffectLightProbe(Player *pl) {
                                 fabsf((lastShown - first[2]) - 60.0f) <= 3.0f;
                             ok = ok && timed;
                             verdict("ST9", ok,
-                                "fire wave at 1/3/6: first shown %.0f/%.0f/%.0f ms (need 20/40/70), held %.0f (need 60); steps %d/%d/%d lit %d/%d/%d colored %d/%d/%d not247 %d/%d/%d; glyph g/r first %.2f/%.2f/%.2f (need 0.8+); light g/r first %.2f/%.2f/%.2f last60+ %.2f/%.2f/%.2f (drop 0.15+)",
+                                "fire wave at 1/3/6: first shown %.0f/%.0f/%.0f ms (need 20/40/70), held %.0f (need 60); steps %d/%d/%d lit %d/%d/%d colored %d/%d/%d not247 %d/%d/%d; glyph green,red first %.2f/%.2f/%.2f (need 0.8+); light green,red first %.2f/%.2f/%.2f last60+ %.2f/%.2f/%.2f (drop 0.15+)",
                                 first[0], first[1], first[2], lastShown - first[2], shown[0], shown[1], shown[2], litN[0], litN[1], litN[2], glN[0], glN[1], glN[2],
                                 wrong[0], wrong[1], wrong[2], r0[0], r0[1], r0[2], l0[0], l0[1], l0[2], l1[0], l1[1], l1[2]);
                         }
