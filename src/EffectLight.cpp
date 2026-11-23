@@ -62,7 +62,7 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
   else if (te->HasFlag(EF_NO_GLOW)) d.lit = false;
   else d.lit = TypeGlows(dtype);
   const int16 cv = te->ef.cval;
-  if (cv >= COL_FIRE && cv <= COL_SUNYELLOW) {
+  if (cv >= COL_FIRE && cv <= COL_AZURE) {
     d.colour = cv;
     return d;
   }
@@ -83,9 +83,10 @@ EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype) {
 }
 
 EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
-                         TEffect *te, bool targetFlash)
+                         TEffect *te, bool targetFlash,
+                         int16 reachOverride, int styleOverride)
     : grade(0), map(m), id(-1), ended(false), lit(true), target(targetFlash),
-      clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false), standing(false) {
+      clockMs(0.0f), life(900.0f), glyphsOn(false), risen(false), standing(false), held(false) {
   if (te) {
     const EffectLightDecision d = EffectLightDecide(te, dtype);
     lit = d.lit || (targetFlash && te->HasFlag(EF_FLASH_STRUCK));   /* inc-jw0hw: an unlit effect may still flash what it strikes */
@@ -102,6 +103,8 @@ EffectLight::EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype,
     else if (blastColour == COL_ELEC) style = LF_ARC;
   }
   if (blastColour == COL_RAINBOW) style = LF_RAINBOW;
+  if (reachOverride > 0) reach = reachOverride;   /* inc-as123: a weapon hit's own reach and flicker */
+  if (styleOverride >= 0) style = (uint8)styleOverride;
   gain = blastColour == COL_SONIC ? 0.6f : 1.0f;
   colour = LightEffectColour(blastColour);
   ramp = LightFlashRampFor(blastColour);
@@ -156,8 +159,24 @@ void EffectLight::MoveTo(int16 x, int16 y) {
     LightFlashSetLife(id, life);
     LightFlashSetClock(id, clockMs);   /* the new square is born now */
     LightFlashGlyphs(id, glyphsOn);
+    if (held) {
+      LightFlashSetRise(id, true);
+      LightFlashLevel(id, 1.0f);
+    }
     LightFlashCell(id, x, y);
   }
+}
+
+void EffectLight::RecolourRGB(LightRGB c) {
+  colour = c;
+  ramp = LR_GENERIC;
+  held = true;   /* a held color is steady: no pale flash at birth, no cooling */
+  if (id >= 0 && !ended) {
+    LightFlashSetRise(id, true);
+    LightFlashLevel(id, 1.0f);
+  }
+  if (id >= 0 && !ended)
+    LightFlashRecolour(id, colour, style, gain, ramp);
 }
 
 /* inc-jw0hw: the whole flash takes the color of light row or palette color `col`. */
@@ -339,11 +358,11 @@ void EffectLight::End() {
 
 void EffectLight::FlashStruck(Map *m, int16 blastColour, uint8 shape,
                               int16 dtype, TEffect *te, Thing *const *list,
-                              int n) {
+                              int n, int16 reachOverride, int styleOverride) {
   Player *p = theGame->GetPlayer(0);
   if (!m || !list || n <= 0 || !p || p->Opt(OPT_ANIMATION) == 2)
     return;
-  EffectLight fx(m, blastColour, shape, dtype, te, true);
+  EffectLight fx(m, blastColour, shape, dtype, te, true, reachOverride, styleOverride);
   if (!fx.lit || fx.id < 0)
     return;
   int shown = 0;
@@ -357,6 +376,22 @@ void EffectLight::FlashStruck(Map *m, int16 blastColour, uint8 shape,
   if (!shown)
     return;
   /* the struck creatures' glyphs follow the ramp for the whole flash */
+  fx.glyphsOn = true;
+  LightFlashGlyphs(fx.id, true);
+  fx.Show();
+  if (TargetFlashHook) TargetFlashHook(TF_LIT);
+  fx.Tail(true);
+  fx.End();
+}
+
+void EffectLight::FlashSquare(Map *m, int16 blastColour, int16 x, int16 y, int16 reachOverride, int styleOverride) {
+  Player *p = theGame->GetPlayer(0);
+  if (!m || !p || p->Opt(OPT_ANIMATION) == 2)
+    return;
+  EffectLight fx(m, blastColour, EL_AREA, 0, NULL, true, reachOverride, styleOverride);
+  if (!fx.lit || fx.id < 0 || !fx.Sees(x, y))
+    return;
+  fx.Light(x, y);
   fx.glyphsOn = true;
   LightFlashGlyphs(fx.id, true);
   fx.Show();

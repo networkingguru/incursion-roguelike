@@ -96,6 +96,7 @@ INCURSION_HDPOOL_PROBE	pre-registry	-
 INCURSION_HIDE_DIST_PROBE	pre-registry	-
 INCURSION_HIDE_GOD_PROBE	pre-registry	-
 INCURSION_HIDE_MOD_PROBE	pre-registry	-
+INCURSION_HIDE_NOTE_PROBE	inc-6lwjk	a watcher's spot-result notes stay bounded (tools/check_hide_note_cap.sh)
 INCURSION_HIDE_PAIRS_PROBE	pre-registry	-
 INCURSION_HIDE_PROBE	pre-registry	-
 INCURSION_HIDE_ROLL_PROBE	pre-registry	-
@@ -234,8 +235,11 @@ INCURSION_WAKE_PROBE	pre-registry	-
 INCURSION_WALL_LOAD	inc-jw0hw	effect reel probe: log the wall squares, standing lights and lit squares of a loaded Wall of Fire level (tools/check_effect_motion.sh W3)
 INCURSION_WALL_SAVE	inc-jw0hw	effect reel probe: leave the Wall of Fire standing and stop, so the keys can save the level (tools/check_effect_motion.sh W3)
 INCURSION_WAS_FRIENDLY_PROBE	inc-n3eni	WAS_FRIENDLY granted once per attacker oracle (tools/check_was_friendly_once.sh)
+INCURSION_WATCHDOG_PROBE	inc-sbx6t	from key read N on, the headless game spins between key reads, so the CPU-time watchdog must end it (tools/check_watchdog_cpu.sh)
+INCURSION_WATCHDOG_S	inc-sbx6t	headless watchdog limit in CPU seconds, replacing the 300 s default (tools/check_watchdog_cpu.sh)
 INCURSION_WATER_WALKING_PROBE	pre-registry	-
 INCURSION_WEAPONTYPE_PROBE	pre-registry	-
+INCURSION_WEAPON_LIGHT_PROBE	inc-as123	weapon light probe (tools/check_weapon_light.sh)
 INCURSION_WROUGHT_HARDNESS_PROBE	pre-registry	-
 INCURSION_WROUGHT_METAL_PROBE	pre-registry	-
 INCURSION_XPDRAIN_PROBE	pre-registry	-

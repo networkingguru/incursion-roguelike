@@ -356,7 +356,7 @@ uint8 BlastColourSets[] = {
  /* COL_CRIMSON */ PINK, RED, PINK, RED,
  /* COL_DARKRED */ RED, RED, RED, SHADOW,
  /* COL_SUNYELLOW */ YELLOW, YELLOW, WHITE, YELLOW,
-                   0,0,0,0,
+ /* COL_AZURE */   AZURE, SKYBLUE, AZURE, BLUE,
                    0,0,0,0 };
 
 
@@ -2580,7 +2580,7 @@ static Glyph PatternPickGlyph()
 
 static int16 PatternPickColour(int16 col)
   {
-    if (col <= 0 || col == COL_RAINBOW || col > COL_SUNYELLOW)
+    if (col <= 0 || col == COL_RAINBOW || col > COL_AZURE)
       return PatternColours[cosmetic_random(sizeof(PatternColours)/sizeof(PatternColours[0]))];
     if (col < 16)
       return col;

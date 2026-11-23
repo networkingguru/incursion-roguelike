@@ -54,6 +54,12 @@ class Thing;
    above any real line of sight. */
 #define HIDE_WATCH_MAX 256
 
+/* Most HK_SPOT_RESULT notes one watcher holds (HideSetKey evicts the farthest
+   at the cap). Far below the 256-entry status list a creature can hold. */
+// no-family
+#define HIDE_NOTE_MAX 32
+// end no-family
+
 /* The roar key's Mag is a signed 16-bit Status field (Status::Mag, inc/Res.h),
    but theGame->Turn is 32-bit and already ~198000 in a fresh game, so a raw
    Turn does not fit. A key stores the round number wrapped to 15 bits instead:

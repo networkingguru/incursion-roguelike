@@ -9,6 +9,7 @@
 # shows_nothing: yes only where a ruling says the effect shows nothing.
 # basis: R<date> = ruling of that date in the bead notes; otherwise the principle used.
 # Pyrotechnics (smoke|fireworks|explosion) are the reel's three clips of the parent spell, one per answer of its prompt.
+# Weapon rows (keys "Weapon held|hit|flight ..."): the reel's weapon clips of inc-as123; the probe lists them with the effects, from the engine's own decision (LightHeldColour, WeaponHitColour, LightMissileOf).
 # Not here: the 9 REEL_SKIP effects.
 effect	glow	color	shows_nothing	basis
 Aura of Valour	UNLIT	-	no	rulings: not luminous by Desc/type (lib/classes.irh:1739)
@@ -303,3 +304,28 @@ Breath Weapon (Special) cone	UNLIT	-	no	inc-epzc0 cone breath
 Breath Weapon (Strength Damage) cone	UNLIT	-	no	inc-epzc0 cone breath
 Breath Weapon (Stunning) cone	UNLIT	-	no	inc-epzc0 cone breath
 Breath Weapon (Tripping) cone	UNLIT	-	no	inc-epzc0 cone breath
+Weapon held flaming long sword	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held flame blade	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held produced flame	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held glowing long sword	LIT	light	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held Sunblade	LIT	sunyellow	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held Quickblade	LIT	light	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held Sword of the Planes	LIT	rgb:150,180,255	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held Nine Lives Stealer	LIT	crimson	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held torch and Sunblade	LIT	sunyellow	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon held monster flaming sword	LIT	fire	no	inc-as123 held weapon light, src/Light.cpp HeldLightOf
+Weapon hit flaming	LIT	fire	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit frost	LIT	cold	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit shocking	LIT	elec	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit soul-drinking	LIT	necro	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit flaming burst critical	LIT	fire	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit holy	LIT	light	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit lawful	LIT	azure	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit chaotic	LIT	crimson	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit balance	LIT	silvery	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit unholy	LIT	necro	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon hit disruption kill	LIT	light	no	inc-as123 weapon hit flash, src/Fight.cpp WeaponHitColour
+Weapon flight flaming dagger	LIT	fire	no	inc-as123 weapon flight light, src/Light.cpp LightMissileOf (fire seeds: the impact flash, src/Fight.cpp)
+Weapon flight flaming arrow	LIT	fire	no	inc-as123 weapon flight light, src/Light.cpp LightMissileOf (fire seeds: the impact flash, src/Fight.cpp)
+Weapon flight fire seeds	LIT	fire	no	inc-as123 weapon flight light, src/Light.cpp LightMissileOf (fire seeds: the impact flash, src/Fight.cpp)
+Weapon flight produced flame	LIT	fire	no	inc-as123 weapon flight light, src/Light.cpp LightMissileOf (fire seeds: the impact flash, src/Fight.cpp)

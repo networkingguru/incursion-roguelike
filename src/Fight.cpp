@@ -604,6 +604,7 @@ struct LOFFlight {
     int pause;
     Thing *shooter;
     bool drawn;
+    Item *missile, *launcher;   /* inc-as123: what flies, and what it flew from; the missile's light reads them */
 };
 static LOFFlight *LOFPendingFlight = NULL;
 
@@ -617,6 +618,15 @@ static void LOFDrawFlight(LOFFlight *f, int16 sx, int16 sy)
 {
     if (!f || f->drawn || !f->o)
         return;
+    /* inc-as123: a missile that would give held light, or flies from a flaming launcher, flies as inc-jw0hw's missile light: one
+       steady point that lights 1 square around itself and moves with the glyph. It ends here, before any hit resolves. */
+    std::unique_ptr<EffectLight> fx;
+    int16 lcol; LightRGB lrgb;
+    Player *pl0 = theGame->GetPlayer(0);
+    if (f->m && f->missile && pl0 && pl0->Opt(OPT_ANIMATION) != 2 && LightMissileOf(f->missile, f->launcher, lcol, lrgb)) {
+        fx.reset(new EffectLight(f->m, lcol, EL_MISSILE));
+        fx->RecolourRGB(lrgb);
+    }
     for (int16 i = 0; i < f->count; i++) {
         /* inc-9r189: a missile glyph draws only where the player has line of
            sight, dark or not, as a spell glyph does (not VI_DEFINED, which a
@@ -627,12 +637,24 @@ static void LOFDrawFlight(LOFFlight *f, int16 sx, int16 sy)
             LOFSetLastDraw(f->path[i].x, f->path[i].y);
             if (GlyphDrawHook) GlyphDrawHook(6, f->path[i].x, f->path[i].y); /* inc-9r189 probe */
             f->o->ShowGlyphs();
-            PossiblyPause(T1, f->path[i].x, f->path[i].y, f->pause);
+            if (fx) {
+                fx->MoveTo(f->path[i].x, f->path[i].y);
+                fx->Refresh();
+                if (EffectStepHook) EffectStepHook(ES_FLIGHT, f->path[i].x, f->path[i].y, f->path[i].glyph);
+                fx->Wait((int16)f->pause);
+            } else {
+                if (EffectStepHook) EffectStepHook(ES_FLIGHT, f->path[i].x, f->path[i].y, f->path[i].glyph);
+                PossiblyPause(T1, f->path[i].x, f->path[i].y, f->pause);
+            }
             f->o->DeActivate();
             f->o->Activate();
         }
         if (f->path[i].x == sx && f->path[i].y == sy)
             break;
+    }
+    if (fx) {
+        fx->End();
+        fx.reset();
     }
     LOFSetLastDrawOccupied(f->m && f->m->FCreatureAt(sx, sy) != NULL);
     f->drawn = true;
@@ -1625,6 +1647,7 @@ EvReturn Creature::RAttack(EventInfo &e)
      killing strike draws it while the target still stands on it. */
   LOFFlight flight;
   flight.drawn = false;
+  flight.missile = flight.launcher = NULL;
 
   // where do we start? 
   int16 sx, sy, cx, cy, lx, ly;
@@ -1849,6 +1872,8 @@ hitNow:
   flight.pause = 30;
   flight.shooter = e.EActor;
   flight.drawn = false;
+  flight.missile = e.EItem2;
+  flight.launcher = e.EItem;
   /* inc-w91w phase 2b: set true by a creature strike below. A shot aimed at
      a found trap's square that strikes no creature in between then resolves
      against the trap, after the creature resolution rather than before it. */
@@ -2183,6 +2208,16 @@ SkipAttack:
      passes its landing square. Every shot fills its flight, so every shot
      draws exactly once -- a strike that landed already marked it drawn. */
   LOFDrawFlight(&flight, lx/2, ly/2);
+
+  /* inc-as123: only a fire seed (WT_FIRE_DAMAGE with WT_NO_MELEE: the two items carrying the first are produced flame and fire
+     seeds, lib/pspells.irh) bursts into the wide fire flash, wherever it lands. A produced flame makes the ordinary 1-square
+     fire flash, and only on the creature it hits. */
+  if (e.EItem2 && TITEM(e.EItem2->iID)->HasFlag(WT_FIRE_DAMAGE)) {
+    if (TITEM(e.EItem2->iID)->HasFlag(WT_NO_MELEE))
+      EffectLight::FlashSquare(&m, COL_FIRE, lx/2, ly/2, 2);
+    else if ((struckCreature || e.isHit) && !targetTrap)   /* struckCreature: a bystander; e.isHit: the creature aimed at */
+      EffectLight::FlashSquare(&m, COL_FIRE, lx/2, ly/2, 1);
+  }
 
   o.ShowGlyphs();
   o.DeActivate();
@@ -10352,6 +10387,34 @@ EvReturn Player::Death(EventInfo &e)
  * whatever ... 
  *
  * this should basically only be called by QualityDmg below! */
+/* inc-as123: the light a weapon hit's extra damage makes on the struck creature. Only a damage type with a color here flashes;
+   acid, sonic and the rest make none. `wide`: a burst's flash reaches 2 squares, the rest 1. AD_EVIL is forced to glow here;
+   spells keep their own rule (TypeGlows). Chaos flickers like fire. */
+int16 WeaponHitColour(int16 dtype)
+{
+  switch (dtype) {
+    case AD_FIRE: return COL_FIRE;
+    case AD_COLD: return COL_COLD;
+    case AD_ELEC: return COL_ELEC;
+    case AD_NECR: case AD_EVIL: return COL_NECRO;
+    case AD_HOLY: return COL_LIGHT;
+    case AD_LAWF: return COL_AZURE;
+    case AD_CHAO: return COL_CRIMSON;
+    case AD_MAGC: return COL_SILVERY;
+    default: return 0;
+  }
+}
+
+static void WeaponHitFlash(Creature *v, int16 dtype, bool wide)
+{
+  const int16 col = WeaponHitColour(dtype);
+  const int style = dtype == AD_CHAO ? LF_FIRE : -1;   /* chaos flickers like fire */
+  if (!col || !v || !v->m)
+    return;
+  Thing *t = v;
+  EffectLight::FlashStruck(v->m, col, EL_AREA, 0, NULL, &t, 1, wide ? 2 : 1, style);
+}
+
 void Weapon::QualityDmgSingle(EventInfo &e, int32 q)
 {
   bool id = false; 
@@ -10430,6 +10493,7 @@ void Weapon::QualityDmgSingle(EventInfo &e, int32 q)
 AlignmentQuality:
       n = Dice::Roll(2,6); e.xDmg += n;
       e.strXDmg += Format(" +2d6 %s",txt4);
+      WeaponHitFlash(e.EVictim, DmgType, false);
       ThrowDmg(EV_DAMAGE, DmgType, n,
           txt1,e.EActor,e.EVictim);
       switch(random(3)) {
@@ -10532,6 +10596,8 @@ ElemQuality:
         e.xDmg += n;
         if (txt1)
           VPrint(e,"You <Str1>!", "The <EVictim> <Str2>!",txt2,txt3); 
+        if (e.ETarget->isCreature())
+          WeaponHitFlash(e.EVictim, DmgType, true);
         ThrowDmg(EV_DAMAGE,DmgType,n, Name(NA_A),e.EActor,e.EVictim);
       }
       else {
@@ -10545,6 +10611,8 @@ ElemQuality:
         e.xDmg += n;
         if (txt1)
           VPrint(e,"<Str1> you!", "<Str1> the <EVictim>!",txt1); 
+        if (e.ETarget->isCreature())
+          WeaponHitFlash(e.EVictim, DmgType, false);
         ThrowDmg(EV_DAMAGE, DmgType, n, Name(NA_A), e.EActor,e.EVictim);
       }
       id = true;
@@ -10677,6 +10745,10 @@ ElemQuality:
         {
           VPrint(e,"You are disrupted by holy power!",
               "The <EVictim> is disrupted by holy power!");
+          {
+            Thing *dt = e.EVictim;
+            EffectLight::FlashStruck(e.EVictim->m, COL_LIGHT, EL_AREA, 0, NULL, &dt, 1, 2);
+          }
           ThrowDmg(EV_DEATH,0,0,XPrint("a <Obj> with a <Obj>",e.EActor,this),
               e.EActor,e.EVictim);
           id = true;

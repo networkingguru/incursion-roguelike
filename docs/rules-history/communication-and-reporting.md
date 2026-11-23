@@ -180,3 +180,6 @@ to do. 2. Why is it not doing that 3. How will you fix that 4. Does this leave
 any other 'non-conformant' holes in the test". The session answered in that
 shape and asked whether to change the rule to the four questions; Brian
 answered "y". The rule went from three questions to four.
+
+## unmeasured-numbers-stand-until-playtest
+New rule, 2026-11-23, bead inc-om4ks. In an inc-pu6v.17 session, after Baalzebul's swarm-kill weight was ruled, the session asked whether the proposed body weight (1) and infested-level weight (5) should stand as starting values until a playtest measured the 75 percent passive share. Brian, 2026-11-23: "Goddamnit why are you asking me this shit? How in the fuk am I going to know till we playtest it? I'm not relitigating every single fuckign number. WRITE TIHIS DOWN. IUf you reask about somethign I haver already ffuvckign settled, you need a goddamn solid reason"

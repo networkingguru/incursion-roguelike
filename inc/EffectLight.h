@@ -26,9 +26,9 @@ extern void (*EffectWaitHook)(int ms);
 /* inc-jw0hw (Phase 2): test hook for the pieces an effect draws. kind says which, x,y the square, g the glyph with its color
    (0 when none). ES_TRAVEL: a projectile starts to fly (x,y the caster). ES_STEP: it shows on a square. ES_PILLAR: a falling
    pillar shows on a square. ES_DART: a trap's dart shows on a square. ES_THROWN: a thrown item shows on a square.
-   ES_BURST: a burst glyph shows on a square. */
+   ES_BURST: a burst glyph shows on a square. ES_FLIGHT (inc-as123): a thrown or fired weapon shows on a square; its light, if any, is there. */
 // family: effect-step-kind internal
-enum { ES_TRAVEL = 0, ES_STEP = 1, ES_PILLAR = 2, ES_DART = 3, ES_THROWN = 4, ES_BURST = 5 };
+enum { ES_TRAVEL = 0, ES_STEP = 1, ES_PILLAR = 2, ES_DART = 3, ES_THROWN = 4, ES_BURST = 5, ES_FLIGHT = 6 };
 // end family: effect-step-kind
 extern void (*EffectStepHook)(int kind, int16 x, int16 y, Glyph g);
 
@@ -55,12 +55,16 @@ int DartFlightPlan(Map *m, int16 vx, int16 vy, int16 *px, int16 *py, int max_n, 
 struct EffectLightDecision { bool lit; int16 colour; int grade; };   /* grade 0..3: extra lights above the basic grade (EF_GRADE_n) */
 EffectLightDecision EffectLightDecide(TEffect *te, int16 dtype);
 
+/* inc-as123: the COL_* row a weapon hit's extra damage of this type flashes on the struck creature; 0 when it flashes nothing. */
+int16 WeaponHitColour(int16 dtype);
+
 struct EffectLight {
   /* dtype: the effect's damage type (AD_*), or 0. With te, EffectLightDecide
      decides whether the effect glows and its color; the blast color is the
      fallback. Without te, the type's color wins. Glyph colors are the caller's. */
   EffectLight(Map *m, int16 blastColour, uint8 shape, int16 dtype = 0,
-              TEffect *te = NULL, bool targetFlash = false);
+              TEffect *te = NULL, bool targetFlash = false,
+              int16 reachOverride = 0, int styleOverride = -1);
   ~EffectLight();
   bool Light(int16 x, int16 y);   /* only if the player has line of sight to it; true when lit */
   bool Sees(int16 x, int16 y);    /* the player has line of sight to the square on this light's map */
@@ -71,6 +75,7 @@ struct EffectLight {
   void SetCellColour(int16 x, int16 y, int16 glyphColour);
   /* inc-jw0hw: a target flash lights one struck creature's square as a wave reaches it; its glyph follows the ramp. */
   bool LightStruck(int16 x, int16 y);
+  void RecolourRGB(LightRGB c);   /* inc-as123: the whole flash takes this color, its style and ramp kept */
   void Recolour(int16 col);       /* the whole flash takes light color `col` (a COL_* row or palette color) */
   void Redraw();                  /* repaint the map without a hook call */
   void Refresh();                 /* light, vision, memory and overlay */
@@ -93,8 +98,13 @@ struct EffectLight {
      creature in list (a reach of 1 square), cool it on the effect's own clock
      and end it. Call it before any hit resolves. Lights nothing for an unlit
      effect, under OPT_ANIMATION None, or for a square the player cannot see. */
+  /* inc-as123: reachOverride above 0 sets the flash's reach in squares (the target flash's is 1), and styleOverride 0 or above
+     (LF_*) sets its flicker; both default to the target flash's own. A weapon hit passes te NULL and dtype 0, so blastColour is the color. */
   static void FlashStruck(Map *m, int16 blastColour, uint8 shape, int16 dtype,
-                          TEffect *te, Thing *const *list, int n);
+                          TEffect *te, Thing *const *list, int n,
+                          int16 reachOverride = 0, int styleOverride = -1);
+  /* inc-as123: a flash on one square, struck or not (a fire seed bursts where it lands). The player must see the square. */
+  static void FlashSquare(Map *m, int16 blastColour, int16 x, int16 y, int16 reach, int styleOverride = -1);
   /* inc-jw0hw: a standing light for a standing pattern (see StandingPatternStart). It holds each lit square at the peak of its own
      color and never cools. Stand() makes it so; ClearCells() drops every square, to be lit again with Light(). A standing light
      ends without a repaint: the caller repaints, because End() may run inside a repaint. */
@@ -117,6 +127,7 @@ private:
   bool glyphsOn;
   bool risen;
   bool standing;
+  bool held;   /* inc-as123: a held color: every square the light takes shows the base color at full level, never the flash ramp */
 };
 
 /* inc-jw0hw: a standing pattern. Random glyphs in random colors, with the light of each square following its glyph's color,

@@ -561,6 +561,10 @@ void Game::Play() {
        EffectLightProbe (src/EffectLightProbe.cpp). */
     extern void EffectLightProbe(Player *pl);
     EffectLightProbe(pp);
+    /* inc-as123: off unless INCURSION_WEAPON_LIGHT_PROBE is set. See
+       WeaponLightProbe (src/WeaponLightProbe.cpp). */
+    extern void WeaponLightProbe(Player *pl);
+    WeaponLightProbe(pp);
     /* inc-jw0hw: off unless INCURSION_EFFECT_REEL is set. See
        EffectReelProbe (src/EffectReelProbe.cpp). */
     extern void EffectReelProbe(Player *pl);
@@ -789,6 +793,12 @@ void Game::Play() {
        (src/HideSearchProbe.cpp) and tools/check_hide_search.sh. */
     extern void HideSearchProbe(Player *pl);
     HideSearchProbe(pp);
+
+    /* inc-6lwjk: a watcher's spot-result notes stay bounded. Off unless
+       INCURSION_HIDE_NOTE_PROBE is set. See src/HideNoteProbe.cpp and
+       tools/check_hide_note_cap.sh. */
+    extern void HideNoteProbe(Player *pl);
+    HideNoteProbe(pp);
 
     /* inc-9622: opt-in lost-enemy/heard-noise reproduction. */
     extern void LostEnemyProbe(Player *pl);

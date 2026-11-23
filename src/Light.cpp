@@ -617,20 +617,93 @@ static void ScanFlashes() {
   }
 }
 
+/* inc-as123: the light a held weapon gives. One verdict serves both the sight
+   range (Creature::LightRange, src/Values.cpp) and the light map, so the two
+   cannot disagree. A weapon not in a creature's hand gives none. */
+struct HeldLight { int16 r; LightRGB c; bool fire; };
+
+static bool HeldLightOf(Creature *c, Item *w, HeldLight &o) {
+  o.r = 0; o.fire = false; o.c.r = o.c.g = o.c.b = 0;
+  if (!w || LightFlashDisabled()) return false;   /* the effect reel's light-off pass: a weapon gives no light */
+  char nm[64];   /* NAME is a rotating temporary string, and a name cuts at its semicolon: "flame blade;weapon" reads "flame blade" */
+  strncpy(nm, NAME(w->iID), sizeof nm - 1); nm[sizeof nm - 1] = 0;
+  int16 best = 0;
+  if (w->HasQuality(WQ_FLAMING) || !stricmp(nm, "flame blade")) {
+    best = 2; o.fire = true; o.c = LightEffectColour(COL_FIRE);
+  }
+  if (!stricmp(nm, "produced flame")) {
+    best = 4; o.fire = true; o.c = LightEffectColour(COL_FIRE);
+  }
+  if (w->HasQuality(WQ_GLOWING) && w->GetPlus() * 3 > best) {
+    best = (int16)(w->GetPlus() * 3); o.fire = false;
+    o.c = LightEffectColour((w->eID && !stricmp(NAME(w->eID), "Sunblade")) ? COL_SUNYELLOW : COL_LIGHT);
+  }
+  if (w->HasQuality(WQ_ENERGY) && 4 > best) {
+    best = 4; o.fire = false; o.c.r = 150; o.c.g = 180; o.c.b = 255;
+  }
+  if (c && w->eID && 2 > best && !stricmp(NAME(w->eID), "Nine Lives Stealer") &&
+      c->HasEffStati(EFF_FLAG1, w->eID, -1, w)) {   /* the state its activation sets, cleared by EV_REMOVED */
+    best = 2; o.fire = false; o.c = LightEffectColour(COL_CRIMSON);
+  }
+  o.r = best;
+  return best > 0;
+}
+
+bool LightHeldColour(Creature *c, Item *w, LightRGB &rgb) {
+  HeldLight h;
+  if (!HeldLightOf(c, w, h)) return false;
+  rgb = h.c;
+  return true;
+}
+
+int16 LightHeldRadius(Creature *c, Item *w) {
+  HeldLight h;
+  return HeldLightOf(c, w, h) ? h.r : 0;
+}
+
+/* inc-as123: a thrown or fired missile that would give held light, or that flies from a flaming launcher, carries one steady light
+   in its held color. A flaming launcher passes its fire to the ammunition: the launcher's own quality damage strikes with it. */
+bool LightMissileOf(Item *missile, Item *launcher, int16 &col, LightRGB &rgb) {
+  HeldLight h;
+  if (missile && HeldLightOf(NULL, missile, h)) {
+    col = h.fire ? COL_FIRE : COL_LIGHT; rgb = h.c;
+    return true;
+  }
+  if (launcher && launcher->HasQuality(WQ_FLAMING)) {
+    col = COL_FIRE; rgb = LightEffectColour(COL_FIRE);
+    return true;
+  }
+  return false;
+}
+
+/* A held weapon's source: the torch row's fire flicker, or the glow row held steady, in the weapon's own color. */
+static void AddHeldSource(Creature *c, const HeldLight &h) {
+  AddSource(c->x, c->y, h.r, h.fire ? LK_TORCH : LK_GLOW, h.c);
+  LightSource &s = Src[nSrc - 1];
+  s.c = h.c;
+  if (!h.fire) { s.amp = 0.0f; s.gain = 1.0f; }
+}
+
+/* inc-as123: a carried light and each lit weapon are separate sources, each
+   with its own color, radius and flicker. */
 static void ScanCreatures(Map *m) {
   for (Thing *t = m->FirstThing(); t; t = m->NextThing()) {
     if (!t->isCreature()) continue;
     Creature *c = (Creature *)t;
     if (c->isDead() || c->LightRange == 0) continue;
     if (!m->InBounds(c->x, c->y)) continue;
+    int32 before = nSrc;
     Item *li = c->EInSlot(SL_LIGHT);
-    uint8 kind = LK_GLOW;
-    LightRGB col = KindTable[LK_GLOW].c;
-    if (li) {
-      kind = li->GetLightRange() <= 4 ? LK_TORCH : LK_LANTERN;
-      col = GlyphColour(li->Image);
+    if (li && li->GetLightRange() > 0) {
+      const int16 r = li->GetLightRange() + (int16)c->AbilityLevel(CA_LOWLIGHT);
+      AddSource(c->x, c->y, r, li->GetLightRange() <= 4 ? LK_TORCH : LK_LANTERN, GlyphColour(li->Image));
     }
-    AddSource(c->x, c->y, c->LightRange, kind, col);
+    Item *w1 = c->InSlot(SL_WEAPON), *w2 = c->InSlot(SL_READY);
+    HeldLight h;
+    if (HeldLightOf(c, w1, h)) AddHeldSource(c, h);
+    if (w2 != w1 && HeldLightOf(c, w2, h)) AddHeldSource(c, h);
+    if (nSrc == before)   /* a range nothing above explains keeps the old single glow */
+      AddSource(c->x, c->y, c->LightRange, LK_GLOW, KindTable[LK_GLOW].c);
   }
 }
 
@@ -678,11 +751,11 @@ static std::vector<int32> LimnSrc;   /* LimnCells[i]'s source, an index into Src
 static LightRGB LimnColour(int16 val, rID eID) {
   if (val == LIMN_VIOLET) { LightRGB c = { 170, 110, 255 }; return c; }
   if (val == LIMN_AZURE)  { LightRGB c = {  60, 150, 255 }; return c; }
-  if ((val > 0 && val < MAX_COLOURS) || (val >= COL_FIRE && val <= COL_SUNYELLOW))
+  if ((val > 0 && val < MAX_COLOURS) || (val >= COL_FIRE && val <= COL_AZURE))
     return LightEffectColour(val);
   if (eID && TEFF(eID)) {
     const int16 cv = TEFF(eID)->ef.cval;
-    if ((cv > 0 && cv < MAX_COLOURS) || (cv >= COL_FIRE && cv <= COL_SUNYELLOW))
+    if ((cv > 0 && cv < MAX_COLOURS) || (cv >= COL_FIRE && cv <= COL_AZURE))
       return LightEffectColour(cv);
   }
   return LightEffectColour(COL_SILVERY);
@@ -1135,7 +1208,7 @@ void LightTick(uint32 ms) {
 
 LightRGB LightEffectColour(int16 blastColour) {
   /* Fire 255,140,40; Cold 170,210,255; ... Rainbow starts at hue 0. */
-  static const LightRGB T[COL_SUNYELLOW - COL_FIRE + 1] = {
+  static const LightRGB T[COL_AZURE - COL_FIRE + 1] = {
     { 255, 140,  40 },  /* COL_FIRE    */
     { 170, 210, 255 },  /* COL_COLD    */
     { 210, 190, 255 },  /* COL_MAGIC   */
@@ -1153,8 +1226,9 @@ LightRGB LightEffectColour(int16 blastColour) {
     { 220,  40,  60 },  /* COL_CRIMSON */
     { 170,  30,  30 },  /* COL_DARKRED */
     { 255, 215, 110 },  /* COL_SUNYELLOW */
+    {  90, 150, 255 },  /* COL_AZURE   */
   };
-  if (blastColour >= COL_FIRE && blastColour <= COL_SUNYELLOW)
+  if (blastColour >= COL_FIRE && blastColour <= COL_AZURE)
     return T[blastColour - COL_FIRE];
   LightRGB p = Palette[blastColour & COLOUR_MASK], o;
   o.r = (uint8)((p.r + 255) / 2);
