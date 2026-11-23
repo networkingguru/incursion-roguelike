@@ -146,6 +146,11 @@ typedef signed int        hObj;
 #define CONSTRAINED_ENC(enc,con) (-2) enc con
 #define CON_ENC_MINMAX(enc,con,low,high) (-3) enc con low high
 // end no-family
+// family: mon_feats internal
+
+/* Entries in a monster's Feats and a template's NewFeats list (one list holds feats and skills). Not saved. */
+#define MAX_MON_FEATS 512
+// end family: mon_feats
 // family: evreturn internal
 
 #define ERROR    -1

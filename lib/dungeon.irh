@@ -4844,14 +4844,11 @@ Monster "Murgash, the Goblin King" : MA_GOBLIN, MA_FORCE_D10, MA_ADVENTURER
           SK_HIDE,
           SK_LISTEN,
           SK_MOVE_SIL,
-          SK_SPOT;
-          /* ww: currently 16 feat/skill limit, which, when violated,
-            * silently corrupts the rest of the structure ...
+          SK_SPOT,
           SK_FIND_WEAKNESS,
           SK_BLUFF,
           SK_DIPLOMACY,
           SK_SENESCHAL;
-          */
     Flags: M_CARNI, M_HERBI, M_HUMANOID, M_NOGEN, M_EVIL, M_LAWFUL,
           M_UNIQUE, M_LIGHT_AVERSE, M_PROPER, M_ALL_MALE, M_KING,
           M_NOPOLY, M_IGNORE_ITEMS, M_PSYCHO;

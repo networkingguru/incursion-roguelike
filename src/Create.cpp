@@ -5842,7 +5842,7 @@ int16 Creature::SkillLevel(int16 sk)
                     Synergies[i][2];
         TMonster *tm = TMON(tmID);
         TTemplate *tt;
-        for(i=0;i!=15;i++)
+        for(i=0;i!=MAX_MON_FEATS-1 && tm->Feats[i];i++)
             if (tm->Feats[i] == FT_SKILL_FOCUS)
                 if (tm->Feats[i+1] == sk)
                 { 
@@ -5852,7 +5852,8 @@ int16 Creature::SkillLevel(int16 sk)
                 StatiIter(this)
                     if (S->Nature == TEMPLATE) {
                         tt = TTEM(S->eID);
-                        for(i=0;i!=16;i++)
+                        /* upstream: the loop read NewFeats[16] on a 16-entry list; Win32 reads past the array too. Traced; inc-h9snz; not sent. */
+                        for(i=0;i!=MAX_MON_FEATS-1 && tt->NewFeats[i];i++)
                             if (tt->NewFeats[i] == FT_SKILL_FOCUS)
                                 if (tt->NewFeats[i+1] == sk)
                                 { 

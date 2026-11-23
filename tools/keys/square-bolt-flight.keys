@@ -1,0 +1,6 @@
+# inc-s87gl: the probe runs once at the top of Game::Play; the keys only let the
+# session settle and quit. Oracle: SQUARE_BOLT lines in the isolated errors.log.
+SPACE*30
+ESC*10
+
+@quit

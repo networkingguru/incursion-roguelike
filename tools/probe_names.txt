@@ -57,6 +57,7 @@ INCURSION_DURATION_PROBE_EFNUM	pre-registry	-
 INCURSION_DURATION_PROBE_FLAG	pre-registry	-
 INCURSION_DURATION_PROBE_HANDLER	pre-registry	-
 INCURSION_DURATION_PROBE_SAMPLES	pre-registry	-
+INCURSION_EAT_FATIGUE_PROBE	inc-rk030	eating restores fatigue oracle (tools/check_eat_fatigue.sh)
 INCURSION_EFFECT_LIGHT_OFF	inc-jw0hw	light flashes add nothing; the reel's light-off pass and the check's baseline
 INCURSION_EFFECT_LIGHT_PROBE	inc-jw0hw	effect light probe (tools/check_effect_light.sh)
 INCURSION_EFFECT_LIGHT_TABLE	inc-jw0hw	effect reel probe logs each reel effect's glow decision and light color without casting (tools/check_effect_light_table.sh)
@@ -70,7 +71,9 @@ INCURSION_EXACTMON_PROBE	pre-registry	-
 INCURSION_FALL_CHAIN	pre-registry	-
 INCURSION_FALL_CHAIN_SKIP	pre-registry	-
 INCURSION_FAST_PROBE	inc-rst61	names a file; an expensive entry point logs itself there and exits 3
+INCURSION_FATIGUE_REST_PROBE	inc-jahch	interrupted-rest, waiting and AutoRest fatigue oracle (tools/check_fatigue_rest.sh)
 INCURSION_FEAR_DUR_PROBE	pre-registry	-
+INCURSION_FIELD_DEAD_TARGET_PROBE	inc-8vxk6	spell target dying in the caster attack of opportunity oracle (tools/check_field_dead_target.sh)
 INCURSION_FIELD_VALUES	pre-registry	-
 INCURSION_FIERY_ROOM	inc-jw0hw	effect reel probe: generate levels until one holds the Fiery Prison room, stand beside its curtain of flame, log seen and lit squares (tools/keys/fiery-room.keys)
 INCURSION_FOLLOWER_PROBE	pre-registry	-
@@ -133,6 +136,7 @@ INCURSION_MAX_KEYS	pre-registry	-
 INCURSION_MONINIT_PROBE	pre-registry	-
 INCURSION_MONSTER_FEAT_PROBE	pre-registry	-
 INCURSION_MONWIELD_PROBE	pre-registry	-
+INCURSION_MOUNT_FIELD_PROBE	inc-h5v6o	ridden mount gets rider field events oracle (tools/check_mount_field.sh)
 INCURSION_MOUNT_SIZE_PROBE	pre-registry	-
 INCURSION_MULTIPLY_NOROOM	pre-registry	-
 INCURSION_MULTIPLY_STAGE	pre-registry	-
@@ -195,6 +199,7 @@ INCURSION_SNEAK_PROBE	pre-registry	-
 INCURSION_SOAK_TORCH_PROBE	pre-registry	-
 INCURSION_SPECIAL_PROBE	pre-registry	-
 INCURSION_SPELLFLAG_PROBE	pre-registry	-
+INCURSION_SQUARE_BOLT_PROBE	inc-s87gl	bolt aimed at a square or cast in a direction: flight glyphs and per-square effect (tools/check_square_bolt_flight.sh)
 INCURSION_ST7_ANIM	inc-jw0hw	with the effect-light probe, wakes a Skull Trap once at the given OPT_ANIMATION and prints the stream position and the next draw (tools/check_effect_light.sh ST7)
 INCURSION_STACK_PROBE	pre-registry	-
 INCURSION_STAIR_PROBE	pre-registry	-
@@ -222,10 +227,12 @@ INCURSION_TRUE_BLOWS_PROBE	pre-registry	-
 INCURSION_TRUE_ILLUSION_PROBE	pre-registry	-
 INCURSION_TRUE_ILLUSION_SPELL	pre-registry	-
 INCURSION_UNDEAD_MOUNT_PROBE	pre-registry	-
+INCURSION_UNSEEN_GLYPH_PROBE	inc-9r189	casters in a closed, never-seen room; logs spell glyph draws on unseen squares (tools/check_unseen_spell_glyphs.sh)
 INCURSION_V1_RAW	pre-registry	-
 INCURSION_WAKE_PROBE	pre-registry	-
 INCURSION_WALL_LOAD	inc-jw0hw	effect reel probe: log the wall squares, standing lights and lit squares of a loaded Wall of Fire level (tools/check_effect_motion.sh W3)
 INCURSION_WALL_SAVE	inc-jw0hw	effect reel probe: leave the Wall of Fire standing and stop, so the keys can save the level (tools/check_effect_motion.sh W3)
+INCURSION_WAS_FRIENDLY_PROBE	inc-n3eni	WAS_FRIENDLY granted once per attacker oracle (tools/check_was_friendly_once.sh)
 INCURSION_WATER_WALKING_PROBE	pre-registry	-
 INCURSION_WEAPONTYPE_PROBE	pre-registry	-
 INCURSION_WROUGHT_HARDNESS_PROBE	pre-registry	-

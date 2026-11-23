@@ -30,6 +30,7 @@
 #include "Incursion.h"
 #include "HideCheck.h"
 #include "QualityClassProbe.h" /* inc-rddai */
+extern void (*GlyphDrawHook)(int kind, int x, int y); /* inc-9r189 */
 
 int16 LastSkillCheckResult = 0;
 
@@ -2151,6 +2152,7 @@ void Character::UseAbility(uint8 ab, int16 pa) {
 					{
 						g = T1->GetGlyph(cx, cy);
 						g = (g & GLYPH_ID_MASK) | GLYPH_FORE(AZURE);
+						if (GlyphDrawHook) GlyphDrawHook(3, cx, cy);
 						T1->PutGlyph(cx, cy, g);
 					}
 			T1->Update();
@@ -3128,6 +3130,7 @@ EvReturn Creature::Search(EventInfo &e) {
 			if ((dist(x, y, dx, dy) <= 5) && m->InBounds(dx, dy)) {
 				g = T1->GetGlyph(dx, dy);
 				g = (g & GLYPH_ID_MASK) | GLYPH_FORE(PINK);
+				if (GlyphDrawHook) GlyphDrawHook(3, dx, dy);
 				T1->PutGlyph(dx, dy, g);
 			}
 

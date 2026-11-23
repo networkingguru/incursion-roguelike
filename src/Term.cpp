@@ -768,6 +768,7 @@ inline int16 Priority(int16 t) {
     return 1;
 }
 
+extern void (*GlyphDrawHook)(int kind, int x, int y);
 void Map::Update(int16 x,int16 y) {
   int16 i; uint8 items, creatures; bool hi = false;
   int16 Pri; Thing *t, *bt = NULL;
@@ -933,8 +934,10 @@ DoDraw:
 DoOverlay:
   if (ov.Active && !isEngulfed)
       for (i = 0; i != ov.GlyphCount; i++)
-          if (ov.GlyphX[i] == x && ov.GlyphY[i] == y)
+          if (ov.GlyphX[i] == x && ov.GlyphY[i] == y) {
+              if (GlyphDrawHook) GlyphDrawHook(2, x, y);
               T1->PutGlyph(x, y, ov.GlyphImage[i] | (mg & GLYPH_BACK_MASK), Vis);
+          }
 }
 
 void TextTerm::ShowMap() {
@@ -3458,6 +3461,11 @@ bool TextTerm::yn(const char*msg) {
     {
         extern int BlasphemyProbeKey();
         int key = BlasphemyProbeKey();
+        if (key) return key == 'y';
+    }
+    {   /* inc-rk030: the eating probe answers the full-stomach prompts. */
+        extern int EatFatigueProbeKey(const char *msg);
+        int key = EatFatigueProbeKey(msg);
         if (key) return key == 'y';
     }
     if (Mode == MO_RECREATE)

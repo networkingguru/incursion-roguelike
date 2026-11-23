@@ -1135,7 +1135,9 @@ Text "help::commands"
      \n__This command allows you to eat any object in your inventory that
      is edible to you in your current form, as chosen from the menu it
      presents listing such items. Note that eating takes time, and thus
-     it isn't wise to do during combat.\n\n     
+     it isn't wise to do during combat. Finishing a food item restores
+     some fatigue, unless you started it while satiated. Vomiting costs
+     one fatigue.\n\n     
 
      <15>Fire Ranged Weapon ('<13>f<15>')<6> {F}
      \n__Uses the most easily accessible ranged weapon that you have
@@ -1431,8 +1433,9 @@ Text "help::adventuring"
         <9>RESTING AND FATIGUE {RF}\n
            ===================<1>\n
         __In Incursion, the passage of time does not restore lost Hit
-        Points, Mana Points or Fatigue Points. Instead, the player must use
-        the rest ('z') command to achieve this. However, resting has a wide
+        Points or Mana Points, and it restores Fatigue Points only slowly,
+        up to half their maximum. Instead, the player must use the rest
+        ('z') command to recover. However, resting has a wide
         variety of consequences, and so it's important that it be done
         tactically. Resting has the following effects:\n
         __<9>*<1>_Your character recovers all of his Mana Points.\n
@@ -1467,9 +1470,11 @@ Text "help::adventuring"
         the monsters have time to attack before the player does. Deeper into the
         dungeon, this can be lethal.\n
         __If a character has an encounter when resting, the full normal number of
-        Hit Points and Mana Points are not restored. Instead, only a fraction are
-        regained, based on the number of hours that character was able to rest for
-        peacefully before the encounter occurred.\n\n
+        Hit Points, Mana Points and Fatigue Points are not restored. Instead, only
+        a fraction are regained, based on the number of hours that character was
+        able to rest for peacefully before the encounter occurred. The character
+        regains at least a quarter of the Fatigue Points they are missing, and
+        an interrupted rest never restores all fatigue.\n\n
         
         <9>Resting Safely<1>\n
         __An encounter can quite easily kill even a very powerful character,
@@ -3230,14 +3235,18 @@ Text "help::combat"
       risk is accepted, a Fortitude save is made to determine whether the
       character can remain conscious whenever more Fatigue Points are spent.\n
       __<11>Recovering Fatigue<3>: Normal magical healing does nothing to
-      restore lost Fatigue; the primary way to recover it is simply to rest.
-      A character who is not Fatigued when they rest regains all of their
-      Fatigue Points immediately. A character who is fatigued recovers all
-      of their Fatigue Points only if the night passes uneventfully; in the
-      case of an encounter, only a portion of the Fatigue Points lost will
-      be recovered. An exhausted character recovers Fatigue Points equal to
-      her Constitution modifier (minimum 1) per rest, requiring several nights to fully recover from the
-      effects.\n
+      restore lost Fatigue. A full night of rest restores it: a character
+      who is not exhausted regains all of their Fatigue Points, and an
+      exhausted character regains Fatigue Points equal to their Constitution
+      modifier (minimum 1). An encounter cuts the rest short. The character
+      then regains a share of the Fatigue Points they are missing, counting
+      from their maximum down through any negative total. The share equals
+      the part of the night they slept, but is never less than a quarter.
+      An interrupted rest never restores all fatigue.
+      Waiting also restores Fatigue, slowly: a character regains 1 Fatigue
+      Point per 250 turns without a fight, up to half their maximum (at
+      least 1). Fatigue Regeneration speeds this pace and raises the limit
+      by 5% of the maximum per rank.\n
       __<11>Fatigue Costs:<3> The following actions all cause a character to
       expend Fatigue. Actions marked with an asterisk are not currently
       implemented in this version of Incursion, but will appear in a future

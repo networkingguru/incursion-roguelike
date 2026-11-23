@@ -1573,7 +1573,8 @@ void EffectLightProbe(Player *pl) {
 
                 /* F: no flash survives an early exit. */
                 shoot(acid, false, false, false, pre, post, endF);   /* no victim */
-                verdict("F1", gLit == 0 && endF == 0 && post == pre,
+                /* inc-s87gl: a bolt at an empty square flies, so it lights at least one frame. */
+                verdict("F1", gLit > 0 && endF == 0 && post == pre,
                     "bolt with no victim: frames=%d flashes after=%d light same=%d", gLit, endF, (int)(post == pre));
                 shoot(missile, false, true, false, pre, post, endF); /* self target */
                 verdict("F2", gLit == 0 && endF == 0 && post == pre,

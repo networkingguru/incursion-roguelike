@@ -39,6 +39,7 @@
    with ReThrow(EV_DAMAGE,e). Defined in src/DmgPostProbe.cpp; off unless
    INCURSION_DMGPOST_PROBE is set. */
 extern void DmgPostConvertProbe(EventInfo &e, int from);
+extern void (*GlyphDrawHook)(int kind, int x, int y); /* inc-9r189 */
 
 /* inc-1xr3: the nauseated "use Concentration to attack?" confirmation, in
    one place for the three combat sites that ask it. The odds come from
@@ -617,12 +618,19 @@ static void LOFDrawFlight(LOFFlight *f, int16 sx, int16 sy)
     if (!f || f->drawn || !f->o)
         return;
     for (int16 i = 0; i < f->count; i++) {
-        f->o->AddGlyph(f->path[i].x, f->path[i].y, f->path[i].glyph);
-        LOFSetLastDraw(f->path[i].x, f->path[i].y);
-        f->o->ShowGlyphs();
-        PossiblyPause(T1, f->path[i].x, f->path[i].y, f->pause);
-        f->o->DeActivate();
-        f->o->Activate();
+        /* inc-9r189: a missile glyph draws only where the player has line of
+           sight, dark or not, as a spell glyph does (not VI_DEFINED, which a
+           dark square in view lacks). An undrawn square leaves
+           LOFSetLastDraw as it was. */
+        if (PossiblyPause(T1, f->path[i].x, f->path[i].y, 0)) {
+            f->o->AddGlyph(f->path[i].x, f->path[i].y, f->path[i].glyph);
+            LOFSetLastDraw(f->path[i].x, f->path[i].y);
+            if (GlyphDrawHook) GlyphDrawHook(6, f->path[i].x, f->path[i].y); /* inc-9r189 probe */
+            f->o->ShowGlyphs();
+            PossiblyPause(T1, f->path[i].x, f->path[i].y, f->pause);
+            f->o->DeActivate();
+            f->o->Activate();
+        }
         if (f->path[i].x == sx && f->path[i].y == sy)
             break;
     }
@@ -1741,13 +1749,12 @@ EvReturn Creature::RAttack(EventInfo &e)
     ly = cy;
 
     // record this square for the flight replay below; draw nothing here 
-    if (m.At(cx/2,cy/2).Visibility & VI_DEFINED) {
-      if (pathCount < LOFMaxPath) {
-        path[pathCount].x = cx/2;
-        path[pathCount].y = cy/2;
-        path[pathCount].glyph = g | gcolour;
-        pathCount++;
-      }
+    if (GlyphDrawHook) GlyphDrawHook(7, cx/2, cy/2); /* inc-9r189 probe: flown over */
+    if (pathCount < LOFMaxPath) {
+      path[pathCount].x = cx/2;
+      path[pathCount].y = cy/2;
+      path[pathCount].glyph = g | gcolour;
+      pathCount++;
     }
 
     // move to the next spot! 

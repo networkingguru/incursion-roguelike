@@ -1047,13 +1047,14 @@ AI_MACRO Effect "AutoRest" : EA_GENERIC
       at all) and to get rid of any negative conditions such as stunned,
       confused, trap or spell effects that expire over a number of turns,
       etc. If you have regeneration, it waits until you are fully healed
-      as well. The macro asks to stop resting if you are threatened by 
-      any hostile creatures.\n
-      __To prevent pathological situations of infinite resting, the macro
-      stop resting after 1000 turns; it also stops if you are starving.";
+      as well. It also waits until your Fatigue Points are above 0.
+      The macro stops if a hostile creature comes into view or strikes you.\n
+      __To prevent infinite resting, the macro stops after 1000 turns unless
+      your Fatigue Points are 0 or below. It also stops if you are starving.";
     int32 restedTurns;
     On Event EV_MACRO {
       bool moreRest;
+      int16 fatCeil;
       moreRest = false;
       if (EActor->GetStatiDur(STUNNED) > 0)
         moreRest = true;
@@ -1079,9 +1080,18 @@ AI_MACRO Effect "AutoRest" : EA_GENERIC
       if (EActor->GetStatiDur(ADJUST_PAIN) > 0)
         moreRest = true;      
         
+      /* inc-jahch: below 0 is Fatigued; waiting stops at the ceiling. */
+      if (EActor->cFP <= 0)
+        moreRest = true;
       if (EActor->HasAbility(CA_FATIGUE_REGEN))
-        if (EActor->GetAttr(A_FAT) > EActor->cFP)
-          moreRest = true;
+        {
+          fatCeil = (EActor->GetAttr(A_FAT) *
+            (50 + 5 * EActor->AbilityLevel(CA_FATIGUE_REGEN))) / 100;
+          if (fatCeil < 1)
+            fatCeil = 1;
+          if (EActor->cFP < EActor->GetAttr(A_FAT) && EActor->cFP < fatCeil)
+            moreRest = true;
+        }
       
       if (EActor->cHP < EActor->mHP + EActor->GetAttr(A_THP))
         if (EActor->GetStatiVal(REGEN) > 0 ||
@@ -1092,7 +1102,7 @@ AI_MACRO Effect "AutoRest" : EA_GENERIC
         if (EActor->cMana()*2 >= EActor->nhMana())
           moreRest = true;
           
-      if (restedTurns > 1000)
+      if (restedTurns > 1000 && EActor->cFP > 0)
         {
           EActor->IPrint("Breaking auto-rest after 1000 turns!");
           moreRest = false;

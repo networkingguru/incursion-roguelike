@@ -308,6 +308,7 @@ class Creature: public Thing, public Magic
       FIELD_I8 ("LastMoveDir", LastMoveDir);
       FIELD_I8 ("AoO", AoO);
       FIELD_I8 ("FFCount", FFCount);
+      FIELD_I16("QuietTurns", QuietTurns); /* inc-jahch */
       FIELD_I8 ("HideVal", HideVal);
       FIELD_I16("StateFlags", StateFlags);
       FIELD_I8 ("AttrDeath", AttrDeath);
@@ -353,6 +354,7 @@ class Creature: public Thing, public Magic
       int16  TouchDef;
       Dir LastMoveDir;
       int8 AoO, FFCount, HideVal;
+      int16 QuietTurns; /* inc-jahch: quiet turns toward the next waiting fatigue point */
 	    int16 StateFlags; int8 AttrDeath;
 	    int8 AttackMode();
 	    Dice &DmgVal(int16 mode, bool is_large);

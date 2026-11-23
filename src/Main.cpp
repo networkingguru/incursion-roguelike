@@ -561,6 +561,14 @@ void Game::Play() {
        EffectReelProbe (src/EffectReelProbe.cpp). */
     extern void EffectReelProbe(Player *pl);
     EffectReelProbe(pp);
+    /* inc-9r189: off unless INCURSION_UNSEEN_GLYPH_PROBE is set. See
+       UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). */
+    extern void UnseenGlyphProbe(Player *pl);
+    UnseenGlyphProbe(pp);
+    /* inc-s87gl: off unless INCURSION_SQUARE_BOLT_PROBE is set. See
+       SquareBoltProbe (src/SquareBoltProbe.cpp). */
+    extern void SquareBoltProbe(Player *pl);
+    SquareBoltProbe(pp);
     extern void TerraformEdgeProbe(Player *pl);
     TerraformEdgeProbe(pp);
     extern void TrapAttackProbe(Player *pl);
@@ -624,6 +632,24 @@ void Game::Play() {
     /* inc-fdi2: opt-in live Blasphemy fatigue and area-hit oracle. */
     extern void BlasphemyProbe(Player *caster);
     BlasphemyProbe(pp);
+
+    /* inc-rk030: opt-in eating-restores-fatigue oracle; see EatFatigueProbe. */
+    extern void EatFatigueProbe(Player *pl);
+    EatFatigueProbe(pp);
+
+    /* inc-jahch: opt-in interrupted-rest, waiting and AutoRest fatigue oracle. */
+    extern void FatigueRestProbe(Player *pl);
+    FatigueRestProbe(pp);
+
+    /* inc-n3eni: opt-in WAS_FRIENDLY-once oracle; see WasFriendlyProbe. */
+    extern void WasFriendlyProbe(Player *pl);
+    WasFriendlyProbe(pp);
+    /* inc-h5v6o: opt-in mount field-event oracle; see MountFieldProbe. */
+    extern void MountFieldProbe(Player *pl);
+    MountFieldProbe(pp);
+    /* inc-8vxk6: opt-in dead-spell-target oracle; see FieldDeadTargetProbe. */
+    extern void FieldDeadTargetProbe(Player *pl);
+    FieldDeadTargetProbe(pp);
 
     /* inc-g1q1: opt-in live bolt count and fear-save oracle. */
     extern void GloryProbe(Player *caster);

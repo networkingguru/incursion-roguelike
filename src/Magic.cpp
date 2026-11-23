@@ -41,6 +41,10 @@
 #include "HideCheck.h"
 #include <memory>
 
+/* inc-8vxk6: opt-in dead-target oracle hooks; see FieldDeadTargetProbe. */
+void FieldDeadTargetKill(EventInfo &e);
+void FieldDeadTargetEnter();
+
 #define is_elemental_dmg(i) (i == AD_FIRE || i == AD_COLD || i == AD_ELEC || \
                              i == AD_TOXI || i == AD_SONI || i == AD_ACID)  
 
@@ -3092,6 +3096,11 @@ static void GlobeRain(EventInfo &e, EffectLight &fx, int16 cx, int16 cy, int16 h
 void (*BallRingHook)(int ring, int ntaken, const int16 *tx, const int16 *ty,
     int ndrawn, const int16 *dx, const int16 *dy, int waitMs) = NULL;
 
+/* inc-9r189: set only by UnseenGlyphProbe (src/UnseenGlyphProbe.cpp). kind 1
+   is Overlay::AddGlyph (an overlay glyph is queued), 2 is the overlay draw in
+   Map::Update, 3 is a direct T1->PutGlyph effect highlight. */
+void (*GlyphDrawHook)(int kind, int x, int y) = NULL;
+
 EvReturn Magic::MagicXY(EventInfo &e,int16 tx,int16 ty)
   {
     Map *m; EvReturn r, r2; int16 oe, o_efNum;
@@ -3473,6 +3482,7 @@ EvReturn Magic::AGlobe(EventInfo &e)
               Glyph was = g;
               g = (g & GLYPH_ID_MASK) | GLYPH_FORE(e.EMagic->cval >= 16 ?
                     BlastColourSets[e.EMagic->cval * 4] : e.EMagic->cval);
+              if (GlyphDrawHook) GlyphDrawHook(3,x,y);
               T1->PutGlyph(x,y,g);
               if (GlobeGlyphHook) GlobeGlyphHook(x,y,was,T1->GetGlyph(x,y));
             }
@@ -3783,6 +3793,7 @@ EvReturn Magic::ABarrier(EventInfo &e)
 EvReturn Magic::AField(EventInfo &e)
   {
     Glyph g; int16 tx,ty,x, y;
+    FieldDeadTargetEnter();
     if (!e.EActor || !e.EActor->m) return ABORT;
     
       /* Later, figure out if blast, hit, target, self, etc. */
@@ -3808,6 +3819,10 @@ EvReturn Magic::AField(EventInfo &e)
 
     tx = e.EXVal ? e.EXVal : e.ETarget ? e.ETarget->x : e.EActor->x;
     ty = e.EYVal ? e.EYVal : e.ETarget ? e.ETarget->y : e.EActor->y;
+    /* upstream: a field center outside the map must not reach Map::NewField.
+       The original code does the same on every platform. Observed, inc-8vxk6,
+       not sent. */
+    if (!e.EActor->m->InBounds(tx,ty)) return ABORT;
 
     e.vRadius = (int8)LevelAdjust(e.EMagic->lval,e.vCasterLev,(e.EItem && e.EItem->isItem()) ? e.EItem->GetPlus() : 0);
     e.vRadius = abs(e.vRadius); 
@@ -4215,6 +4230,10 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   Thing * possTarget = NULL;
   bool hitSelf = false;
   int16 boltX = 0, boltY = 0;
+  /* inc-s87gl: a bolt with no chosen creature -- candidates on its path,
+     the next one to test, the cover penalty, and the one roll's total. */
+  Creature *lofCands[1024]; int16 lofCount = 0, lofIdx = 0, lofTotal = 0;
+  int8 lofPenalty = 0; bool lofActive = false;
 
   wasEngulfed = false;
   // inc-w91w: a remotely sprung ball/burst starts at the trap, without travel.
@@ -4311,74 +4330,14 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   if ((!e.EVictim ||
        (e.isDir && e.EDir != CENTER && e.EVictim == e.EActor)) &&
       !isMulti && !isBall && !e.isNAttack) {
-      Creature *cands[1024]; int16 candCount = 0;
-      PredictVictimsOfBallBeamBolt(e, isBeam, false, false, cands,
-          candCount, false);
-      if (candCount > 128) /* item 5: clamp, matching Fight.cpp */
-          candCount = 128;
-      Thing *winner = NULL;
-      /* inc-55jl item 5: cands[0]'s own ReThrow(EV_STRIKE) below already
-         applies the effect once, through Creature::Strike's own DoHit ->
-         "if (e.AType == A_SPEL) if (e.isHit) ReThrow(EV_MAGIC_STRIKE,e)"
-         (src/Fight.cpp). Only a winner found by the walk over cands[1..]
-         still needs the explicit ReThrow(EV_MAGIC_STRIKE) below. */
-      bool winnerNeedsStrike = false;
-      if (candCount > 0) {
-          const int8 penalty = (candCount == 1) ? 0 :
-              LineOfFireCoverPenalty(1);
-          int8 D0 = (int8)cands[0]->TouchDef;
-          EventInfo se = e;
-          se.ETarget = cands[0];
-          /* Strike() computes a range-dependent part of vHit from e.EXVal/
-             EYVal; e's own EXVal/EYVal are the aim point, which for an
-             empty-square shot is not cands[0]'s square, so aim there
-             directly or the roll is calibrated against the wrong range. */
-          se.EXVal   = cands[0]->x;
-          se.EYVal   = cands[0]->y;
-          se.vHit    = (int8)e.EActor->GetBAB(S_ARCHERY);
-          se.vDef    = (int8)(D0 + penalty);
-          se.vThreat = 20;
-          se.AType   = A_SPEL;
-          /* inc-55jl item 5 follow-up: capture se.Dmg's dice -- CalcEffect's
-             own maximized (or not) numbers -- BEFORE the strike, not after:
-             on a hit, the strike's own damage application (Blast(),
-             src/Effects.cpp) consumes/clears these fields as a side effect
-             (measured: DmgNum/Sides/Bonus read 0/0/-1 immediately after a
-             hit, still the real dice after a miss), so reading them after
-             is only reliable for the miss case. */
-          LOFSetLastDmg(se.Dmg, se.DType);
-          ReThrow(EV_STRIKE, se);
-          LOFSetLastVHit(se.vHit);
-          if (se.isHit)
-              winner = cands[0];
-          else {
-              int16 total = se.vHit + se.vRoll;
-              for (int16 idx = 1; idx < candCount; idx++) {
-                  int8 Di = (int8)cands[idx]->TouchDef;
-                  if (total >= Di + penalty) {
-                      winner = cands[idx];
-                      winnerNeedsStrike = true;
-                      break;
-                  }
-              }
-          }
-      }
-      /* Land the decided hit directly, without going through TargetList/
-         DoHits: DoHits rebuilds eCopy from the OUTER e, which has never
-         had e.AType set to A_SPEL, so a redispatch through it would enter
-         MagicStrike's kludge branch again and roll a SECOND time -- this
-         rule allows exactly one roll. isHit=true and AType=A_SPEL make
-         MagicStrike skip straight to effect application, the same trick
-         its own band redirect (above) uses on its own re-entry. */
-      if (winner && winnerNeedsStrike) {
-          EventInfo re2 = e;
-          re2.ETarget = winner;
-          re2.EVictim = (Creature*)winner;
-          re2.isHit   = true;
-          re2.AType   = A_SPEL;
-          ReThrow(EV_MAGIC_STRIKE, re2);
-      }
-      goto DoneProject;
+      PredictVictimsOfBallBeamBolt(e, isBeam, false, false, lofCands,
+          lofCount, false);
+      if (lofCount > 128) /* item 5: clamp, matching Fight.cpp */
+          lofCount = 128;
+      lofPenalty = (lofCount == 1) ? 0 : LineOfFireCoverPenalty(1);
+      /* inc-s87gl: the shot flies the travel loop below; the one roll and
+         the strike happen when the flight reaches a candidate's square. */
+      lofActive = lofCount > 0;
   }
 
    NextChain:
@@ -4458,9 +4417,11 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
         break;
       }
 
-    // draw something on this square? 
-    if (m.At(cx/2,cy/2).Visibility & VI_DEFINED)
-      vis = true;
+    /* upstream: a bolt or beam glyph draws only where the player has line
+       of sight, as light does, dark or not. `vis = true` at the top never
+       closed, so every square drew. Original source, every platform.
+       Observed via tools/check_unseen_spell_glyphs.sh; inc-9r189, not sent. */
+    vis = PossiblyPause(T1,cx/2,cy/2,0);
 
 
     int16 drawX = cx/2, drawY = cy/2; Glyph drawG = g;
@@ -4478,6 +4439,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       else 
         colour = BlastColourSets[Color * 4];
       if (!pat) o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
+      if (GlyphDrawHook) GlyphDrawHook(5,drawX,drawY); /* inc-9r189 probe */
       if (EffectStepHook) EffectStepHook(ES_STEP, drawX, drawY, drawG | GLYPH_FORE(colour));
       if (meanders && MeanderHook) MeanderHook(cx/2,cy/2,drawX,drawY,drawG);
       if (!pat) o.ShowGlyphs();
@@ -4549,7 +4511,48 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
     if (!m.InBounds(cx/2,cy/2))
       break;
 
-    if (isMulti) {
+    if (lofActive) {
+      /* One roll for the whole shot (inc-55jl item 5): the first candidate
+         rolls ReThrow(EV_STRIKE), which applies the effect on a hit through
+         Strike's own DoHit; a later candidate the same total beats takes
+         the explicit EV_MAGIC_STRIKE. Struck creatures never join
+         TargetList, so DoHits cannot roll a second time. */
+      /* Candidates are each square's head creature, in path order. */
+      if (lofIdx < lofCount && lofCands[lofIdx]->x==cx/2 &&
+                               lofCands[lofIdx]->y==cy/2) {
+        Creature *c = lofCands[lofIdx];
+        if (lofIdx == 0) {
+          EventInfo se = e;
+          se.ETarget = c;
+          /* Strike() takes its range-dependent vHit from EXVal/EYVal, so aim
+             at the creature, not at the shot's aim point. */
+          se.EXVal   = c->x;
+          se.EYVal   = c->y;
+          se.vHit    = (int8)e.EActor->GetBAB(S_ARCHERY);
+          se.vDef    = (int8)((int8)c->TouchDef + lofPenalty);
+          se.vThreat = 20;
+          se.AType   = A_SPEL;
+          /* se.Dmg's dice are consumed by a hit: capture them first. */
+          LOFSetLastDmg(se.Dmg, se.DType);
+          ReThrow(EV_STRIKE, se);
+          LOFSetLastVHit(se.vHit);
+          if (se.isHit)
+            goto OuterBreak;
+          lofTotal = se.vHit + se.vRoll;
+        } else if (lofTotal >= (int8)c->TouchDef + lofPenalty) {
+          /* Land the hit directly: DoHits would enter MagicStrike's kludge
+             branch again and roll a second time. */
+          EventInfo re2 = e;
+          re2.ETarget = c;
+          re2.EVictim = c;
+          re2.isHit   = true;
+          re2.AType   = A_SPEL;
+          ReThrow(EV_MAGIC_STRIKE, re2);
+          goto OuterBreak;
+        }
+        lofIdx++;
+      }
+    } else if (isMulti) {
       /* Beams, breaths and chains: unchanged. They strike everything in
          the line by design (see "The rule" in
          docs/specs/2026-09-21-line-of-fire-spec.md, "Phase 3"). */
@@ -6820,6 +6823,16 @@ EvReturn Magic::ATouch(EventInfo &e)
     return DONE;
 }
 
+/* upstream: a spell's creature target can die in the caster's attack of
+   opportunity and then has no map position; the spell must not run on it.
+   The original code does the same on every platform. Observed, inc-8vxk6,
+   not sent. */
+static bool SpellTargetGone(EventInfo &e) {
+    Thing *t = e.ETarget;
+    if (!t || !t->isCreature()) return false;
+    return t->isDead() || !t->m || t->x == -1;
+}
+
 EvReturn Creature::Cast(EventInfo &e) {
     int16 mCost, rating, dmg_pen, roll; 
     EvReturn res; Item *it; bool dmgFail, wasThreatened;
@@ -7232,6 +7245,12 @@ ContinueCasting:
         StateFlags &= ~(MS_CASTING|MS_STILL_CAST);
         return ABORT;
     }
+    FieldDeadTargetKill(e);
+    /* upstream: see SpellTargetGone. Observed, inc-8vxk6, not sent. */
+    if (SpellTargetGone(e)) {
+        StateFlags &= ~(MS_CASTING|MS_STILL_CAST);
+        return DONE;
+    }
 
     if (e.EActor->HasStati(INVIS))
         if (!(e.EActor->GetStatiVal(INVIS) == INV_IMPROVED)) 
@@ -7447,6 +7466,10 @@ EvReturn Creature::Invoke(EventInfo &e)
     // ww: we weren't checking this before!
     if (e.EActor->isDead())
       return DONE; 
+    FieldDeadTargetKill(e);
+    /* upstream: see SpellTargetGone. Observed, inc-8vxk6, not sent. */
+    if (SpellTargetGone(e))
+      return DONE;
 
     csr = Counterspell(e,NULL);
     if (csr == ABORT)

@@ -457,14 +457,14 @@ mon_entry:
   | DEF (':')? cexpr<n> ';'         { theMon->Def = (int8)n; }
   | ARM (':')? cexpr<n> ';'         { theMon->Arm = (int8)n; }
   | MANA (':')? cexpr<n> ';'        { theMon->Mana = (int16)n; }
-  | FEATS (':')? (cexpr3<n> ','      { theMon->Feats[CurrFeat++] = (uint16)n; 
-    if (CurrFeat > 16) Fatal("Too many feats for '%s' (max 16)",
-                                theModule->QTextSeg + theMon->Name);
-    } )*
-                  cexpr3<n> ';'      { theMon->Feats[CurrFeat++] = (uint16)n; 
-    if (CurrFeat > 16) Fatal("Too many feats for '%s' (max 16)",
-                                theModule->QTextSeg + theMon->Name);
-    } 
+  | FEATS (':')? (cexpr3<n> ','      { /* upstream: the bound was checked after the write, one past a 16-entry list; Win32 overflows too. Traced; inc-h9snz; not sent. */
+    if (CurrFeat >= MAX_MON_FEATS) Fatal("Too many feats for '%s' (max %d)",
+                                theModule->QTextSeg + theMon->Name, MAX_MON_FEATS);
+    theMon->Feats[CurrFeat++] = (uint16)n; } )*
+                  cexpr3<n> ';'      {
+    if (CurrFeat >= MAX_MON_FEATS) Fatal("Too many feats for '%s' (max %d)",
+                                theModule->QTextSeg + theMon->Name, MAX_MON_FEATS);
+    theMon->Feats[CurrFeat++] = (uint16)n; } 
   | FLAGS (':')? (mflag_entry)* ';'
   | attrib_entry (',' attrib_entry)* ';'
   | SIZE (':')? cexpr3<n> ';'        { theMon->Size = (int8)n; }
@@ -1051,8 +1051,14 @@ template_entry:
   | IMMUNE  (':')? (( cexpr3<res>    { theTemp->AddImm |= res; } 
             | ('~'|'!') cexpr3<res>  { theTemp->SubImm |= res; } ) 
       (',')?)* ';'
-  | FEATS (':')? (cexpr3<n> ','      { theTemp->NewFeats[CurrFeat++] = (uint16)n; } )*
-                  cexpr3<n> ';'      { theTemp->NewFeats[CurrFeat++] = (uint16)n; } 
+  | FEATS (':')? (cexpr3<n> ','      { /* upstream: no bound check at all on template feats; Win32 overflows too. Traced; inc-h9snz; not sent. */
+    if (CurrFeat >= MAX_MON_FEATS) Fatal("Too many feats for template '%s' (max %d)",
+                                theModule->QTextSeg + theTemp->Name, MAX_MON_FEATS);
+    theTemp->NewFeats[CurrFeat++] = (uint16)n; } )*
+                  cexpr3<n> ';'      {
+    if (CurrFeat >= MAX_MON_FEATS) Fatal("Too many feats for template '%s' (max %d)",
+                                theModule->QTextSeg + theTemp->Name, MAX_MON_FEATS);
+    theTemp->NewFeats[CurrFeat++] = (uint16)n; } 
   | SPELLS (':')? ( res_ref<rr>      { theTemp->AddsFlag(M_INNATE);
                                        theTemp->AddResID(AN_INNATE, rr); }
      (',')? )* ';'

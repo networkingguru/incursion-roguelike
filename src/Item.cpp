@@ -1908,6 +1908,10 @@ EvReturn Food::Eat(EventInfo &e)
       }
     }
 
+    /* inc-rk030: a meal started satiated restores no fatigue; mark it. */
+    if (Eaten == 0 && e.EActor->HungerState() >= SATIATED)
+      GainPermStati(TRIED,e.EActor,SS_MISC,100*EV_EAT);
+
     Eaten += 5;
 
     if (isType(T_CORPSE))
@@ -1939,6 +1943,7 @@ EvReturn Food::Eat(EventInfo &e)
           DPrint(e,"You vomit!",
                    "The <EActor> vomits!");
           e.EActor->SetStatiDur(HUNGER,-1,NULL,min(full/2,HUNGRY));
+          e.EActor->LoseFatigue(1,false); /* inc-rk030: a vomit costs 1 fatigue */
           if (!confirm && e.EActor->yn("Stop eating?"))
                   goto StopEating;
           confirm = true; 
@@ -2001,6 +2006,14 @@ EvReturn Food::Eat(EventInfo &e)
       DPrint(e,"You finish eating the <EItem>.",
                  "The <EActor> finishes eating the <EItem>.");
       EvReturn res = RES(iID)->Event(e,iID);
+      /* inc-rk030: finishing a meal restores max(1,nut/10) fatigue, capped at
+         the maximum, unless the meal was started satiated. */
+      if (!HasStati(TRIED,100*EV_EAT,e.EActor) &&
+          e.EActor->cFP < e.EActor->Attr[A_FAT]) {
+        e.EActor->cFP = min((int)e.EActor->Attr[A_FAT],
+                            e.EActor->cFP + max(1,nut / 10));
+        e.EActor->IPrint("You feel less tired.");
+        }
       Remove(true);
       e.EActor->RemoveStati(ACTING);
       confirm = false; 
