@@ -65,3 +65,6 @@ TRAPS THAT COST TIME HERE:
 - A STALE incursion-probe lies. It is not rebuilt by build_macos.sh's normal path, so always build it or pass --no-build knowingly.
 - Key scripts differ 200x in how much game they buy: explore.keys ~38,000 turns, marathon.keys ~10,800, dive.keys 198-6,714 (it stalls after about key 219, inc-loa.2). dive12.keys is a prefix of dive.keys and adds nothing. Keep a long script in any sweep.
 - No scripted session reaches depth 11. DUN_DEPTH is 10 (lib/dungeon.irh:17), src/Debug.cpp:805-808 refuses more. inc-dhc's 'depth 12' was the depth the script ASKED for.
+
+## creation-uses-point-buy
+Ruled 2026-11-23 (bead inc-xvsam). On inc-pu6v.15 (Ekliazeh), `tools/keys/chargen.keys` took the first rolled attribute set. The branch added six Effect resources; the Wild Talent perk calls `random(m->szEff)` (`src/Create.cpp:2293`), so every perk roll after it changed. On dive.keys seed 4, set [a] went from Translocate + Murderous (epic 3717e7c6) to Adrenaline Control + Natural Aptitude (branch), with identical stats. Natural Aptitude asked "Choose a skill:", which the script did not answer, and the gate stopped the session at creation (exit 6). Brian, 2026-11-23: "No, why in the fuck are we rolling with perks? DOes this require it? If not, uyse PB. Standing fucign rule: Use PB for ANY CREATION that does not explicitely test perks or rolls"

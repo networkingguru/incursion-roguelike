@@ -42,3 +42,8 @@ History: docs/rules-history/test-harness-mechanics.md#gate-invalid-object-handle
 ## layout-divergence-class-is-guarded
 inc-dhc CLOSED — caused by comparing heap addresses across launches. Standing alarm: `tools/check_layout_sweep.sh` (needs lldb; `--selftest` needs no build). Red -> reopen inc-dhc with the failing seed. ASan is UNUSABLE on this Mac (deadlocks in its own init) — use UBSan. Build `incursion-probe` fresh or pass `--no-build` knowingly. `DUN_DEPTH` is 10 (`lib/dungeon.irh:17`) — no scripted session reaches depth 11.
 History: docs/rules-history/test-harness-mechanics.md#layout-divergence-class-is-guarded.
+
+## creation-uses-point-buy
+Every scripted character creation (key script, `.char` fixture, check, probe) MUST take Point Buy at the attribute step (`p`, then spend every point), unless the check explicitly tests perks or attribute rolls. A rolled set carries random perks: a perk can open a prompt the script does not answer (Bonus Feat: Natural Aptitude asks "Choose a skill:"), and the perk rolls draw from the list of all effects, so any added Effect changes them. Prior art: `tools/keys/kit-warrior.keys`.
+Why: Point Buy has no roll and no perk, so an added resource cannot change the character a script builds.
+History: docs/rules-history/test-harness-mechanics.md#creation-uses-point-buy. Bead inc-xvsam.
