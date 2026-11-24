@@ -18,7 +18,7 @@
 # rows below it, seven rows north and three columns east. It presses UP on three
 # cursors: [t], [l] and [l][t]. INCURSION_TARGET_PROBE=1 writes each cursor's
 # candidate list to logs/targetprobe.log. The invariant: every creature the
-# player sees on the map is an "aim" candidate. The CONTROL golem MUST be one,
+# player sees on the map is a "cand" candidate. The CONTROL golem MUST be one,
 # or the run measured nothing (INCONCLUSIVE). The EDGE golem MUST be one, or the
 # check FAILs, and it FAILS on a build that still has the strict test.
 #
@@ -60,11 +60,12 @@ presses = []
 for block in text.split('arrow ')[1:]:
     head = block.split('\n', 1)[0]
     pl = re.search(r'player=\((\d+),(\d+)\)', head)
+    nr = re.search(r'newrun=(\d)', head)
     presses.append({
-        'entering': 'entering the ring' in head,
+        'entering': nr is not None and nr.group(1) == '1',
         'player': (int(pl.group(1)), int(pl.group(2))) if pl else None,
         'aims': [(int(x), int(y), name) for x, y, name in
-                 re.findall(r'aim\s+\(\s*(\d+),\s*(\d+)\) dist=\d+\s+(.*)', block)],
+                 re.findall(r'cand\s+\(\s*(\d+),\s*(\d+)\) dist=\d+\s+slice=\S+\s+(.*)', block)],
     })
 entering = [q for q in presses if q['entering']]
 
@@ -93,7 +94,7 @@ if not dead:
                         "              candidate either, so the cursor measured nothing." % (name, control))
         elif not has(q, edge):
             fails.append("%s: the golem at %s, on the window's first row and in view,\n"
-                         "      is not an aim candidate. Candidates: %s"
+                         "      is not a cand candidate. Candidates: %s"
                          % (name, edge, [(a[0], a[1]) for a in q['aims']]))
 
 if fails and not dead:
@@ -119,8 +120,8 @@ selftest() {
         for i in 5 6; do echo "row$i"; done
         echo " |G flesh golem"; echo " |G flesh golem"
     } > "$d/scene"
-    one() { printf 'arrow clockwise cursor=(5,20) player=(5,20) -- entering the ring\n  aim  ( 8,13) dist=7   a flesh golem\n%s' "$1"; }
-    edge='  aim  ( 7,11) dist=9   a flesh golem\n'
+    one() { printf 'arrow N newrun=1 cursor=(5,20) player=(5,20)\n  cand ( 8,13) dist=7   slice=N a flesh golem\n%s' "$1"; }
+    edge='  cand ( 7,11) dist=9   slice=N a flesh golem\n'
     { one "$(printf "$edge")"; one "$(printf "$edge")"; one "$(printf "$edge")"; } > "$d/good"
     { one ""; one ""; one ""; } > "$d/red"
     { one ""; } > "$d/short"
