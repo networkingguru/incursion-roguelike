@@ -2112,9 +2112,9 @@ inline String & DescribeResource(rID xID) {
 }
 
 /* Diagnostic: set INCURSION_TARGET_PROBE=1 to record every arrow press made
-   in target mode -- the place on the ring the cursor started from, every
-   candidate the scan accepted with its bearing from the player, and the one
-   the press moved to. It tells apart "the candidate list is wrong" from "the
+   in target mode -- the arrow, whether it starts a new run, every candidate
+   the scan accepted with its distance and slice, and the one the press moved
+   to. It tells apart "the candidate list is wrong" from "the
    order is wrong", which is the distinction inc-upw.26 turned on, and it is
    the oracle tools/check_target_order.sh reads. */
 static void TargetProbe(const char *fmt, ...) {
@@ -2136,29 +2136,67 @@ static void TargetProbe(const char *fmt, ...) {
     fflush(f);
 }
 
-/* Order two offsets from the player by bearing, clockwise from north. The
-   screen's y axis points down, so a positive cross product means the first
-   offset comes first. The compass is cut into an east half, which holds
-   bearings 0 up to but not including 180, and a west half, which holds the
-   rest; within one half no two bearings are more than 180 apart, so the
-   cross product alone orders them.
+/* inc-3ybbz: the eight 45-degree slices round the player. Slice 0 is
+   centred on north and the numbers run clockwise: N NE E SE S SW W NW. Screen
+   y points down, so north is dy < 0. A boundary lies at tan(22.5) = sqrt(2)-1
+   of an axis; (ax+ay)^2 against 2*a^2 tests it in integers, and no integer
+   offset lies exactly on one. */
+static int TargetAbsSlice(int dx, int dy) {
+    int ax = abs(dx), ay = abs(dy);
+    long sum2 = (long)(ax + ay) * (ax + ay);
 
-   Two things on the same bearing order nearest-to-the-player first. Two
-   things in the same square compare equal, and the ring treats them as one
-   place -- [n] is the key that steps between them. Integers throughout: the
-   offsets are map coordinates, so the products cannot overflow a long. */
-static int BearingCompare(int ax, int ay, int ad, int bx, int by, int bd) {
-    int ha = (ax > 0 || (ax == 0 && ay < 0)) ? 0 : 1;
-    int hb = (bx > 0 || (bx == 0 && by < 0)) ? 0 : 1;
+    if (sum2 < 2L * ay * ay)
+        return dy < 0 ? 0 : 4;
+    if (sum2 < 2L * ax * ax)
+        return dx > 0 ? 2 : 6;
+    if (dx > 0)
+        return dy < 0 ? 1 : 3;
+    return dy < 0 ? 7 : 5;
+}
+
+static const char *TargetSliceName(Dir d) {
+    switch (d) {
+    case NORTH: return "N";   case NORTHEAST: return "NE";
+    case EAST:  return "E";   case SOUTHEAST: return "SE";
+    case SOUTH: return "S";   case SOUTHWEST: return "SW";
+    case WEST:  return "W";   case NORTHWEST: return "NW";
+    default:    return "?";
+    }
+}
+
+/* The Dir that a slice is centred on. */
+static int TargetSliceDir(int slice) {
+    static const int dirs[8] = { NORTH, NORTHEAST, EAST, SOUTHEAST,
+                                 SOUTH, SOUTHWEST, WEST, NORTHWEST };
+    return dirs[slice & 7];
+}
+
+/* The slice of an offset counted from the slice the arrow starts in: 0 is the
+   arrow's own slice, 1 the next clockwise. */
+static int TargetSlice(int dx, int dy, Dir start) {
+    int s0 = 0, i;
+    for (i = 0; i < 8; i++)
+        if (TargetSliceDir(i) == (int)start)
+            s0 = i;
+    return (TargetAbsSlice(dx, dy) - s0 + 8) % 8;
+}
+
+/* Order two places by (slice from the start arrow, distance, clockwise
+   bearing); negative means the first comes first. Within one slice no two
+   bearings are 180 degrees apart, so the cross product alone gives the
+   clockwise order (positive means a is the more anticlockwise). Two things in
+   one square compare equal: one place, and [n] steps between them. */
+static int TargetOrder(int ax, int ay, int ad, int as,
+                       int bx, int by, int bd, int bs) {
     long cross;
 
-    if (ha != hb)
-        return ha < hb ? -1 : 1;
+    if (as != bs)
+        return as < bs ? -1 : 1;
+    if (ad != bd)
+        return ad < bd ? -1 : 1;
     cross = (long)ax * by - (long)ay * bx;
     if (cross)
         return cross > 0 ? -1 : 1;
-    if (ad != bd)
-        return ad < bd ? -1 : 1;
     return 0;
 }
 
@@ -2169,6 +2207,7 @@ bool TextTerm::EffectPrompt(EventInfo &e,uint16 fl,bool is_look, const char* Pro
     String Prompt;
     Item *wp;
     bool first = true, cycled = false; 
+    int runarrow = -1;  /* the arrow that started the Q_TAR run, inc-3ybbz */
     bool isEngulfed = p->HasStati(ENGULFED);
 
     if (fl == 0 && e.eID && RES(e.eID)->Type == T_TEFFECT)
@@ -2651,34 +2690,38 @@ TargetChosen:
                columns sideways. See tools/check_target_order.sh. inc-upw.26,
                not sent.
 
-               What replaces it is this fork's own design, not a repair of the
-               old sum: the candidates form a ring around the player, ordered
-               by bearing, and an arrow steps one place round it. UP, RIGHT and
-               the two east diagonals go clockwise; DOWN, LEFT and the two west
-               diagonals go counter-clockwise. The cursor starts on the player,
-               which is not a place on the ring, so the first press after it
-               enters the ring at the nearest candidate in the direction
-               pressed. WHICH things are candidates is not changed by any of
-               this -- the filters below are untouched, and they are what the
-               calling prompt decides. */
+               inc-3ybbz, this fork's order: cut the map round the player
+               into eight 45-degree slices, one centred on each arrow. A run
+               that starts with arrow A visits A's slice first, then the next
+               slice clockwise, and so on round all eight. Inside a slice the
+               nearest thing comes first, and equal distances go clockwise by
+               bearing. The first press of a run (cursor on the player, or an
+               arrow other than the run's) takes the first place in that
+               order; the same arrow again takes the next one, and the last
+               wraps to the first. Things in one square are one place. WHICH
+               things are candidates is not changed by any of this -- the
+               filters below are untouched. */
             case Q_TAR: {
                 Dir kdir = DIR_OF_KY_CMD(ch);
-                bool clockwise = (kdir == NORTH || kdir == NORTHEAST ||
-                                  kdir == EAST || kdir == SOUTHEAST);
-                /* The cursor sits on the player until a press moves it. */
-                bool aiming = (cr == p);
+                /* The cursor sits on the player until a press moves it; an
+                   arrow other than the run's starts a new run. */
+                bool newrun = (cr == p || (int)kdir != runarrow);
                 int16 curdx = cr->x - p->x, curdy = cr->y - p->y;
+                int16 tdx, tdy, td, ts;
                 int16 curd = ::dist(p->x, p->y, cr->x, cr->y);
-                int16 tdx, tdy, td, c;
-                int16 bdx = 0, bdy = 0, bd = 0;
-                int16 wrap = -1, wdx = 0, wdy = 0, wd = 0;
+                int16 curs = TargetSlice(curdx, curdy, kdir);
+                int16 bdx = 0, bdy = 0, bd = 0, bs = 0;
+                int16 fdx = 0, fdy = 0, fd = 0, fs = 0;
+                int16 first_i = -1;
 
+                if (curdx == 0 && curdy == 0)
+                    newrun = true;
+                runarrow = (int)kdir;
                 best = -1;
                 bestd = 1000;
-                TargetProbe("arrow %s cursor=(%d,%d) player=(%d,%d) %s\n",
-                    clockwise ? "clockwise" : "widdershins",
-                    (int)cr->x, (int)cr->y, (int)p->x, (int)p->y,
-                    aiming ? "-- entering the ring" : "");
+                TargetProbe("arrow %s newrun=%d cursor=(%d,%d) player=(%d,%d)\n",
+                    TargetSliceName(kdir), newrun ? 1 : 0,
+                    (int)cr->x, (int)cr->y, (int)p->x, (int)p->y);
                 MapIterate(m,th,i)
                     /* upstream: base-code defect, fix is ours. The candidate
                        bounds MUST equal the bounds PutGlyph draws, which
@@ -2709,65 +2752,42 @@ TargetChosen:
                                     if ((fl & Q_CRE) && !th->isCreature())
                                         continue; 
 
-                                    /* The player's own square is the ring's
-                                       centre and has no bearing, so nothing
-                                       standing or lying in it is a place on
-                                       the ring. [*] is how you target
-                                       yourself, and the location cursor is how
-                                       you reach what you are standing on. */
+                                    /* The player's own square is the centre
+                                       of the slices and has no bearing, so
+                                       nothing standing or lying in it is a
+                                       place. [*] is how you target yourself,
+                                       and the location cursor is how you
+                                       reach what you are standing on. */
                                     if (th->x == p->x && th->y == p->y)
                                         continue;
 
                                     tdx = th->x - p->x;
                                     tdy = th->y - p->y;
                                     td = ::dist(p->x, p->y, th->x, th->y);
-
-                                    if (aiming) {
-                                        /* Strictly in the direction pressed,
-                                           and then nearest to the player. */
-                                        if (DirX[kdir] == 1 && th->x <= p->x)
-                                            continue;
-                                        if (DirX[kdir] == -1 && th->x >= p->x)
-                                            continue;
-                                        if (DirY[kdir] == 1 && th->y <= p->y)
-                                            continue;
-                                        if (DirY[kdir] == -1 && th->y >= p->y)
-                                            continue;
-                                        TargetProbe("  aim  (%2d,%2d) dist=%-3d %s\n",
-                                            (int)th->x, (int)th->y, (int)td,
-                                            (const char*)th->Name(NA_A|NA_LONG));
-                                        if (td < bestd) {
-                                            best = i;
-                                            bestd = td;
-                                        }
-                                        continue;
-                                    }
-
-                                    c = BearingCompare(tdx,tdy,td, curdx,curdy,curd);
-                                    TargetProbe("  ring (%2d,%2d) dist=%-3d %s %s\n",
+                                    ts = TargetSlice(tdx, tdy, kdir);
+                                    TargetProbe("  cand (%2d,%2d) dist=%-3d slice=%s %s\n",
                                         (int)th->x, (int)th->y, (int)td,
-                                        c < 0 ? "before" : c > 0 ? "after " : "here  ",
+                                        TargetSliceName((Dir)TargetSliceDir(TargetAbsSlice(tdx, tdy))),
                                         (const char*)th->Name(NA_A|NA_LONG));
 
-                                    /* The next place round in the chosen
-                                       direction, and separately the place the
-                                       ring wraps to when there is no next. */
-                                    if (c && (clockwise ? c > 0 : c < 0))
-                                        if (best == -1 ||
-                                            (clockwise ? BearingCompare(tdx,tdy,td, bdx,bdy,bd) < 0
-                                                       : BearingCompare(tdx,tdy,td, bdx,bdy,bd) > 0)) {
-                                            best = i; bdx = tdx; bdy = tdy; bd = td;
-                                        }
-                                    if (wrap == -1 ||
-                                        (clockwise ? BearingCompare(tdx,tdy,td, wdx,wdy,wd) < 0
-                                                   : BearingCompare(tdx,tdy,td, wdx,wdy,wd) > 0)) {
-                                        wrap = i; wdx = tdx; wdy = tdy; wd = td;
+                                    /* The first place in the order, kept as
+                                       the wrap target. */
+                                    if (first_i == -1 ||
+                                        TargetOrder(tdx,tdy,td,ts, fdx,fdy,fd,fs) < 0) {
+                                        first_i = i; fdx = tdx; fdy = tdy; fd = td; fs = ts;
+                                    }
+                                    /* The first place after the cursor's. */
+                                    if (!newrun &&
+                                        TargetOrder(tdx,tdy,td,ts, curdx,curdy,curd,curs) > 0 &&
+                                        (best == -1 ||
+                                         TargetOrder(tdx,tdy,td,ts, bdx,bdy,bd,bs) < 0)) {
+                                        best = i; bdx = tdx; bdy = tdy; bd = td; bs = ts;
                                     }
                                 }
 
-                /* Past the last place on the ring, come round to the first. */
+                /* A new run, or past the last place: the first place. */
                 if (best == -1)
-                    best = wrap;
+                    best = first_i;
 
                 if (best != -1) {
                     t = best; 

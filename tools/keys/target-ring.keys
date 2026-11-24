@@ -1,8 +1,9 @@
-# Walk the target cursor round the ring of things about the player, clockwise
-# and then counter-clockwise. This is the oracle for inc-upw.26.
+# Step the target cursor with the arrow keys, one run per arrow, and let
+# tools/check_target_order.sh read the order from the probe log. This is the
+# oracle for inc-upw.26 (the stride defect) and inc-3ybbz (slice order).
 #
 #   INCURSION_TARGET_PROBE=1 INCURSION_OPTIONS=tools/fixtures/options-2026-08-18.dat \
-#   INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0818.char \
+#   INCURSION_LOAD=tools/fixtures/specimens/orc-barbarian-seed1-opt0818.sav \
 #       tools/headless.sh tools/keys/target-ring.keys 1
 #
 # The run loads a frozen character, saved on arrival in the Goblin Caves entry
@@ -12,12 +13,10 @@
 # cursor take no game turn, so nothing moves and nothing rolls.
 #
 # [l] opens the Look prompt on the location cursor. [t] switches it to the
-# target cursor, which starts on the player. The first arrow press after that
-# enters the ring; every press after it steps one place round.
-#
-# Twelve presses each way, for a ring of nine: enough to prove the lap closes
-# and to see it start round again. tools/check_target_order.sh works the ring
-# size out from the probe log rather than trusting the nine.
+# target cursor, which starts on the player. Four runs follow, each started by
+# a different arrow: RIGHT (twelve presses, more than one lap of nine), UP
+# (twelve), DOWN (three) and PGUP, the north-east diagonal (three). A press of
+# another arrow starts a new run at that arrow's own slice.
 
 @dump:arrival
 
@@ -25,12 +24,14 @@ l                   # Look -- the location cursor
 t                   # switch to the target cursor, on the player
 @dump:target-on-player
 
-RIGHT               # enter the ring: the nearest thing to the right
-@dump:entered
-UP*12               # clockwise, more than one full lap
-@dump:clockwise
-DOWN*12             # counter-clockwise, back the way it came
-@dump:widdershins
+RIGHT*12            # run 1, east slice first, more than one lap
+@dump:right
+UP*12               # run 2, north slice first -- not where RIGHT stopped
+@dump:up
+DOWN*3              # run 3, south slice first
+@dump:down
+PGUP*3              # run 4, the north-east diagonal (PGUP is NE)
+@dump:northeast
 
 ESC
 @quit
