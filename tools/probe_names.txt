@@ -26,6 +26,7 @@ INCURSION_BONUS_ORDER_PROBE	pre-registry	-
 INCURSION_BONUS_ORDER_REVERSE	pre-registry	-
 INCURSION_BREATH_PROBE	pre-registry	-
 INCURSION_CAST_PROBE	pre-registry	-
+INCURSION_CHAIN_BRANCH_PROBE	inc-nrxo8	logs each Chain Lightning arc's start and end square and each creature struck (tools/check_chain_branch.sh)
 INCURSION_CHANCE_PROBE	pre-registry	-
 INCURSION_CHAR_PROBE	pre-registry	-
 INCURSION_CHASM_SWAP_PROBE	pre-registry	-
