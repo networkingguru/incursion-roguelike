@@ -1002,7 +1002,8 @@ void EffectReelProbe(Player *pl) {
             continue;
         }
         /* an effect with no light of its own needs a bright room to be judged; a LIT one a dark room. No row: bright. */
-        const bool bright = !row || row->glow != "LIT";
+        /* inc-nrxo8: Chain Lightning's room is bright too, so the creatures an arc does not reach show beside the ones it strikes. */
+        const bool bright = !row || row->glow != "LIT" || !strcmp(nm, "Chain Lightning");
         if (!row) Error("REEL_ROOM_NOROW %s has no table row; room treated as UNLIT", nm);
         BuildRoom(mp, pl, floor, wall, bright);
         Error("REEL_ROOM %d %s %s", count + 1, nm, bright ? "bright" : "dark");
@@ -1067,6 +1068,9 @@ void EffectReelProbe(Player *pl) {
         if (aim == AIM_DIR && te->ef.aval == AR_NONE)
             for (int k = 0; k < 3; ++k) { kx[k] = PX + 1; ky[k] = PY + (k - 1); }
         if (touch) { kx[1] = PX + 1; ky[1] = PY; }
+        /* inc-nrxo8: Chain Lightning's arcs all start at the primary (the middle kobold, AIMX,PY). The other five stand 5 to 7 squares from
+           it in different directions (north, south, northwest, southwest, northeast), none behind another as seen from it, so each arc is long enough to show its meander. */
+        if (isChain) { kx[0] = AIMX; ky[0] = PY - 5; kx[2] = AIMX; ky[2] = PY + 5; }
         if (isCharm) {   /* a wall torch in the stub, where the kobolds see it */
             PutTerrain(mp, FIND("Wall Torch"), STUBX, PY);
             pl->CalcVision();
@@ -1163,9 +1167,9 @@ void EffectReelProbe(Player *pl) {
         if (isAnimate)     /* one more item, far outside the globe: it must not shake */
             addFloorItem("club", RX1 - 9, PY);
         if (isChain) {     /* three more kobolds, so the bolt has six to arc through; the first three stand where every clip puts them */
-            addMon("kobold", AIMX - 3, PY - 3);
-            addMon("kobold", AIMX - 5, PY - 3);
-            addMon("kobold", AIMX - 3, PY + 3);
+            addMon("kobold", AIMX - 5, PY - 5);   /* northwest, 7 */
+            addMon("kobold", AIMX - 5, PY + 5);   /* southwest, 7 */
+            addMon("kobold", AIMX + 3, PY - 6);   /* northeast, 7: the wall stub at STUBX, rows PY-2 to PY+2, blocks the east */
         }
         if (isFumes && !sceneOff) {   /* the thunderbeast stands beside the kobolds, north of the stub, in the player's view and 12 squares from him */
             const rID tbr = FIND("thunderbeast");

@@ -4349,6 +4349,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   /* inc-jw0hw: fade the travel's light and end it. Runs before any hit. */
   #define FINISH_TRAIL                          \
      if (trail) {                               \
+       if (chainProbe) Error("CHAIN_BRANCH_PROBE: fade"); \
        pat.reset();                             \
        if (!isBall) {                           \
          o.DeActivate();                        \
@@ -4422,6 +4423,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   o.Activate();
 
   int distSoFar = 0;
+  int16 chainPx = 0, chainPy = 0;   /* inc-nrxo8: the primary's square, where every secondary arc starts */
+  Glyph chainPrevG = 0;
+  const bool chainProbe = isChain && getenv("INCURSION_CHAIN_BRANCH_PROBE") != NULL;   /* inc-nrxo8 */
 
   Thing * possTarget = NULL;
   bool hitSelf = false;
@@ -4541,6 +4545,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   }
 
    NextChain:
+   if (chainProbe) Error("CHAIN_BRANCH_PROBE: arc %d start %d,%d", (int)e.vChainCount, (int)(cx/2), (int)(cy/2));
 
    if (e.EVictim)
      ArcList[ac++] = e.EVictim;
@@ -4621,6 +4626,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
        of sight, as light does, dark or not. `vis = true` at the top never
        closed, so every square drew. Original source, every platform.
        Observed via tools/check_unseen_spell_glyphs.sh; inc-9r189, not sent. */
+    if (chainProbe) Error("CHAIN_BRANCH_PROBE: step %d arc %d %d,%d", distSoFar, (int)e.vChainCount, (int)(cx/2), (int)(cy/2));
     vis = PossiblyPause(T1,cx/2,cy/2,0);
 
 
@@ -4826,12 +4832,238 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
   OuterBreak:
 
   if (meanders && MeanderHook) MeanderHook(-1,-1,-1,-1,0);
+  if (chainProbe) Error("CHAIN_BRANCH_PROBE: arc %d end %d,%d target %d,%d", (int)e.vChainCount, (int)(cx/2), (int)(cy/2), e.ETarget ? (int)e.ETarget->x : -1, e.ETarget ? (int)e.ETarget->y : -1);
+  /* inc-nrxo8: Chain Lightning branches: the primary's light stays, every secondary arc is chosen from the primary's square, and
+     all of them are drawn together, one square each per step, then fade together. */
+  if (isChain && e.vChainCount == 0 && !hitSelf && trail)
+    {
+      struct ChainHookRec { int16 lx, ly, dx, dy; Glyph g; };
+      struct ChainArc {
+        Thing *tgt; int16 sx, sy, cx, cy; int8 dirX, dirY; bool isDir; int dir;
+        Fraction slope; int dist; Glyph g; MeanderPlan plan; int at; bool meanders, done;
+        std::vector<Thing*> mine; std::vector<ChainHookRec> hooks;
+        ChainArc() : tgt(NULL), sx(0), sy(0), cx(0), cy(0), dirX(0), dirY(0), isDir(false), dir(0),
+                     dist(0), g(0), at(0), meanders(false), done(false) { plan.n = 0; plan.prev = 0; }
+      };
+      std::vector<ChainArc> arcs;
+      chainPx = cx; chainPy = cy; chainPrevG = meanderPrevG;
+      e.vChainCount = 1;
+      /* every secondary target, nearest to the primary first; each creature is the target of at most one arc */
+      for (int16 n = 1; n <= e.vChainMax && ac < 63; n++)
+        {
+          Thing *t, *best = NULL; int16 bdist = 1000;
+          for (t = m.FirstThing(); t; t = m.NextThing())
+            {
+              if (dist(chainPx/2,chainPy/2,t->x,t->y) > e.vRange)
+                continue;
+              /* Don't arc to doors and such */
+              if (!(t->isItem() || t->isCreature()))
+                continue;
+              /* Don't arc to items unless we affect them */
+              if (t->isItem() && !TEFF(e.eID)->HasFlag(EF_AFFECTS_ITEMS))
+                continue;
+              /* Don't arc to friends unless benevolent effect */
+              if (t->isCreature())
+                if (((Creature*)t)->isFriendlyTo(e.EActor))
+                  if (!TEFF(e.eID)->HasFlag(EF_NOTBAD))
+                    continue;
+              /* Don't arc to same target twice */
+              if (t == e.EVictim)
+                continue;
+              bool arced = false;
+              for (int16 i=0;i!=ac;i++)
+                if (t == ArcList[i])
+                  arced = true;
+              if (arced)
+                continue;
+              /* Need clear line of fire */
+              if (!m.LineOfFire(chainPx/2,chainPy/2,t->x,t->y,e.EActor))
+                continue;
+              /* Choose the closest valid target; equally near ones are chosen at random. */
+              if ((dist(chainPx/2,chainPy/2,t->x,t->y) < bdist) ||
+                  (dist(chainPx/2,chainPy/2,t->x,t->y) == bdist && !random(2)))
+                {
+                  best = t;
+                  bdist = dist(chainPx/2,chainPy/2,t->x,t->y);
+                }
+            }
+          if (bdist == 1000)
+            break;
+          ArcList[ac++] = best;
+          ChainArc a;
+          a.tgt = best; a.sx = a.cx = chainPx; a.sy = a.cy = chainPy; a.g = g;
+          if (best->x*2 == a.cx)
+            { a.isDir = true; a.dir = (a.sy < best->y*2) ? SOUTH : NORTH; }
+          else if (best->y*2 == a.cy)
+            { a.isDir = true; a.dir = (a.sx < best->x*2) ? EAST : WEST; }
+          else
+            {
+              a.dirX = (best->x*2 >= a.cx) ? 1 : -1;
+              a.dirY = (best->y*2 >= a.cy) ? 1 : -1;
+              a.slope.Set(abs((best->y*2 - a.dirY) - a.cy), abs((best->x*2 - a.dirX) - a.cx));
+            }
+          if (e.DType == AD_ELEC && EffectLightDecide(TEFF(e.eID), e.DType).lit)
+            {
+              e.ETarget = best;
+              MeanderPlanBuild(a.plan, m, e.EActor, e.EVictim, isChain, a.isDir, a.dir, a.dirX, a.dirY, a.slope,
+                  a.sx, a.sy, a.cx, a.cy, 0, e.vRange, WarpCount, chainPrevG);
+              a.meanders = a.plan.n > 0;
+            }
+          arcs.push_back(a);
+        }
+      for (size_t i = 0; i != arcs.size(); i++)
+        {
+          if (chainProbe) Error("CHAIN_BRANCH_PROBE: arc %d start %d,%d", (int)(i+1), (int)(chainPx/2), (int)(chainPy/2));
+          if (EffectStepHook) EffectStepHook(ES_TRAVEL, e.EActor->x, e.EActor->y, 0);
+        }
+      /* one square of one arc: the loop body above, run for each unfinished arc in turn. Returns false when the arc ends. */
+      bool anyVis = false; int16 visX = 0, visY = 0;
+      auto chainStep = [&](ChainArc &a, int n, int step) -> bool
+        {
+          Feature *aft; Creature *acr;
+          #define ADD_ARC_TARGET(t)                                  \
+            if (tc < 127) {                                          \
+              bool dup = false;                                      \
+              if ((t) != a.tgt)                                      \
+                for (int16 q2 = 0; q2 != ac; q2++)                   \
+                  if (ArcList[q2] == (t)) dup = true;                \
+              for (size_t q = 0; q != a.mine.size(); q++)            \
+                if (a.mine[q] == (t)) dup = true;                    \
+              if (!dup) { TargetList[tc++] = (t); a.mine.push_back(t); } \
+            }
+          if (!m.InBounds(a.cx/2,a.cy/2))
+            return false;
+          if (a.dist++ >= e.vRange)
+            return false;
+          for (aft=m.FFeatureAt(a.cx/2,a.cy/2);aft;aft=m.NFeatureAt(a.cx/2,a.cy/2))
+            if (aft->Flags & F_SOLID)
+              {
+                ADD_ARC_TARGET(aft);
+                if (WarpCount)
+                  WarpCount--;
+                else
+                  return false;
+              }
+          if (m.At(a.cx/2,a.cy/2).Solid) {
+            EventInfo sc = e; sc.isLoc = true;
+            sc.EXVal = a.cx / 2; sc.EYVal = a.cy / 2;
+            MagicXY(sc,a.cx/2,a.cy/2);
+            if (m.At(a.cx/2,a.cy/2).Solid) {
+              if (WarpCount)
+                WarpCount--;
+              else
+                return false;
+              }
+            }
+          if (chainProbe) Error("CHAIN_BRANCH_PROBE: step %d arc %d %d,%d", step, n, (int)(a.cx/2), (int)(a.cy/2));
+          const bool avis = PossiblyPause(T1,a.cx/2,a.cy/2,0);
+          int16 drawX = a.cx/2, drawY = a.cy/2; Glyph drawG = a.g;
+          if (a.meanders && a.at < a.plan.n && a.plan.lx[a.at] == a.cx/2 && a.plan.ly[a.at] == a.cy/2) {
+            drawX = a.plan.dx[a.at]; drawY = a.plan.dy[a.at];
+            if (a.plan.g[a.at]) drawG = a.plan.g[a.at];
+            }
+          a.at++;
+          if (avis) {
+            const uint16 colour = BlastColourSets[(Color * 4)+random(4)];
+            if (!pat) o.AddGlyph(drawX,drawY, drawG | GLYPH_FORE(colour));
+            if (GlyphDrawHook) GlyphDrawHook(5,drawX,drawY);
+            if (EffectStepHook) EffectStepHook(ES_STEP, drawX, drawY, drawG | GLYPH_FORE(colour));
+            if (a.meanders && MeanderHook) { ChainHookRec hr = { (int16)(a.cx/2), (int16)(a.cy/2), drawX, drawY, drawG }; a.hooks.push_back(hr); }
+            trail->Light(drawX,drawY);
+            if (pat) pat->Square(drawX,drawY,!isBeam);
+            anyVis = true; visX = a.cx/2; visY = a.cy/2;
+            }
+          {
+            EventInfo sc = e; sc.isLoc = true;
+            sc.EXVal = a.cx / 2; sc.EYVal = a.cy / 2;
+            MagicXY(sc,a.cx/2,a.cy/2);
+          }
+          if (a.isDir) {
+            a.cx += DirX[a.dir]*2;
+            a.cy += DirY[a.dir]*2;
+            switch (a.dir) {
+              case NORTH: case SOUTH: a.g='|'; break;
+              case EAST: case WEST: a.g='-'; break;
+              case NORTHEAST: case SOUTHWEST: a.g='/'; break;
+              case NORTHWEST: case SOUTHEAST: a.g='\\'; break;
+              default: a.g='*';
+            }
+          } else {
+            Fraction atest;
+            atest.Set(abs((a.cy + a.dirY)-a.sy), abs((a.cx + a.dirX)-a.sx));
+            if (atest > a.slope) {
+              a.cx += 2 * a.dirX;
+              a.g = '-';
+            } else if (atest < a.slope) {
+              a.cy += 2 * a.dirY;
+              a.g = '|';
+            } else {
+              a.cx += 2 * a.dirX;
+              a.cy += 2 * a.dirY;
+              if ((a.dirX < 0 && a.dirY < 0) || (a.dirX > 0 && a.dirY > 0))
+                a.g = '\\';
+              else
+                a.g = '/';
+            }
+          }
+          if (!m.InBounds(a.cx/2,a.cy/2))
+            return false;
+          if (a.tgt->x==a.cx/2 && a.tgt->y==a.cy/2)
+            { ADD_ARC_TARGET(a.tgt); return false; }
+          for(acr=m.FCreatureAt(a.cx/2,a.cy/2);acr;acr=m.NCreatureAt(a.cx/2,a.cy/2))
+            if (acr != (Creature*)a.tgt)
+              { ADD_ARC_TARGET(acr); }
+          return true;
+          #undef ADD_ARC_TARGET
+        };
+      size_t live = arcs.size();
+      for (int step = 1; live; step++)
+        {
+          anyVis = false;
+          for (size_t i = 0; i != arcs.size(); i++)
+            {
+              ChainArc &a = arcs[i];
+              if (a.done) continue;
+              e.ETarget = a.tgt; e.EXVal = a.tgt->x; e.EYVal = a.tgt->y;
+              e.isDir = a.isDir; e.EDir = a.dir;
+              if (!chainStep(a, (int)(i+1), step))
+                {
+                  a.done = true; live--;
+                  if (chainProbe) Error("CHAIN_BRANCH_PROBE: arc %d end %d,%d target %d,%d", (int)(i+1), (int)(a.cx/2), (int)(a.cy/2), (int)a.tgt->x, (int)a.tgt->y);
+                }
+            }
+          if (anyVis)
+            {
+              if (!pat) o.ShowGlyphs();
+              trail->Refresh();
+              if (PossiblyPause(T1,visX,visY,0)) {
+                if (pat) pat->Wait(35);
+                else trail->Wait(35);
+                }
+            }
+        }
+      if (MeanderHook)
+        for (size_t i = 0; i != arcs.size(); i++)
+          if (arcs[i].meanders)
+            {
+              for (size_t q = 0; q != arcs[i].hooks.size(); q++)
+                MeanderHook(arcs[i].hooks[q].lx, arcs[i].hooks[q].ly, arcs[i].hooks[q].dx, arcs[i].hooks[q].dy, arcs[i].hooks[q].g);
+              MeanderHook(-1,-1,-1,-1,0);
+            }
+      e.isDir = false;
+      e.vChainCount = 1 + (int)arcs.size();
+      FINISH_TRAIL
+      goto DoneChain;
+    }
   /* inc-jw0hw: the travel is over; fade the light and end it before any hit. */
   FINISH_TRAIL
 
   if (isChain)
     {
       Thing *t, *best; int16 bdist;
+      /* inc-nrxo8: d20 Chain Lightning; every secondary arc starts at the primary's square. */
+      if (e.vChainCount == 0)
+        { chainPx = cx; chainPy = cy; chainPrevG = meanderPrevG; }
       e.vChainCount++;
       if (e.vChainCount > e.vChainMax)
         goto DoneChain;
@@ -4839,7 +5071,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       bdist = 1000;
       for (t = m.FirstThing(); t; t = m.NextThing())
         {
-          if (dist(cx/2,cy/2,t->x,t->y) > e.vRange)
+          if (dist(chainPx/2,chainPy/2,t->x,t->y) > e.vRange)
             continue;
           
           /* Don't arc to doors and such */
@@ -4860,22 +5092,23 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
           if (t == e.EVictim)
             continue;
           
+              
           for (int16 i=0;i!=ac;i++)
             if (t == ArcList[i])
               { goto OuterContinue; }
               
           /* Need clear line of fire */
-          if (!m.LineOfFire(cx/2,cy/2,t->x,t->y,e.EActor))
+          if (!m.LineOfFire(chainPx/2,chainPy/2,t->x,t->y,e.EActor))
             continue;
           
           /* Choose the closest valid target to arc to; if there
              are multiple targets the same distance away, it should
              be random which one we arc to. */
-          if ((dist(cx/2,cy/2,t->x,t->y) < bdist) || 
-              (dist(cx/2,cy/2,t->x,t->y) == bdist && !random(2)))
+          if ((dist(chainPx/2,chainPy/2,t->x,t->y) < bdist) || 
+              (dist(chainPx/2,chainPy/2,t->x,t->y) == bdist && !random(2)))
             {  
               best = t;
-              bdist = dist(cx/2,cy/2,t->x,t->y);
+              bdist = dist(chainPx/2,chainPy/2,t->x,t->y);
             }   
           
           OuterContinue:;
@@ -4884,8 +5117,9 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       if (bdist != 1000)
         {
           distSoFar = 0;
-          sx = cx;
-          sy = cy;
+          sx = cx = chainPx;
+          sy = cy = chainPy;
+          meanderPrevG = chainPrevG;
           e.ETarget = best;
           e.EXVal = best->x;
           e.EYVal = best->y;
@@ -4999,6 +5233,7 @@ EvReturn Magic::ABallBeamBolt(EventInfo &e)
       eCopy.EXVal = TargetList[j]->x;
       eCopy.EYVal = TargetList[j]->y;
       cr = (Creature*) TargetList[j];
+      if (chainProbe) Error("CHAIN_BRANCH_PROBE: strike %d,%d", (int)TargetList[j]->x, (int)TargetList[j]->y);
       if (e.EMagic && (e.EMagic->aval == AR_BOLT || e.EMagic->aval == AR_RAY))
         if (cr->isCreature() && cr->HasFeat(FT_DEFLECT_MAGIC))
           if (cr->AoO && cr->Perceives(e.EActor) && !cr->isFlatFooted())

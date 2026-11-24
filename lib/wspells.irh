@@ -8571,15 +8571,14 @@ Wizard / Scroll Spell "Chain Lightning" : EA_BLAST
     Desc: "Casting this spell causes a stroke of lightning to arc
       from the caster's hand to an enemy of her choice, inflicting
       1d6 points of damage per caster level with no scaling. After
-      striking the first foe, the lightning arcs to the next
-      creature hostile to the caster nearest to the original target,
-      and from there to the next, and so forth. The lightning can
+      striking the first foe, the lightning arcs from that foe to each
+      other creature hostile to the caster, nearest first. The lightning can
       arc up to one time for every four caster levels, so at 12th
       level it hits a minimum of four targets -- the original and
       three arcs. Every arc decreases the damage by 2d6.\n
-      __Note that the lightning can concievably hit a creature more 
-      than once in the process of arcing from creature to creature
-      (but it only *arcs to* any given creature once); furthermore,
+      __Note that an arc strikes every creature in its path, so the
+      lightning can hit a creature more than once (but it only
+      *arcs to* any given creature once); furthermore,
       it can strike creatures the player does not perceive, for
       example turning 90 degrees to strike a hiding creature further 
       down an unexplored hallway."; 
