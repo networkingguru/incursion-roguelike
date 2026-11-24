@@ -8,29 +8,28 @@
 # was whichever sat first in Map::Things. Brian described it from play as
 # "almost like when you configure tab stops incorrectly".
 #
-# The arrows now step round a ring: the candidates are ordered by their
-# bearing from the player, UP and RIGHT go clockwise, DOWN and LEFT go
-# counter-clockwise, and the cursor enters the ring at the nearest candidate
-# in the direction of the first press. WHICH things are candidates did not
-# change; that is the calling prompt's business and the filters are untouched.
+# inc-3ybbz replaced that with this order. The map round the player is cut into
+# eight 45-degree slices, one centred on each arrow (N NE E SE S SW W NW; screen
+# y grows down, so north is dy < 0). A run that starts with arrow A visits A's
+# slice first, then the next slice clockwise, and so on round all eight. Inside
+# a slice the nearest thing comes first, and equal distances go clockwise. The
+# first press of a run (cursor on the player, or an arrow other than the run's)
+# takes the first place in that order; the same arrow again takes the next one;
+# the last wraps to the first. WHICH things are candidates did not change; that
+# is the calling prompt's business and the filters are untouched.
 #
 # fact: character -- fixture orc-barbarian-seed1-opt0818 -- orc-barbarian-seed1-opt0818 is frozen old save kept as a specimen until inc-9s4u0 gives its scene a map builder (tools/fixtures/specimens/orc-barbarian-seed1-opt0818.sav)
 # fact: map, player square (111,110), nine corpses in view -- same fixture (a save pins the dungeon)
 # fact: no monster acts, no roll is made -- Look and the target cursor take no game turn
 #
-# Measured 2026-08-19, seed 1, same key script, src/Term.cpp the only file
-# different between the two builds. The player stands at (111,110) with nine
-# corpses in view:
-#
-#   RIGHT from the player   before: (112,107), three columns off and the
-#                                   furthest of the three tied candidates
-#                           after:  (112,108), the nearest thing to the right
-#   UP from (116,107)       before: (111,106) -- up one row, sideways five
-#                           after:  (115,109), the next place round the ring
-#   twelve UP presses       before: four squares, revisited out of order
-#                           after:  nine distinct squares, then the lap again
-#
-# The three assertions below are all red on the old build.
+# The assertions, all read from the probe log, with the slices worked out here
+# from the logged coordinates by atan2, not by the game's integer test:
+#   1. a run's first press chose the nearest candidate in its arrow's slice, or
+#      in the next non-empty slice clockwise;
+#   2. a run's choices equal the computed order, every place once per lap, and
+#      then the lap again;
+#   3. a run started by another arrow restarts at its own slice;
+#   4. a hand-worked second oracle: the first five squares of the RIGHT run.
 #
 # THE RUN CAN FAIL TO MEASURE ANYTHING, and that is reported as INCONCLUSIVE
 # rather than FAIL: a session that failed to load the fixture, or whose [t]
@@ -62,112 +61,139 @@ log="$run/logs/targetprobe.log"
 }
 
 python3 - "$log" "$run" <<'PY'
-import re, sys
+import math, re, sys
 
 log, run = sys.argv[1], sys.argv[2]
 # The probe prints creature names, which carry the game's colour bytes.
 # Only the coordinates are read here, so the bytes are decoded permissively.
 text = open(log, 'rb').read().decode('latin-1')
 
-presses = []          # one per arrow press: way, cursor, aim candidates, chosen
+NAMES = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']   # clockwise from north
+
+presses = []
 for block in text.split('arrow ')[1:]:
     head = block.split('\n', 1)[0]
-    cur = re.search(r'cursor=\((\d+),(\d+)\)', head)
+    m = re.match(r'(\w+) newrun=(\d) cursor=\((\d+),(\d+)\) player=\((\d+),(\d+)\)', head)
+    if not m:
+        continue
     chosen = re.search(r'CHOSE \(\s*(\d+),\s*(\d+)\)', block)
     presses.append({
-        'way': head.split()[0],
-        'cursor': (int(cur.group(1)), int(cur.group(2))) if cur else None,
-        'aims': [(int(x), int(y), int(d)) for x, y, d in
-                 re.findall(r'aim\s+\(\s*(\d+),\s*(\d+)\) dist=(\d+)', block)],
+        'arrow': m.group(1),
+        'newrun': m.group(2) == '1',
+        'player': (int(m.group(5)), int(m.group(6))),
+        'cands': sorted({(int(x), int(y), int(d)) for x, y, d in
+                         re.findall(r'cand\s+\(\s*(\d+),\s*(\d+)\) dist=(\d+)', block)}),
         'chosen': (int(chosen.group(1)), int(chosen.group(2))) if chosen else None,
     })
 
 fails, dead = [], []
 
-def way(name):
-    return [q for q in presses if q['way'].startswith(name)]
+# Runs: consecutive presses of one arrow.
+runs = []
+for q in presses:
+    if runs and runs[-1][0]['arrow'] == q['arrow']:
+        runs[-1].append(q)
+    else:
+        runs.append([q])
 
-cw_all, ccw_all = way('clock'), way('widder')
+def bearing(dx, dy):
+    """Degrees clockwise from north; screen y grows down."""
+    return math.degrees(math.atan2(dx, -dy)) % 360
 
-# A run that never opened the target cursor, or never pressed enough keys at
-# it, measures nothing and must not be reported as either a pass or a fail.
-# A cursor that HAD presses and refused to move is a different thing, and is
-# a failure -- that is the whole complaint.
-if len(cw_all) < 4 or len(ccw_all) < 4:
-    dead.append("the target cursor took only %d clockwise and %d counter-clockwise\n"
-                "              presses, so the arrows never reached it."
-                % (len(cw_all), len(ccw_all)))
-if presses and not presses[0]['aims']:
-    dead.append("the first press did not enter the ring, so the cursor was not\n"
-                "              on the player when the arrows started.")
+def slice_of(dx, dy):
+    return int(((bearing(dx, dy) + 22.5) % 360) // 45)
+
+def key(c, px, py, start):
+    """(slice from the start arrow, distance, bearing from the slice's start edge)"""
+    dx, dy = c[0] - px, c[1] - py
+    s = slice_of(dx, dy)
+    edge = (45 * s - 22.5) % 360
+    return ((s - start) % 8, c[2], (bearing(dx, dy) - edge) % 360)
+
+def order(cands, player, arrow):
+    start = NAMES.index(arrow)
+    return [(c[0], c[1]) for c in
+            sorted(cands, key=lambda c: key(c, player[0], player[1], start))]
+
+# Four runs, RIGHT (E) twelve, UP (N) twelve, DOWN (S) three, PGUP (NE) three,
+# measure nothing if the arrows never reached the target cursor.
+if [r[0]['arrow'] for r in runs] != ['E', 'N', 'S', 'NE']:
+    dead.append("the probe saw the runs %s, not E, N, S, NE, so the arrows\n"
+                "              never reached the target cursor as scripted."
+                % [r[0]['arrow'] for r in runs])
+elif not presses[0]['cands']:
+    dead.append("the first press saw no candidates; nothing was in view.")
 
 if not dead:
-    # 1. Entering the ring takes the NEAREST candidate in the direction pressed.
-    #    The old code took the nearest COLUMN, then whichever of that column's
-    #    ties came first in Map::Things.
-    first = presses[0]
-    nearest = min(first['aims'], key=lambda c: c[2])
-    if first['chosen'] != (nearest[0], nearest[1]):
-        fails.append("the first press entered the ring at %s, but the nearest\n"
-                     "      candidate in that direction is %s (distance %d)."
-                     % (first['chosen'], (nearest[0], nearest[1]), nearest[2]))
+    for r in runs:
+        arrow, player = r[0]['arrow'], r[0]['player']
+        cands = r[0]['cands']
+        want = order(cands, player, arrow)
+        start = NAMES.index(arrow)
 
-    # 2. Every press moves. A press with nowhere to go is the stride bug's
-    #    signature: the cursor walks itself into a corner and stops.
-    for name, seq in (("clockwise", cw_all), ("counter-clockwise", ccw_all)):
-        stuck = [i + 1 for i, q in enumerate(seq) if q['chosen'] is None]
-        if stuck:
-            fails.append("%d of the %d %s presses moved the cursor nowhere\n"
-                         "      (presses %s). The ring has no dead ends."
-                         % (len(stuck), len(seq), name,
-                            ', '.join(str(i) for i in stuck[:6]) + (', ...' if len(stuck) > 6 else '')))
+        # The game's own claim about which presses start a run.
+        flags = [q['newrun'] for q in r]
+        if flags != [True] + [False] * (len(r) - 1):
+            fails.append("run %s: the newrun flags are %s; only the first press of a\n"
+                         "      run starts a new run." % (arrow, flags))
 
-    # 3. One direction, pressed repeatedly, walks a closed lap: every place on
-    #    the ring once, in the same order, for ever.
-    laps = {}
-    for name, seq in (("clockwise", [q['chosen'] for q in cw_all if q['chosen']]),
-                      ("counter-clockwise", [q['chosen'] for q in ccw_all if q['chosen']])):
-        if seq[0] not in seq[1:]:
-            if len(set(seq)) == len(seq):
-                dead.append("%s never came back round to %s in %d presses, so the\n"
-                            "              ring is bigger than this run walks."
-                            % (name, seq[0], len(seq)))
-            else:
-                fails.append("%s revisited a place without completing a lap:\n      %s"
-                             % (name, seq))
-            continue
-        n = seq.index(seq[0], 1)
-        if len(set(seq[:n])) != n:
-            fails.append("%s came back round after %d presses, but only %d of those\n"
-                         "      places are distinct -- it does not walk a lap:\n      %s"
-                         % (name, n, len(set(seq[:n])), seq[:n]))
-            continue
-        broke = next((i for i, place in enumerate(seq) if place != seq[i % n]), None)
-        if broke is not None:
-            fails.append("%s broke its order at press %d: expected %s, got %s."
-                         % (name, broke + 1, seq[broke % n], seq[broke]))
-            continue
-        laps[name] = seq[:n]
+        # 1. The first press: nearest in the arrow's slice, or the next
+        #    non-empty slice clockwise.
+        for rel in range(8):
+            inside = [c for c in cands
+                      if (slice_of(c[0] - player[0], c[1] - player[1]) - start) % 8 == rel]
+            if inside:
+                near = min(inside, key=lambda c: key(c, player[0], player[1], start))
+                if r[0]['chosen'] != (near[0], near[1]):
+                    fails.append("run %s: the first press chose %s, but the nearest in the\n"
+                                 "      first non-empty slice (%s) is %s, distance %d."
+                                 % (arrow, r[0]['chosen'], NAMES[(start + rel) % 8],
+                                    (near[0], near[1]), near[2]))
+                break
 
-    # 4. Counter-clockwise is clockwise backwards. Same ring, same places, the
-    #    reverse order -- a cursor that cannot retrace its steps is useless.
-    if len(laps) == 2:
-        cw_lap, ccw_lap = laps["clockwise"], laps["counter-clockwise"]
-        if sorted(cw_lap) != sorted(ccw_lap):
-            fails.append("the two directions walk different sets of places:\n"
-                         "      clockwise %s\n      counter   %s"
-                         % (sorted(cw_lap), sorted(ccw_lap)))
-        else:
-            n = len(cw_lap)
-            at = cw_lap.index(ccw_lap[0])
-            backwards = [cw_lap[(at - k) % n] for k in range(n)]
-            if ccw_lap != backwards:
-                fails.append("counter-clockwise is not clockwise reversed:\n"
-                             "      forwards  %s\n      backwards %s\n      measured  %s"
-                             % (cw_lap, backwards, ccw_lap))
+        # 2. The whole run is the computed order, lap after lap.
+        got = [q['chosen'] for q in r]
+        expect = [want[i % len(want)] for i in range(len(r))]
+        if got != expect:
+            k = next(i for i in range(len(r)) if got[i] != expect[i])
+            fails.append("run %s: press %d chose %s, but the order has %s there.\n"
+                         "      order: %s" % (arrow, k + 1, got[k], expect[k], want))
+        if len(r) > len(want) and got[len(want)] != got[0]:
+            fails.append("run %s: the lap of %d did not come back to %s."
+                         % (arrow, len(want), got[0]))
 
-# A proved failure outranks a missing measurement: something already went
-# wrong, and calling that inconclusive would hide it.
+    # A run too short to show a lap on the two long runs measures nothing.
+    if len(runs[0]) <= len(order(runs[0][0]['cands'], runs[0][0]['player'], 'E')):
+        dead.append("the RIGHT run is no longer than one lap, so the wrap was not reached.")
+
+    # 3. The UP run restarts at its own slice; it does not go on from where
+    #    the RIGHT run stopped.
+    right, up = runs[0], runs[1]
+    cont = order(right[0]['cands'], right[0]['player'], 'E')
+    after = cont[len(right) % len(cont)]
+    first_up = order(up[0]['cands'], up[0]['player'], 'N')[0]
+    if up[0]['chosen'] != first_up:
+        fails.append("the UP run began at %s, not at its own first place %s."
+                     % (up[0]['chosen'], first_up))
+    if first_up == after:
+        dead.append("the UP run's first place equals where RIGHT would have gone\n"
+                    "              next, so this run cannot tell a restart from a continuation.")
+
+    # 4. Second oracle, worked by hand from the candidate list in the log.
+    #    Player (111,110). Slices (dx,dy) -> slice, dist:
+    #      E  (115,109) d4 (4,-1)   S (112,113) d3 (1,3)   SW (109,111) d2 (-2,1)
+    #      W  (105,111) d6 (-6,1)   NW (108,108) d4 (-3,-2)
+    #      N  (112,107) d3 (1,-3), (111,106) d4 (0,-4)
+    #      NE (112,108) d2 (1,-2), (116,107) d6 (5,-3);  SE: none.
+    #    RIGHT starts at E: E, SE (empty), S, SW, W, NW, N, NE. So the first
+    #    five squares are the E one, the S one, the SW one, the W one, the NW one.
+    HAND = [(115, 109), (112, 113), (109, 111), (105, 111), (108, 108)]
+    got5 = [q['chosen'] for q in right[:5]]
+    if got5 != HAND:
+        fails.append("the first five RIGHT squares are %s; worked by hand they are %s."
+                     % (got5, HAND))
+
+# A proved failure outranks a missing measurement.
 if fails:
     for f in fails:
         print("FAIL: " + f)
@@ -180,10 +206,8 @@ if dead:
     print("              Run dir: " + run)
     sys.exit(2)
 
-lap = laps["clockwise"]
-print("PASS: the cursor enters the ring at the nearest thing in the direction")
-print("      pressed, walks %d places clockwise and the same %d backwards."
-      % (len(lap), len(lap)))
+print("PASS: each arrow's run starts at its own slice, goes nearest first and")
+print("      clockwise round all eight slices, and laps; %d places in view." % len(want))
 print("Run dir: " + run)
 PY
 status=$?
