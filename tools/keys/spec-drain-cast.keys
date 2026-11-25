@@ -1,0 +1,19 @@
+# One Magic Missile cast by a Thaumaturge, whose opposed school is Evocation
+# (SpecialistTable -10), for tools/check_spec_drain_rate.sh (bd inc-qple2).
+# Load the fixture orc-thaumaturge-seed1-opt0822 with INCURSION_LOAD.
+# Dumps before and after the cast; the check reads Mana and Fatigue from both.
+s                       # one real turn: this counts as a session
+w y                     # wizard mode, confirm
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE            # Ignore Spell Failure ON, so the cast always happens
+ESC
+@until "HP:" ESC
+@dump:before
+m
+@choose "Magic Missile"
+RIGHT ENTER             # aim east; a bolt at an empty square still costs its mana
+@until "HP:" ESC
+@dump:after
+v                       # message history: where "Lacking aptitude" shows
+@dump:msgs
+ESC
