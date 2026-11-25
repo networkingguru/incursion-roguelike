@@ -73,6 +73,7 @@ INCURSION_EXACTMON_PROBE	pre-registry	-
 INCURSION_FALL_CHAIN	pre-registry	-
 INCURSION_FALL_CHAIN_SKIP	pre-registry	-
 INCURSION_FAST_PROBE	inc-rst61	names a file; an expensive entry point logs itself there and exits 3
+INCURSION_FATIGUE_FLOOR_PROBE	inc-93mxz	fatigue band recalculation oracle (tools/check_fatigue_floor.sh)
 INCURSION_FATIGUE_REST_PROBE	inc-jahch	interrupted-rest, waiting and AutoRest fatigue oracle (tools/check_fatigue_rest.sh)
 INCURSION_FEAR_DUR_PROBE	pre-registry	-
 INCURSION_FIELD_DEAD_TARGET_PROBE	inc-8vxk6	spell target dying in the caster attack of opportunity oracle (tools/check_field_dead_target.sh)

@@ -338,6 +338,7 @@ void Creature::CalcValues(bool KnownOnly, Item *thrown) {
     int8 i;
     int16 j, tsav, oFP, oHP, oldSize;
     int32 restart_count = 0; 
+    int16 encStr = 0;
     static int16 MRVals[BONUS_LAST], MRC;
     bool isHalted = false;
     Item *it;
@@ -983,6 +984,7 @@ Restart:
         StackBonus(BONUS_CIRC,A_DEF, max(1,Mod2(A_CHA)));
     } 
 
+    encStr = Attr[A_STR]; /* the Strength Encumbrance() reads below */
     switch (Encumbrance()) {
     case EN_NONE:
         break;
@@ -1717,7 +1719,11 @@ Restart:
         if (FatigueRestProbeMax > 0 && isPlayer())
             Attr[A_FAT] = FatigueRestProbeMax;
     }
-    if (Attr[A_FAT] != oFP) {
+    /* upstream: encumbrance and the fatigue floor MUST read this pass's final
+       Strength; Encumbrance() reads the previous pass's, so a Strength change
+       (fatigue band) moved the floor one recalculation late. Same order of
+       operations in v0.6.5B on any platform. Observed. inc-93mxz. Not sent. */
+    if (Attr[A_FAT] != oFP || Attr[A_STR] != encStr) {
         if (restart_count++ < 10) 
             goto Restart;
         // ww: you lose! 
