@@ -46,6 +46,17 @@ Two kinds of name are NOT new to the bead, though the base ledger lacks them:
   means a name that master had. A name that is retired on its first appearance
   has no live name to retire, so it stays new.
 
+The bead's own lib/ changes decide NEW last. `git diff <base> -- lib/` (the base
+tip against the working tree) is the bead's change. When it is empty, the bead
+changes no lib/ file: the check prints "skipped" and exits 0 before it runs the
+module dump. Otherwise a candidate stays new only if its name appears in an
+ADDED line of that diff: the quoted bare name (the name before any ';') for a
+resource, the name as a whole word for a variable. Comments are not stripped
+from the diff, so an extra match only keeps a candidate new (fails closed). A
+failed git diff is exit 2, never an empty diff. This stops a ledger that lags
+its branch (a god branch merged into a sub-bead) from refusing resources the
+bead never added.
+
 It also refuses a lib/landed-*.irh that lib/landed.irc does not include, and
 an include line in lib/landed.irc that names a missing file or is not an
 include line.
@@ -56,6 +67,7 @@ or lib/landed.irc unreadable).
 # fact: current branch name and its incursionBase -- --bead override; git rev-parse and git config otherwise
 # fact: the module's resource and variable names -- --dump override in --selftest; incursion-headless -resorder otherwise
 # fact: the base ledger -- --base-ledger override in --selftest; git show <base>:tools/resource_order.ledger otherwise
+# fact: the bead's own lib/ changes -- --diff override in --selftest; git diff <base> -- lib/ otherwise
 # fact: the contents of lib/ -- --lib override, a scratch directory under logs/ in --selftest
 # This tool reads no seed, no character and no world.
 """
@@ -171,7 +183,26 @@ def declared_in(kind, nm, body):
     return re.search(r"(?<![A-Za-z0-9_])%s(?![A-Za-z0-9_])" % re.escape(nm), body) is not None
 
 
-def check(bead, dump, base, lib, parents=(), parent_bodies=()):
+def added_lines(diff_text):
+    """The text of every added line (`+...`, not a `+++` header) of a diff."""
+    return "\n".join(ln[1:] for ln in diff_text.splitlines()
+                     if ln.startswith("+") and not ln.startswith("+++"))
+
+
+def in_diff(kind, nm, added):
+    if kind == "resource":
+        return ('"%s"' % nm.split(";")[0]) in added
+    return declared_in(kind, nm, added)
+
+
+def lib_diff(base_name):
+    rc, out = git("diff", base_name, "--", "lib/")
+    if rc != 0:
+        raise Cannot("git diff %s -- lib/ failed" % base_name)
+    return out
+
+
+def check(bead, dump, base, lib, parents=(), parent_bodies=(), added=None):
     """Return the list of refusal messages (empty = clean)."""
     refusals = []
     landed_irc = lib / "landed.irc"
@@ -201,6 +232,8 @@ def check(bead, dump, base, lib, parents=(), parent_bodies=()):
     except OSError:
         body = None
     for kind, arr, nm in new_names(dump, base, parents):
+        if added is not None and not in_diff(kind, nm, added):
+            continue
         found = body is not None and declared_in(kind, nm, body)
         if not found and any(declared_in(kind, nm, pb) for pb in parent_bodies):
             continue
@@ -242,7 +275,8 @@ def merged_parents(bead, base_name):
     return reports, bodies
 
 
-def run(bead, dump_path, base_path, lib, parent_paths=None):
+def run(bead, dump_path, base_path, lib, parent_paths=None, diff_path=None):
+    """Refusal list, or None when the bead changes no lib/ file (skipped)."""
     if bead is None:
         rc, out = git("rev-parse", "--abbrev-ref", "HEAD")
         if rc != 0:
@@ -250,6 +284,18 @@ def run(bead, dump_path, base_path, lib, parent_paths=None):
         bead = out.strip()
     if not BEAD_RE.match(bead):
         raise Cannot("branch %r is not a bead id (inc-<id>[.<n>])" % bead)
+    rc, base_name = git("config", "--get", "branch.%s.incursionBase" % bead)
+    base_name = base_name.strip() if rc == 0 and base_name.strip() else "master"
+    if diff_path is None:
+        diff_text = lib_diff(base_name)
+    else:
+        try:
+            diff_text = pathlib.Path(diff_path).read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            raise Cannot("cannot read diff %s: %s" % (diff_path, e))
+    if not diff_text.strip():
+        return None
+    added = added_lines(diff_text)
     if dump_path is None:
         try:
             if not roc.BIN.exists():
@@ -262,8 +308,6 @@ def run(bead, dump_path, base_path, lib, parent_paths=None):
     else:
         dump = read_report(dump_path, "module dump")
     if base_path is None:
-        rc, base_name = git("config", "--get", "branch.%s.incursionBase" % bead)
-        base_name = base_name.strip() if rc == 0 and base_name.strip() else "master"
         rc, text = git("show", "%s:tools/resource_order.ledger" % base_name)
         if rc != 0:
             raise Cannot("cannot read %s:tools/resource_order.ledger" % base_name)
@@ -274,8 +318,6 @@ def run(bead, dump_path, base_path, lib, parent_paths=None):
     else:
         base = read_report(base_path, "base ledger")
     if parent_paths is None:
-        rc, base_name = git("config", "--get", "branch.%s.incursionBase" % bead)
-        base_name = base_name.strip() if rc == 0 and base_name.strip() else "master"
         parents, bodies = merged_parents(bead, base_name)
     else:
         parents = [read_report(p, "merged parent ledger") for p in parent_paths]
@@ -283,7 +325,7 @@ def run(bead, dump_path, base_path, lib, parent_paths=None):
         for p in parent_paths:
             for f in sorted(pathlib.Path(str(p) + ".landed").glob("*.irh")):
                 bodies.append(strip_comments(f.read_text(encoding="utf-8", errors="replace")))
-    return check(bead, dump, base, lib, parents, bodies)
+    return check(bead, dump, base, lib, parents, bodies, added)
 
 
 def selftest():
@@ -303,11 +345,15 @@ def selftest():
             lines.append("V\t0\t-1\t-1\t%d\t%s\tint16" % (o, v))
         return "\n".join(lines) + "\n"
 
+    default_diff = "+++ b/lib/x.irh\n" + "".join(
+        "+" + ln + "\n" for ln in ['Effect "Zap" : 1 {}', 'Effect "Zap2" : 1 {}', 'Effect "Fire2" : 1 {}',
+                                  'Effect "Ice" : 1 {}', "int16 newvar;", "int16 newvar2;"])
     base_arrays = [("Effect", ["Fire", "Ice"]), ("Flavour", ["red", "red", "blue"])]
     n = [0]
 
     def case(label, want, *, bead="inc-t1", dump=None, base=None, irc="", files=None,
-             badbead=None, nodump=False, nobase=False, parent=None, parent_landed=None):
+             badbead=None, nodump=False, nobase=False, parent=None, parent_landed=None,
+             diff=None):
         n[0] += 1
         d = work / ("c%d" % n[0])
         lib = d / "lib"
@@ -332,8 +378,11 @@ def selftest():
                 (d / "parent.landed").mkdir()
                 for fn, body in parent_landed.items():
                     (d / "parent.landed" / fn).write_text(body)
+        fp = d / "diff"
+        fp.write_text(default_diff if diff is None else diff)
         try:
-            got = 1 if run(badbead or bead, dp, bp, lib, pp) else 0
+            res = run(badbead or bead, dp, bp, lib, pp, fp)
+            got = 1 if res else 0
         except Cannot:
             got = 2
         if got != want:
@@ -393,6 +442,20 @@ def selftest():
          [("Effect", ["Ice", "Fire2"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
     case("new name at a new position refused", 1, dump=rec(
          [("Effect", ["Fire", "Ice", "Zap2"]), ("Flavour", ["red", "red", "blue"])], ["v1"]))
+    case("merged-in base resource, empty lib diff", 0, dump=plus, diff="")
+    case("base resource the bead did not touch, other lib lines changed", 0, dump=plus,
+         diff="+++ b/lib/x.irh\n+Effect \"Other\" : 1 {}\n-Effect \"Zap\" : 1 {}\n")
+    case("bead's own new resource outside its landed file", 1, dump=plus,
+         diff='+++ b/lib/other.irh\n+Effect "Zap" : 1 {}\n')
+    case("bead's own new resource in its landed file", 0, dump=plus, irc=inc,
+         files={"landed-inc-t1.irh": 'Effect "Zap" : 1 { }\n'},
+         diff='+++ b/lib/landed-inc-t1.irh\n+Effect "Zap" : 1 { }\n')
+    n[0] += 1
+    try:
+        lib_diff("no-such-ref-zzz")
+        fails.append("failed git diff: want Cannot, got a diff")
+    except Cannot:
+        pass
     shutil.rmtree(work, ignore_errors=True)
     if fails:
         for f in fails:
@@ -409,6 +472,7 @@ def main():
     ap.add_argument("--dump")
     ap.add_argument("--base-ledger")
     ap.add_argument("--lib")
+    ap.add_argument("--diff", help="the bead's lib/ diff text (selftest override)")
     ap.add_argument("--root", help="checkout to measure (its branch, lib/ and module); default is this copy's")
     a = ap.parse_args()
     if a.root:
@@ -419,10 +483,13 @@ def main():
         return selftest()
     lib = pathlib.Path(a.lib) if a.lib else ROOT / "lib"
     try:
-        refusals = run(a.bead, a.dump, a.base_ledger, lib)
+        refusals = run(a.bead, a.dump, a.base_ledger, lib, None, a.diff)
     except Cannot as e:
         sys.stderr.write("check_landed_files: cannot establish: %s\n" % e)
         return 2
+    if refusals is None:
+        print("check_landed_files: skipped, %s changes no lib/ file" % (a.bead or git("rev-parse", "--abbrev-ref", "HEAD")[1].strip()))
+        return 0
     for r in refusals:
         sys.stderr.write("REFUSED: %s\n" % r)
     if refusals:
