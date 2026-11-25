@@ -79,7 +79,7 @@
 # property under test -- an invariant that MUST hold on every seed, like the
 # encounter-building checks in docs/VERIFICATION.md -- and the wander requests,
 # whose target the seed does decide, are excluded from the measurement.
-# fact: character race/class/stats/kit/name -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) via INCURSION_LOAD
+# fact: character race/class/stats/kit/name -- fixture kobold-rogue-seed1 (built from its .char, served by tools/fixture_cache.sh) via INCURSION_LOAD; in --prove-red under INCURSION_FIXTURE_PIN the scratch copy reads the real tree's logs/fixture-cache (INCURSION_FIXTURE_CACHE), unpinned it builds its own (inc-a6meq)
 # fact: the empty Weapon Hand (the whip on the floor) -- tools/keys/setup-kobold-rogue-seed1.keys (the old .sav held it; V7-1 moved it into the checks)
 # fact: the scene (sealed L corridor, player at one end, creature at the far end, route squares memory-cleared) -- probe src/RouteUnseenProbe.cpp, gated by INCURSION_ROUTE_UNSEEN; builds the map, independent of the generated level
 # fact: the watched creature's mode/role (hostile/companion/neutral) -- INCURSION_ROUTE_UNSEEN
@@ -175,7 +175,10 @@ PY
                  echo "INCONCLUSIVE: the mutated scratch build failed; log in $proof/build-$mut.log"; exit 2; }
 
         echo "  running this check inside the scratch copy (seed $seed)"
-        INCURSION_ROUTE_ROOT="$scratch" "$scratch/tools/check_route_unseen.sh" "$seed" \
+        # inc-a6meq: under a pin the scratch copy reads the real tree's fixture cache; unpinned it builds its own.
+        POOL=()
+        [ -n "${INCURSION_FIXTURE_PIN:-}" ] && POOL=(INCURSION_FIXTURE_CACHE="${INCURSION_FIXTURE_CACHE:-$WT/logs/fixture-cache}")
+        env ${POOL[@]+"${POOL[@]}"} INCURSION_ROUTE_ROOT="$scratch" "$scratch/tools/check_route_unseen.sh" "$seed" \
             > "$proof/red-$mut.log" 2>&1
         inner=$?
         grep -E '^(mode=|INCONCLUSIVE)' "$proof/red-$mut.log" | sed 's/^/  | /'

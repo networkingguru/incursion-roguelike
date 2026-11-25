@@ -34,7 +34,7 @@
 #
 # fact: the key script -- read from this tree (tools/keys/quality-grow.keys), a fixed answer list
 # fact: the files under test -- the tracked files as they are on disk, copied by this check; the patch is committed (tools/fixtures/quality-grow.patch)
-# fact: loaded character -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, copied into the scratch tree
+# fact: loaded character -- INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char, copied into the scratch tree; under INCURSION_FIXTURE_PIN the scratch session reads the real tree's logs/fixture-cache (INCURSION_FIXTURE_CACHE), unpinned it builds its own in the scratch tree (inc-a6meq)
 # fact: settings -- INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat
 # fact: the seed -- not read; items are Item::Create from named resources with qualities written directly, no GenItem, no random bane
 # fact: item identity, known flags, quality slots -- in-process staging with readback in src/QualityClassProbe.cpp, SETUP_ERROR on mismatch
@@ -87,7 +87,11 @@ patch -p1 -d "$SCR" -s < "$PATCH" >/dev/null 2>&1 || unmeasured "the patch faile
 [ -x "$SCR/incursion-headless" ] || unmeasured "no binary was built"
 
 RUNDIR="$SCR/run"
-( cd "$SCR" && INCURSION_BIN="$SCR/incursion-headless" \
+# inc-a6meq: a pinned fixture is never built, so the scratch tree reads the real tree's cache.
+# Unpinned, the scratch tree builds into its own cache (a patched-binary build must not prune the real one).
+POOL=()
+[ -n "${INCURSION_FIXTURE_PIN:-}" ] && POOL=(INCURSION_FIXTURE_CACHE="${INCURSION_FIXTURE_CACHE:-$ROOT/logs/fixture-cache}")
+( cd "$SCR" && env ${POOL[@]+"${POOL[@]}"} INCURSION_BIN="$SCR/incursion-headless" \
     INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
     INCURSION_LOAD=tools/fixtures/chars/orc-barbarian-seed1-opt0822.char \
     INCURSION_RUN_DIR="$RUNDIR" INCURSION_QUALITY_CLASS_PROBE=grow \
