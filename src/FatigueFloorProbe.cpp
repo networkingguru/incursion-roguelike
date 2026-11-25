@@ -93,6 +93,7 @@ static void ffCase(Player *pl, const char *name, int start, int amt, bool bandCh
 }
 
 void FatigueFloorProbe(Player *pl) {
+    /* inc-93mxz: armed only by INCURSION_FATIGUE_FLOOR_PROBE. */
     if (!getenv("INCURSION_FATIGUE_FLOOR_PROBE")) return;
     if (!pl || !pl->m) {
         Error("FATFLOOR_PROBE: setup INCONCLUSIVE missing player/map");
@@ -113,8 +114,8 @@ void FatigueFloorProbe(Player *pl) {
     ffCase(pl,"zero-to-below",0,1,true);
     ffCase(pl,"zero-to-below-big",0,3,true);
     /* Control: a payment inside the Fatigued band changes no band. The floor
-       itself is not compared across the exhausted band or from above 0, where
-       back-to-back CalcValues calls alternate it (see inc-93mxz notes). */
+       itself is checked below by ffStable (cross-floor, above-zero): back-to-back
+       CalcValues calls at one fatigue give a stable floor. */
     ffCase(pl,"within-fatigued",-1,1,false);
     ffStable(pl,"cross-floor",-mx);
     ffStable(pl,"above-zero",mx);
