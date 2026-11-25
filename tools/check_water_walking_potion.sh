@@ -1,6 +1,6 @@
 #!/bin/bash
 # gate: live
-# inc-2rws: the potion of water walking (status WATER_WALKING, (20d4+1)/2 units).
+# inc-2rws: the potion of water walking (status WATER_WALKING, until the drinker rests, Duration -2).
 #
 #   tools/check_water_walking_potion.sh   exit 0 every point holds, 1 a point
 #                                         fails or nothing could be measured
@@ -14,12 +14,18 @@
 #
 # Points: 1 before drinking, the Swim path runs (character with 1 Swim rank:
 # many trials fail or drown, each terrain); 2 after drinking, all 200 trials
-# per terrain pass with no failure and no drowning damage; 3 rolled duration
-# falls in 10..40 units over 400 drinks, mean about 25 (20d4 is 50 +- 5
-# rounds, so the spread is narrow); 4 the
-# status is present at the last unit minus one and gone at the last unit, for
-# three rolls; 5 price 50 gp in Roark's stock at low and high Diplomacy and 50
-# for getShopCost(NULL,NULL), against a control potion whose price moves.
+# per terrain pass with no failure and no drowning damage; 3 every one of 400
+# drinks gives Duration -2 (persistent); 4 the status is still present after
+# 600 turns and gone after Map::DaysPassed, the call rest makes; 5 price 50 gp
+# in Roark's stock at low and high Diplomacy and 50 for getShopCost(NULL,NULL),
+# against a control potion whose price moves.
+# fact: the character -- INCURSION_LOAD fixture orc-mage-seed4-gate.sav
+# fact: settings -- INCURSION_OPTIONS pinned file options-2026-08-22.dat
+# fact: terrain handler outcomes -- the probe throws EV_MOVE at the real handlers, 200 trials per terrain
+# fact: the drink -- a real EV_DRINK thrown by the probe, no rolled item or shop
+# fact: the duration -- read off the stati; -2 is fixed, not rolled per seed
+# fact: rest -- the probe calls Map::DaysPassed directly, no rest interruption or encounter roll
+# fact: the price -- Roark's stock against a control potion, both read in one session
 # A missing line fails the check.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -75,16 +81,14 @@ for ph in ('before', 'after'):
         print('%s %s: passed=%d failed=%d drowned=%d (swim=%d)' % (ph, t, r['ok'], r['fail'], r['drown'], r['swim']))
 
 d = re.findall(r'WATER_WALKING drink return=(-?\d+) status=(\d+) duration=(-?\d+)', text)
-need(len(d) == 1 and d[0][1] == '1' and 10 <= int(d[0][2]) <= 40, 'drinking did not grant the status in 10..40: %r' % d)
-r = re.findall(r'WATER_WALKING range drinks=(\d+) min=(-?\d+) max=(\d+) mean10=(\d+) inrange=(\d+)', text)
+need(len(d) == 1 and d[0][1] == '1' and int(d[0][2]) == -2, 'drinking did not grant the status with duration -2: %r' % d)
+r = re.findall(r'WATER_WALKING range drinks=(\d+) persistent=(\d+) min=(-?\d+) max=(-?\d+)', text)
 need(len(r) == 1, 'missing range line')
 if r:
-    n, lo, hi, mean10, inr = map(int, r[0])
-    need(n == 400 and inr == n, 'rolls outside 10..40: %r' % (r[0],))
-    need(lo >= 10 and hi <= 40 and lo <= 22 and hi >= 28, 'rolls do not spread around 25: min=%d max=%d' % (lo, hi))
-    need(240 <= mean10 <= 260, 'mean duration %.1f, want about 25' % (mean10 / 10))
-t = re.findall(r'WATER_WALKING timing run=(\d) dur=(\d+) atdurm1=(-?\d) atdur=(-?\d) dead=(\d)', text)
-need(len(t) == 3 and all(x[2:] == ('1', '0', '0') for x in t), 'timing: want present at dur-1, gone at dur, alive, 3 runs: %r' % t)
+    n, per, lo, hi = map(int, r[0])
+    need(n == 400 and per == n, 'not every drink is persistent: %r' % (r[0],))
+t = re.findall(r'WATER_WALKING timing turns=(\d+) after_turns=(-?\d) after_rest=(-?\d) dead=(\d)', text)
+need(len(t) == 1 and t[0][1:] == ('1', '0', '0') and t[0][0] == '600', 'timing: want present after 600 turns, gone after rest, alive: %r' % t)
 
 p = re.findall(r'WATER_WALKING price stock=(\d+) seller=(\d) dip_low=(-?\d+) dip_high=(-?\d+) ww_low=(\d+) ww_high=(\d+) ctl_low=(\d+) ctl_high=(\d+) nullnull=(\d+)', text)
 need(len(p) == 1, 'missing price line')
