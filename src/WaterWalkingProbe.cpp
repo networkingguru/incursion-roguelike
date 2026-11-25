@@ -90,9 +90,8 @@ void WaterWalkingProbe(Player *p) {
     }
     shop->Remove(true);
 
-    /* Range: many real drinks, each replacing the last status. */
-    int lo = 9999, hi = -1, hist[41] = {0};
-    long sum = 0;
+    /* Range: many real drinks; the potion lasts until rest (Duration -2). */
+    int lo = 9999, hi = -9999, persistent = 0;
     const int DRINKS = 400;
     for (int i = 0; i < DRINKS; ++i) {
         p->RemoveStati(WATER_WALKING);
@@ -100,27 +99,22 @@ void WaterWalkingProbe(Player *p) {
         int d = p->GetStatiDur(WATER_WALKING);
         if (d < lo) lo = d;
         if (d > hi) hi = d;
-        sum += d;
-        if (d >= 0 && d <= 40) hist[d]++;
+        if (d == -2) persistent++;
     }
-    int inrange = 0;
-    for (int d = 10; d <= 40; ++d) inrange += hist[d];
-    Error("WATER_WALKING range drinks=%d min=%d max=%d mean10=%d inrange=%d", DRINKS, lo, hi,
-        (int)(sum * 10 / DRINKS), inrange);
+    Error("WATER_WALKING range drinks=%d persistent=%d min=%d max=%d", DRINKS, persistent, lo, hi);
 
-    /* Timing: drive the live per-turn code (Creature::DoTurn -> UpdateStati) for rolled durations. */
-    for (int k = 0; k < 3; ++k) {
-        p->RemoveStati(WATER_WALKING);
-        Drink(p, potion, effect);
-        int dur = p->GetStatiDur(WATER_WALKING), present = -1, gone = -1;
-        for (int t = 1; t <= dur && !p->isDead(); ++t) {
-            p->DoTurn();
-            if (t == dur - 1) present = p->HasStati(WATER_WALKING) ? 1 : 0;
-            if (t == dur) gone = p->HasStati(WATER_WALKING) ? 1 : 0;
-        }
-        Error("WATER_WALKING timing run=%d dur=%d atdurm1=%d atdur=%d dead=%d", k, dur,
-            present, gone, (int)p->isDead());
-    }
+    /* Timing: live per-turn code for 600 turns, then the call rest makes (Map::DaysPassed). */
+    p->RemoveStati(WATER_WALKING);
+    Drink(p, potion, effect);
+    const int TURNS = 600;
+    int turns = 0;
+    for (; turns < TURNS && !p->isDead(); ++turns) p->DoTurn();
+    int afterTurns = p->HasStati(WATER_WALKING) ? 1 : 0;
+    theGame->Day++; /* Player::Rest advances the day first; DaysPassed returns when Day matches */
+    p->m->DaysPassed();
+    int afterRest = p->HasStati(WATER_WALKING) ? 1 : 0;
+    Error("WATER_WALKING timing turns=%d after_turns=%d after_rest=%d dead=%d", turns,
+        afterTurns, afterRest, (int)p->isDead());
     Error("WATER_WALKING done");
     p->Options[OPT_AUTOMORE] = more;
     theGame->PlayMode = playing;
