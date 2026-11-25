@@ -7310,6 +7310,19 @@ static bool HoldsSummonedItemOf(Creature *c, rID eID) {
     return false;
 }
 
+/* Test hook (bd inc-qple2): INCURSION_SPEC_DRAIN_ROLL=<0..99> replaces the
+   opposed-school drain roll in Creature::Cast. Unset or invalid: random(100). */
+static int SpecDrainRoll() {
+    static int fixed = -2;
+    if (fixed == -2) {
+        const char *s = getenv("INCURSION_SPEC_DRAIN_ROLL");
+        char *end = NULL;
+        long v = (s && *s) ? strtol(s, &end, 10) : -1;
+        fixed = (s && *s && *end == 0 && v >= 0 && v <= 99) ? (int)v : -1;
+    }
+    return fixed >= 0 ? fixed : random(100);
+}
+
 EvReturn Creature::Cast(EventInfo &e) {
     int16 mCost, rating, dmg_pen, roll; 
     EvReturn res; Item *it; bool dmgFail, wasThreatened;
@@ -7640,8 +7653,10 @@ ContinueCasting:
         }
     }
 
+    /* upstream: the chance is the penalty, as the getSpellMana comment says; the
+       2014 import (7b8504a) doubled it, on any compiler. Traced; inc-qple2; not sent. */
     if (specMod < 0)
-        if (random(100) < abs(specMod*2)) {
+        if (SpecDrainRoll() < abs(specMod)) {
             int16 sc = GetStatiVal(SPECIALTY_SCHOOL), worst, mod, i;
             mod = 50; worst = 0;
             for (i=0;i!=9;i++)

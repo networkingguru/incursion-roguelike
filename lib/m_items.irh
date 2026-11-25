@@ -8543,14 +8543,15 @@ AI_BRACERS Effect "Devilbane" : EA_GRANT
 and EA_GRANT 
   { xval: ENEMY_TO; yval: MA_DEVIL; }
 
+// upstream: data typo -- stray word "any" and British "favour" in the Elemental Disjunction and Theryan Inviolability Descs; upstream's text, same on Win32 (data, no platform dependence); Traced (prose-only, no in-play value changes); inc-a2mso; not sent.
 AI_RING Effect "Elemental Disjunction" : EA_GRANT
   { xval: ALSO_TURN_MA_TYPE; yval: MA_ELEMENTAL; Level: 5; SC_ABJ;
     Desc: "This sacred item allows your deity to channel additional energy
       through you. Any Rebuke, Command or Turn action you take against the
       Undead will additionally affect Elementals and their kind.
       Unfortunately, bearing this item will also cause such creatures to
-      view you with marked disdain. Ekliazeh, Immotian, Kysul and Sabine 
-      favour such devices, but any they can be useful in the hands of a
+      view you with marked disdain. Ekliazeh, Immotian, Kysul and Sabine
+      favor such devices, but they can be useful in the hands of a
       devout priest of any faith.";
   } and EA_GRANT { xval: ENEMY_TO; yval: MA_ELEMENTAL; }
 
@@ -8561,7 +8562,7 @@ AI_STONE Effect "Theryan Inviolability" : EA_GRANT
       Undead will additionally affect Outsiders. 
       Unfortunately, bearing this item will also cause such creatures to
       view you with marked disdain. Ekliazeh, Immotian and Kysul all 
-      favour such devices.";
+      favor such devices.";
   } and EA_GRANT { xval: ENEMY_TO; yval: MA_OUTSIDER; }
 
 AI_BRACERS Effect "Purity" : EA_GRANT

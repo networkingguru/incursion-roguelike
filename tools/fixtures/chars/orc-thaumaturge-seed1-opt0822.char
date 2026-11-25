@@ -1,0 +1,135 @@
+# orc-thaumaturge-seed1-opt0822: a Point Buy orc Thaumaturge (opposed school Evocation, -10 in SpecialistTable) who knows Magic Missile (bead inc-qple2).
+# Recorded by INCURSION_RECORD_CHAR from a copy of tools/keys/chargen-mage.keys with Point Buy and Thaumaturgy; Floating Disc was changed to Magic Missile.
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Orc
+subrace: Orc
+name: Rathak
+surname: the Breaker
+class: Mage
+attr_str: 14
+attr_dex: 16
+attr_con: 18
+attr_int: 18
+attr_wis: 12
+attr_cha: 16
+attr_luc: 17
+craft_formula [Alchemy]: tanglefoot bag
+alignment: Neutral
+specialist_school: Thaumaturgy
+feat: Acrobatic
+feat: Alertness
+hp_roll [Mage]: 8
+mana_roll [Mage]: 20
+craft_formula [Potion]: See Invisibility;potion
+craft_formula [Potion]: Light;potion
+craft_formula [Scroll]: Thunderlance
+craft_formula [Scroll]: Web
+craft_formula [Scroll]: Detect Monsters
+craft_formula [Scroll]: Resist Fire
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 1
+skill_ranks [Decipher Script]: 0
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: Scentblind
+craft_formula [Alchemy]: eggshell smoke-bomb
+gear_stream [Orc]: 18
+kit_item [Orc;a0]: medium backpack, quantity 1
+kit_item [Orc;a1]: strip of cured meat, quantity 11
+kit_item [Orc;a2]: knife, quantity 1
+gear_chance [Orc;a3]: 41
+kit_item [Orc;a3]: longspear, quantity 1
+gear_stream [Mage]: 19
+kit_item [Mage;a0]: dagger, quantity 3
+kit_item [Mage;a2]: gold piece, quantity 155
+kit_item [Mage;a3]: robes, quantity 1
+kit_item [Mage;a4]: potion, effect Mana, quantity 6
+kit_item [Mage;a5]: stone, effect Channeling, plus 2, quantity 1
+kit_item [Mage;a6]: spellbook [Adventurers' Arts], quantity 1
+kit_item [Mage;a7]: spellbook [Fundamentals of Magick], quantity 1
+kit_item [Mage;a8]: spellbook [Mortal Coil], quantity 1
+kit_item [Mage;a9]: spellbook [Words of Power], quantity 1
+kit_item [Mage;a12]: scroll, effect Magic Weapon, quantity 1
+kit_item [Mage;a13]: scroll, effect Burning Hands, quantity 1
+kit_item [Mage;a14]: scroll, effect Detect Secret Doors, quantity 1
+kit_item [Mage;a15]: scroll, effect Greater Magic Weapon, quantity 1
+kit_item [Mage;a16]: scroll, effect Darkvision, quantity 1
+gear_chance [Mage;a17]: 6
+kit_item [Mage;a17]: scroll, effect Energy Buffer, quantity 1
+gear_chance [Mage;a18]: 70
+gear_chance [Mage;a19]: 100
+gear_chance [Mage;a20]: 50
+kit_item [Mage;a20]: scroll, effect Force Shapechange, quantity 1
+gear_chance [Mage;a21]: 36
+kit_item [Mage;a21]: scroll, effect Vampiric Touch, quantity 1
+gear_stream [Universal Gear]: 20
+gear_chance [Universal Gear;a3]: 32
+gear_chance [Universal Gear;a4]: 51
+gear_chance [Universal Gear;a6]: 88
+gear_chance [Universal Gear;a7]: 4
+kit_item [Universal Gear;a9]: gold piece, quantity 1
+thrown_quantity: 6
+script_yn [Orc;EV_150]: yes
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: twilight salve
+spell_learn: Alarm [Arcane]
+spell_learn: Enlarge [Arcane]
+spell_learn: Expeditious Retreat [Arcane]
+spell_learn: Magic Missile [Arcane]
+store_seed: 25
+character_name: Rathak the Breaker
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 2
