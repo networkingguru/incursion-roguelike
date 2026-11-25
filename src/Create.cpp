@@ -936,9 +936,13 @@ bool Player::Create(bool) {
         MMArray[i] = 0;
     // upstream: off-by-one wrote SkillRanks[SK_LAST] (index 49) into
     // SkillRanks[SK_LASTSKILL==49], one past the end (valid indices 0-48).
-    // Every other loop over SkillRanks in this codebase uses "i!=SK_LAST"
-    // with no "+1" (Debug.cpp:1677, Create.cpp:2958/2990, Managers.cpp:1821,
-    // Help.cpp:82); this is the only outlier. UBSan, Traced, inc-bd2, not sent.
+    // In upstream's tree every other loop bounded by SK_LAST stops at
+    // "i!=SK_LAST" with no "+1"; this is the only outlier. For example:
+    // https://github.com/rmtew/incursion-roguelike/blob/7469d3eddf1c4347928854a9494eeefb301d358e/src/Debug.cpp#L1653
+    // https://github.com/rmtew/incursion-roguelike/blob/7469d3eddf1c4347928854a9494eeefb301d358e/src/Create.cpp#L2622
+    // https://github.com/rmtew/incursion-roguelike/blob/7469d3eddf1c4347928854a9494eeefb301d358e/src/Managers.cpp#L1762
+    // https://github.com/rmtew/incursion-roguelike/blob/7469d3eddf1c4347928854a9494eeefb301d358e/src/Help.cpp#L82
+    // UBSan, Traced, inc-bd2, not sent.
     for(i=0;i!=SK_COUNT;i++)
         SkillRanks[i] = 0;
 
