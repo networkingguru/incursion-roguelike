@@ -2565,9 +2565,13 @@ bool Creature::LoseFatigue(int16 amt, bool avoid) {
     if (avoid && cFP < 0 && isCharacter() && isThreatened() && isMType(MA_GOOD))
         thisc->gainFavour(FIND("Essiah"), 25 * abs(cFP - min(0, oFP)));
 
-    if (cFP <= 0 && oFP > 0)
+    /* upstream: recalculate on every fatigue band change (fine, Fatigued,
+       exhausted), so the pass-out warning reads a current floor. The old test
+       missed a payment from exactly 0 to below 0 and on any platform left
+       Strength, encumbrance and Attr[A_FAT] stale. Observed. inc-93mxz. Not sent. */
+    if ((oFP >= 0) != (cFP >= 0))
         stat_change = true;
-    if (cFP < -Attr[A_FAT] && oFP >= -Attr[A_FAT])
+    if ((oFP >= -Attr[A_FAT]) != (cFP >= -Attr[A_FAT]))
         stat_change = true;
     if (stat_change)
         CalcValues();

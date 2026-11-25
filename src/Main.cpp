@@ -645,6 +645,10 @@ void Game::Play() {
     extern void EatFatigueProbe(Player *pl);
     EatFatigueProbe(pp);
 
+    /* inc-93mxz: opt-in fatigue-band recalculation oracle; see FatigueFloorProbe. */
+    extern void FatigueFloorProbe(Player *pl);
+    FatigueFloorProbe(pp);
+
     /* inc-jahch: opt-in interrupted-rest, waiting and AutoRest fatigue oracle. */
     extern void FatigueRestProbe(Player *pl);
     FatigueRestProbe(pp);
