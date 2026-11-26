@@ -37,6 +37,8 @@ static const Need NEEDS[] = {
     { "identify scroll",    "scroll", "identify;scroll", 12 },
     { "dispel magic scroll","scroll", "dispel magic", 3 },
     { "transmute rock to mud scroll","scroll", "transmute rock to mud", 6 },
+    { "knock scroll",       "scroll", "knock", 6 },
+    { "wand of opening",    "wand", "opening", 2 },
     { "mana",               "potion", "mana", 12 },
     { "food ration",        "food ration", NULL, 12 },
     { "torch",              "torch",          NULL, 12 },
@@ -96,6 +98,12 @@ static void CountMode(Player *p) {
             }
             Error("ROARK_STOCK mundane seed=%d item=%s plus=%d eff=%d", seed, NEEDS[i].label, plus, eff);
         }
+        /* every wand stack in the shop: its quantity and charges (a wand with 0 charges is useless) */
+        for (Item *it = shop->FirstInv(); it; it = shop->NextInv())
+            if (it->isType(T_WAND))
+                Error("ROARK_STOCK wand seed=%d eff=%d qty=%d charges=%d fixed=%d", seed,
+                    it->eID == FIND("opening") ? 1 : 0, (int)it->GetQuantity(), (int)it->GetCharges(),
+                    TEFF(it->eID)->HasFlag(EF_FIXED_PRICE) ? 1 : 0);
         Error("ROARK_STOCK seed=%d short=%d over=%d total=%d", seed, short_, over, NN);
         shop->Remove(true);
     }
@@ -114,13 +122,13 @@ static void PriceMode(Player *p) {
         { "valour", 50 }, { "identify scroll", 100 }, { "mana", 50 },
         { "true blows", 50 }, { "water walking", 50 }, { "elemental resistance", 50 },
     };
-    static const char *CTLNAMES[] = { "restoration", "restore strength", "dimension door", "dispel magic scroll", "transmute rock to mud scroll", "pickaxe" };
+    static const char *CTLNAMES[] = { "restoration", "restore strength", "dimension door", "dispel magic scroll", "transmute rock to mud scroll", "pickaxe", "knock scroll", "wand of opening" };
     rID roark = FIND("Roark Ironbeard");
     p->storeSeed = 1;
     Creature *shop = InitShopkeeper(roark, 100000);
     int d0 = p->SkillLevel(SK_DIPLOMACY);
-    int32 pLow[16], pHigh[16], pNull[16]; const char *names[16]; int nn = 0;
-    Item *its[16];
+    int32 pLow[24], pHigh[24], pNull[24]; const char *names[24]; int nn = 0;
+    Item *its[24];
     for (size_t f = 0; f < sizeof(FIXED) / sizeof(FIXED[0]); f++)
         for (int i = 0; i < NN; i++)
             if (!strcmp(NEEDS[i].label, FIXED[f].label)) {
@@ -199,6 +207,10 @@ static void Report(Creature *shop, const char *phase, int ret) {
         if (!strcmp(NEEDS[i].label, "mana")) mana = have;
         Error("ROARK_STOCK refill phase=%s item=%s have=%d need=%d", phase, NEEDS[i].label, have, NEEDS[i].tier);
     }
+    for (Item *it = shop->FirstInv(); it; it = shop->NextInv())
+        if (it->isType(T_WAND))
+            Error("ROARK_STOCK refill phase=%s wand=%d qty=%d charges=%d", phase,
+                it->eID == FIND("opening") ? 1 : 0, (int)it->GetQuantity(), (int)it->GetCharges());
     Error("ROARK_STOCK refill phase=%s ret=%d short=%d over=%d antitoxin=%d mana=%d",
         phase, ret, short_, over, anti, mana);
 }
@@ -220,6 +232,8 @@ static void RefillMode(Player *p) {
     SetHave(shop, "antitoxin", 9);                /* above the tier size of 6 */
     SetHave(shop, "sheaf arrow", 20);             /* ammunition: partly spent */
     SetHave(shop, "sling stone", 0);              /* ammunition: all spent */
+    SetHave(shop, "knock scroll", 0);             /* all spent */
+    SetHave(shop, "wand of opening", 0);          /* all spent */
     Report(shop, "spent", -1);
     theGame->Turn = 5 * DAY + DAY - 1;            /* last tick of day 5 */
     Report(shop, "sameday", RestockShopDaily(shop) ? 1 : 0);

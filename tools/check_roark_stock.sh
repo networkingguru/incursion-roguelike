@@ -19,12 +19,15 @@
 # and a necessity above its tier size is not reduced (sheaf arrow and sling stone
 # included); 4 craft cost; 5 cost -- list cost of dart 5 cp, sling stone 1 cp, controls
 # sheaf arrow 5 cp and crossbow bolt 10 cp (TITEM Cost, hundredths of a gp).
+# inc-4wv89: count also holds knock scroll 6 and wand of opening 2 (normal price, charges > 0), refill restocks both.
 # inc-6i0x: count also holds six ammunition rows (sheaf arrow, flight arrow, crossbow
 # bolt, hand crossbow dart, dart, sling stone) at exactly 50, mundane (plus 0, no effect).
 # fact: character -- fixture orc-mage-seed4-gate.char, options-2026-08-22.dat
 # fact: shop contents -- probe sets p->storeSeed and builds InitShopkeeper; RestockShop tops to tier
 # fact: game day -- probe sets theGame->Turn directly
 # fact: list cost -- TITEM Cost read directly, no roll
+# fact: wand charges -- Item ctor sets 30+random(21) for T_WAND, probe reads the stored Charges of every stocked wand, asserts only > 0 (inc-4wv89)
+# fact: wand price -- probe reads EF_FIXED_PRICE and getShopCost at Diplomacy 0 and 30, no roll (inc-4wv89)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PROVE=0
@@ -70,9 +73,9 @@ t = log('count')
 rows = re.findall(r'ROARK_STOCK count seed=(\d+) item=([\w ]+) have=(\d+) need=(\d+)', t)
 sums = re.findall(r'ROARK_STOCK seed=(\d+) short=(\d+) over=(\d+) total=(\d+)', t)
 need(len(sums) == 20 and 'ROARK_STOCK done' in t, 'count: want 20 seeds, got %d' % len(sums))
-need(len(rows) == 20 * 39, 'count: want 780 rows, got %d' % len(rows))
+need(len(rows) == 20 * 41, 'count: want 820 rows, got %d' % len(rows))
 for seed, short, over, total in sums:
-    need((short, over, total) == ('0', '0', '39'), 'count seed %s: short=%s over=%s total=%s' % (seed, short, over, total))
+    need((short, over, total) == ('0', '0', '41'), 'count seed %s: short=%s over=%s total=%s' % (seed, short, over, total))
 for seed, item, have, nd in rows:
     need(have == nd, 'count seed %s %s: have %s need %s' % (seed, item, have, nd))
 AMMO = ('sheaf arrow', 'flight arrow', 'crossbow bolt', 'hand crossbow dart', 'dart', 'sling stone')
@@ -85,6 +88,16 @@ for a in AMMO:
     m = [x for x in mun if x[1] == a]
     need(len(m) == 20 and all(x[2] == '0' and x[3] == '0' for x in m),
          'count ammunition %s: want 20 mundane stacks (plus 0, no effect), got %r' % (a, m))
+# inc-4wv89: Knock scrolls and Wands of Opening are stocked, at the normal price, every wand with charges.
+for lab, q in (('knock scroll', '6'), ('wand of opening', '2')):
+    r = [x for x in rows if x[1] == lab]
+    need(len(r) == 20 and all(x[2] == q and x[3] == q for x in r),
+         'count %s: want 20 seeds holding exactly %s, got %r' % (lab, q, [(x[0], x[2]) for x in r]))
+W = re.findall(r'ROARK_STOCK wand seed=(\d+) eff=1 qty=(\d+) charges=(-?\d+) fixed=(\d)', t)
+need(len(W) == 20, 'count wands: want a wand stack on each of 20 seeds, got %d' % len(W))
+need(all(int(c) > 0 for _, _, c, _ in W), 'count wands: a stocked wand has 0 charges: %r' % (W,))
+need(all(f == '0' for _, _, _, f in W), 'count wands: a stocked wand has a fixed price (not the normal price)')
+need(sum(int(q) for _, q, _, _ in W) == 40, 'count wands: want 2 Wands of Opening on each of 20 seeds, got %r' % (W,))
 print('count: %d seeds, %d rows, short=%d over=%d' % (len(sums), len(rows),
       sum(int(s[1]) for s in sums), sum(int(s[2]) for s in sums)))
 
@@ -102,7 +115,7 @@ for k, gp in FIX.items():
         need(r[2] == gp and r[3] == gp and r[4] == gp, 'price %s: want %d got low=%d high=%d null=%d' % (k, gp, r[2], r[3], r[4]))
         need(r[0] <= 0 and r[1] >= 20, 'price %s: Diplomacy not low/high (%d,%d)' % (k, r[0], r[1]))
 for k in ('restoration', 'restore strength', 'dimension door', 'dispel magic scroll',
-          'transmute rock to mud scroll', 'pickaxe'):
+          'transmute rock to mud scroll', 'pickaxe', 'knock scroll', 'wand of opening'):
     r = P.get(k)
     need(r is not None and r[2] > r[3], 'price control %s does not fall with Diplomacy: oracle blind (%r)' % (k, r))
 print('price:', ' '.join('%s=%d/%d' % (k, P[k][2], P[k][3]) for k in FIX if k in P))
@@ -118,7 +131,7 @@ def ph(n):
     need(n in S, 'refill: missing phase ' + n); return S.get(n, (0,) * 5)
 # (ret, short, over, antitoxin, mana)
 need(ph('init')[1:3] == (0, 0), 'refill init: a fresh shop is not full')
-need(ph('spent')[1] == 8 and ph('spent')[2] == 1, 'refill spent: setup did not short 8 / raise 1: %r' % (ph('spent'),))
+need(ph('spent')[1] == 10 and ph('spent')[2] == 1, 'refill spent: setup did not short 10 / raise 1: %r' % (ph('spent'),))
 need(ph('sameday')[0] == 0 and ph('sameday')[1:] == ph('spent')[1:], 'refill sameday: stock changed or refill ran: %r' % (ph('sameday'),))
 need(ph('nextday')[0] == 1 and ph('nextday')[1] == 0, 'refill nextday: not topped up: %r' % (ph('nextday'),))
 need(ph('nextday')[3] == 9 and ph('nextday')[2] == 1, 'refill nextday: necessity above tier size was reduced: %r' % (ph('nextday'),))
@@ -127,6 +140,13 @@ for item, (have, nd) in I.get('nextday', {}).items():
 need(ph('sameday2')[0] == 0 and ph('sameday2')[1] == 1 and ph('sameday2')[4] == 2,
      'refill sameday2: a second refill ran the same day: %r' % (ph('sameday2'),))
 need(ph('day8')[0] == 1 and ph('day8')[1] == 0 and ph('day8')[4] == 12, 'refill day8: %r' % (ph('day8'),))
+for item in ('knock scroll', 'wand of opening'):
+    need(I.get('spent', {}).get(item, (1, 0))[0] == 0 and I.get('nextday', {}).get(item, (0, 1))[0] == I.get('nextday', {}).get(item, (0, 1))[1] > 0,
+         'refill %s: spent=%r nextday=%r, want 0 then the tier size' % (item, I.get('spent', {}).get(item), I.get('nextday', {}).get(item)))
+RW = re.findall(r'ROARK_STOCK refill phase=(\w+) wand=1 qty=(\d+) charges=(-?\d+)', t)
+need(any(p == 'nextday' for p, _, _ in RW) and all(int(c) > 0 for p, _, c in RW if p == 'nextday'),
+     'refill nextday: restocked Wand of Opening has no charges: %r' % (RW,))
+need(not any(p == 'spent' for p, _, _ in RW), 'refill spent: a wand is still in stock')
 for a in ('sheaf arrow', 'sling stone'):
     need(I.get('spent', {}).get(a, (0, 0))[0] < 50 and I.get('nextday', {}).get(a) == (50, 50),
          'refill ammunition %s: spent=%r nextday=%r, want short then 50' % (a, I.get('spent', {}).get(a), I.get('nextday', {}).get(a)))
