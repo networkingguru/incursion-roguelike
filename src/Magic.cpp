@@ -7291,6 +7291,25 @@ static bool SpellTargetGone(EventInfo &e) {
     return t->isDead() || !t->m || t->x == -1;
 }
 
+/* True when c carries an item that a cast of spell eID summoned. A redirected
+   spell marks the item with its sub-effect ("Flame Blade" -> "flame blade;conjure"),
+   whose displayed name is the spell's name in lower case. */
+static bool HoldsSummonedItemOf(Creature *c, rID eID) {
+    /* NAME() hands back one shared buffer: copy each name before the next call. */
+    String spell = NAME(eID);
+    Item *it;
+    for (it = c->FirstInv(); it; it = c->NextInv()) {
+        StatiIterNature(it,SUMMONED)
+            if (S->h == c->myHandle && S->eID) {
+                String nm = NAME(S->eID);
+                if (S->eID == eID || !stricmp((const char*)nm, (const char*)spell))
+                    StatiIterBreakout(it,return true)
+            }
+        StatiIterEnd(it)
+    }
+    return false;
+}
+
 /* Test hook (bd inc-qple2): INCURSION_SPEC_DRAIN_ROLL=<0..99> replaces the
    opposed-school drain roll in Creature::Cast. Unset or invalid: random(100). */
 static int SpecDrainRoll() {
@@ -7394,6 +7413,18 @@ EvReturn Creature::Cast(EventInfo &e) {
                         "a second casting would have no effect.", e.eID);
                     return ABORT;
                 }
+
+    /* upstream: a weapon-summoning spell (CREA_TEMP|CREA_WIELD) marks the
+       ITEM with its SUMMONED stati, so the two refusals above never see it
+       and a second cast makes a second weapon; a redirected spell marks the
+       item with its sub-effect ("Flame Blade" -> "flame blade;conjure").
+       Same code on Win32. Observed, inc-m790r, not sent. */
+    if (TEFF(e.eID)->HasFlag(EF_PERSISTANT) || TEFF(e.eID)->HasFlag(EF_PERMANANT))
+        if (HoldsSummonedItemOf(this, e.eID)) {
+            IPrint("You already have <9><Res><7> cast on you, "
+                "a second casting would have no effect.", e.eID);
+            return ABORT;
+        }
 
     if (isCharacter())
         if (thisc->Spells[e.sp] & SP_STAFF)

@@ -2781,7 +2781,7 @@ and EA_INFLICT
 Wizard / Sorcerer Spell "Decastave" : EA_CREATION
   { SC_EVO; Base: SP_EASY; Cost: 5; Level: 2; 
     xval: CREA_WIELD | CREA_TEMP; rval: $"force construct staff"; 
-    Flags: EF_DLONG; Purpose: EP_BUFF (VS_MELEE); 
+    Flags: EF_PERSISTANT, EF_LOSEMANA; Purpose: EP_BUFF (VS_MELEE); 
     pval: +6; 
     On Event EV_MAGIC_HIT
       "A force-staff appears in your hands!" /
@@ -2789,7 +2789,7 @@ Wizard / Sorcerer Spell "Decastave" : EA_CREATION
     Desc: "Creates a force staff in the caster's hands that inflicts
       1d10 (1d8 vs. large creatures) points of blunt damage, 1d6 points 
       of sonic damage, scores at threat on 17-20 (crit x3) and has a 
-      speed modifier of +25~.";
+      speed modifier of +25~. The staff lasts until the caster rests or the spell is dispelled.";
     hObj it;
     On Event EV_ISTARGET {
       for(it=EActor->FirstInv();it;it=EActor->NextInv()) 

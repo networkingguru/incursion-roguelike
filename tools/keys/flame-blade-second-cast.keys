@@ -1,0 +1,50 @@
+# Observe a second cast of Flame Blade's conjure form while its blade is held, for bd inc-m790r.
+# Run through tools/check_decastave_persistent.sh (fixture druid-shoulder-metal-seed7-opt0822, raised to druid level 3).
+@while "more --" SPACE
+w
+@while "Enter wizard mode" y
+@until "Wizard Mode Options" w
+@choose "Wizard Mode Switches"
+DOWN*2          # Free Advancement is the 3rd switch: the level-ups below.
+SPACE
+DOWN*2          # Always Rest Safely is the 5th: the dungeon refuses a rest otherwise.
+SPACE
+DOWN            # Ignore Spell Failure is the 6th.
+SPACE
+DOWN*5          # Freeze Monsters is the 11th.
+SPACE
+ESC
+# Flame Blade is a level 2 spell, learnable from caster level 3; the fixture is a level 1 druid.
+d
+G
+G
+a               # the level 3 feat menu: the first feat
+@dump:sheet-level
+L
+TAB             # the table has one page per spell level: page 2 holds the level 2 spells
+DOWN*10 SPACE   # Flame Blade is the 11th row
+@dump:learn-marked
+ENTER           # open the summary box
+ENTER           # confirm the box
+ESC
+@until "HP:" ESC
+z               # "Learn at rest": the rest memorizes Flame Blade
+@while "Confirm rest in dungeon" y
+@until "HP:" ESC
+m
+@choose "Flame Blade"
+c               # "Augment or conjure?": conjure
+@dump:after-cast
+b SPACE         # swap the blade from the In-the-Air slot into the Weapon Hand
+@while "two-handed" y
+d               # drop the scythe the swap left in the air
+@dump:blade-wielded
+ESC
+@until "HP:" ESC
+# A second casting while the blade is held.
+m
+@choose "Flame Blade"
+@dump:second-cast
+@while "Augment or conjure" c
+@while "'In the Air'" ESC
+@quit
