@@ -982,10 +982,15 @@ int16 getChivalryBreach(EventInfo &e, bool *fleeingBreach) {
     return breach;
 }
   
-bool attackSanity(EventInfo &e) {
+/* The fleeing/terms/confirm part of attackSanity, shared with Creature::Cast
+   (inc-g1zfl). Returns false when the attack must not happen: terms accepted,
+   or the player answered no to the prompt. *breachOut gets the final breach.
+   upstream: upstream's attackSanity never runs for a spell, so a lawful or good
+   caster is charged for striking a fleeing creature with no prompt. Reasoned,
+   inc-g1zfl, not sent. The terms offer is ours (inc-gfq2). */
+bool fleeingTermsConfirm(EventInfo &e, int16 *breachOut) {
     bool doAlignWarning, fleeingBreach; 
     int16 breach;
-    Creature *l;
     
     auto alignWarning = [&](int16 br) {
         if (e.EActor->isMType(MA_LAWFUL) || (e.EActor->isCharacter() && 
@@ -1028,7 +1033,19 @@ bool attackSanity(EventInfo &e) {
                 e.EVictim->HasStati(PRONE) ? "prone" :
                 e.EVictim->HasStati(BLIND) ? "blinded" :
                 e.EVictim->HasStati(PARALYSIS) ? "paralyzed" : "stuck"),true))
-        return false;        
+        return false;
+
+    if (breachOut)
+        *breachOut = breach;
+    return true;
+}
+
+bool attackSanity(EventInfo &e) {
+    int16 breach;
+    Creature *l;
+
+    if (!fleeingTermsConfirm(e, &breach))
+        return false;
 
     /* Creatures with a lawful or good leader may be under orders
        not to do things which contravene the leader's alignment. */
