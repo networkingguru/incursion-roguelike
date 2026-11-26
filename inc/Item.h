@@ -148,7 +148,12 @@ class Item: public Thing, public Magic
       virtual void RandomBane() { }
       virtual bool QualityOK(int8 q,uint8 lev=200) {return false; }
       virtual int16 GetQuality(int16 i) { return 0; }
-      virtual int32 getShopCost(Creature *Buyer, Creature *Seller);
+      /* asLevel: -1 prices the item as it is; -2 prices the plain base item with
+         no magic; 0 or more prices an unidentified magic item as if its level
+         were asLevel, never reading its true effect or plus (inc-ibzyp). */
+      virtual int32 getShopCost(Creature *Buyer, Creature *Seller, int16 asLevel=-1);
+      int  IntuitTier();   /* index into IntuitLevels of the hint in Inscrip, or -1 */
+      int32 KnownValue(Creature *viewer);   /* value the player can know; inc-ibzyp */
       virtual bool isBaneOf(int16 MType) { return false; }
       virtual bool isBaneOf(Creature *c) { return false; }
       virtual int32 GetGroup();
@@ -490,6 +495,12 @@ struct ItemGen {
   bool Flavored;
 };
 
+/* The hint words Player::IntuitItem writes into Item::Inscrip, weakest first
+   (inc-ibzyp: shared with Item::IntuitTier, so the two cannot drift). */
+// family: INTUIT_LEVEL internal
+#define INTUIT_LEVEL_COUNT 8
+// end family: INTUIT_LEVEL
+extern const char * const IntuitLevels[INTUIT_LEVEL_COUNT];
 extern ItemGen DungeonItems[],
                MonsterItems[],
                IllusionItems[],

@@ -784,6 +784,11 @@ void Game::Play() {
     extern void AutoLootPacksProbe(Player *pl);
     AutoLootPacksProbe(pp);
 
+    /* inc-ibzyp: off unless INCURSION_MULTISELECT_COLOR_PROBE is set. See
+       src/MultiSelectColorProbe.cpp and tools/check_multiselect_colors.sh. */
+    extern void MultiSelectColorProbe(Player *pl);
+    MultiSelectColorProbe(pp);
+
     /* inc-4reo: opt-in AutoPickupFloor multi-pack reproduction. */
     extern void AutoPickupPacksProbe(Player *pl);
     AutoPickupPacksProbe(pp);

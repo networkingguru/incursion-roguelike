@@ -2419,6 +2419,50 @@ bool Item::HasSpell(uint16 sp)
     return false;
   }
 
+const char * const IntuitLevels[INTUIT_LEVEL_COUNT] = {
+    "<7>mundane<7>",
+    "<3>magical<7>",
+    "<5>good<7>",
+    "<6>great<7>",
+    "<4>excellent<7>",
+    "<12>superior<7>",
+    "<14>legendary<7>",
+    "<15>unearthly<7>"
+};
+
+int Item::IntuitTier()
+  {
+    if (!Inscrip.GetLength())
+      return -1;
+    for (int k = 0; k != INTUIT_LEVEL_COUNT; k++)
+      {
+        String w = XPrint(IntuitLevels[k]);
+        if (w.GetLength() && !strncmp(Inscrip, w, w.GetLength()))
+          return k;
+      }
+    return -1;
+  }
+
+/* inc-ibzyp: the value a viewer may learn from this item, on one scale (gp
+   after the shop /3): known magic and plus gives the true price; an intuition
+   hint gives the price of an item at the middle of the levels that hint spans;
+   anything else gives the plain base item. It never reads an unidentified
+   item's effect or plus, so a sort on it reveals nothing. Hint k covers levels
+   3(k-1)..3(k-1)+2, so the midpoint is 3(k-1)+1 (PROVISIONAL, inc-ibzyp). The
+   result is clamped so that the difference of two keys fits an int32. */
+int32 Item::KnownValue(Creature *viewer)
+  {
+    int32 v;
+    int t;
+    if (isKnown(KN_MAGIC) && isKnown(KN_PLUS))
+      v = getShopCost(NULL,NULL);
+    else if ((t = IntuitTier()) >= 1)
+      v = getShopCost(NULL,NULL,3 * (t - 1) + 1);
+    else
+      v = getShopCost(NULL,NULL,-2);
+    return min(v,(int32)1000000000);
+  }
+
 int16 Item::PItemLevel(Creature *cr)
   {
     if (cr->HasStati(TRUE_SIGHT))

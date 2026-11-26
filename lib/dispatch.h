@@ -2131,8 +2131,8 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
         REGS(n) = T1->ChooseResource(GETSTR(STACK(1)), (int16)STACK(2), STACK(3));
         return;
     case 414:
-        ASSERT(REGS(63) >= 3)
-        T1->LOption(GETSTR(STACK(1)), STACK(2), GETSTR(STACK(3)));
+        ASSERT(REGS(63) >= 4)
+        T1->LOption(GETSTR(STACK(1)), STACK(2), GETSTR(STACK(3)), STACK(4));
         return;
     case 415:
         ASSERT(REGS(63) >= 0)
@@ -2824,6 +2824,11 @@ void VMachine::CallMemberFunc(int16 funcid, hObj h, int8 n) {
     case 550:
         ASSERT(REGS(63) >= 0)
         REGS(n) = QualityMaxNumber();
+        return;
+    case 551:
+        VERIFY(h,T_ITEM,"KnownValue")
+        ASSERT(REGS(63) >= 1)
+        REGS(n) = oItem(h)->KnownValue(oCreature(STACK(1)));
         return;
       default:
         Error("Illegal member function call!");
