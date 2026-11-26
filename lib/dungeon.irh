@@ -423,6 +423,8 @@ Monster "Roark Ironbeard" : MA_DWARF, MA_ADVENTURER
           $"scroll" $"identify;scroll" 12 24
           $"scroll" $"dispel magic" 3 KIT_BY_TYPE
           $"scroll" $"transmute rock to mud" 6 KIT_BY_TYPE
+          $"scroll" $"Knock" 6 0
+          $"wand" $"Opening" 2 0
           $"potion" $"mana" 12 KIT_BY_TYPE
           $"food ration" 0 12 KIT_BY_TYPE
           $"torch" 0 12 KIT_BY_TYPE
