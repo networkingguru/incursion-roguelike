@@ -380,7 +380,9 @@ public:
     bool CellPixel(int16 mx, int16 my, int &px, int &py, int &cw, int &ch);
 private:
     bool LightFrame(uint32 now);
-    void SleepTicking(int16 milli);
+    void LitRepaintAll();
+    bool EffectFrame(uint32 now);
+    void SleepTicking(int16 milli, bool fast = false);
     void RecStep();
     void RecAdvance(uint32 ms);
     int oldResX, oldResY;
@@ -1126,6 +1128,10 @@ void libtcodTerm::SetDebugText(const char *text) {
     debugText = text;
 }
 
+extern bool AnimSpeedSampling();
+extern void AnimSpeedPresent(uint32 hash);
+extern void AnimSpeedWait(bool inside);
+
 void libtcodTerm::Update() {
     static int update_count = 0;
     TCOD_console_blit(bScreen,0,0,0,0,NULL,0,0,1.0f,1.0f);
@@ -1138,6 +1144,19 @@ void libtcodTerm::Update() {
     TCOD_console_flush();
     PALETTE_LOG_RECT();
     PALETTE_LOG_EVENT("present", "Update");
+    /* inc-i63lc: observe the colors actually submitted, never tick or repaint. */
+    if (AnimSpeedSampling()) {
+        uint32 hash = 2166136261u;
+        for (int y = Windows[WIN_MAP].Top; y <= Windows[WIN_MAP].Bottom; ++y)
+            for (int x = Windows[WIN_MAP].Left; x <= Windows[WIN_MAP].Right; ++x) {
+                TCOD_color_t fg = TCOD_console_get_char_foreground(bCurrent, x, y);
+                TCOD_color_t bg = TCOD_console_get_char_background(bCurrent, x, y);
+                hash = (hash ^ fg.r) * 16777619u; hash = (hash ^ fg.g) * 16777619u;
+                hash = (hash ^ fg.b) * 16777619u; hash = (hash ^ bg.r) * 16777619u;
+                hash = (hash ^ bg.g) * 16777619u; hash = (hash ^ bg.b) * 16777619u;
+            }
+        AnimSpeedPresent(hash);
+    }
 
     updated = true;
 }
@@ -1297,10 +1316,28 @@ bool libtcodTerm::LightFrame(uint32 now) {
 	if (now - ticks_light_last < LIGHT_TICK_MS)
 		return false;
 	LightTick(now);
+	LitRepaintAll();
+	Update();
+	ticks_light_last = now;
+	return true;
+}
+
+void libtcodTerm::LitRepaintAll() {
 	const int32 n = (int32)sizeX * sizeY;
 	for (int32 i = 0; i < n; i++)
 		if (litCells[i].lit)
 			LitPaint(i);
+}
+
+/* inc-i63lc: one repaint of a live effect light in any light mode. The steady
+   light (Fast) never ticks, so LightFrame draws nothing for it. Only shimmer
+   advances the noise. Returns whether it drew. */
+bool libtcodTerm::EffectFrame(uint32 now) {
+	if (!litCells || Mode != MO_PLAY || showCursor || LightFlashCount() <= 0)
+		return false;
+	if (LightMode(p) == LIGHT_SHIMMER)
+		LightTick(now);
+	LitRepaintAll();
 	Update();
 	ticks_light_last = now;
 	return true;
@@ -1506,10 +1543,7 @@ void libtcodTerm::RecStep() {
 		RefreshMap();   /* inc-jw0hw: a standing pattern picks again on the virtual clock too */
 	if (litCells && Mode == MO_PLAY) {
 		LightTick(g_virtMs);
-		const int32 n = (int32)sizeX * sizeY;
-		for (int32 i = 0; i < n; i++)
-			if (litCells[i].lit)
-				LitPaint(i);
+		LitRepaintAll();
 		ticks_light_last = g_virtMs;
 	}
 	Update();
@@ -1523,28 +1557,81 @@ void libtcodTerm::RecStep() {
 	TCOD_sys_save_bitmap((void*)g_lastFrame, path.c_str());
 }
 
+/* inc-i63lc: carry the remainder so a short wait (Normal 16 ms, Fast 8 ms)
+   costs its true time instead of one whole 33 ms step. */
+static uint32 g_recCarry = 0;
 void libtcodTerm::RecAdvance(uint32 ms) {
-	for (uint32 done = 0; done < ms; done += 33)
+	g_recCarry += ms;
+	while (g_recCarry >= 33) {
+		g_recCarry -= 33;
 		RecStep();
+	}
 }
 
-void libtcodTerm::SleepTicking(int16 milli) {
+/* inc-i63lc: one display refresh period in whole ms, rounded UP, read once from
+   SDL's current mode of display 0. A report of 0 or a failure means 60 Hz. */
+static uint32 RefreshPeriodMs() {
+	static uint32 period = 0;
+	if (!period) {
+		SDL_DisplayMode dm;
+		int hz = 60;
+		if (SDL_GetCurrentDisplayMode(0, &dm) == 0 && dm.refresh_rate > 0)
+			hz = dm.refresh_rate;
+		period = (1000 + hz - 1) / hz;
+	}
+	return period;
+}
+
+/* Fast: the wait lasts max(milli/8, one refresh period), counted from the end of
+   the previous wait when it ended under 50 ms ago, and the draw counts inside it.
+   Normal and None keep the plain sleep-then-draw shape. */
+void libtcodTerm::SleepTicking(int16 milli, bool fast) {
+	struct WaitScope {
+		WaitScope() { AnimSpeedWait(true); }
+		~WaitScope() { AnimSpeedWait(false); }
+	} waitScope;
+	uint32 total = (milli > 0) ? (uint32)milli : 0u;
+	if (fast) {   /* the recorder takes the same Fast length as the live path */
+		const uint32 normal = (total + 1) / 2;   /* what Normal waits */
+		total = (total + 7) / 8;
+		if (total < RefreshPeriodMs()) total = RefreshPeriodMs();
+		if (total > normal) total = normal;   /* Fast is never longer than Normal */
+	}
 	if (RecOn()) {
-		RecAdvance(milli > 0 ? (uint32)milli : 0u);
+		RecAdvance(total);
 		return;
 	}
+	static uint32 prevEnd = 0, lastDrawMs = 0;
+	static bool havePrev = false;
 	const uint32 start = TCOD_sys_elapsed_milli();
-	const uint32 total = (milli > 0) ? (uint32)milli : 0u;
-	uint32 done = 0;
+	uint32 origin = start;
+	if (fast && havePrev && start - prevEnd < 50u) origin = prevEnd;
+	// Fast reserves the last draw's cost, so the draw finishes at the deadline.
+	const uint32 sleepTo = (fast && total > lastDrawMs) ? total - lastDrawMs : total;
+	uint32 done = start - origin;
+	bool drew = false;
 	// Unsigned elapsed subtraction survives the millisecond counter wrap.
-	while (done < total) {
-		uint32 step = total - done;
+	while (done < sleepTo) {
+		uint32 step = sleepTo - done;
 		if (step > LIGHT_TICK_MS) step = LIGHT_TICK_MS;
 		TCOD_sys_sleep_milli(step);
 		uint32 now = TCOD_sys_elapsed_milli();
-		done = now - start;
-		if (!LightFrame(now))
+		done = now - origin;
+		drew = LightFrame(now);
+		if (!drew)
 			MotionFrame(now);   /* inc-jw0hw: a shake or dance moves on every frame */
+	}
+	if (!drew) {
+		const uint32 t0 = TCOD_sys_elapsed_milli();
+		if (EffectFrame(t0))   /* inc-i63lc: a short wait still shows its frame */
+			lastDrawMs = TCOD_sys_elapsed_milli() - t0;
+	}
+	if (fast) {
+		uint32 now = TCOD_sys_elapsed_milli();
+		if (now - origin < total)
+			TCOD_sys_sleep_milli(total - (now - origin));
+		prevEnd = TCOD_sys_elapsed_milli();
+		havePrev = true;
 	}
 }
 
@@ -1605,8 +1692,8 @@ void libtcodTerm::Color(uint16 _attr) {
 
 void libtcodTerm::StopWatch(int16 milli) {    
     switch (p ? p->Opt(OPT_ANIMATION) : 0) {
-    case 0: SleepTicking(milli); return;
-    case 1: SleepTicking((milli+3)/4); return; 
+    case 0: SleepTicking((milli+1)/2); return;   /* inc-i63lc: Normal is half the old time */
+    case 1: SleepTicking(milli, true); return;   /* Fast: max(milli/8, one refresh) */
     case 2: return;
     }
 }
@@ -1620,6 +1707,7 @@ void FrameClip(const char *name) {
     if (!RecOn() || !name || !name[0]) return;
     g_recClip = name;
     g_recFrame = 0;
+    g_recCarry = 0;
     RecMkdir(g_recDir);
 }
 

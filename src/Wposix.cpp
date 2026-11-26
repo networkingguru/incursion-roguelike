@@ -822,8 +822,8 @@ void posixTerm::StopWatch(int16 milli) {
     if (!useCurses)
         return;
     switch (p ? p->Opt(OPT_ANIMATION) : 0) {
-    case 0: napms(milli); return;
-    case 1: napms((milli + 3) / 4); return;
+    case 0: napms((milli + 1) / 2); return;   /* inc-i63lc */
+    case 1: napms((milli + 7) / 8); return;
     case 2: return;
     }
 }

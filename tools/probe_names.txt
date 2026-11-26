@@ -7,6 +7,7 @@
 # fails on an unregistered name, a stale row, a second row, an unsorted row or a bad row.
 INCURSION_ACT_OVERFLOW_PROBE	pre-registry	-
 INCURSION_ALIGN_PROBE	pre-registry	-
+INCURSION_ANIM_SPEED_PROBE	inc-i63lc	live SDL Fireball presents, consecutive map-color states and wall ms; value 0 Normal, 1 Fast or 2 None; refuses recording
 INCURSION_AOO_PROBE	pre-registry	-
 INCURSION_AREA_PROBE	pre-registry	-
 INCURSION_ARMOUR_PROBE	pre-registry	-
@@ -64,6 +65,7 @@ INCURSION_EFFECT_LIGHT_OFF	inc-jw0hw	light flashes add nothing; the reel's light
 INCURSION_EFFECT_LIGHT_PROBE	inc-jw0hw	effect light probe (tools/check_effect_light.sh)
 INCURSION_EFFECT_LIGHT_TABLE	inc-jw0hw	effect reel probe logs each reel effect's glow decision and light color without casting (tools/check_effect_light_table.sh)
 INCURSION_EFFECT_REEL	inc-jw0hw	effect reel probe: casts every blast, globe, aura field and breath type in a dark room, one recorder clip each (tools/render_effect_reel.sh, tools/check_effect_reel_list.sh)
+INCURSION_EFFECT_REEL_ANIM	inc-i63lc	reel animation option, 0 Normal (default) or 1 Fast; any other value logs REEL_ERROR and no reel
 INCURSION_EFFECT_REEL_ONLY	inc-jw0hw	comma-separated effect names; the reel plays only those
 INCURSION_ELEM_RESIST_PROBE	pre-registry	-
 INCURSION_ELUDE_PROBE	pre-registry	-
