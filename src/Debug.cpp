@@ -28,6 +28,24 @@
 
 #include "Incursion.h"
 
+/* inc-g1zfl: summon-time fear staging, independent of monster AI and morale. */
+static void SummonAfraidProbe(Monster *mn)
+{
+    const char *mode = getenv("INCURSION_SUMMON_AFRAID");
+    if (!mode || (strcmp(mode,"HP") && strcmp(mode,"MAGIC"))) return;
+    const int fear = !strcmp(mode,"HP") ? FEAR_HP : FEAR_MAGIC;
+    mn->GainTempStati(AFRAID,NULL,10000,SS_MONI,fear);
+    char path[1024];
+    snprintf(path,sizeof(path),"%slogs/summon-afraid.log",
+        (const char*)T1->IncursionDirectory);
+    FILE *log = fopen(path,"a");
+    if (log) {
+        fprintf(log,"SUMMON mon=%s fear=%s afraid=%d x=%d y=%d duration=10000\n",
+            (const char*)NAME(mn->mID),mode,(int)mn->HasStati(AFRAID),mn->x,mn->y);
+        fclose(log);
+    }
+}
+
 
 #ifdef DEBUG_MEMORY_CORRUPTION
 
@@ -706,6 +724,7 @@ void Player::WizardOptions() {
                 TMON(mn->tmID)->PEvent(EV_BIRTH,mn,mn->tmID);
                 mn->PlaceAt(m,e.EXVal,e.EYVal);
                 mn->Initialize(true);
+                SummonAfraidProbe(mn);
                 /* inc-b4l3g.15, test-only: the probe follows this monster. */
                 if (getenv("INCURSION_LOWHP_FEAR_PROBE")) {
                     extern void LowHpFearProbeTarget(Monster *m);

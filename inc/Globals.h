@@ -31,6 +31,7 @@ bool AlignConflict(uint16 al1, uint16 al2, bool strict=false);
 bool godAllowsAlign(rID gID, uint16 align);
 bool isLegalPersonTo(Creature *Actor, Creature *Victim);
 int16 getChivalryBreach(EventInfo &e, bool *fleeingBreach = NULL);
+bool fleeingTermsConfirm(EventInfo &e, int16 *breachOut);
 rID getAnimalName();
 const char* GodPronoun(rID gID, bool poss);
 bool effectGivesStati(rID eID);

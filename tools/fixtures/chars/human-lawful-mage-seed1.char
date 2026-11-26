@@ -1,0 +1,141 @@
+# human-lawful-mage-seed1: Human Lawful Good Mage, Point Buy, Evocation; Magic Missile is a class grant (known as an ordinary spell, so a cast goes through Creature::Cast).
+# Recorded by INCURSION_RECORD_CHAR from tools/keys/chargen-human-lawful-mage-save.keys, seed 1, settings tools/fixtures/options-2026-08-22.dat. Bead inc-g1zfl.
+# recorded by INCURSION_RECORD_CHAR: the creation decisions, in the order made
+options: tools/fixtures/options-2026-08-22.dat
+seed: 1
+alter_options: no
+explore_continue: yes
+formula_seed: 2
+race: Human
+name: David
+surname: Faravis
+natural_aptitude: Athletics
+natural_aptitude: Diplomacy
+class: Mage
+attr_str: 14
+attr_dex: 16
+attr_con: 18
+attr_int: 18
+attr_wis: 12
+attr_cha: 16
+attr_luc: 17
+craft_formula [Alchemy]: tanglefoot bag
+craft_formula [Alchemy]: eggshell smoke-bomb
+alignment: Lawful Good
+specialist_school: Evocation
+feat: Acrobatic
+feat: Alertness
+feat: Acute Senses
+hp_roll [Mage]: 4
+mana_roll [Mage]: 20
+craft_formula [Potion]: See Invisibility;potion
+craft_formula [Potion]: Light;potion
+craft_formula [Potion]: Vitality
+craft_formula [Potion]: Dimension Door
+craft_formula [Scroll]: Resist Water
+craft_formula [Scroll]: Cone of Cold
+craft_formula [Scroll]: Spirit Net
+craft_formula [Scroll]: Flame Arrow
+craft_formula [Scroll]: Polymorph Self
+craft_formula [Scroll]: Blur
+craft_formula [Scroll]: Detect Stairs
+craft_formula [Scroll]: Stone to Flesh
+skill_ranks [skill 0]: 0
+skill_ranks [Alchemy]: 2
+skill_ranks [Animal Empathy]: 0
+skill_ranks [Appraise]: 2
+skill_ranks [Athletics]: 0
+skill_ranks [Balance]: 0
+skill_ranks [Bluff]: 0
+skill_ranks [Climb]: 0
+skill_ranks [Concentration]: 2
+skill_ranks [Craft]: 2
+skill_ranks [Decipher Script]: 2
+skill_ranks [Diplomacy]: 0
+skill_ranks [Disguise]: 0
+skill_ranks [Escape Artist]: 0
+skill_ranks [Find Weakness]: 0
+skill_ranks [Gather Information]: 0
+skill_ranks [Handle Device]: 0
+skill_ranks [Healing]: 0
+skill_ranks [Hide in Shadows]: 0
+skill_ranks [Illusioncraft]: 0
+skill_ranks [Intimidate]: 0
+skill_ranks [Intuition]: 0
+skill_ranks [Jump]: 0
+skill_ranks [Knowledge (Theyra)]: 0
+skill_ranks [Knowledge (Infernal)]: 0
+skill_ranks [Knowledge (Magic)]: 0
+skill_ranks [Knowledge (Mythology)]: 0
+skill_ranks [Knowledge (Nature)]: 0
+skill_ranks [Knowledge (Oceans)]: 0
+skill_ranks [Knowledge (Planes)]: 0
+skill_ranks [Knowledge (Theology)]: 0
+skill_ranks [Knowledge (Undead)]: 0
+skill_ranks [Listen]: 0
+skill_ranks [Lockpicking]: 0
+skill_ranks [Metamagic]: 0
+skill_ranks [Mining]: 0
+skill_ranks [Move Silently]: 0
+skill_ranks [Perform]: 0
+skill_ranks [Pick Pockets]: 0
+skill_ranks [Poison Use]: 0
+skill_ranks [Ride]: 0
+skill_ranks [Searching]: 0
+skill_ranks [Seneschal]: 0
+skill_ranks [Spellcraft]: 0
+skill_ranks [Spot]: 0
+skill_ranks [Swimming]: 0
+skill_ranks [Tumble]: 0
+skill_ranks [Use Magic]: 0
+skill_ranks [Wilderness Lore]: 0
+craft_formula [Alchemy]: Silversheen;alchemy
+craft_formula [Alchemy]: Alchemist's Fire
+gear_stream [Human]: 17
+kit_item [Human;a0]: medium backpack, quantity 1
+kit_item [Human;a1]: food ration, quantity 6
+kit_item [Human;a2]: torch, quantity 5
+gear_stream [Mage]: 18
+kit_item [Mage;a0]: dagger, quantity 4
+kit_item [Mage;a1]: quarterstaff, quantity 1
+kit_item [Mage;a2]: gold piece, quantity 157
+kit_item [Mage;a3]: robes, quantity 1
+kit_item [Mage;a4]: potion, effect Mana, quantity 6
+kit_item [Mage;a5]: stone, effect Channeling, plus 2, quantity 1
+kit_item [Mage;a6]: spellbook [Adventurers' Arts], quantity 1
+kit_item [Mage;a7]: spellbook [Fundamentals of Magick], quantity 1
+kit_item [Mage;a8]: spellbook [Conjurations and Summonings], quantity 1
+kit_item [Mage;a9]: spellbook [Conjurations and Summonings], quantity 1
+kit_item [Mage;a12]: scroll, effect Emotion, quantity 1
+kit_item [Mage;a13]: scroll, effect Detect Objects, quantity 1
+kit_item [Mage;a14]: scroll, effect Major Creation, quantity 1
+kit_item [Mage;a15]: scroll, effect Force Bolt, quantity 1
+kit_item [Mage;a16]: scroll, effect Heightened Senses, quantity 1
+gear_chance [Mage;a17]: 100
+gear_chance [Mage;a18]: 35
+kit_item [Mage;a18]: scroll, effect Sleep, quantity 1
+gear_chance [Mage;a19]: 62
+gear_chance [Mage;a20]: 6
+kit_item [Mage;a20]: scroll, effect Enchant Armour, quantity 1
+gear_chance [Mage;a21]: 80
+gear_stream [Universal Gear]: 19
+gear_chance [Universal Gear;a3]: 46
+gear_chance [Universal Gear;a4]: 59
+gear_chance [Universal Gear;a6]: 46
+gear_chance [Universal Gear;a7]: 11
+kit_item [Universal Gear;a9]: gold piece, quantity 1
+personality: The Ambitious Conqueror
+craft_formula [Alchemy]: sunrod
+craft_formula [Alchemy]: Universal Solvent
+spell_learn: Alarm [Arcane]
+spell_learn: Burning Hands [Arcane]
+spell_learn: Endure Cold [Arcane]
+spell_learn: Endure Fire [Arcane]
+spell_learn: Expeditious Retreat [Arcane]
+store_seed: 24
+character_name: David Faravis
+wizard_mode: 0
+explore_mode: 1
+rerolled_perks: 0
+rerolls: 0
+stat_method: 2

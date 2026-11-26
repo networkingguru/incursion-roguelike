@@ -219,6 +219,7 @@ INCURSION_STONE_FLESH_STATUE	pre-registry	-
 INCURSION_STONING_DUR_PROBE	pre-registry	-
 INCURSION_STUDY_PROBE	pre-registry	-
 INCURSION_STUN_DUR_PROBE	pre-registry	-
+INCURSION_SUMMON_AFRAID	inc-g1zfl	wizard summon gains AFRAID with HP or MAGIC fear before AI runs
 INCURSION_SUMMON_INV_PROBE	pre-registry	-
 INCURSION_SUMMON_NO_GEAR	pre-registry	-
 INCURSION_SWARM_THEFT_PROBE	pre-registry	-

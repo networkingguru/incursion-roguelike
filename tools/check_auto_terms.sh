@@ -30,13 +30,36 @@
 # flees, and needs at least one seed of each result. A run that cannot show its
 # own staging is INCONCLUSIVE (exit 2), never a pass.
 #
+# Spell reproduction (inc-g1zfl): --spells, or --spells --prove-red.
+# fact: Lawful Good caster identity/alignment -- INCURSION_LOAD=human-paladin-seed4-opt0822 fixture
+# fact: spells known -- wizard Learn Any Spell grants Magic Missile and Fireball
+# fact: casting succeeds and mana suffices -- wizard Ignore Spell Failure and Infinite Mana
+# fact: lit unobstructed line of fire -- INCURSION_RUNTO_STAGE=R fixed corridor, overview opened before summon
+# fact: sapient hostile rainbow sprite at (43,40) -- wizard Genocide Everything then Monster Summoning; species has M_HOSTILE, no M_IALIGN
+# fact: target has no random equipment/resistances -- INCURSION_SUMMON_NO_GEAR=1
+# fact: fear is AFRAID/FEAR_HP before casting -- INCURSION_SUMMON_AFRAID=HP at summon time (inc-g1zfl)
+# fact: target cannot move or recover from fear -- wizard Freeze Monsters plus INCURSION_RESCAN_HOLD
+# fact: summon and targeting share a turn -- key scripts cast immediately, screen headers record the same turn
+# fact: completed sessions and separate specimens -- headless.sh clean exit report, unique INCURSION_RUN_DIR per run
+# fact: Auto-Offer Terms setting -- options byte 312, stamped OPT_GEN_CURRENT
+# fact: Diplomacy roll of the terms offer -- INCURSION_RUNTO_SKILL_ROLL=20 (accept scenes) and =1 (refuse scenes), pins the d20 read by Creature::SkillCheck
+# fact: spell cast path (Cast vs Invoke) -- paladin's wizard-learned spell is innate (Invoke); mage fixture human-lawful-mage-seed1 knows Magic Missile as a class grant (Cast)
+# fact: mage identity/alignment/known spells -- INCURSION_LOAD=human-lawful-mage-seed1 fixture, Point Buy, Lawful Good, class-grant Magic Missile
+# fact: spell damage and Fireball save -- invariant over all rolls; no amount asserted, only strike/offer/prompt ordering
+# fact: matched caster/target/spell text -- fixture name, wizard-selected ogre and granted spells; engine message literals
+# No morale roll or monster turn stages fear in the spell mode; S2, M2 and S3 run at seed 1.
+# It leaves the four legacy weapon outcomes in the default mode.
+#
 # Exit 0 = all four proved, 1 = a FAIL, 2 = could not measure.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if [ "${1:-}" = "--prove-red" ]; then
+SPELLS=0
+if [ "${1:-}" = "--spells" ]; then SPELLS=1; shift; fi
+
+if [ "$SPELLS" = 0 ] && [ "${1:-}" = "--prove-red" ]; then
     AUTO_TERMS_ON_BYTE=0 "$0"
     rc=$?
     if [ "$rc" -eq 1 ]; then
@@ -50,7 +73,7 @@ fi
 ON_BYTE="${AUTO_TERMS_ON_BYTE:-1}"
 SEEDS="${SEEDS:-40}"
 BASE=tools/fixtures/options-2026-08-22-noroomdesc.dat
-CHAR=tools/fixtures/chars/human-paladin-seed4-opt0822.sav
+CHAR=tools/fixtures/chars/human-paladin-seed4-opt0822.char
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 OUT="$ROOT/logs/runs/auto-terms-$STAMP"
 
@@ -95,11 +118,37 @@ printf "$(printf '\\%03o' "$GEN_CURRENT")" | \
 
 runs=0
 run() { # <settings name> <keys> <seed> <dir name>
-    INCURSION_OPTIONS="$OUT/$1.dat" INCURSION_LOAD="$CHAR" \
+    INCURSION_OPTIONS="$OUT/$1.dat" INCURSION_LOAD="${CHAR_OVERRIDE:-$CHAR}" \
         INCURSION_RUN_DIR="$OUT/$4" \
         tools/headless.sh "$2" "$3" > "$OUT/$4.out" 2>&1
     runs=$((runs + 1))
 }
+
+if [ "$SPELLS" = 1 ]; then
+    # S1 paladin (spell held as innate: Invoke) and M1 mage (ordinary spell: Cast), each run twice
+    # at seed 1 with the Diplomacy d20 pinned: roll 20 must accept (-acc), roll 1 must refuse (-ref).
+    MCHAR=tools/fixtures/chars/human-lawful-mage-seed1.char
+    [ -f "$MCHAR" ] || { echo "INCONCLUSIVE: missing $MCHAR"; exit 2; }
+    spell_run() { # <scene> <settings> <keys> <seed> <char> [skill roll]
+        CHAR_OVERRIDE="$5" INCURSION_RUNTO_SKILL_ROLL="${6:-}" INCURSION_SUMMON_AFRAID=HP INCURSION_SUMMON_NO_GEAR=1 INCURSION_RESCAN_HOLD=1 \
+        INCURSION_RUNTO_STAGE=R INCURSION_RUNTO_AT=40,40 INCURSION_RUNTO_PROBE=1 \
+            run "$2" "$3" "$4" "$1"
+    }
+    for pin in acc:20 ref:1; do
+        spell_run "S1-${pin%%:*}" on tools/keys/auto-terms-spell-missile.keys 1 "$CHAR" "${pin##*:}"
+        spell_run "M1-${pin%%:*}" on tools/keys/auto-terms-spell-missile-mage.keys 1 "$MCHAR" "${pin##*:}"
+    done
+    spell_run S2 off tools/keys/auto-terms-spell-missile.keys 1 "$CHAR"
+    spell_run M2 off tools/keys/auto-terms-spell-missile-mage.keys 1 "$MCHAR"
+    spell_run S3 on tools/keys/auto-terms-spell-ball.keys 1 "$CHAR"
+    made=$(find "$OUT" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+    if [ "$made" != "$runs" ]; then
+        echo "INCONCLUSIVE: $runs runs but $made run directories"
+        exit 2
+    fi
+    python3 tools/auto_terms_spells.py "$OUT" "${1:-}"
+    exit $?
+fi
 
 for v in on off; do
     run "$v" tools/keys/auto-terms-magic.keys 4 "magic-$v"
