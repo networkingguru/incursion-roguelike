@@ -986,8 +986,8 @@ int16 getChivalryBreach(EventInfo &e, bool *fleeingBreach) {
    (inc-g1zfl). Returns false when the attack must not happen: terms accepted,
    or the player answered no to the prompt. *breachOut gets the final breach.
    upstream: upstream's attackSanity never runs for a spell, so a lawful or good
-   caster is charged for striking a fleeing creature with no prompt. The terms
-   offer is ours (inc-gfq2). Reasoned, inc-g1zfl, not sent. */
+   caster is charged for striking a fleeing creature with no prompt. Reasoned,
+   inc-g1zfl, not sent. The terms offer is ours (inc-gfq2). */
 bool fleeingTermsConfirm(EventInfo &e, int16 *breachOut) {
     bool doAlignWarning, fleeingBreach; 
     int16 breach;
