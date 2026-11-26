@@ -1,0 +1,15 @@
+# inc-g1zfl S1/S2: summon-time FEAR_HP; cast immediately without a wait/move.
+@include auto-terms-spell-setup.keys
+m
+@choose "Magic Missile"
+RIGHT
+@dump:spell-target
+ENTER
+@dump:spell-cast
+@while "Confirm attack" y
+@while "more --" SPACE
+@dump:spell-after
+v
+@dump:spell-log
+ESC
+@quit

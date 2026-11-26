@@ -7323,6 +7323,21 @@ static int SpecDrainRoll() {
     return fixed >= 0 ? fixed : random(100);
 }
 
+/* upstream: a single-target attack spell at a fleeing creature skipped the
+   terms offer and the confirm prompt a weapon attack gets, then charged the
+   breach. Cast and Invoke (a learned spell the player holds as innate) both
+   call this before any cost; false means abort. Area spells keep their own
+   rule. Reasoned, inc-g1zfl (terms part ours, inc-gfq2), not sent. */
+static bool AttackSpellFleeingOk(Creature *c, EventInfo &e) {
+    if (!c->isPlayer() || !e.EVictim || e.EVictim == c ||
+        !(TEFF(e.eID)->Purpose & EP_ATTACK) || !TEFF(e.eID)->Vals(0))
+        return true;
+    int8 av = TEFF(e.eID)->Vals(0)->aval;
+    if (av != AR_BOLT && av != AR_RAY && av != AR_TOUCH)
+        return true;
+    return fleeingTermsConfirm(e, NULL);
+}
+
 EvReturn Creature::Cast(EventInfo &e) {
     int16 mCost, rating, dmg_pen, roll; 
     EvReturn res; Item *it; bool dmgFail, wasThreatened;
@@ -7455,6 +7470,9 @@ EvReturn Creature::Cast(EventInfo &e) {
             return ABORT;
         }
     }
+
+    if (!AttackSpellFleeingOk(this, e))
+        return ABORT;
 
     if (e.isStaffSpell)
         if (!(thisc->Spells[e.sp] & SP_KNOWN)) {
@@ -7929,6 +7947,9 @@ EvReturn Creature::Invoke(EventInfo &e)
         return ABORT;
       }
        
+    if (!AttackSpellFleeingOk(this, e))
+      return ABORT;
+
     if (!TEFF(e.eID)->HasFlag(EF_SPECABIL))
       IDPrint(NULL,"An <Obj> concentrates.",this);
     

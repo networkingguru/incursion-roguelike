@@ -1,0 +1,34 @@
+# inc-g1zfl: make a Human Lawful Good Mage who knows Magic Missile as an ordinary
+# spell (not a wizard-mode innate one) and SAVE him, to be recorded as a .char.
+#   INCURSION_RECORD_CHAR=$PWD/logs/new.char INCURSION_OPTIONS=tools/fixtures/options-2026-08-22.dat \
+#       tools/headless.sh tools/keys/chargen-human-lawful-mage-save.keys 1
+# Point Buy at the attribute step: no roll, no perk (rules: creation-uses-point-buy).
+a       # Initial Choices: [a] Create a New Character
+n       # Alter the character generation options? -- no
+y       # Explore Mode? -- yes
+@choose "Human"
+@choose "Athletics"
+@choose "Diplomacy"
+@choose "Mage"
+p       # Attributes: Point Buy
+RIGHT*6 DOWN RIGHT*8 DOWN RIGHT*10 DOWN RIGHT*10 DOWN RIGHT*4 DOWN RIGHT*8 DOWN RIGHT*9
+ENTER   # every point spent
+y       # final stats
+@choose "Lawful Good"
+@choose "Evocation"
+@while "Choose a feat" a
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN RIGHT*3 DOWN
+ENTER y
+@while "wish to worship" y
+@while "personality archetype" a
+@expect "Learn Spells: Level"
+@dump:spell-list
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+SPACE DOWN SPACE DOWN SPACE DOWN SPACE DOWN
+ENTER
+@dump:arrival
+@until "System Menu" ESC
+@expect "System Menu"
+b
+@dump:saved

@@ -1,0 +1,34 @@
+# inc-g1zfl: loaded Lawful Good paladin, wizard-granted spells, fixed corridor.
+w
+y
+@choose "Genocide Everything"
+w
+@choose "Wizard Mode Switches"
+DOWN*5 SPACE DOWN*2 SPACE DOWN*3 SPACE
+@dump:spell-switches
+ESC
+w
+@choose "Learn Any Spell"
+"Magic Missile"
+ENTER
+w
+@choose "Learn Any Spell"
+"Fireball"
+ENTER
+# Opening overview invokes RUNTO_STAGE=R, a lit, cleared east-west corridor.
+l o
+ESC
+.
+# Refresh the viewport after probe relocation before location targeting.
+w
+@choose "Examine Nearby Things"
+@dump:stage-player
+ESC
+w
+@choose "Monster Summoning"
+@choose "Faerie"
+@choose "rainbow sprite"
+l RIGHT*3
+@dump:summon-target
+ENTER
+@dump:spell-summoned

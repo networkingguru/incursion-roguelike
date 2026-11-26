@@ -1,0 +1,15 @@
+# inc-g1zfl S3: area spell keeps the existing no-offer/no-prompt rule.
+@include auto-terms-spell-setup.keys
+m
+@choose "Fireball"
+l RIGHT*3
+@dump:spell-target
+ENTER
+@dump:spell-cast
+@while "Confirm attack" y
+@while "more --" SPACE
+@dump:spell-after
+v
+@dump:spell-log
+ESC
+@quit
