@@ -151,12 +151,14 @@ RULES.
    share no such prefix has none; a prefix that two or more families use is still a
    prefix. (b) BASELINE: every no-family define MUST be listed in
    tools/nofamily_baseline.txt (columns file, name, form `define` or `enum`, tab
-   separated, key file plus name). The baseline only shrinks, by the code of rule 5
-   (gain_problems): the check FAILS when it gains an entry against
-   `master:tools/nofamily_baseline.txt` (skipped when master lacks the file or the
-   tree has no .git). So a new no-family define needs one baseline line, and the
-   branch that adds it FAILS until Brian lets the gain through; put a define in its
-   family instead. Nothing regenerates the file. Delete a line when a define goes.
+   separated, key file plus name). An entry that `master:tools/nofamily_baseline.txt`
+   lacks (skipped when master lacks the file or the tree has no .git) passes ONLY when
+   its name, as a whole word, is in none of: a module script (lib/*.irh, lib/*.irc),
+   inc/ConstNam.h, or a FIELD_* call statement
+    in any inc/ or src/ source file (the #define FIELD_ lines excluded). Otherwise the check FAILS,
+   naming the file and line of the first use: a name used there is a code, so put the
+   define in its family. Entries already on master's list are judged as before. Nothing
+   regenerates the file. Delete a line when a define goes.
    The baseline applies to the full run only, as rule 5 does (not to --defines).
 4b. A comment on a #define line, or on the comment-only line just above it, that
    holds the word `renumbered` (any case) FAILS, naming file:line: a value moves
@@ -203,6 +205,7 @@ tools/check_stored_values.py imports it.
 # fact: the base baseline -- `git show master:tools/define_baseline.txt`, a committed ref, not a clock or a random value
 # fact: the no-family members -- read from the text of inc/ and src/ against tools/nofamily_baseline.txt; no game run, no seed
 # fact: the base no-family baseline -- `git show master:tools/nofamily_baseline.txt`, a committed ref, not a clock or a random value
+# fact: where a gained no-family name is used -- whole-word text search of lib/*.irh, lib/*.irc, inc/ConstNam.h and the FIELD_* call statements of every inc/ and src/ source file that holds one; tracked text, no game run, no seed
 # fact: a family's prefix and a `not a code` or `renumbered` comment -- read from the member names and comments of the same text; no game run, no seed
 """
 import ast
@@ -1135,9 +1138,65 @@ def gain_problems(baseline, base_keys, relpath, instead):
             for key in sorted(set(baseline) - base_keys)]
 
 
-def nofamily_problems(nofam, baseline, base_keys, multi):
-    """Rule 4: a no-family define the baseline does not list FAILS; so does a baseline
-    that gained an entry against master."""
+USE_LIB_EXT = (".irh", ".irc")   # main.irc includes the .irh files and landed.irc; lib/dispatch.h is not compiled into the module
+USE_FIELD_CALL = re.compile(r"\bFIELD_[A-Z0-9_]+\s*\(")   # the save layer's field macros (inc/Base.h); V1EmbedBegin takes the same names
+
+
+def _field_statements(text):
+    """Yield (lineno, statement text) for each FIELD_*( call, up to its closing parenthesis."""
+    for m in USE_FIELD_CALL.finditer(text):
+        ls = text.rfind("\n", 0, m.start()) + 1
+        if re.match(r"[ \t]*#[ \t]*define\b", text[ls:m.start()] + "define"):
+            continue   # the macro definitions themselves (inc/Base.h)
+        depth, i = 0, m.end() - 1
+        while i < len(text):
+            depth += (text[i] == "(") - (text[i] == ")")
+            i += 1
+            if depth == 0:
+                break
+        yield text.count("\n", 0, m.start()) + 1, text[m.start():i]
+
+
+def first_uses(names, root=ROOT):
+    """{name: 'file:line'} for each of `names` that a module script (lib/*.irh, lib/*.irc), inc/ConstNam.h
+    or a FIELD_* call statement of any inc/ or src/ source file holds as a whole word. A name used in none is absent."""
+    sources = []
+    libdir = os.path.join(root, "lib")
+    if os.path.isdir(libdir):
+        sources += [(os.path.join("lib", fn), False) for fn in sorted(os.listdir(libdir))
+                    if fn.endswith(USE_LIB_EXT)]
+    sources += [(os.path.join("inc", "ConstNam.h"), False)]
+    for sub in ("inc", "src"):   # every file that holds a FIELD_ call, found by content, so a new archive class is covered
+        for dp, _dn, fns in sorted(os.walk(os.path.join(root, sub))):
+            for fn in sorted(fns):
+                if fn.endswith(SOURCE_EXT):
+                    fp = os.path.join(dp, fn)
+                    try:
+                        with open(fp, encoding="latin-1") as f:
+                            has = "FIELD_" in f.read()
+                    except OSError:
+                        has = False
+                    if has:
+                        sources.append((os.path.relpath(fp, root), True))
+    found = {}
+    for relp, fields_only in sources:
+        try:
+            with open(os.path.join(root, relp), encoding="latin-1") as f:
+                text = f.read()
+        except OSError:
+            continue
+        units = _field_statements(text) if fields_only else \
+            ((no, line) for no, line in enumerate(text.split("\n"), 1))
+        for no, chunk in units:
+            for name in names:
+                if name not in found and re.search(r"(?<!\w)%s(?!\w)" % re.escape(name), chunk):
+                    found[name] = "%s:%d" % (relp.replace(os.sep, "/"), no)
+    return found
+
+
+def nofamily_problems(nofam, baseline, base_keys, multi, root=ROOT):
+    """Rule 4: a no-family define the baseline does not list FAILS. So does a baseline entry that master's
+    baseline lacks, unless its name is used by no module script, no inc/ConstNam.h entry and no save field."""
     msgs = []
     for path, no, name, _kind, _why in nofam:
         if (rel(path), name) not in baseline:
@@ -1146,8 +1205,17 @@ def nofamily_problems(nofam, baseline, base_keys, multi):
                         "baseline line (file, name, form, tab-separated), and the baseline "
                         "only shrinks."
                         % (where(path, no, multi), name, NOFAM_REL))
-    return msgs + gain_problems(baseline, base_keys, NOFAM_REL,
-                                "put the define in a family block instead")
+    if base_keys is None:
+        return msgs
+    gains = sorted(set(baseline) - base_keys)
+    used = first_uses({k[1] for k in gains}, root)
+    for key in gains:
+        if key[1] in used:
+            msgs.append("FAIL: %s gained the entry %s %s that %s does not have, and %s uses the name "
+                        "(a module script, inc/ConstNam.h or a save field). A name used there is a "
+                        "code: put the define in a family block instead."
+                        % (NOFAM_REL, key[0], key[1], BASE_REF, used[key[1]]))
+    return msgs
 
 
 def renumber_problems(paths):
@@ -1180,7 +1248,7 @@ def check(defines, others=(), loose=None):
             files if loose is None else sorted(set(files) | set(loose[0])))
         if loose is not None:
             bad_msgs += loose_problems(loose[0], defines, loose[1], loose[2]) \
-                + nofamily_problems(nofam, loose[3], loose[4], multi) + saved_field_problems(fams)
+                + nofamily_problems(nofam, loose[3], loose[4], multi, *loose[5:6]) + saved_field_problems(fams)
     except Unmeasurable as e:
         return 2, ["check_define_dups: UNMEASURED: %s" % e]
     except OSError as e:
@@ -1699,8 +1767,33 @@ def selftest():
         c, m, _p = loose_run("// no-family\n#define NEWD2 61\n// end no-family\n", nf=["NEWD"])
         assert c == 1 and "NEWD2 is a no-family define" in m, (c, m)
         # red: the no-family baseline gained an entry against the base; green when master has it
-        c, m, _p = loose_run(nfblock, nf=["NEWD"], nf_base=set())
-        assert c == 1 and "tools/nofamily_baseline.txt gained the entry" in m and "NEWD" in m, (c, m)
+        # inc-ow4i6: a gained entry passes when no script, ConstNam entry or save field uses its name; red in each of the three
+        sroot = os.path.join(tmp, "useroot")
+        for sub in ("lib", "inc", "src"):
+            os.makedirs(os.path.join(sroot, sub), exist_ok=True)
+        def use_run(lib="", constnam="", save="", name="NEWD", header=""):
+            for relp, txt in (("lib/x.irh", lib), ("inc/ConstNam.h", constnam), ("src/SaveV1.cpp", save), ("inc/Arch.h", header)):
+                with open(os.path.join(sroot, relp), "w") as f:
+                    f.write(txt)
+            n[0] += 1
+            path = os.path.join(tmp, "U%d.h" % n[0])
+            with open(path, "w") as f:
+                f.write("// no-family\n#define %s 61\n// end no-family\n" % name)
+            code, msgs = check(anchor, [path], ([anchor, path], {}, set(), {(rel(path), name): "define"}, set(), sroot))
+            return code, "\n".join(msgs)
+        c, m = use_run(lib="Effect NEWD2 x NEWDX;\n", constnam="{ OTHER, \"NEWD_\" },\n",
+                       save="int NEWD = 1; FIELD_U8(\"f\", NEWDQ);\nFIELD_U8(\"g\", w);\n")
+        assert c == 0, (c, m)                                    # green: gained, used nowhere (partial words and non-field lines do not count)
+        c, m = use_run(lib="line one\nNumber: NEWD;\n")
+        assert c == 1 and "lib/x.irh:2" in m and "gained the entry" in m, (c, m)   # red: used in a script
+        c, m = use_run(constnam="{ NEWD, \"NEWD\" },\n")
+        assert c == 1 and "inc/ConstNam.h:1" in m, (c, m)       # red: used in ConstNam
+        c, m = use_run(save="x;\nFIELD_ARRAY(\"a\", p,\n  K_U8, NEWD);\n")
+        assert c == 1 and "src/SaveV1.cpp:2" in m, (c, m)       # red: used in a save field (multi-line call)
+        c, m = use_run(header="class A {\n  FIELD_U8(\"f\", NEWD);\n};\n")
+        assert c == 1 and "inc/Arch.h:2" in m, (c, m)           # red: used in a save field declared in a header
+        c, m = use_run(header="#define FIELD_Z(n, NEWD) (n)\n")
+        assert c == 0, (c, m)                                   # green: a FIELD_ macro definition is not a save field
         c, m, _p = loose_run(nfblock, nf=["NEWD"], nf_base=lambda r: {(r, "NEWD"), ("x.h", "GONE")})
         assert c == 0, (c, m)
         # the prefix rule and the baseline are independent: a listed define with a family's prefix is still red
