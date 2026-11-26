@@ -1,0 +1,12 @@
+# inc-ibzyp: the MultiSelectColorProbe stages two items under the player and
+# runs the AutoLoot macro. DOWN then UP puts the cursor on each row in turn, so
+# every row draws once as the cursor row and once as a plain row. ENTER takes
+# the (unmarked) selection; ESC closes anything left. The @while closes a
+# room-description box that a loaded old save may open first.
+@while "Winding Corridor" SPACE
+DOWN
+UP
+ENTER
+@while "too large" SPACE
+ESC*10
+@quit
