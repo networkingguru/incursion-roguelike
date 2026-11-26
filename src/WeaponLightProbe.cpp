@@ -121,7 +121,7 @@ void StripAll(Player *pl) {
 
 /* inc-as123 phase 2: the weapon-hit flash cases. */
 // no-family
-enum { K_ANY, K_GOOD, K_EVIL, K_LAWFUL, K_CHAOTIC, K_NEUTRAL, K_UNDEAD };
+enum { K_ANY, K_GOOD, K_EVIL, K_LAWFUL, K_CHAOTIC, K_NEUTRAL, K_UNDEAD };   /* not a code: a probe-local case index, never read outside this file */
 const int FROW = 6;           /* squares logged east of the victim */
 // end no-family
 int gVX, gVY, gHookCalls, gHookRow[FROW], gHookStray, gHookVar, gHookLit;

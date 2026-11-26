@@ -15,7 +15,8 @@ the family reaches a save or another file on disk (spec docs/superpowers/specs/
 
 RULE FOR IMPLEMENTERS. A new #define goes inside its family's marks; a
 deliberate second name for an existing value carries `/* alias of <NAME> */`; a
-value that is not compared with anything goes in a no-family block.
+value that is not a code (a size, a cap, a probe-local index) goes in a no-family
+block, and rule 4 below governs what may go there.
 
 MARKS (whitespace is free). Own-line block marks use `//` (`/* */` also works).
 A TRAILING mark on a #define line MAY use `/* */` or `//`.
@@ -31,6 +32,9 @@ A TRAILING mark on a #define line MAY use `/* */` or `//`.
                                 shared family with the same value, else FAIL.
   known collision: <bead>       same placement: reported KNOWN with the bead.
                                 Mark every member of a colliding group but one.
+  not a code: <reason>          same placement: a no-family define that starts with
+                                a family's prefix (rule 4) is allowed. The reason
+                                MUST be non-empty prose.
 CLASS (one per family on every open mark; the end mark carries none):
   internal                                  no value of the family reaches a file
   stored <ordinal|bits|enum> <u8|i8|u16|i16|u32|i32>
@@ -138,7 +142,26 @@ RULES.
 2. In one family, two names with one value FAIL, unless a name is an alias
    or a known collision.
 3. The same value in two different families passes.
-4. A no-family block is never compared.
+4. A no-family block is never compared with a family, and two rules guard it
+   (bead inc-x39wn). (a) PREFIX: a define or enumerator in a no-family block FAILS,
+   naming file, line and name, when its name starts with the prefix of any family
+   and its line (trailing comment) or the line just above carries no `not a code:
+   <reason>`. A family's prefix is the leading `<TOKEN>_` (letters and digits, then
+   one underscore) that EVERY member of the family shares; a family whose members
+   share no such prefix has none; a prefix that two or more families use is still a
+   prefix. (b) BASELINE: every no-family define MUST be listed in
+   tools/nofamily_baseline.txt (columns file, name, form `define` or `enum`, tab
+   separated, key file plus name). The baseline only shrinks, by the code of rule 5
+   (gain_problems): the check FAILS when it gains an entry against
+   `master:tools/nofamily_baseline.txt` (skipped when master lacks the file or the
+   tree has no .git). So a new no-family define needs one baseline line, and the
+   branch that adds it FAILS until Brian lets the gain through; put a define in its
+   family instead. Nothing regenerates the file. Delete a line when a define goes.
+   The baseline applies to the full run only, as rule 5 does (not to --defines).
+4b. A comment on a #define line, or on the comment-only line just above it, that
+   holds the word `renumbered` (any case) FAILS, naming file:line: a value moves
+   only through tools/move_branch_values.py, never by hand. It applies to every
+   file the run reads, and with --defines to that file.
 
 WHAT COUNTS AS A CONSTANT. Every integer `#define NAME <expr>`, comments
 removed (`/* */` across lines, and `//`). Values are evaluated, including
@@ -156,7 +179,7 @@ earlier integer define is a constant. An integer-looking expression that
 cannot be evaluated exits 2 naming the line.
 
 Usage: tools/check_define_dups.py [--defines FILE] [--selftest]
-       --defines FILE reads that one file only (no rule 5); without it the check reads
+       --defines FILE reads that one file only (no rule 5, no no-family baseline); without it the check reads
        inc/Defines.h and every other file of inc/ and src/ that holds a mark, and
        applies rule 5 to every file of inc/ and src/.
 Exit:  0 clean   1 unmarked define, duplicate, bad alias, or bad class
@@ -178,6 +201,9 @@ tools/check_stored_values.py imports it.
 # fact: enumerator values -- counted from the enum text as the compiler counts; no build, no seed
 # fact: constants outside every block -- read from the text of inc/ and src/ against tools/define_baseline.txt; no game run, no seed
 # fact: the base baseline -- `git show master:tools/define_baseline.txt`, a committed ref, not a clock or a random value
+# fact: the no-family members -- read from the text of inc/ and src/ against tools/nofamily_baseline.txt; no game run, no seed
+# fact: the base no-family baseline -- `git show master:tools/nofamily_baseline.txt`, a committed ref, not a clock or a random value
+# fact: a family's prefix and a `not a code` or `renumbered` comment -- read from the member names and comments of the same text; no game run, no seed
 """
 import ast
 import bisect
@@ -316,6 +342,8 @@ AT_ONE = r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\[[A-Za-z_]\w*\]"
 AT_LIST = re.compile(AT_ONE + r"(?:\+" + AT_ONE + r")*")
 FAM_LIST = re.compile(r"[A-Za-z_][\w-]*(?:\+[A-Za-z_][\w-]*)*")
 IDENT_LIST = re.compile(r"[A-Za-z_]\w*(?:\+[A-Za-z_]\w*)*")   # `+` joins names: a comma ends a class
+NOT_CODE = re.compile(r"(?://|/\*).*?\bnot\s+a\s+code\s*:\s*(.*?)\s*(?:\*/)?\s*$", re.I)
+RENUMBERED = re.compile(r"(?://|/\*).*\brenumbered\b", re.I)
 FUNC_DEFINE = re.compile(r"\s*#\s*define\s+([A-Za-z_]\w*)\(")
 SHAPES = ("ordinal", "bits", "enum")
 WIDTHS = ("u8", "i8", "u16", "i16", "u32", "i32")
@@ -459,6 +487,20 @@ def read_marks(raw_lines):
     return events, notes, specs, bad
 
 
+def not_code_reason(raw_lines, no):
+    """The reason of a `not a code: <reason>` note on define line `no` (1-based:
+    trailing comment, or the comment-only line just above), or None. An empty reason
+    is None."""
+    texts = [raw_lines[no - 1]]
+    if no >= 2 and COMMENT_ONLY.match(raw_lines[no - 2]):
+        texts.append(raw_lines[no - 2])
+    for t in texts:
+        m = NOT_CODE.search(t)
+        if m and m.group(1).strip():
+            return m.group(1).strip()
+    return None
+
+
 def find_enums(text):
     """Return a list of (first line, last line, [(line, name, expr or None)])
     for every `enum [tag] { ... }` of the comment-free text."""
@@ -555,13 +597,15 @@ def rel(path):
 
 
 def scan_file(path, strict, multi):
-    """Read one file. Return (placed, outside, specs, bad). placed: list of
+    """Read one file. Return (placed, outside, specs, bad, nofam). placed: list of
     (lineno, name, value, kind, fams, alias, known) of the members of family
     blocks. outside: FAIL messages for defines in no block (strict only).
-    specs: list of (lineno, family, spec). bad: list of FAIL messages."""
+    specs: list of (lineno, family, spec). bad: list of FAIL messages. nofam: list
+    of (lineno, name, kind, `not a code` reason or None) of the no-family members."""
     with open(path, encoding="latin-1") as f:
         raw = f.read()
-    events, notes, specs_by, bad = read_marks(raw.split("\n"))
+    raw_lines = raw.split("\n")
+    events, notes, specs_by, bad = read_marks(raw_lines)
     spans, start = [], None
     for no, what, _kind, _f in events:
         if what == "open":
@@ -584,7 +628,7 @@ def scan_file(path, strict, multi):
                             "the stored family %s, where the inventory cannot see its "
                             "value. Fix: move it to a no-family block."
                             % (no, fm.group(1), rel(path), no, " ".join(stored))))
-    placed, outside = [], []
+    placed, outside, nofam = [], [], []
     ev, cur = 0, None
     for no, name, value, kind in rows:
         while ev < len(events) and events[ev][0] < no:
@@ -600,12 +644,13 @@ def scan_file(path, strict, multi):
             continue
         ckind, fams = cur
         if ckind == "no-family":
+            nofam.append((no, name, kind, not_code_reason(raw_lines, no)))
             continue
         alias, known = notes.get(no, (None, None))
         placed.append((no, name, value, kind, fams, alias, known))
     specs = [(no, fam, sp) for no, d in sorted(specs_by.items()) for fam, sp in d.items()]
     return placed, outside, specs, ["FAIL: %s: %s" % (where(path, n, multi), m.split(": ", 1)[1])
-                                    for n, m in bad]
+                                    for n, m in bad], nofam
 
 
 def marked_files(root=ROOT):
@@ -631,15 +676,16 @@ def scan_all(files):
     load_families, with extra keys 'marks' [(file, line)] and 'rows' (the
     placed members with alias/known) used by check()."""
     multi = len(files) > 1
-    fams, problems = {}, []
+    fams, problems, nofam = {}, [], []
     for k, path in enumerate(files):
         try:
-            placed, outside, specs, bad = scan_file(path, k == 0, multi)
+            placed, outside, specs, bad, nf = scan_file(path, k == 0, multi)
         except OSError as e:
             raise Unmeasurable("cannot read %s: %s" % (path, e))
         except Unmeasurable as e:
             raise Unmeasurable("%s%s" % ("" if not multi else rel(path) + ": ", e))
         problems += outside + bad
+        nofam += [(path, no, name, kind, why) for no, name, kind, why in nf]
         for no, fam, spec in specs:
             d = fams.setdefault(fam, {"class": None, "shape": None, "width": None,
                                       "sentinels": [], "bounds": [], "grows": [], "blocks": [], "members": [],
@@ -684,6 +730,7 @@ def scan_all(files):
                 d["rows"].append((no, name, value, kind, alias, known, path))
                 d["members"].append((name, value, rel(path), no))
     multi_files = multi
+    problems += prefix_problems(fams, nofam, multi)
     # val-of / mag-of: the statuses whose val or mag holds a member of the family (inc-cjos0 9f-pre P2)
     stati_val = {m[0]: m[1] for m in fams.get("stati", {}).get("members", [])}
     claims = {}
@@ -785,7 +832,33 @@ def scan_all(files):
         d["mag_of"] = [s for s, _p, _n in d["mag_of"]]
         for kind in ("field_of", "index_of", "elem_of", "glyph_of", "word_of", "at_of", "shares"):
             d[kind] = [s for s, _p, _n in d[kind]]
-    return fams, problems, multi
+    return fams, problems, multi, nofam
+
+
+def family_prefixes(fams):
+    """{prefix: [family]}. A family's prefix is the leading `<TOKEN>_` (letters and
+    digits, then an underscore) that EVERY member shares. A family whose members share
+    none contributes none. A prefix that 2+ families use is still a prefix."""
+    out = {}
+    for fam, d in fams.items():
+        firsts = {(re.match(r"[A-Za-z0-9]+_", m[0]) or [None])[0] for m in d["members"]}
+        if len(firsts) == 1 and None not in firsts:
+            out.setdefault(firsts.pop(), []).append(fam)
+    return out
+
+
+def prefix_problems(fams, nofam, multi):
+    """Rule 4: FAIL lines for a no-family define named like a family's members that
+    carries no `not a code: <reason>`."""
+    pre, out = family_prefixes(fams), []
+    for path, no, name, _kind, why in nofam:
+        hit = [p for p in sorted(pre) if name.startswith(p)]
+        if hit and not why:
+            out.append("FAIL: %s: %s sits in a no-family block but starts with %s, the prefix of "
+                       "family %s. Fix: put it in that family, or write `not a code: <reason>` "
+                       "on its line (or the line above)."
+                       % (where(path, no, multi), name, hit[0], " ".join(pre[hit[0]])))
+    return out
 
 
 # Names a field-of / index-of / elem-of mark may use that no FIELD_ macro declares. Each needs the reason here.
@@ -846,7 +919,7 @@ def load_families(defines=None, files=None):
         files = [defines or DEF_DEFAULT]
         if defines is None:
             files += marked_files()
-    fams, problems, _multi = scan_all(files)
+    fams, problems, _multi, _nofam = scan_all(files)
     out = {f: {"class": d["class"], "shape": d["shape"], "width": d["width"],
                "sentinels": list(d["sentinels"]), "bounds": list(d["bounds"]),
                "grows": list(d["grows"]), "block": d["block"], "val_of": list(d["val_of"]), "mag_of": list(d["mag_of"]),
@@ -859,6 +932,8 @@ def load_families(defines=None, files=None):
 
 BASELINE_REL = "tools/define_baseline.txt"
 BASELINE = os.path.join(ROOT, *BASELINE_REL.split("/"))
+NOFAM_REL = "tools/nofamily_baseline.txt"
+NOFAM_BASELINE = os.path.join(ROOT, *NOFAM_REL.split("/"))
 BASE_REF = "master"
 SOURCE_EXT = (".h", ".hpp", ".cpp", ".c", ".inc")
 INT_TYPE = (r"(?:unsigned|signed|int|short|long|char|size_t|rID|hObj|uchar|ushort|uint|ulong|"
@@ -1046,23 +1121,66 @@ def loose_problems(files, strict_file, baseline, base_keys):
                         "const": "const variable"}[form]
                 msgs.append("FAIL: %s line %d: unclassified constant %s (%s). %s"
                             % (rel(path), no, name, what, LOOSE_HOW % BASELINE_REL))
-    if base_keys is not None:
-        for key in sorted(set(baseline) - base_keys):
-            msgs.append("FAIL: %s gained the entry %s %s that %s does not have. The "
-                        "baseline only shrinks; put the constant in a family block or "
-                        "a no-family block instead." % (BASELINE_REL, key[0], key[1], BASE_REF))
-    return msgs
+    return msgs + gain_problems(baseline, base_keys, BASELINE_REL,
+                                "put the constant in a family block or a no-family block instead")
+
+
+def gain_problems(baseline, base_keys, relpath, instead):
+    """FAIL lines for every entry of `baseline` that `master:relpath` (base_keys) lacks.
+    Shared by rule 5 (define_baseline.txt) and rule 4 (nofamily_baseline.txt)."""
+    if base_keys is None:
+        return []
+    return ["FAIL: %s gained the entry %s %s that %s does not have. The baseline only "
+            "shrinks; %s." % (relpath, key[0], key[1], BASE_REF, instead)
+            for key in sorted(set(baseline) - base_keys)]
+
+
+def nofamily_problems(nofam, baseline, base_keys, multi):
+    """Rule 4: a no-family define the baseline does not list FAILS; so does a baseline
+    that gained an entry against master."""
+    msgs = []
+    for path, no, name, _kind, _why in nofam:
+        if (rel(path), name) not in baseline:
+            msgs.append("FAIL: %s: %s is a no-family define that %s does not list. Fix: put it "
+                        "in its family's marks. A constant that is not a code needs one "
+                        "baseline line (file, name, form, tab-separated), and the baseline "
+                        "only shrinks."
+                        % (where(path, no, multi), name, NOFAM_REL))
+    return msgs + gain_problems(baseline, base_keys, NOFAM_REL,
+                                "put the define in a family block instead")
+
+
+def renumber_problems(paths):
+    """Rule 4b: a comment on a define line, or the comment-only line above it, that holds
+    the word `renumbered` records a hand move. Values move only through move_branch_values.py."""
+    out = []
+    for path in paths:
+        with open(path, encoding="latin-1") as f:
+            lines = f.read().split("\n")
+        for no, line in enumerate(lines, 1):
+            if not re.match(r"\s*#\s*define\b", line):
+                continue
+            here = RENUMBERED.search(line) or (no >= 2 and COMMENT_ONLY.match(lines[no - 2])
+                                               and RENUMBERED.search(lines[no - 2]))
+            if here:
+                out.append("FAIL: %s:%d: the comment records a hand renumber. Values move only "
+                           "through tools/move_branch_values.py; never edit a stored number by "
+                           "hand. Fix: delete the hand move or run the tool." % (rel(path), no))
+    return out
 
 
 def check(defines, others=(), loose=None):
     """Return (exit code, list of message lines). loose: None, or (files,
-    baseline, base_keys) for the closed-world rule over every file (rule 5)."""
+    baseline, base_keys, nofam_baseline, nofam_base_keys) for the closed-world rules
+    over every file (rule 5 and the no-family baseline of rule 4)."""
     files = [defines] + list(others)
     try:
-        fams, bad_msgs, multi = scan_all(files)
+        fams, bad_msgs, multi, nofam = scan_all(files)
+        bad_msgs = list(bad_msgs) + renumber_problems(
+            files if loose is None else sorted(set(files) | set(loose[0])))
         if loose is not None:
-            bad_msgs = list(bad_msgs) + loose_problems(loose[0], defines, loose[1], loose[2]) \
-                + saved_field_problems(fams)
+            bad_msgs += loose_problems(loose[0], defines, loose[1], loose[2]) \
+                + nofamily_problems(nofam, loose[3], loose[4], multi) + saved_field_problems(fams)
     except Unmeasurable as e:
         return 2, ["check_define_dups: UNMEASURED: %s" % e]
     except OSError as e:
@@ -1105,7 +1223,8 @@ def check(defines, others=(), loose=None):
     if not bad:
         msgs.append("check_define_dups: PASS (%d families, %d known collisions%s)"
                     % (len(fams), nknown, "" if loose is None else
-                       ", %d baseline constants outside every block" % len(loose[1])))
+                       ", %d baseline constants outside every block, %d no-family baseline"
+                       % (len(loose[1]), len(loose[3]))))
     return (1 if bad else 0), msgs
 
 
@@ -1170,6 +1289,38 @@ def selftest():
         # e. no-family block: equal values pass, and are not compared to a family
         c, m = run("// no-family\n#define N_A 5\n#define N_B 5\n// end no-family\n"
                    + fam("a", "#define A_X 5\n"))
+        assert c == 0, (c, m)
+        # e2. rule 4a (inc-x39wn): a no-family define named like a family's members needs `not a code: <why>`
+        nofam = lambda body: "// no-family\n" + body + "// end no-family\n"
+        ef = fam("ef", "#define EF_GLOW 114\n#define EF_X 5\n")
+        c, m = run(ef + nofam("#define EF_ARTIFACT 114\n"))   # the epic case: red
+        assert c == 1 and "EF_ARTIFACT sits in a no-family block" in m and "prefix of family ef" in m, (c, m)
+        c, m = run(ef + nofam("#define EF_CAP 9 /* not a code: a Hit Dice cap */\n"))   # green: trailing reason
+        assert c == 0, (c, m)
+        c, m = run(ef + nofam("// not a code: a Hit Dice cap\n#define EF_CAP 9\n"))     # green: reason on the line above
+        assert c == 0, (c, m)
+        c, m = run(ef + nofam("#define EF_CAP 9 /* not a code: */\n"))                     # red: an empty reason is no reason
+        assert c == 1 and "EF_CAP sits in a no-family block" in m, (c, m)
+        c, m = run(ef + nofam("/* not a code: a cap */\n\n#define EF_CAP 9\n"))           # red: the note is two lines away
+        assert c == 1 and "EF_CAP" in m, (c, m)
+        c, m = run(ef + nofam("enum { EF_E1 = 40 };\n"))                                    # red: an enumerator counts too
+        assert c == 1 and "EF_E1" in m, (c, m)
+        c, m = run(ef + nofam("#define OTHER_CAP 9\n#define EFFECT_CAP 9\n"))             # green: another prefix; EFFECT_ is not EF_
+        assert c == 0, (c, m)
+        # no shared prefix, no prefix: members A_X and B_Y share none
+        c, m = run(fam("mix", "#define A_X 1\n#define B_Y 2\n") + nofam("#define A_CAP 9\n#define B_CAP 9\n"))
+        assert c == 0, (c, m)
+        # two families on one prefix: still a prefix, and both are named
+        c, m = run(fam("p1", "#define P_A 1\n") + fam("p2", "#define P_B 1\n") + nofam("#define P_CAP 9\n"))
+        assert c == 1 and "family p1 p2" in m, (c, m)
+        # rule 4b: a comment that records a hand renumber (trailing, line above, any case)
+        c, m = run(fam("a", "#define A_X 7 /* renumbered from 5 */\n"))
+        assert c == 1 and "hand renumber" in m and "tools/move_branch_values.py" in m and ".h:2" in m, (c, m)
+        c, m = run(fam("a", "// Renumbered by hand\n#define A_X 7\n"))
+        assert c == 1 and "hand renumber" in m, (c, m)
+        c, m = run(fam("a", "// renumbered\n\n#define A_X 7\n"))                        # green: not on the line above
+        assert c == 0, (c, m)
+        c, m = run(fam("a", "#define A_X 7 /* the number is not a renumber */\n"))
         assert c == 0, (c, m)
         # f. known collision: pass, reported with the bead id
         c, m = run(fam("stati", "#define A_X 234\n#define B_X 234 /* known collision: inc-upw.57 */\n"))
@@ -1473,15 +1624,18 @@ def selftest():
         with open(anchor, "w") as f:
             f.write(fam("a", "#define A_X 1\n"))
 
-        def loose_run(text, baseline=(), base_keys=None):
+        def loose_run(text, baseline=(), base_keys=None, nf=(), nf_base=None):
             n[0] += 1
             path = os.path.join(tmp, "L%d.h" % n[0])
             with open(path, "w") as f:
                 f.write(text)
             bl = {(rel(path), name): "define" for name in baseline}
+            nbl = {(rel(path), name): "define" for name in nf}
             if callable(base_keys):
                 base_keys = base_keys(rel(path))
-            code, msgs = check(anchor, [path], ([anchor, path], bl, base_keys))
+            if callable(nf_base):
+                nf_base = nf_base(rel(path))
+            code, msgs = check(anchor, [path], ([anchor, path], bl, base_keys, nbl, nf_base))
             return code, "\n".join(msgs), path
         c, m, _p = loose_run("#define NEWD 61\n")
         assert c == 1 and "L%d.h line 1: unclassified constant NEWD (#define)" % n[0] in m, (c, m)
@@ -1525,7 +1679,7 @@ def selftest():
         assert c == 1 and "unclassified constant NEWD2" in m, (c, m)
         # green: the same constant inside a no-family block, or a family block
         c, m, _p = loose_run("// no-family\n#define NEWD 61\nenum { NEWE };\n"
-                             "const int NEWC = 5;\n// end no-family\n")
+                             "const int NEWC = 5;\n// end no-family\n", nf=["NEWD", "NEWE"])
         assert c == 0, (c, m)
         c, m, _p = loose_run(fam("b", "#define B_X 61\n"))
         assert c == 0, (c, m)
@@ -1534,6 +1688,25 @@ def selftest():
         assert c == 1 and "gained the entry" in m and "NEWD" in m, (c, m)
         c, m, p = loose_run("#define NEWD 61\n", ["NEWD"],
                             lambda r: {(r, "NEWD"), ("x.h", "GONE")})
+        assert c == 0, (c, m)
+        # rule 4 baseline (inc-x39wn): a no-family define the baseline does not list is red; listed is green
+        nfblock = "// no-family\n#define NEWD 61\n// end no-family\n"
+        c, m, _p = loose_run(nfblock)
+        assert c == 1 and "NEWD is a no-family define that tools/nofamily_baseline.txt does not list" in m, (c, m)
+        c, m, _p = loose_run(nfblock, nf=["NEWD"])
+        assert c == 0 and "1 no-family baseline" in m, (c, m)
+        # red: a renamed baseline define is a new define
+        c, m, _p = loose_run("// no-family\n#define NEWD2 61\n// end no-family\n", nf=["NEWD"])
+        assert c == 1 and "NEWD2 is a no-family define" in m, (c, m)
+        # red: the no-family baseline gained an entry against the base; green when master has it
+        c, m, _p = loose_run(nfblock, nf=["NEWD"], nf_base=set())
+        assert c == 1 and "tools/nofamily_baseline.txt gained the entry" in m and "NEWD" in m, (c, m)
+        c, m, _p = loose_run(nfblock, nf=["NEWD"], nf_base=lambda r: {(r, "NEWD"), ("x.h", "GONE")})
+        assert c == 0, (c, m)
+        # the prefix rule and the baseline are independent: a listed define with a family's prefix is still red
+        c, m, _p = loose_run("// no-family\n#define A_NEW 61\n// end no-family\n", nf=["A_NEW"])
+        assert c == 1 and "A_NEW sits in a no-family block" in m, (c, m)
+        c, m, _p = loose_run("// no-family\n#define A_NEW 61 /* not a code: x */\n// end no-family\n", nf=["A_NEW"])
         assert c == 0, (c, m)
         # the base baseline comes from git: a scratch repo whose master holds the file
         repo = os.path.join(tmp, "repo")
@@ -1594,7 +1767,9 @@ def main(argv):
     loose = None
     if not only:
         try:
-            loose = (source_files(), load_baseline(), master_baseline_keys())
+            loose = (source_files(), load_baseline(), master_baseline_keys(),
+                     load_baseline(NOFAM_BASELINE),
+                     master_baseline_keys(relpath=NOFAM_REL))
         except Unmeasurable as e:
             print("check_define_dups: UNMEASURED: %s" % e, file=sys.stderr)
             return 2

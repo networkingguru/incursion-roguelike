@@ -30,3 +30,84 @@ hostility_quant map group 1g (bytes inside the t_why_data blob): a pressure case
 dt map group 1g (type byte of a script variable inside the Variables blob): a pressure case for it is a later brief
 v1_kind map group 1g (file framing, the kind byte after every tag): a pressure case for it is a later brief
 v1_pool map group 1g (file framing, the pool byte of a memory-segment row): a pressure case for it is a later brief
+acq map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+act map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+af map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ai map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+aid map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ar map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+bonus map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+cf map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+coin map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+const_id map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+crea map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+df_dmg map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+dis map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+dsm map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ea map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ef map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+en_enc map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+enc_part map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ev map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+evreturn map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_cha map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_con map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_int map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_luc map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_wis map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+foa map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+fu map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+gf_god map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+heal map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+hunger map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ig map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+istarget_ret map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+item_flag map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+list_id map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+lroll map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+m_flag map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+mat map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+menu map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+msg map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+na map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+namelist map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+nf map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+p_prio map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+phd map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+por map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+pur map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+purpose map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+q map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+queue map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+rc map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+rest map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+rf map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+rm map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+s_style map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+sa map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+sac map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+save_type map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+sc_all map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+sz map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+t_all map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tf map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tile_feature map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tile_monster map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tm map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tmf map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+trouble map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+tt map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+val_base map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+val_illusion map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+val_terraform map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+val_travel map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+vis map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+vs map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+win map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or named in inc/ConstNam.h, inc-x39wn): a pressure case for it is a later brief
+ex_str map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+ex_dex map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+ex_common map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+lim_qkeys map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+lim_macros map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+lim_parts map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
+mon_feats map group 1h (value compiled into mod/Incursion.Mod from lib/*.irh, or an index or limit of a saved or compiled array, inc-x39wn): a pressure case for it is a later brief
