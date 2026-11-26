@@ -130,7 +130,7 @@ end_row() { # row space
 mkdir -p "$R0/tools" "$R0/lib" || die2 "cannot make the scratch tree"
 cp -R inc src compat "$R0/" || die2 "cannot copy inc/ src/ compat/"
 cp lib/dispatch.h "$R0/lib/" || die2 "cannot copy lib/dispatch.h"
-for f in check_define_dups.py check_stored_values.py define_baseline.txt retired_values.txt \
+for f in check_define_dups.py check_stored_values.py define_baseline.txt nofamily_baseline.txt retired_values.txt \
          retired_field_names.txt probe_names.txt check_probe_names.py; do
     cp "tools/$f" "$R0/tools/" || die2 "cannot copy tools/$f"
 done
@@ -284,8 +284,11 @@ end_row 6 "stored ordinal family (stati): a new name takes a master value"
 begin_row
 subst "$R0/inc/Defines.h" '^#define EV_MOVE         1$' '&\n#define EV_ZZ_PLANT     1'
 expect_red 'EV_ZZ_PLANT' in_r0 "${DUPS[@]}"
+expect_red 'EV_ZZ_PLANT' in_r0 "${STORED[@]}"
 restore
-end_row 7 "internal family (EV_): two names, one value"
+expect_green in_r0 "${DUPS[@]}"
+expect_green in_r0 "${STORED[@]}"
+end_row 7 "stored family (EV_ events, compiled into the module): two names, one value"
 
 begin_row
 subst "$R0/inc/Defines.h" '^#define FT_LUCUBRATION         363$' '&\n#define FT_ZZ_PLANT            363'

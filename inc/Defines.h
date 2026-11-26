@@ -77,10 +77,10 @@ typedef signed int        hObj;
 #define DATA_TABLE_MASK  511
 /* instead of "h % OBJ_TABLE_SIZE" we use "h & OBJ_TABLE_MASK" */
 
-#define MAX_PLAYERS         4
-#define MAX_SCROLL_LINES    8192
+#define MAX_PLAYERS         4 /* not a code: bounds the loops over Map::pl[4], whose size is a literal 4 */
+#define MAX_SCROLL_LINES    8192 /* not a code: sizes the message scroll buffer (Wcurses.cpp, TextTerm.cpp) */
 #define SCROLL_WIDTH        120
-#define MAX_GALLERY_SIZE    16
+#define MAX_GALLERY_SIZE    16 /* not a code: caps the number of gallery entries (CreationSource.cpp) */
 #define EVENT_STACK_SIZE    128
 /* Overridable so a probe build can force the queue full in seconds instead of
    waiting for a monster to path far enough to allocate 64000 temporaries.
@@ -146,12 +146,12 @@ typedef signed int        hObj;
 #define CONSTRAINED_ENC(enc,con) (-2) enc con
 #define CON_ENC_MINMAX(enc,con,low,high) (-3) enc con low high
 // end no-family
-// family: mon_feats internal
+// family: mon_feats stored ordinal u16 grows MAX_MON_FEATS
 
 /* Entries in a monster's Feats and a template's NewFeats list (one list holds feats and skills). Not saved. */
 #define MAX_MON_FEATS 512
 // end family: mon_feats
-// family: evreturn internal
+// family: evreturn stored ordinal i8
 
 #define ERROR    -1
 #define NOTHING   0
@@ -159,7 +159,7 @@ typedef signed int        hObj;
 #define ABORT     2
 #define NOMSG     3
 // end family: evreturn
-// family: istarget_ret internal
+// family: istarget_ret stored ordinal i8
 
 // reminder EV_RETURNs for EV_ISTARGET
 #define SHOULD_CAST_IT  0       /* AutoBuff and monster AI will do so */
@@ -183,7 +183,7 @@ typedef signed int        hObj;
 #define DOWN      10
 #define LAST_DIR 7  /* alias of SOUTHWEST */
 // end family: dir
-// family: coin internal
+// family: coin stored ordinal i32
 
 /* Coin Types */
 #define GOLD      1
@@ -196,7 +196,7 @@ typedef signed int        hObj;
 
 #define SAL(a) (__SAL[min((a),9)])
 // end no-family
-// family: lroll internal
+// family: lroll stored ordinal i8
 
 /* These constants can appear in dice values rolled with the
    LRoll function. They allow level-based dice rolls. */
@@ -369,7 +369,7 @@ typedef signed int        hObj;
 #define IF_REAPPLYING  0x0400
 #define IF_LEGEND_ROLLED 0x0800
 // end family: if_flag
-// family: t_type stored ordinal u8 sentinel T_LAST, t_all internal
+// family: t_type stored ordinal u8 sentinel T_LAST, t_all stored ordinal i16
 
 /* The core game objects */
 #define T_GAME     1
@@ -464,7 +464,7 @@ typedef signed int        hObj;
 #define T_STRING 99
 #define T_ARRAY 100
 // end family: t_type, t_all
-// family: t_all internal
+// family: t_all stored ordinal i16
 
 #define T_CREATURE   (-2)
 #define T_CHARACTER  (-3)
@@ -477,8 +477,10 @@ typedef signed int        hObj;
 #define T_THING      (-1)
 
 
-#define is_res(ot) (ot >= T_TMONSTER && ot <= T_TFLAVOR)
 // end family: t_all
+// no-family
+#define is_res(ot) (ot >= T_TMONSTER && ot <= T_TFLAVOR)
+// end no-family
 // family: sobj internal
 
 #define SOBJ_E        1
@@ -565,7 +567,7 @@ typedef signed int        hObj;
 #define SM_CAST           0x01
 #define SM_TRICKERY       0x02
 // end family: sm
-// family: mat internal
+// family: mat stored ordinal i8
 
 
 #define MAT_LIQUID    1 
@@ -604,7 +606,7 @@ typedef signed int        hObj;
 #define MAT_WROUGHT  34
 #define MAT_IRONWOOD 35
 // end family: mat
-// family: item_flag internal
+// family: item_flag stored ordinal u16
 
 #define IT_NOGEN     1
 #define IT_EDIBLE    2
@@ -647,7 +649,7 @@ typedef signed int        hObj;
 #define NOT_PROF_HIT_PENALTY 4   /* inc-1xr3: Values.cpp and the Create.cpp weapon prompt */
 #define NOT_PROF_SPD_PENALTY 10
 // end no-family
-// family: item_flag internal
+// family: item_flag stored ordinal u16
 #define WT_STR1              36
 #define WT_STR2              37
 #define WT_STR3              38
@@ -667,14 +669,14 @@ typedef signed int        hObj;
                                  * you are mounted or you are really big */
 #define IT_LAST              49
 // end family: item_flag
-// family: save_type internal
+// family: save_type stored ordinal i16
 
 #define FORT   0
 #define REF    1
 #define WILL   2
 #define NOSAVE 3
 // end family: save_type
-// family: sa internal
+// family: sa stored bits u32
 
 /* Save Sub-types */
 #define SA_MAGIC       0x00000001
@@ -727,7 +729,7 @@ typedef signed int        hObj;
 #define SN_STUN        21
 #define SN_REST        22
 // end family: sn
-// family: ai internal
+// family: ai stored ordinal i8
 
 #define AI_POTION     1 
 #define AI_SCROLL     2 
@@ -790,7 +792,7 @@ typedef signed int        hObj;
 #define PIERCE 1
 #define BLUNT  2
 // end family: damage_kind
-// family: af internal
+// family: af stored ordinal u16
 
 #define AF_NOGEN      1
 #define AF_SENTIENT   2
@@ -803,7 +805,7 @@ typedef signed int        hObj;
 
 #define AF_LAST       32
 // end family: af
-// family: tf internal
+// family: tf stored ordinal u16
 
 #define TF_SOLID      1
 #define TF_OPAQUE     2
@@ -833,7 +835,7 @@ typedef signed int        hObj;
 #define TF_PIT        27
 #define TF_LAST       28
 // end family: tf
-// family: rf internal
+// family: rf stored ordinal u16
 
 #define RF_CORRIDOR   1
 #define RF_VAULT      2
@@ -864,7 +866,7 @@ typedef signed int        hObj;
 #define RF_CENTER_ENC 27
 #define RF_LAST       28
 // end family: rf
-// family: cf internal
+// family: cf stored ordinal u16
 
 #define CF_RELIGIOUS  1
 #define CF_LAWFUL     2
@@ -884,11 +886,11 @@ typedef signed int        hObj;
 #define CF_NONCHAOTIC 16
 #define CF_LAST       17 /* Class/Race Flags */
 // end family: cf
-// no-family
+// family: dof internal
 
 #define DOF_LAST      1 /* Domain Flags */
-// end no-family
-// family: gf_god internal
+// end family: dof
+// family: gf_god stored ordinal u16
 
 #define GF_GOOD        1
 #define GF_LAWFUL      2
@@ -910,10 +912,12 @@ typedef signed int        hObj;
 #define GF_BLATANT_EVIL 20
 #define GF_LAST       21 /* God Flags */
 // end family: gf_god
-// no-family
+// family: ff internal
 #define FF_LAST       1 /* Feature Flags */
+// end family: ff
+// family: mf internal
 #define MF_LAST       1 /* Map Flags */
-// end no-family
+// end family: mf
 // family: bf internal
 
 #define BF_LMELEE      1  // load mtarg into EVictim
@@ -954,7 +958,7 @@ typedef signed int        hObj;
 
 #define BF_LAST 32
 // end family: bf
-// family: enc_part internal
+// family: enc_part stored bits u32
 
 
 #define EP_ELSE         0x00000001
@@ -982,7 +986,7 @@ typedef signed int        hObj;
 #define EP_MAYCLASS     0x00400000
 #define EP_NOALIGN      0x00800000
 // end family: enc_part
-// family: nf internal
+// family: nf stored ordinal u16
 
 #define NF_NOGEN        1
 #define NF_SINGLE       2
@@ -1020,7 +1024,7 @@ typedef signed int        hObj;
 #define L_MDARK       0x00000200
 #define L_SOLID       0x00000400
 // end family: l_flag
-// family: rm internal
+// family: rm stored ordinal i8
 //#define L_
 
 #define RM_ANY        -1
@@ -1051,7 +1055,7 @@ typedef signed int        hObj;
 #define RM_DIAMONDS   24 /* Grid of Diamond squares */
 #define RM_LAST       32
 // end family: rm
-// family: rc internal
+// family: rc stored ordinal i32
 
 #define RC_EMPTY      1
 #define RC_SINGLE     2
@@ -1077,7 +1081,7 @@ typedef signed int        hObj;
 #define TU_DRUNKARD   29
 #define TU_REINFORCED 30
 // end family: tu
-// family: df_dmg internal
+// family: df_dmg stored bits u32
 
 /* DF_xxxx == AD_xxxx ^ 2 */
 
@@ -1399,7 +1403,7 @@ typedef signed int        hObj;
 #define ATTK_NEXT  2
 #define ATTK_PEEK  3
 // end family: attk_iter
-// family: s_style internal
+// family: s_style stored ordinal i16
 
 #define S_ARCHERY 0
 #define S_BRAWL 1
@@ -1407,7 +1411,7 @@ typedef signed int        hObj;
 #define S_THROWN 3
 #define S_DUAL  4
 // end family: s_style
-// family: queue internal
+// family: queue stored ordinal i16
 
 
 #define QUEUE_WEAPON_MSG   1
@@ -1444,7 +1448,7 @@ typedef signed int        hObj;
 #define MS_THREAT2     0x4000
 #define MS_STILL_CAST  0x8000 
 // end family: ms
-// family: m_flag internal
+// family: m_flag stored ordinal u16
 
 #define M_HUMANOID        1   
 #define M_NOLIMBS         2   
@@ -1561,7 +1565,7 @@ typedef signed int        hObj;
 #define M_NOTTALKABLE     113
 #define M_LAST            114
 // end family: m_flag
-// family: tt internal
+// family: tt stored bits u32
 
 #define TT_SURFACE    0x0001 /* Never in a dungeon */
 #define TT_FOREST     0x0002
@@ -1607,7 +1611,7 @@ typedef signed int        hObj;
 #define MR_VRARE        4
 #define MR_XRARE        5
 // end family: mr
-// family: tmf internal
+// family: tmf stored ordinal i16
 
 #define TMF_BODY_ONLY  -1
 #define TMF_OBVIOUS    -2
@@ -1616,7 +1620,7 @@ typedef signed int        hObj;
 #define TMF_NAMEONLY   -5
 #define TMF_LAST       -6
 // end family: tmf
-// family: sz internal
+// family: sz stored ordinal i8
 
 #define SZ_MINISCULE  1
 #define SZ_TINY       2
@@ -1642,13 +1646,13 @@ typedef signed int        hObj;
 #define PER_SHARED  0x0400
 #define PER_LAST    PER_SHARED  /* alias of PER_SHARED */
 // end family: per
-// no-family
+// family: ex_common stored ordinal i16
 
 #define EXXX_SKILL   10
 #define EXXX_SAVE    11
 #define EXXX_PSKILL  12  /* Skill-based, no bleedoff */
-// end no-family
-// family: ex_str internal
+// end family: ex_common
+// family: ex_str stored ordinal i16
 
 #define ESTR_DOOR    1
 #define ESTR_CRIT    2
@@ -1659,7 +1663,7 @@ typedef signed int        hObj;
 #define ESTR_BURDEN  7   /* Encumbrance Pulse */
 #define ESTR_ARMOUR   8
 // end family: ex_str
-// family: ex_dex internal
+// family: ex_dex stored ordinal i16
 
 #define EDEX_TUMBLE    1
 #define EDEX_CRIT      2
@@ -1668,7 +1672,7 @@ typedef signed int        hObj;
 #define EDEX_EVASION   5
 #define EDEX_JUMP      6
 // end family: ex_dex
-// family: ex_con internal
+// family: ex_con stored ordinal i16
 
 #define ECON_OVERCOME  1
 #define ECON_CRIT      2 /* surviving enemy crit */
@@ -1679,7 +1683,7 @@ typedef signed int        hObj;
 #define ECON_ESSIAH    7
 #define ECON_HEAL      8 /* natural waking healing */
 // end family: ex_con
-// family: ex_int internal
+// family: ex_int stored ordinal i16
 
 #define EINT_CASTING   1
 #define EINT_IDENT     2
@@ -1688,7 +1692,7 @@ typedef signed int        hObj;
 #define EINT_XAVIAS    5
 #define EINT_SABINE    5  /* alias of EINT_XAVIAS */
 // end family: ex_int
-// family: ex_wis internal
+// family: ex_wis stored ordinal i16
 
 #define EWIS_TURNING   1
 #define EWIS_DONATE    2
@@ -1698,7 +1702,7 @@ typedef signed int        hObj;
 #define EWIS_CREATION  6
 #define EWIS_XAVIAS    7
 // end family: ex_wis
-// family: ex_cha internal
+// family: ex_cha stored ordinal i16
 
 #define ECHA_FEAR      1
 #define ECHA_CHARM     2
@@ -1708,7 +1712,7 @@ typedef signed int        hObj;
 #define ECHA_THRONE    6
 #define ECHA_ESSIAH    7
 // end family: ex_cha
-// family: ex_luc internal
+// family: ex_luc stored ordinal i16
 
 #define ELUC_RISK      1
 #define ELUC_ITEM      2
@@ -1884,7 +1888,7 @@ typedef signed int        hObj;
 
 #define MN_LAST_BIT     148
 // end family: mn
-// family: pur internal
+// family: pur stored ordinal i16
 
 /* GetMonID Cause Constants */
 #define PUR_DUNGEON  1
@@ -1909,7 +1913,7 @@ typedef signed int        hObj;
 #define PUR_CRAFT    20
 #define PUR_LISTING  100
 // end family: pur
-// family: ig internal
+// family: ig stored bits u16
 
 #define IG_STAPLE   0x0001
 #define IG_GOOD     0x0002
@@ -1922,7 +1926,7 @@ typedef signed int        hObj;
 #define IG_MONEQUIP 0x0100
 #define IG_KNOWN    0x0200
 // end family: ig
-// family: en_enc internal
+// family: en_enc stored bits u32
 
 
 #define EN_ROOM     0x00000001 /* Place monsters in last created room */
@@ -1953,7 +1957,7 @@ typedef signed int        hObj;
 #define EN_OODMON   0x02000000
 #define EN_DUNREGEN 0x04000000
 // end family: en_enc
-// family: tm internal
+// family: tm stored bits u16
 
 #define TM_SKILL    0x0001 /* skilled kobold, veteran mind flayer, etc. */
 #define TM_CLASS    0x0002 /* orc barbarian, firenewt sorceror, etc. */
@@ -2062,7 +2066,7 @@ typedef signed int        hObj;
 #define EN_HEAVY     3
 #define EN_EXTREME   4
 // end family: encumb
-// family: sc stored bits i16 val-of BONUS_SCHOOL_CASTING_LEVEL mag-of SCHOOL_FOCUS, sc_all internal
+// family: sc stored bits i16 val-of BONUS_SCHOOL_CASTING_LEVEL mag-of SCHOOL_FOCUS, sc_all stored bits u32
 
 #define SC_ABJ       0x00000001
 #define SC_ARC       0x00000002
@@ -2074,7 +2078,7 @@ typedef signed int        hObj;
 #define SC_THA       0x00000080
 #define SC_WEA       0x00000100
 // end family: sc, sc_all
-// family: sc_all internal
+// family: sc_all stored bits u32
 #define SC_THE       0x00000200
 #define SC_NAT       0x00000400
 #define SC_COLD      0x00000800
@@ -2370,7 +2374,7 @@ typedef signed int        hObj;
 #define CA_HIDE_IN_PLAIN_SIGHT 142
 #define CA_LAST              143
 // end family: ca
-// family: phd internal
+// family: phd stored ordinal i16
 
 #define PHD_PARTY    1 /* Generic Pool / NPC Allies */
 #define PHD_MAGIC    2 /* Dominated or Summoned Mons. */
@@ -2384,7 +2388,7 @@ typedef signed int        hObj;
 #define SPEC_RELIGIOUS  1
 #define SPEC_MULTICLASS 2
 // end family: spec
-// family: val_base internal
+// family: val_base stored ordinal i16
 
 #define ABIL_VAL     1000
 #define FEAT_VAL     2000
@@ -2971,7 +2975,7 @@ typedef signed int        hObj;
 #define STUDY_MOUNT       9
 #define STUDY_LAST        10
 // end family: study
-// family: purpose internal
+// family: purpose stored bits u32
 
 #define EP_PLAYER_ONLY  0x00000
 #define EP_ATTACK       0x00001
@@ -2993,7 +2997,7 @@ typedef signed int        hObj;
 #define EP_UNLOCK       0x10000
 #define EP_DISPEL       0x20000
 // end family: purpose
-// family: vs internal
+// family: vs stored ordinal i32
 
 #define VS_GENERAL       0
 #define VS_MELEE         1
@@ -3024,7 +3028,7 @@ typedef signed int        hObj;
 #define VS_GAZE          26
 #define VS_HEALING       27
 // end family: vs
-// family: p_prio internal
+// family: p_prio stored ordinal i8
 
 #define P_IMPOSSIBLE  1
 #define P_VERY_LOW    2
@@ -3036,7 +3040,7 @@ typedef signed int        hObj;
 #define P_CRITICAL    8
 #define P_OVERRIDE    20     
 // end family: p_prio
-// family: act internal
+// family: act stored ordinal i8
 
 #define ACT_WAIT      0
 #define ACT_MOVE      1
@@ -3078,7 +3082,7 @@ typedef signed int        hObj;
 #define ACT_PHASE     42
 #define ACT_LAST      43
 // end family: act
-// family: q internal
+// family: q stored bits i16
 
 
 #define Q_DIR  0x0001  
@@ -3093,11 +3097,11 @@ typedef signed int        hObj;
 #define Q_OPT  0x0200
 #define Q_ALL  0x0400
 // end family: q
-// no-family
+// family: yu internal
 
 #define YU_REVERSE    0x0001
-// end no-family
-// family: bonus internal
+// end family: yu
+// family: bonus stored ordinal i32
 
 /* Bonus types do not match up exactly to the d20 system here. Instead,
  * several d20 types are missing due to the division between armour
@@ -3146,7 +3150,7 @@ typedef signed int        hObj;
 #define BONUS_HIDE    38
 #define BONUS_LAST    39 
 // end family: bonus
-// family: rest internal
+// family: rest stored bits i16
 
 #define REST_SAFE     0x0001
 #define REST_FULL     0x0002
@@ -3160,7 +3164,7 @@ typedef signed int        hObj;
 #define REST_NOIDENT  0x0200
 #define REST_FOOD     0x0400
 // end family: rest
-// family: dsm internal
+// family: dsm stored ordinal i16
 
 #define DSM_SILENT    0
 #define DSM_CHOICE    1
@@ -3302,7 +3306,7 @@ typedef signed int        hObj;
 #define TRACKING      73 /* Rangers */
 #define ILLUSION      74
 // end family: stati
-// family: val_illusion internal
+// family: val_illusion stored bits i16
   #define IL_SPECTRAL 1
   #define IL_IMPROVED 2
   #define IL_ADVANCED 4
@@ -3608,7 +3612,7 @@ typedef signed int        hObj;
 #define TI_ROCK 2
 #define TI_BORDER 3        
 // end family: ti
-// family: ef internal
+// family: ef stored ordinal u16
 
 #define EF_PERIODIC    1
 #define EF_CURSED      2  /* Generate Cursed */
@@ -3731,9 +3735,9 @@ typedef signed int        hObj;
    more. Fixed at 9 because the only user today, Undeath to Death via Circle
    of Death, has 9; if a second HD-pool spell needs a different cap, promote
    this to an effect field rather than growing the constant. inc-kgzx. */
-#define EF_HD_POOL_CAP 9
+#define EF_HD_POOL_CAP 9 /* not a code: a Hit Dice cap, not an effect flag */
 // end no-family
-// family: ef internal
+// family: ef stored ordinal u16
 /* inc-1qyv: Item::getShopCost returns this effect's first ITEM_COST value in
    gold pieces, with no level formula and no shop markup. */
 #define EF_FIXED_PRICE 109
@@ -3771,7 +3775,7 @@ typedef signed int        hObj;
 #define EF_SPORES     141  /* inc-jw0hw: spores fly from the caster in every direction, drawn with arrow glyphs */
 #define EF_LAST       142
 // end family: ef
-// family: ea internal
+// family: ea stored ordinal i8
 
 
 #define EA_BLAST    1      /* xval = DType, pval = Damage */
@@ -3780,7 +3784,7 @@ typedef signed int        hObj;
 #define EA_DRAIN    4
 #define EA_TERRAFORM 5
 // end family: ea
-// family: val_terraform internal
+// family: val_terraform stored ordinal u8
   #define TERRA_EMPTY 1
   #define TERRA_ROCK  2
   #define TERRA_ALL   3
@@ -3791,10 +3795,10 @@ typedef signed int        hObj;
   #define TERRA_CLOSED 10       /* not TERRA_OPEN */
   #define TERRA_BRIDGE 11
 // end family: val_terraform
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_TRAVEL   6      /* pval = Distance, rval = New Map, xval = Type */ 
 // end family: ea
-// family: val_travel internal
+// family: val_travel stored ordinal u8
   #define TRAVEL_KNOWN     1       /* qval determines randomness/target ability */
   #define TRAVEL_ANYWHERE  2       /* yval can be coded x/y coord */
   #define TRAVEL_LEVEL     3
@@ -3803,21 +3807,21 @@ typedef signed int        hObj;
   #define TRAVEL_WORLDWALK 6 /* List known wilderness locations, jump to one */   
   #define TRAVEL_POCKET    7
 // end family: val_travel
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_IDENTIFY 7      /* pval = max item level, xval = known flags, yval = max traits revealed */ 
 #define EA_ILLUSION 8      
 #define EA_SUMMON   9
 // end family: ea
-// family: ef internal
+// family: ef stored ordinal u16
   #define EF_CHOOSE     64  /* known collision: inc-33shr */
   #define EF_GROUP      63  /* known collision: inc-lhid2 */
 // end family: ef
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_ANIMATE  10
 #define EA_FIELD    11 /* Light, Darkness, Web, Obscurement, etc. */
 #define EA_CREATION 13 /* Major Creation, etc. -- Create Item */
 // end family: ea
-// family: crea internal
+// family: crea stored bits u8
   #define CREA_WIELD  0x01
   #define CREA_STOW   0x02
   #define CREA_DROP   0x04
@@ -3827,7 +3831,7 @@ typedef signed int        hObj;
   #define CREA_TRAP   0x40
   #define CREA_XY     0x80 /* place at target xy, not evictim->xy */
 // end family: crea
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_SLAYING  18 /* Slay Living, PW Kill, Disintegrate, etc. */
 #define EA_DETECT   20  /* Misc1 = Below; Misc2 = Range (or 0 = board) */
 // end family: ea
@@ -3841,23 +3845,23 @@ typedef signed int        hObj;
   #define DET_NATURE       0x40 /* Reveals (in text) *what* is found */
   #define DET_INVIS        0x80 /* Reveals invisible creatures */
 // end family: det
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_DISPEL   22 /* Dispel Magic / Disjunction */
 // end family: ea
-// family: dis internal
+// family: dis stored bits u8
   #define DIS_DISPEL       0x01
   #define DIS_DISJOIN      0x02
   #define DIS_BANISH       0x04
   #define DIS_INNATE       0x08
   #define DIS_SUPPRESS     0x10
 // end family: dis
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_WEAPON   23 /* Conjure Magical Weapon -- Black Blade, Spiritual Hammer, etc. */
 #define EA_BANISH   24 /* Send Away -- Imprisonment, Abjure, Banishment, etc. */
 #define EA_NOTIMP   25 
 #define EA_HEALING  26 /* Cure Light, Heal, etc; also Gain Mana, Bonus HP */
 // end family: ea
-// family: heal internal
+// family: heal stored bits u16
   #define HEAL_HP      0x01
   #define HEAL_MANA    0x02
   #define HEAL_XP      0x04
@@ -3868,7 +3872,7 @@ typedef signed int        hObj;
   #define HEAL_SATTR   0x80 /* Heal One Attribute */
   #define HEAL_ALL_MALADIES  0x100 /* like the priest spell 'Heal' */
 // end family: heal
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_RAISE    27 /* Raise Dead, Resurrection */
 #define EA_MENU     28 /* Multi-Effect Staves & Artifacts */
 #define EA_CANCEL   29 /* Rod of Cancellation */
@@ -3885,12 +3889,12 @@ typedef signed int        hObj;
 #define EA_TURNING   41
 #define EA_REVEAL    42
 // end family: ea
-// family: ef internal
+// family: ef stored ordinal u16
   #define EF_NEEDS_CORPSE   63  /* known collision: inc-lhid2 */
   #define EF_TELL_DISTANCE  62  /* known collision: inc-wrqgs */
   #define EF_TELL_INTENSITY 61  /* known collision: inc-egppt */
 // end family: ef
-// family: ea internal
+// family: ea stored ordinal i8
 #define EA_ENCHANT   43         /* Magic Weapon, Keen Edge, etc. */
 #define EA_CONSTRUCT 44         /* Spiritual Weapon, Black Blade */
 #define EA_KNOCKBACK 45
@@ -3898,7 +3902,7 @@ typedef signed int        hObj;
 #define EA_GENERIC   46
 #define EA_VISION    47
 // end family: ea
-// family: vis internal
+// family: vis stored bits u8
   #define VIS_MOBILE   0x01    /* Move Viewpoint About */
   #define VIS_SPECIFIC 0x02    /* See more than '?' for mons */
   #define VIS_SEE_INV  0x04    /* See Invisible */
@@ -3917,7 +3921,7 @@ typedef signed int        hObj;
   #define KNOW_MOMMEM  0x40
   #define KNOW_LOYALTY 0x80
 // end family: know
-// family: ar internal
+// family: ar stored ordinal i8
 
 
 #define AR_NONE      0
@@ -3992,7 +3996,7 @@ typedef signed int        hObj;
 #define FI_SIZE       0x00008000
 #define FI_DARKNESS   0x00010000
 // end family: fi
-// family: por internal
+// family: por stored ordinal u8
 
 #define POR_UP_STAIR   1
 #define POR_DOWN_STAIR 2
@@ -4005,7 +4009,7 @@ typedef signed int        hObj;
 #define POR_TOWN       9
 #define POR_RETURN     10
 // end family: por
-// family: acq internal
+// family: acq stored ordinal i8
 
 #define ACQ_ACQUIRE    1
 #define ACQ_IDENT_ALL  2
@@ -4021,7 +4025,7 @@ typedef signed int        hObj;
 #define ACQ_ANYMON     13
 #define ACQ_RECALL     14
 // end family: acq
-// family: menu internal
+// family: menu stored bits u16
 
 #define MENU_DESC         0x0001
 #define MENU_ESC          0x0002
@@ -4038,7 +4042,7 @@ typedef signed int        hObj;
 #define MENU_WIDE         0x1000
 #define MENU_REDRAW       0x2000
 // end family: menu
-// family: hunger internal
+// family: hunger stored ordinal i16
 
 #define BLOATED   3000
 #define SATIATED  2900    
@@ -4069,7 +4073,7 @@ typedef signed int        hObj;
 #define SS_BODY  14 /* from your current body (polymorph/race) */
 #define SS_TMPL  15 /* from your current template */
 // end family: ss
-// family: na internal
+// family: na stored bits i16
                          /* long sword        kobold         Asmodeus         */
 #define NA_LONG  0x0001  /* uncursed long...  injured kobold healthy Asmodeus */
 #define NA_MECH  0x0002  /* long sword +1     kobold         Asmodeus         */
@@ -4097,7 +4101,7 @@ typedef signed int        hObj;
 #define MT_ROOM 6
 #define MT_VAULT 7
 // end family: mt
-// family: foa internal
+// family: foa stored bits u16
 
 #define FOA_ALLOW_WATER   0x0001
 #define FOA_WATER_ONLY    0x0002
@@ -4113,7 +4117,7 @@ typedef signed int        hObj;
 #define FOA_ALLOW_WARN    0x0800
 #define FOA_WARN_ONLY     0x1000
 // end family: foa
-// family: list_id internal
+// family: list_id stored ordinal i16
 
 #define RM_WEIGHTS            1
 #define VAULT_WEIGHTS         2
@@ -4137,8 +4141,12 @@ typedef signed int        hObj;
 #define PALADIN_MOUNTS        19
 #define BLACKGUARD_MOUNTS     20
 #define SPELL_LIST            21
+// end family: list_id
+// no-family
   #define ALL_SPELLS_FROM_SOURCE(ai_const) (ai_const + 1000)
   #define ALL_SPELLS_FROM_SCHOOL(src,school) 100 (src) (school)
+// end no-family
+// family: list_id stored ordinal i16
 #define SUBEFFECTS            22
 #define SKILL_KIT_FOR         23
 #define SECONDARY_KIT_FOR     24
@@ -4154,7 +4162,7 @@ typedef signed int        hObj;
 // no-family
   #define REL_DEFAULT         (-20)
 // end no-family
-// family: list_id internal
+// family: list_id stored ordinal i16
 #define FAVOURED_SKILLS        32
 #define ALLOWED_GODS          33
 #define TEXT_LIST             34
@@ -4164,7 +4172,7 @@ typedef signed int        hObj;
 // no-family
 #define KIT_BY_TYPE         9999 /* NECESSITIES kit count: use the item-type rule; a plain -1 would parse as a subtraction in the list (inc-rt8l) */
 // end no-family
-// family: list_id internal
+// family: list_id stored ordinal i16
 
 #define GROUP_LEADER          100
 #define GROUP_FOLLOWER        101
@@ -4187,7 +4195,7 @@ typedef signed int        hObj;
 #define UNIVERSAL_TEMPLATE    118
 #define WEIGHT_CURVE_BY_CR    119
 // end family: list_id
-// family: const_id internal
+// family: const_id stored ordinal i16
 
 /* Dungeon constant IDs. */
 
@@ -4326,7 +4334,7 @@ typedef signed int        hObj;
 #define BREATH2_SHAPE         156 /* Monster: As BREATH_SHAPE, for the second breath (A_BRE2). */
 #define LAST_DUNCONST         157
 // end family: const_id
-// family: msg internal
+// family: msg stored ordinal i16
 
 
 #define MSG_IS_ANGRY      1
@@ -4408,7 +4416,7 @@ typedef signed int        hObj;
 #define MSG_VUNEASY_R    80
 #define MSG_AID          81
 // end family: msg
-// family: aid internal
+// family: aid stored ordinal i32
 
 #define AID_HEAL         1  
 #define AID_PURIFY       2  
@@ -4428,7 +4436,7 @@ typedef signed int        hObj;
 #define AID_MANA         16
 #define AID_DEFLECT      17
 // end family: aid
-// family: sac internal
+// family: sac stored ordinal i32
 
 #define SAC_ANGRY        (-100)
 #define SAC_ABOMINATION  (-101)
@@ -4445,7 +4453,7 @@ typedef signed int        hObj;
 #define GS_ANATHEMA      0x0020
 #define GS_KNOWN_ANGER   0x0040
 // end family: gs
-// family: trouble internal
+// family: trouble stored ordinal i32
 
 #define TROUBLE_INJURY     1
 #define TROUBLE_LOWMANA    2
@@ -4465,7 +4473,7 @@ typedef signed int        hObj;
 #define TROUBLE_PARALYSIS  16
 #define TROUBLE_HAUNTED    17
 // end family: trouble
-// family: fu internal
+// family: fu stored ordinal i32
 
 /* TROUBLE_NOBOOK occurs when you have a known arcane spell
    that you do not have a spellbook for; you god will replace
@@ -4501,7 +4509,7 @@ typedef signed int        hObj;
 #define GF_CURSED             0x08
 #define GF_ELSE               0x10
 // end family: gf_gear
-// family: tile_item internal, tile_monster internal, tile_feature internal
+// family: tile_item internal, tile_monster stored bits u8, tile_feature stored bits u8
 
 /* general tile flags */
 #define TILE_ITEM             0x01
@@ -4523,7 +4531,7 @@ typedef signed int        hObj;
 #define TILE_PLUS4            0x0400
 #define TILE_KNOWN            0x0800
 // end family: tile_item
-// family: tile_monster internal
+// family: tile_monster stored bits u8
 
 /* monster tile flags */
 #define TILE_PEACEFUL         0x08
@@ -4532,7 +4540,7 @@ typedef signed int        hObj;
 #define TILE_GUARDING         0x40
 #define TILE_NO_PARTY         0x80
 // end family: tile_monster
-// family: tile_feature internal
+// family: tile_feature stored bits u8
 
 /* feature tile flags */
 #define TILE_START            0x08      /* Tile: Indicates that this tile is the one where the player enters the level. */
@@ -4556,7 +4564,7 @@ typedef signed int        hObj;
 #define INP_LINE 1                      /* Unused? */
 #define INP_CHAR 2                      /* Unused? */
 // end family: inp
-// family: win internal
+// family: win stored ordinal i8
 
 #define WIN_SCREEN   0
 #define WIN_MAP      1
@@ -4594,14 +4602,20 @@ typedef signed int        hObj;
 #define QKY_VERB     4
 #define QKY_SKILL    5
 // end family: qky
-// no-family
-
+// A limit that sizes a saved or compiled array grows and never shrinks (spec 6.1).
+// family: lim_qkeys stored ordinal u16 grows MAX_QKEYS
 #define MAX_QKEYS       40
+// end family: lim_qkeys
+// family: lim_macros stored ordinal u16 grows MAX_MACROS
 //#define MAX_MACROS    48
 #define MAX_MACROS      12
-#define MAX_PATH_LENGTH 1024
-#define MAX_PARTS       16
+// end family: lim_macros
+// no-family
+#define MAX_PATH_LENGTH 1024 /* not a code: sizes the path scratch buffers (Monster.cpp, Term.cpp, Wposix.cpp, KeyScript.cpp) */
 // end no-family
+// family: lim_parts stored ordinal u16 grows MAX_PARTS
+#define MAX_PARTS       16
+// end family: lim_parts
 // family: opt stored ordinal u16 index-of Player.Options
 
 
@@ -4894,7 +4908,7 @@ typedef signed int        hObj;
 // no-family
 
 // 1 << 4 == 16, should be covered below by *_BITS defines.
-#define MAX_COLOURS 16
+#define MAX_COLOURS 16 /* not a code: sizes the palette tables of Light.cpp and the Wcurses/Wlibtcod renderers */
 // end no-family
 // no-family
 
@@ -5123,14 +5137,14 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define MAX_DUNGEONS       32
 // end family: lim_dungeons
 // no-family
-#define MAX_DUNGEON_LEVELS 50
+#define MAX_DUNGEON_LEVELS 50 /* not a code: caps dungeon depth (Feature.cpp, Player.cpp, Dump.cpp); it sizes no array */
 // end no-family
 // family: lim_modules stored ordinal u16 grows MAX_MODULES
 #define MAX_MODULES        126
 // end family: lim_modules
 // no-family
-#define MAX_WILDER_GRIDX   16
-#define MAX_WILDER_GRIDY   16
+#define MAX_WILDER_GRIDX   16 /* not a code: unused: no source reads it */
+#define MAX_WILDER_GRIDY   16 /* not a code: unused: no source reads it */
 // end no-family
 // family: lim_spells stored ordinal u16 grows MAX_SPELLS
 #define MAX_SPELLS         2048
@@ -5142,13 +5156,13 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define MAX_CHAR_LEVEL     11
 // end family: lim_char_level
 // no-family
-#define MAX_CORRIDOR_LENGTH 8192
+#define MAX_CORRIDOR_LENGTH 8192 /* not a code: sizes the corridor scratch buffer in MakeLev.cpp */
 #define ANNOT_INITIAL_SIZE 50
 // end no-family
 // family: lim_sac_cats stored ordinal u16 grows MAX_SAC_CATS
 #define MAX_SAC_CATS       10
 // end family: lim_sac_cats
-// family: namelist internal
+// family: namelist stored ordinal i16
 
 
 #define MALE_NAMES 1
@@ -5184,7 +5198,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 #define META(a)  (a+10000)
 #define GODWATCH(a) (a+20000)
 // end no-family
-// family: ev internal
+// family: ev stored ordinal i16
 
 #define EV_MOVE         1
 #define EV_BREAK        2
@@ -5378,7 +5392,7 @@ static_assert(GLYPH_ATTR(0x40 | 8) == (0x48 << GLYPH_ATTR_SHIFT), "GLYPH_ATTR mu
 
 #define EV_SPOT_CHECK   300  /* hide/spot check state keys (see inc/HideCheck.h) */
 // end family: ev
-// family: msg internal
+// family: msg stored ordinal i16
 
 #define MSG_BLASTNAME   200  /* "fireball", "hail of burning stones" */
 #define MSG_CHATTER     201 
