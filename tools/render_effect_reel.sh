@@ -5,7 +5,11 @@
 # through tools/headless.sh, once with INCURSION_EFFECT_LIGHT_OFF=1, joins each
 # clip's two frame sets into one side-by-side mp4 (tools/frames_to_video.sh
 # --pair), and writes logs/effect-reel/<date>/index.html with a video per clip.
-#   tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>]
+#   tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>] [--speeds]
+# inc-i63lc: --speeds runs both passes with the light on, left at Normal animation (INCURSION_EFFECT_REEL_ANIM=0) and right at Fast (=1),
+# and labels the sides Normal/Fast. The default stays light off (left) against light on (right), both at Normal. The two sides of a
+# --speeds clip differ in length; tools/frames_to_video.sh --pair holds the shorter side's last frame. Then errors-{normal,fast}.log
+# replace errors-{off,on}.log, and the identical-frames check reads the Fast run.
 # inc-as123: after the effects come 25 weapon clips (a held light, a hit flash, a flight light), keyed "Weapon held|hit|flight ..." in the table;
 # --only Weapons renders just those.
 #   tools/render_effect_reel.sh --selftest   (no build: fabricated BMP frames prove the map-area identical-frames check)
@@ -21,6 +25,7 @@
 # (BACKEND=posix ./build_macos.sh) and ffmpeg. Launches the SDL build: the main
 # session runs it, never an implementer.
 # fact: the effect list and each clip's key -- the probe logs REEL_KEY <n> <declared name> per clip; the table is tools/fixtures/effect-light-table.tsv
+# fact: animation option -- INCURSION_EFFECT_REEL_ANIM, set by this script to 0 or 1 for each pass; the reel probe sets OPT_ANIMATION from it
 # fact: the frames -- recorded by the SDL build, not the seeded game; the identical-frames test hashes only the map-area pixels of each BMP
 # fact: the map area -- the probe logs REEL_MAPRECT <x> <y> <w> <h> (pixels, from TermCellPixel); no line or a rectangle outside the frame exits 2
 # Exit 0 done, 1 a clip has frames in one run only, a run lacks REEL_DONE, or a clip shows nothing (all light-on
@@ -37,14 +42,16 @@ ONLY=""
 SELFTEST=0
 KEEP_FRAMES=0
 OUT_ARG=""
+SPEEDS=0
 TABLE="${INCURSION_LIGHT_TABLE:-tools/fixtures/effect-light-table.tsv}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --only) ONLY="${2:-}"; shift 2 ;;
         --selftest) SELFTEST=1; shift ;;
+        --speeds) SPEEDS=1; shift ;;
         --keep-frames) KEEP_FRAMES=1; shift ;;
         --out) OUT_ARG="${2:-}"; [ -n "$OUT_ARG" ] || { echo "usage: --out needs a directory" >&2; exit 2; }; shift 2 ;;
-        *) echo "usage: tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>] | --selftest" >&2; exit 2 ;;
+        *) echo "usage: tools/render_effect_reel.sh [--only <name>[,<name>...]] [--keep-frames] [--out <dir>] [--speeds] | --selftest" >&2; exit 2 ;;
     esac
 done
 
@@ -231,12 +238,13 @@ echo "@quit" >> "$KEYS"
 run_pass() {   # <off|on>
     local mode="$1" rd="$ROOT/logs/runs/$STAMP-$$-effect-reel-$1"
     mkdir -p "$rd"
-    local off=""
-    [ "$mode" = off ] && off=INCURSION_EFFECT_LIGHT_OFF=1
+    local off="" anim=0
+    [ "$mode" = off ] && [ "$SPEEDS" -eq 0 ] && off=INCURSION_EFFECT_LIGHT_OFF=1
+    [ "$mode" = on ] && [ "$SPEEDS" -eq 1 ] && anim=1
     env INCURSION_BIN="${INCURSION_REEL_BIN:-./incursion}" INCURSIONFONTPATH="$ROOT/fonts" \
         INCURSION_FRAMES="$rd/frames" INCURSION_RUN_DIR="$rd" \
         INCURSION_OPTIONS="$OPTIONS" INCURSION_LOAD="$LOAD" \
-        INCURSION_EFFECT_REEL=1 INCURSION_EFFECT_REEL_ONLY="$ONLY" INCURSION_LIGHT_TABLE="$(cd "$(dirname "$TABLE")" && pwd)/$(basename "$TABLE")" \
+        INCURSION_EFFECT_REEL=1 INCURSION_EFFECT_REEL_ANIM="$anim" INCURSION_EFFECT_REEL_ONLY="$ONLY" INCURSION_LIGHT_TABLE="$(cd "$(dirname "$TABLE")" && pwd)/$(basename "$TABLE")" \
         $off \
         tools/headless.sh "$KEYS" "$SEED" > "$rd/run.out" 2>&1
     echo "$rd"
@@ -245,9 +253,13 @@ run_pass() {   # <off|on>
 # run_pass creates its dir before the run, so set the trap's variables first.
 OFF_RUN="$ROOT/logs/runs/$STAMP-$$-effect-reel-off"; run_pass off >/dev/null
 ON_RUN="$ROOT/logs/runs/$STAMP-$$-effect-reel-on"; run_pass on >/dev/null
+LABEL_L=off; LABEL_R=on; PAIR_LABELS="light off|light on"
+[ "$SPEEDS" -eq 1 ] && { LABEL_L=normal; LABEL_R=fast; PAIR_LABELS="Normal|Fast"; }
+export PAIR_LABELS
 for m in off on; do
     r="$ROOT/logs/runs/$STAMP-$$-effect-reel-$m"
-    cp -f "$r/logs/errors.log" "$OUT/errors-$m.log" 2>/dev/null || true
+    lab=$LABEL_L; [ "$m" = on ] && lab=$LABEL_R
+    cp -f "$r/logs/errors.log" "$OUT/errors-$lab.log" 2>/dev/null || true
 done
 for rd in "$OFF_RUN" "$ON_RUN"; do
     if ! grep -aq ' REEL_DONE ' "$rd/logs/errors.log" 2>/dev/null; then
@@ -267,7 +279,7 @@ for c in "${CLIPS[@]}"; do
     a=$(ls "$OFF_RUN/frames/$c"/f*.bmp 2>/dev/null | wc -l)
     b=$(ls "$ON_RUN/frames/$c"/f*.bmp 2>/dev/null | wc -l)
     if [ "$a" -eq 0 ] || [ "$b" -eq 0 ]; then
-        echo "FAIL: clip $c has $a frames with light off and $b with light on."
+        echo "FAIL: clip $c has $a frames in the $LABEL_L run and $b in the $LABEL_R run."
         BAD=1
     fi
 done
@@ -294,9 +306,9 @@ done
 
 IDENT_OUT="$(identical_clips "$ON_RUN/frames" "$ON_RUN/logs/errors.log" "$TABLE")"; IDENT_RC=$?
 SKIPS="$(grep -ac 'REEL_SKIP' "$ON_RUN/logs/errors.log")"
-python3 -I - "$OUT" "$ROWS" <<'PY'
+python3 -I - "$OUT" "$ROWS" "$SPEEDS" <<'PY'
 import html, sys, os
-out, rows = sys.argv[1], sys.argv[2]
+out, rows, speeds = sys.argv[1], sys.argv[2], sys.argv[3]
 parts = ["""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Effect reel</title>
@@ -310,8 +322,9 @@ h2 span { color: #8a8a99; font-weight: normal; margin-left: 8px; }
 video { display: block; max-width: 100%; background: #000; }
 </style></head><body>
 <h1>Effect reel</h1>
-<p class="legend">left: light off -- right: light on</p>
+<p class="legend">LEGEND</p>
 """]
+parts[0] = parts[0].replace("LEGEND", "left: Normal -- right: Fast (both light on)" if speeds == "1" else "left: light off -- right: light on")
 for ln in open(rows, encoding="utf-8", errors="replace"):
     clip, n, name, kind = ln.rstrip("\n").split("\t")
     parts.append('<section><h2>%s %s<span>%s</span></h2>\n<video controls loop muted preload="none" src="%s.mp4"></video></section>\n'

@@ -20,6 +20,10 @@
 #include "Light.h"
 #include "EffectLight.h"
 
+extern void AnimSpeedArm(int option);
+extern void AnimSpeedEnd();
+extern void AnimSpeedPhase(int phase, bool target);
+extern void AnimSpeedReport(int option);
 extern int16 Silence;
 extern bool isExchange;
 extern void LOFSetForcedRoll(int8 r);
@@ -113,11 +117,17 @@ void StepHook(int kind, int16 x, int16 y, Glyph g) {
           (int)GLYPH_ID_VALUE(g), (int)GLYPH_FORE_VALUE(g), (int)LightFlashCount(), LightLitAt(x, y) ? 1 : 0);
 }
 void ElHook(int phase) {
+    AnimSpeedPhase(phase, false);
+    if (phase == EL_END) AnimSpeedEnd();
     if (phase != EL_LIT) return;
     ++gElLit;
     if (LightFlashCount() > 0) ++gElLitFlash;
 }
-void TfHook(int phase) { if (phase == TF_LIT) ++gTfLit; }
+void TfHook(int phase) {
+    AnimSpeedPhase(phase, true);
+    if (phase == TF_END) AnimSpeedEnd();
+    if (phase == TF_LIT) ++gTfLit;
+}
 void RingHook(int ring, int ntaken, const int16 *tx, const int16 *ty, int ndrawn, const int16 *, const int16 *, int) {
     Error("REEL_RING %s ring %d taken %d drawn %d flashes %d at %d,%d", gClip, ring, ntaken, ndrawn, (int)LightFlashCount(),
           ring == -2 && tx ? (int)tx[0] : -1, ring == -2 && ty ? (int)ty[0] : -1);
@@ -848,10 +858,25 @@ void WeaponReel(Player *pl, Map *mp, rID floor, rID wall, const char *only, cons
 
 /* inc-jw0hw: hooks INCURSION_EFFECT_REEL, INCURSION_EFFECT_LIGHT_TABLE, INCURSION_WALL_LOAD and INCURSION_FIERY_ROOM. */
 void EffectReelProbe(Player *pl) {
+    const char *animSpeed = getenv("INCURSION_ANIM_SPEED_PROBE");
+    if (animSpeed && (getenv("INCURSION_FRAMES") ||
+        (strcmp(animSpeed, "0") && strcmp(animSpeed, "1") && strcmp(animSpeed, "2")))) {
+        Error("ANIM_SPEED_ERROR requires option 0, 1 or 2 and no INCURSION_FRAMES");
+        return;
+    }
+    /* inc-i63lc: INCURSION_EFFECT_REEL_ANIM picks the reel's animation option, 0 Normal or 1 Fast. */
+    int reelAnim = 0;
+    if (const char *ra = getenv("INCURSION_EFFECT_REEL_ANIM")) {
+        if (strcmp(ra, "0") && strcmp(ra, "1")) {
+            Error("REEL_ERROR INCURSION_EFFECT_REEL_ANIM must be 0 or 1, got \"%s\"", ra);
+            return;
+        }
+        reelAnim = atoi(ra);
+    }
     const bool tableMode = getenv("INCURSION_EFFECT_LIGHT_TABLE") != NULL;
     if (getenv("INCURSION_WALL_LOAD") && pl && pl->m) { WallLoadProbe(pl); return; }
     if (getenv("INCURSION_FIERY_ROOM") && pl && pl->m) { FieryRoomProbe(pl); return; }
-    if (!getenv("INCURSION_EFFECT_REEL") && !tableMode)
+    if (!getenv("INCURSION_EFFECT_REEL") && !tableMode && !animSpeed)
         return;
     if (!pl || !pl->m) {
         Error("REEL_ERROR no live player and map");
@@ -869,7 +894,7 @@ void EffectReelProbe(Player *pl) {
         return;
     }
     /* inc-jw0hw: INCURSION_EFFECT_REEL_ONLY keeps the named effects (tools/render_effect_reel.sh --only). */
-    const char *only = getenv("INCURSION_EFFECT_REEL_ONLY");
+    const char *only = animSpeed ? "Fireball" : getenv("INCURSION_EFFECT_REEL_ONLY");
     /* inc-jw0hw: INCURSION_REEL_SCENE_OFF leaves out the creatures, corpses and items a scene places for its effect to act on
        (tools/check_effect_reel_scenes.sh --red uses it to show each assertion goes red). */
     const bool sceneOff = getenv("INCURSION_REEL_SCENE_OFF") != NULL;
@@ -962,7 +987,7 @@ void EffectReelProbe(Player *pl) {
     const int8 wasLight = pl->LightRange, wasInfra = pl->InfraRange, wasShadow = pl->ShadowRange;
     const int16 wasHP = pl->cHP, wasMax = pl->mHP, wasFP = pl->cFP;
     theGame->PlayMode = true;
-    pl->Options[OPT_ANIMATION] = 0;   /* Normal: the light map is live */
+    pl->Options[OPT_ANIMATION] = animSpeed ? atoi(animSpeed) : reelAnim;
     pl->Options[OPT_AUTOMORE] = 1;
     int count = 0;
     SnapshotPlayer(pl);
@@ -1087,6 +1112,11 @@ void EffectReelProbe(Player *pl) {
             Monster *mn = new Monster(kobold); ks[k] = mn;
             mn->PlaceAt(mp, kx[k], ky[k], true);
             mn->Initialize(true);
+            if (animSpeed) {   /* inc-i63lc: damage/gear rolls cannot change the visible target set. */
+                mn->mHP = mn->cHP = 30000;
+                Item *gear;
+                while ((gear = mn->FirstInv()) != NULL) gear->Remove(true);
+            }
             if (k == 1) mid = mn;
         }
         /* inc-jw0hw: the scene's content: what the effect acts on, placed where the cast reaches it. */
@@ -1374,6 +1404,7 @@ void EffectReelProbe(Player *pl) {
         if (te->ef.aval == AR_BARRIER && te->ef.eval == EA_TERRAFORM && EffectLightDecide(te, 0).lit) {
             gSweepPl = pl; gSweepTerr = te->ef.rval; gSweepStep = 0; WallSweepHook = SweepHook;
         }
+        if (animSpeed) AnimSpeedArm(atoi(animSpeed));
         if (isNightmare) {
             /* inc-jw0hw: the Nightmare Smite clip plays what a player sees: the demon casts the gather, its rainbow pattern
                changes for 2 s while the game waits for a key (idle frames), one turn passes with the pattern still changing,
@@ -1514,6 +1545,7 @@ void EffectReelProbe(Player *pl) {
                     }
             Error("REEL_FORMATION_FINAL %s n %d glyph %d sq %s", nm, n, fg, sq);
         }
+        if (animSpeed) AnimSpeedReport(pl->Opt(OPT_ANIMATION));
         Silence = 0;
         EffectStepHook = NULL; EffectLightHook = NULL; TargetFlashHook = NULL; BallRingHook = NULL; GlobeGlyphHook = NULL; FormationHook = NULL;
         MotionHook = NULL; SporeHook = NULL; WallSweepHook = NULL; gSweepPl = NULL;

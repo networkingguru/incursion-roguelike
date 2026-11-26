@@ -1,0 +1,2 @@
+# inc-i63lc: Game::Play runs the probe after loading; no gameplay needed.
+@quit
