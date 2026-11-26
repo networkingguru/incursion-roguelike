@@ -1327,7 +1327,7 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
                     cnum++;
                     s = h2->Name(NA_A|NA_LONG|NA_MECH); 
                     s += " (in chest)";
-                    ETerm->LOption(s,(int32)h2);
+                    ETerm->LOption(s,(int32)h2,"",-h2->KnownValue(EActor));
                     found = true;
                   }
                 }
@@ -1337,7 +1337,7 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
               {
                 s = h->Name(NA_A|NA_LONG|NA_MECH);
                 s += " (on ground)";
-                ETerm->LOption(s,(int32)h);
+                ETerm->LOption(s,(int32)h,"",-h->KnownValue(EActor));
                 found = true;
               }
           
@@ -1345,7 +1345,8 @@ AI_MACRO Effect "AutoLoot" : EA_GENERIC
             { EActor->HaltAction("nothing to loot",true);
               return ABORT; }
           
-          if (!ETerm->LMultiSelect(MENU_BORDER|MENU_ESC/*|MENU_DESC*/,
+          /* inc-ibzyp: most valuable first, by what the player can know. */
+          if (!ETerm->LMultiSelect(MENU_BORDER|MENU_ESC|MENU_SORTED/*|MENU_DESC*/,
                   "Select Items to Loot",WIN_MENUBOX))
             { EActor->HaltAction("aborted",true);
               ETerm->LOptionClear();

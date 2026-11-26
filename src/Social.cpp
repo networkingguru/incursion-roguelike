@@ -2024,23 +2024,30 @@ GiveStacks:
   
 int32 ShopIndexOverride = -999;
 
-int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
+int32 Item::getShopCost(Creature *Buyer, Creature *Seller, int16 asLevel) {
     double cost;
     int16 i;
     bool plusPriced;
     int32 priceList[10];
+    /* inc-ibzyp: asLevel != -1 prices what a viewer may know. The item's own
+       effect, plus and book contents are not read; asLevel >= 0 stands in for
+       a magic item of that level, -2 for the plain base item. */
+    const bool masked = asLevel != -1;
+    const rID useEID = masked ? (rID)0 : eID;
+    const int16 plusNow = masked ? (asLevel >= 0 ? 1 : 0) : GetInherentPlus();
+    const int16 lev = masked ? max(0, (int)asLevel) : ItemLevel(false);
 
     /* inc-1qyv: a fixed-price effect costs its first ITEM_COST in gp, everywhere. */
-    if (eID && TEFF(eID)->HasFlag(EF_FIXED_PRICE) &&
+    if (useEID && TEFF(eID)->HasFlag(EF_FIXED_PRICE) &&
         TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
         return priceList[0] * Quantity;
 
     plusPriced = false;
     cost = TITEM(iID)->Cost;
-    if (TITEM(iID)->GetList(ITEM_COST, (rID*)priceList, 10)) {
+    if (!masked && TITEM(iID)->GetList(ITEM_COST, (rID*)priceList, 10)) {
         cost = priceList[GetInherentPlus()] * 100L;
         plusPriced = true;
-    } else if (isType(T_BOOK)) {
+    } else if (!masked && isType(T_BOOK)) {
         cost = 0;
         for (i = 0; i != MAX_SPELLS; i++)
             if (HasSpell(i))
@@ -2048,16 +2055,16 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
     }
 
     if (isType(T_SCROLL) || isType(T_POTION)) {
-        if (eID)
+        if (useEID)
             cost += (TEFF(eID)->Level + 3) * (isType(T_POTION) ? 50 : 20) * 10;
     } else if (isType(T_WAND)) {
-        if (eID)
+        if (useEID)
             cost += 250L * ItemLevel() * ItemLevel();
     }
 
 
-    if (eID || (GetInherentPlus() && !plusPriced)) {
-        if (eID && TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
+    if (useEID || (plusNow && !plusPriced)) {
+        if (useEID && TEFF(eID)->GetList(ITEM_COST, (rID*)priceList, 10))
             cost += priceList[GetInherentPlus()] * 100;
         else {
             double defCost[] = {
@@ -2074,9 +2081,9 @@ int32 Item::getShopCost(Creature *Buyer, Creature *Seller) {
             if (isType(T_WEAPON) || isType(T_ARMOUR) ||
                 isType(T_SHIELD) || isType(T_BOW) ||
                 isType(T_MISSILE))
-                cost += defCost[max(0, min(20, ItemLevel(false)))] * (eID ? 400L : 160L);
+                cost += defCost[max(0, min(20, (int)lev))] * (useEID ? 400L : 160L);
             else
-                cost += defCost[max(0, min(20, ItemLevel(false)))] * 70L;
+                cost += defCost[max(0, min(20, (int)lev))] * 70L;
         }
     }
 

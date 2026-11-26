@@ -144,6 +144,7 @@ INCURSION_MOUNT_FIELD_PROBE	inc-h5v6o	ridden mount gets rider field events oracl
 INCURSION_MOUNT_SIZE_PROBE	pre-registry	-
 INCURSION_MULTIPLY_NOROOM	pre-registry	-
 INCURSION_MULTIPLY_STAGE	pre-registry	-
+INCURSION_MULTISELECT_COLOR_PROBE	inc-ibzyp	stages cursed items on the ground (a) or in a chest (b), runs AutoLoot, logs each checklist row's colors (tools/check_multiselect_colors.sh)
 INCURSION_MULTISELECT_PROBE	pre-registry	-
 INCURSION_MUSIC_AREA_PROBE	pre-registry	-
 INCURSION_MUSIC_AREA_PROBE_GOD	pre-registry	-

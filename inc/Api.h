@@ -654,7 +654,7 @@ system rID     T_TERM::ChooseResource(string prompt, int16 RType, rID eID);
    the upstream compiler, and nothing here depends on the port's typedefs.
    Observed -- the marked item arrived as -21359 for handle 44177; see
    tools/check_menu_value.sh. inc-802, not sent. */
-system void    T_TERM::LOption(string txt, int32 val, string des=0);
+system void    T_TERM::LOption(string txt, int32 val, string des=0, int32 sortkey=0);
 system void    T_TERM::LOptionClear();
 system int32   T_TERM::LMenu(int16 fl, string title, int8 MWin=WIN_MENUBOX,string help=0);
 system bool    T_TERM::LMultiSelect(int16 fl, string title, int8 MWin=WIN_MENUBOX,string help=0);
@@ -1127,7 +1127,9 @@ system bool    DTypeTakesHP(int16 dtype);
 system bool    QualityIsWeapon(int16 q);
 system bool    QualityIsArmor(int16 q);
 /* The highest quality number in QualityTable; loops over every quality stop here (inc-mafd8). */
-system int16   QualityMaxNumber();
+system int16   QualityMaxNumber();/* inc-ibzyp: what the viewer can know of the item's value, never its hidden magic. */
+system int32   T_ITEM::KnownValue(hObj:T_CREATURE viewer=0);
+
  
  
 /* functions with variable-type parameters handled by macro type-cast */

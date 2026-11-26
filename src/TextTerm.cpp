@@ -964,6 +964,10 @@ void TextTerm::LOptionClear()
         OptionCount=0;
 }
 
+/* inc-ibzyp: probe hook, a no-op unless MultiSelectColorProbe armed it. */
+void MultiSelectColorSnap(Term *T, int16 x0, int16 y, int16 width, int16 row,
+                          bool cursor, const char *text, const char *menu);
+
 int LMenuOptionAlphaSort(const void *a, const void *b) {
     LMenuOption *l = (LMenuOption *)a, *r = (LMenuOption *)b;
     if (l->SortKey == r->SortKey) {
@@ -1185,6 +1189,9 @@ Restart:
                 Color(GREY);
                 Write(Format("  [%s] %.*s", let, szCol - 5, (const char*)Option[i].Text));
             }
+            MultiSelectColorSnap(this,((i-vStart)/vRows)*szCol+activeWin->Left,
+                ((i-vStart)%vRows)+DY+activeWin->Top,szCol,i,c == i,
+                (const char*) Option[i].Text,"menu");
         }
         /* Say so. A page that hid two thirds of the list without a word
            would read exactly like the defect this replaces. */
@@ -1605,11 +1612,19 @@ Restart:
                 Write(Format("  [%c%c%c] %.*s",-PINK,
                     Option[i].isMarked ? '*' : ' ',-GREY,
                     szCol - 5, (const char*) Option[i].Text));
+            /* upstream: the 2015 glyph widening (d5232990) left this 2014 mask
+               clearing every cell's colors; it misbehaves on upstream's own
+               build. Invariant: keep glyph id and foreground, set only the
+               background. Observed (inc-ibzyp red/green). Tracking inc-ibzyp.
+               Not sent. */
             for (j=((i-vStart)/vRows)*szCol+1+activeWin->Left;
                 j!=((i-vStart)/vRows)*szCol+1+min(barlen,szCol)+activeWin->Left;j++)
                 APutChar(j,((i-vStart)%vRows)+DY+activeWin->Top,
-                (AGetChar(j,((i-vStart)%vRows)+DY+activeWin->Top) & 0x0FFF) | 
-                ((c == i) ? 0x1000 : 0x0000));
+                (AGetChar(j,((i-vStart)%vRows)+DY+activeWin->Top) & ~GLYPH_BACK_MASK) |
+                ((c == i) ? GLYPH_BACK(1) : 0));
+            MultiSelectColorSnap(this,((i-vStart)/vRows)*szCol+activeWin->Left,
+                ((i-vStart)%vRows)+DY+activeWin->Top,szCol,i,c == i,
+                (const char*) Option[i].Text,"multi");
         }
         if (fl & MENU_DESC) {
             ClearScroll();

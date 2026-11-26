@@ -1,0 +1,10 @@
+# inc-ibzyp: MultiSelectColorProbe mode p stages two floor items under the
+# player and leaves the log open; g opens the real "Pick up what?" menu. DOWN
+# then UP puts the cursor on each row once, so each row draws as a plain row.
+# The @while closes a room-description box that a loaded old save may open.
+@while "Winding Corridor" SPACE
+g
+DOWN
+UP
+ESC*5
+@quit

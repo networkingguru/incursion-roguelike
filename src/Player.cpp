@@ -2165,16 +2165,7 @@ void Player::IntuitItem(Item *it) {
 
     if (precision < 0) precision = 0;
 
-    const char * levels[] = {
-        "<7>mundane<7>",
-        "<3>magical<7>",
-        "<5>good<7>",
-        "<6>great<7>",
-        "<4>excellent<7>",
-        "<12>superior<7>",
-        "<14>legendary<7>",
-        "<15>unearthly<7>"
-    };
+    const char * const *levels = IntuitLevels;   /* shared with Item::IntuitTier (inc-ibzyp) */
 
     /* If you want absolute ability to tell _anything_ about an
        item, you should have at least Intuition +5. */
