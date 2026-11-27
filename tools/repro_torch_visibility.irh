@@ -1,0 +1,72 @@
+/* inc-pu6v.484 reproduction scene, appended only to scratch modules.
+   PATHMODE is replaced by tools/repro_torch_visibility.py: 1 or 2.
+   fact: character -- kobold-rogue-seed1 fixture, one shared saved character
+   fact: arena -- probe WriteAt, dark, fixed coordinates, one walled room (1) or one lane (2)
+   fact: carrier/gear -- probe creates goblin and torch, explicit light slot
+   fact: movement -- real EV_MOVE, direction a pure function of the carrier's square; RESCAN_HOLD
+   fact: hiding -- explicit HIDING on player; no random hide roll
+   Path 1: wall at x=16 with a gap at y=15; the carrier loops (22,15) west to
+   (17,15), north to (17,10), east to (22,10), south, so it passes behind the wall.
+   Path 2: lane y=15, the carrier walks east from (14,15) away from the player.
+   The scene only moves the carrier; tools/check_torch_visibility.sh reads the
+   INCURSION_VIS_PROBE log. inc-znk1w */
+God "Torch Visibility Repro" {
+  Lists: * FAVOUR_CHART 1000 50000 60000 70000 80000 90000
+    100000 110000 120000 130000;
+  hObj player;
+  On Event EV_BLESSING {
+    hObj h; hObj lamp; hObj carrier; Rect area; int16 xx; int16 yy; int16 pm;
+    if (player) return NOTHING;
+    pm = PATHMODE;
+    player = GetHandle(EActor);
+    for (xx=0; xx<10; xx++)
+    for (h = EMap->FirstThing(); h; h = EMap->NextThing())
+      if (h != player) h->Remove(false);
+    if (pm == 1) {
+      area@x1=5; area@y1=5; area@x2=35; area@y2=25;
+      for (xx=5; xx<=35; xx++) for (yy=5; yy<=25; yy++)
+        EMap->WriteAt(area,xx,yy,
+          (xx==5 || xx==35 || yy==5 || yy==25 || (xx==16 && yy!=15)) ?
+            $"Dungeon Wall" : $"Floor",$"Winding Corridor",100,true);
+    } else {
+      area@x1=5; area@y1=14; area@x2=110; area@y2=16;
+      for (xx=5; xx<=110; xx++) for (yy=14; yy<=16; yy++)
+        EMap->WriteAt(area,xx,yy,
+          (xx==5 || xx==110 || yy!=15) ? $"Dungeon Wall" : $"Floor",
+          $"Winding Corridor",100,true);
+    }
+    player->PlaceAt(EMap,10,15);
+    player->GainPermStati(HIDING,NULL,SS_MISC);
+    carrier=CreateMonster($"goblin");
+    carrier->PlaceAt(EMap,(pm==1) ? 22 : 14,15);
+    carrier->Initialize();
+    carrier->RemoveStati(HIDING); carrier->RemoveStati(SLEEPING);
+    lamp=CreateItem($"torch");
+    carrier->GainItem(lamp,true); lamp->IFlags |= IF_WORN;
+    carrier->CalcValues();
+    EMap->VUpdate(10,15);
+    player->IPrint(Format("TV READY car=%d x=%d y=%d",carrier,carrier->x,carrier->y));
+    return NOTHING;
+  },
+  GODWATCH(EV_TURN) {
+    int16 xx; int16 yy; hObj h; hObj car; int16 pm; int16 dr;
+    /* God variables do not survive a save: find the carrier by scan. */
+    pm = PATHMODE;
+    car = NULL_OBJ;
+    for (h=EMap->FirstThing();h;h=EMap->NextThing())
+      if (h->isCreature() && h->mID == $"goblin" && h->x >= 5 &&
+          h->x <= ((pm == 1) ? 35 : 110) && h->y >= ((pm == 1) ? 5 : 15) &&
+          h->y <= ((pm == 1) ? 25 : 15)) car = h;
+    if (!car) return NOTHING;
+    if (pm == 1) {
+      if (car->y==15 && car->x>=18) dr = WEST;
+      else if (car->x==17 && car->y>10) dr = NORTH;
+      else if (car->y==10 && car->x<22) dr = EAST;
+      else dr = SOUTH;
+    } else dr = EAST;
+    xx = car->x; yy = car->y;
+    ThrowDir(EV_MOVE,dr,car);
+    if (car->x == xx && car->y == yy) ThrowDir(EV_MOVE,dr,car);
+    return NOTHING;
+  };
+}

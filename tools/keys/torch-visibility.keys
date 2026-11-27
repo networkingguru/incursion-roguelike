@@ -1,0 +1,10 @@
+# inc-znk1w: POSIX key script. Setup, then 40 waits while the torch carrier walks east.
+w y
+@choose "Become Divine Champion"
+"Torch Visibility Repro"
+ENTER
+@while "more --" SPACE
+@while "#------" SPACE
+@while "more --" SPACE
+# WAIT_PREFIX
+@quit

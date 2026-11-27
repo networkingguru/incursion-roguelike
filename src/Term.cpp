@@ -981,9 +981,11 @@ void TextTerm::ShowMap() {
     Color(GREY);
     StandingPatternPrepare(m);   /* inc-jw0hw: before the light map, so a pattern's light is in it */
     /* Vision reads the light map, so the map must be built first. */
-    LightRebuild(m, p);
-    if (p->UpdateMap)
+    /* inc-znk1w: sight is stale when a light source moved, though the player did not. */
+    const bool lightMoved = LightRebuild(m, p);
+    if (p->UpdateMap || lightMoved)
         p->CalcVision();
+    LightVisProbe(m, p);
     p->UpdateMap = 0;
     SetWin(WIN_MAP);
 
