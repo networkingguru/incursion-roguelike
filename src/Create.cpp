@@ -5205,11 +5205,14 @@ bool Character::FeatPrereq(int16 feat, bool fail_if_feat_requires_a_feat)
     /* inc-2jd0: the feat also needs at least one spell eligible to be taken. */
     if (feat == FT_INHERANT_SPELL && isPlayer()) {
         bool any = false;
+        /* inc-zg50j: one learnable-spell list per test, not one per spell. */
+        LearnableSpell *ils = CalcSpellAccess();
         for (int16 sn = 0; sn < (int16)theGame->LastSpell(); sn++)
-            if (((Player*)this)->InherentPickable(sn)) {
+            if (((Player*)this)->InherentPickable(sn, ils)) {
                 any = true;
                 break;
             }
+        free(ils);
         if (!any)
             return false;
     }
@@ -6940,7 +6943,7 @@ void Player::ApplySpellSelection() {
 }
 
 /* inc-2jd0: a spell the Inherent Spell feat may pick. sn is a spell index. */
-bool Player::InherentPickable(int16 sn) {
+bool Player::InherentPickable(int16 sn, LearnableSpell *access) {
     int16 L, i;
     uint32 f;
     bool arcane;
@@ -6963,14 +6966,15 @@ bool Player::InherentPickable(int16 sn) {
        so ask it for an SP_ARCANE row for this spell rather than reading a
        stamped kind bit. */
     arcane = false;
-    ls = CalcSpellAccess();
+    ls = access ? access : CalcSpellAccess();
     for (i = 0; ls[i].spID; i++)
         if (ls[i].Type == SP_ARCANE
             && theGame->SpellNum(ls[i].spID) == sn) {
             arcane = true;
             break;
         }
-    free(ls);
+    if (!access)
+        free(ls);
 
     if (arcane) {
         if (!HasBookFor(sn))
@@ -6994,14 +6998,17 @@ bool Player::ChooseInherentSpell() {
     for (;;) {
         nSpells = 0;
         pl.Clear();
+        /* inc-zg50j: one learnable-spell list per pass. */
+        ls = CalcSpellAccess();
         for (sn = 0; sn < (int16)theGame->LastSpell(); sn++)
-            if (InherentPickable(sn)) {
+            if (InherentPickable(sn, ls)) {
                 L = TEFF(theGame->SpellID(sn))->Level;
                 MyTerm->LOption(Format("%s (level %d)", (const char*)NAME(theGame->SpellID(sn)), (int)L),
                     sn + 1);
                 pl.Add(CreationFullName(theGame->SpellID(sn)).c_str(), sn + 1);
                 nSpells++;
             }
+        free(ls);
 
         if (nSpells == 0) {
             IPrint("You have no spell you can take as an inherent spell.");
