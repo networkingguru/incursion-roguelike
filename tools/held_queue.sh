@@ -25,6 +25,14 @@
 
 set -uo pipefail
 
+# One line from the nightly epic gate (tools/epic_nightly_gate.sh), when it found something.
+epic_gate_line() {
+    local f="${INCURSION_EPIC_GATE_REPORTS:-$HOME/Scripts/nightly-harness/projects/incursion/nightly-epic}/latest.txt"
+    [ -s "$f" ] && printf 'EPIC GATE: %s\n' "$(head -1 "$f")"
+    return 0
+}
+[ "${1:-}" = "--count" ] || trap epic_gate_line EXIT
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 0
 
