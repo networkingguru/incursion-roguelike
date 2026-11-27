@@ -50,6 +50,10 @@ values and file:line, when:
      of named smaller masks. A new flag takes one free bit, as the mover gives
      it. Base names are not tested (KN_IDENTIFIED 0x60 overlaps KN_ARTI 0x20
      and KN_RUSTPROOF 0x40 on master and passes);
+ 13. (shape ordinal or enum, mark `sentinel <NAME>` with no `alias of` note on its line)
+     a member that is new or changed since the base is at or past the sentinel. The
+     sentinel is one past the last member and sizes the arrays the values index
+     (BONUS_LAST sizes AttrAdj). Bead inc-pu6v.478.7;
  11. (families sk and ft, spec 6.2) a tree-only skill is not in
      SK_HIGH_FIRST .. SK_HIGH_END-1, or is above 999; a tree-only feat is above
      799; a tree-only feat or skill holds a number the other family holds.
@@ -99,6 +103,7 @@ Exit:  0 clean   1 a stored value changed, collided or does not fit   2 unmeasur
 # fact: define and enumerator values -- the compiler at the posix flags of build_macos.sh; no game run, no seed
 # fact: the merge base -- `git merge-base HEAD <ref>`, re-read on every run; no randomness
 # fact: family, class, shape, width -- the marks in inc/ and src/ of each tree; no randomness
+# fact: which sentinels are inclusive -- the `alias of` note on the sentinel's own line (or the comment-only line above), read from the tree's source; no randomness
 # fact: retired values -- tools/retired_values.txt, a tracked file
 """
 import concurrent.futures
@@ -356,6 +361,34 @@ def bound_problems(fam, t, b):
     return out
 
 
+def end_marker_problems(fam, t, b):
+    """Rule 13 for one stored family t (b: the base's family dict, may be {}). A
+    `sentinel` with no `alias of` note is one past the last member. A member that is new
+    or changed since the base MUST be below it: AttrAdj[ATTR_LAST][BONUS_LAST] has no
+    slot at BONUS_LAST. A member unchanged since the base is not tested (master's own
+    T_STRING 99 sits past T_LAST 92)."""
+    if t["shape"] == "bits":
+        return []
+    out = []
+    vals = {}
+    for m in t["members"]:
+        vals.setdefault(m[0], m)
+    bvals = {m[0]: m[1] for m in b.get("members", [])}
+    skip = set(t["sentinels"]) | set(t.get("grows", [])) | set(t.get("bounds", []))
+    for mk in t["sentinels"]:
+        if mk not in vals or mk in t.get("alias_marks", ()):
+            continue
+        lim = vals[mk][1]
+        for name, m in sorted(vals.items()):
+            if name in skip or m[1] < lim or bvals.get(name) == m[1]:
+                continue
+            out.append("FAIL: family %s %s = %d at %s is at or past its end marker %s = %d (%s). "
+                       "The marker sizes the array this value indexes. Fix: restore the value "
+                       "below it, or raise the marker through tools/move_branch_values.py"
+                       % (fam, name, m[1], where(m), mk, lim, where(vals[mk])))
+    return out
+
+
 def compare(base, tree, problems, retired, split_names=None):
     """base, tree: load_families results. Return (FAIL lines, names compared).
     split_names: {family: set of names} the merge base holds, or None. A base name
@@ -441,6 +474,7 @@ def compare(base, tree, problems, retired, split_names=None):
             out += overlap_problems(fam, t)
             out += new_bits_problems(fam, t, base.get(fam, {}))
         out += bound_problems(fam, t, base.get(fam, {}))
+        out += end_marker_problems(fam, t, base.get(fam, {}))
         for name, m, hn, hv, why in family_collisions(t, base.get(fam, {}), ret):
             out.append("FAIL: family %s tree-only %s = %d at %s reuses the value "
                        "of %s = %d (%s)" % (fam, name, m[1], where(m), hn, hv, why))
@@ -479,6 +513,26 @@ def clean_path(path, tmp):
     return path[len(tmp) + 1:] if path.startswith(tmp + os.sep) else path
 
 
+def alias_sentinels(d, tree_root):
+    """The sentinels of family d whose line, or the comment-only line above, says
+    `alias of <NAME>`: such a sentinel EQUALS its last member, so it is no exclusive end."""
+    out = set()
+    for s in d["sentinels"]:
+        m = next((x for x in d["members"] if x[0] == s), None)
+        if m is None:
+            continue
+        try:
+            with open(os.path.join(tree_root, m[2]), encoding="latin-1") as f:
+                raw = f.read().split("\n")
+        except OSError:
+            continue
+        for off in (0, -1):
+            i = m[3] - 1 + off
+            if i >= 0 and (not off or cdd.COMMENT_ONLY.match(raw[i])) and cdd.ALIAS.search(raw[i]):
+                out.add(s)
+    return out
+
+
 def read_families(tree_root, strictly):
     """Return (families, problems) for the tree on disk at tree_root."""
     defines = os.path.join(tree_root, "inc", "Defines.h")
@@ -491,6 +545,7 @@ def read_families(tree_root, strictly):
         raise Unmeasured(str(e))
     for d in fams.values():
         d["members"] = [(n, v, clean_path(p, tree_root), l) for n, v, p, l in d["members"]]
+        d["alias_marks"] = alias_sentinels(d, tree_root)
     return fams, (problems if strictly else [])
 
 
@@ -900,6 +955,22 @@ def selftest():
         assert c == 1 and "B_Z = 5" in m, (c, m)
         c, m = go(bz, fam("o", "#define B_X 1\n#define B_Y 2\n#define B_LAST 4\n"))
         assert c == 1 and "drops it" in m and "bound B_LAST" in m, (c, m)
+        # rule 13: a new member at or past an exclusive sentinel is refused (inc-pu6v.478.7)
+        sn = "stored ordinal u16 sentinel S_LAST"
+        sz = fam("o", "#define S_X 1\n#define S_Y 2\n#define S_LAST 3\n", sn)
+        assert go(sz, sz)[0] == 0
+        assert go(sz, fam("o", "#define S_X 1\n#define S_Y 2\n#define S_Z 3\n"
+                               "#define S_LAST 4\n", sn))[0] == 0
+        c, m = go(sz, fam("o", "#define S_X 1\n#define S_Y 2\n#define S_Z 4\n"
+                               "#define S_LAST 4\n", sn))   # planted: Z at the marker
+        assert c == 1 and "S_Z = 4" in m and "at or past its end marker S_LAST = 4" in m, (c, m)
+        c, m = go(sz, fam("o", "#define S_X 1\n#define S_Y 2\n#define S_Z 5\n"
+                               "#define S_LAST 4\n", sn))
+        assert c == 1 and "S_Z = 5" in m, (c, m)
+        al = fam("o", "#define S_X 1\n#define S_Y 2\n#define S_LAST 2 /* alias of S_Y */\n", sn)
+        assert go(al, al)[0] == 0   # an alias sentinel equals the last member: not exclusive
+        assert go(al, fam("o", "#define S_X 1\n#define S_Y 2\n#define S_Z 3\n"
+                               "#define S_LAST 3 /* alias of S_Z */\n", sn))[0] == 0
         # rule 9: a `grows` limit may rise, never fall; its old value is free (spec 6.1)
         gw = "stored ordinal u8 grows G_LAST"
         gb = fam("g", "#define G_X 1\n#define G_LAST 2\n", gw)
