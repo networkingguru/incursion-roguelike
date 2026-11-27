@@ -1603,7 +1603,7 @@ class Player: public Character
          Skill Manager and the creation source both call it (inc-10v7f 6b). */
       void CommitSkillRanks(const int8 *ranks, const int8 *unspent);
       void ApplySpellSelection();
-      bool InherentPickable(int16 sn);
+      bool InherentPickable(int16 sn, LearnableSpell *access = NULL);
       bool ChooseInherentSpell();
       void MigrateInherentSpell();
       bool LucubrationPickable(rID bookKind);
