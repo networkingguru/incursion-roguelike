@@ -404,7 +404,7 @@ check_log_path() {
 # back to /dev/null -- the behaviour of every run before this one -- rather than
 # let the gate's answer depend on a directory.
 run_check() {
-    local log rc timefile t0=$SECONDS
+    local log rc timefile cpid wpid t0=$SECONDS
     log="$(check_log_path "$1")"
     mkdir -p "$LOG_DIR" 2> /dev/null
     ( : > "$log" ) 2> /dev/null || log="/dev/null"
@@ -422,11 +422,24 @@ run_check() {
     timefile="${log}.time"
     if [ "$log" != "/dev/null" ] && [ -x /usr/bin/time ]; then
         rm -f "$timefile" 2> /dev/null
-        /usr/bin/time -p -o "$timefile" bash -c "$2" >> "$log" 2>&1
+        /usr/bin/time -p -o "$timefile" bash -c "$2" >> "$log" 2>&1 &
     else
-        ( eval "$2" ) >> "$log" 2>&1
+        ( eval "$2" ) >> "$log" 2>&1 &
     fi
+    cpid=$!
+    # inc-omhv1: a sidecar alerts once if the check runs 5x past its expected
+    # time. It never signals the check; any failure of it leaves rc untouched.
+    wpid=""
+    if command -v python3 > /dev/null 2>&1 && [ -f "$ROOT/tools/slow_check_watch.py" ]; then
+        python3 "$ROOT/tools/slow_check_watch.py" "$1" "$cpid" > /dev/null 2>&1 &
+        wpid=$!
+    fi
+    wait "$cpid"
     rc=$?
+    if [ -n "$wpid" ]; then
+        kill "$wpid" 2> /dev/null
+        wait "$wpid" 2> /dev/null
+    fi
     printf '\n=== exit %s\n' "$rc" >> "$log" 2> /dev/null
     # inc-b0ziu.8: one timing row per check, beside the machine state. The
     # helper never fails; its output must not mix into the echoed exit code.
