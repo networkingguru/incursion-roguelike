@@ -76,6 +76,9 @@ import check_stored_values as csv  # noqa: E402
 ROOT = cdd.ROOT
 LITERAL = re.compile(r"-?(0[xX][0-9a-fA-F]+|\d+)[uUlL]*")
 ALIAS_NAME = re.compile(r"(\balias\s+of\s+)[A-Za-z_]\w*")
+# The name of an end-of-table marker. A marker is no stored value, so a family mark MUST say
+# so (`sentinel`, `grows` or `bound`); an unmarked one that holds a collision is refused.
+END_MARKER = re.compile(r"(_LAST|_MAX|_COUNT|_END)$|^(NUM|LAST)_")
 ENUM_LINE = re.compile(r"^(\s*)([A-Za-z_]\w*)(?:\s*=\s*(.*?))?\s*(,?)\s*$")
 
 
@@ -160,6 +163,69 @@ def alias_moves(tree, moves, root):
     return out
 
 
+def repair_moves(base, tree, retired, root, skip):
+    """A family that no collision moved may still hold a member that is new or changed
+    since the base and sits at or past its exclusive end marker (a `sentinel` with no
+    `alias of` note): an earlier merge moved it past the marker. Move each one to the
+    next value after the highest taken one below the marker, else the highest free value below it, or REFUSE when none is free (bead
+    inc-pu6v.478.7). Families in `skip` already took their moves."""
+    out = []
+    for fam in sorted(tree):
+        t = tree[fam]
+        if t["class"] != "stored" or t["shape"] == "bits" or t.get("block") or fam in skip:
+            continue
+        tvals = {}
+        for m in t["members"]:
+            tvals.setdefault(m[0], m)
+        bvals = {m[0]: m[1] for m in base.get(fam, {}).get("members", [])}
+        marks = set(t["sentinels"]) | set(t.get("grows", [])) | set(t.get("bounds", []))
+        lims = [tvals[s][1] for s in t["sentinels"]
+                if s in tvals and alias_note(root, tvals[s]) is None]
+        lims += [tvals[b][1] for b in t.get("bounds", []) if b in tvals]
+        if not lims:
+            continue
+        lim = min(lims)
+        bad = sorted((m for n, m in tvals.items()
+                      if n not in marks and m[1] >= lim and bvals.get(n) != m[1]),
+                     key=lambda m: (m[2], m[3]))
+        if not bad:
+            continue
+        taken = {m[1] for m in base.get(fam, {}).get("members", []) if m[0] not in marks}
+        taken |= {m[1] for n, m in tvals.items() if n not in marks and m not in bad}
+        taken |= set(dict(retired.get(fam, [])).values())
+        for m in bad:
+            mx = max((v for v in taken if v < lim), default=-1)
+            free = [mx + 1] if mx + 1 < lim else \
+                [v for v in range(lim - 1, -1, -1) if v not in taken and v > min(taken, default=0)]
+            if not free or not csv.fits(free[0], t["shape"], t["width"]):
+                raise Refused("family %s: %s = %d is at or past its end marker %s = %d and no "
+                              "free value is left below it (bead inc-pu6v.478.7)"
+                              % (fam, m[0], m[1], ",".join(sorted(marks)), lim))
+            taken.add(free[0])
+            out.append(dict(fam=fam, name=m[0], old=m[1], new=free[0], file=m[2], line=m[3],
+                            shape=t["shape"], sentinel=False))
+    return out
+
+
+def bound_guard(tree, moves, root):
+    """No moved value may land at or past its family's exclusive end marker (a `bound`, or
+    a `sentinel` with no `alias of` note), as that marker stands after the moves. Raise
+    Refused naming the family, the value and the marker."""
+    newv = {mv["name"]: mv["new"] for mv in moves}
+    for mv in moves:
+        if mv["sentinel"] or mv["shape"] == "bits":
+            continue
+        t = tree[mv["fam"]]
+        for mk in t["sentinels"] + t.get("bounds", []):
+            m = next((x for x in t["members"] if x[0] == mk), None)
+            if m is None or (mk in t["sentinels"] and alias_note(root, m) is not None):
+                continue
+            lim = newv.get(mk, m[1])
+            if mv["new"] >= lim:
+                raise Refused("family %s: %s would take %d, at or past its end marker %s = %d "
+                              "(bead inc-pu6v.478.7)" % (mv["fam"], mv["name"], mv["new"], mk, lim))
+
+
 def plan(base, tree, retired, root=None):
     """Return a list of moves. A move is a dict: fam, name, old, new, file, line,
     shape, sentinel (bool). Raises Refused."""
@@ -178,6 +244,15 @@ def plan(base, tree, retired, root=None):
         tvals = {}
         for m in t["members"]:
             tvals.setdefault(m[0], m)
+        marked = sent | grows | set(t.get("bounds", []))
+        if shape != "bits":
+            held_by = sorted({h[2] for h in hits if END_MARKER.search(h[2]) and h[2] not in marked})
+            if held_by:
+                raise Refused("family %s: the value of a tree name is held by %s, which looks like "
+                              "an end-of-table marker but the family mark does not say so. An end "
+                              "marker is no taken value: add `sentinel`, `grows` or `bound` %s to "
+                              "the mark of family %s first (bead inc-pu6v.478.7)"
+                              % (fam, ", ".join(held_by), held_by[0], fam))
         names = {}
         for name, m, _hn, _hv, _why in hits:
             names[name] = m
@@ -308,7 +383,10 @@ def plan(base, tree, retired, root=None):
                                   "%s (bead inc-xm3nq)" % (fam, g, mx + 1, width))
                 moves.append(dict(fam=fam, name=g, old=m[1], new=mx + 1, file=m[2],
                                   line=m[3], shape=shape, sentinel=True, grows=True))
-    return moves + alias_moves(tree, moves, root)
+    moves += alias_moves(tree, moves, root)
+    moves += repair_moves(base, tree, retired, root, {mv["fam"] for mv in moves})
+    bound_guard(tree, moves, root)
+    return moves
 
 
 # ---------------------------------------------------------------- editing
@@ -763,6 +841,39 @@ def selftest():
              fam("at", "#define T_X 1\n#define T_Y 2\n#define T_Z 2\n#define T_W 2\n"
                        "#define T_LAST 3\n#define T_HIT 4\n", at),
              code=1, grep=["family at", "T_LAST = 3", "reserved member T_HIT = 4"])
+        # inc-pu6v.478.7: master's end marker B_LAST 2 is no taken value. The old tool moved
+        # B_S to 4, past the tree's own marker B_LAST 3 (the BONUS_SSIGHT 41 incident).
+        um = "stored ordinal i32"
+        case("an unmarked end marker that holds a collision refuses and names the marker",
+             fam("u", "#define B_X 1\n#define B_LAST 2\n", um),
+             fam("u", "#define B_X 1\n#define B_S 2\n#define B_LAST 3\n", um),
+             code=1, grep=["family u", "held by B_LAST", "end-of-table marker"])
+        ms = "stored ordinal i32 sentinel B_LAST"
+        d, defs = mkrepo(fam("u", "#define B_X 1\n#define B_LAST 2\n", um),
+                         fam("u", "#define B_X 1\n#define B_S 2\n#define B_LAST 3\n", ms))
+        assert check(d) == [], "marked, the base marker is no taken value"
+        print("  GREEN a marked marker raises no collision: " + um)
+        rp = "stored ordinal i32 sentinel B_LAST"
+        case("a member past its marker with no collision is moved back below it",
+             fam("u", "#define B_X 1\n#define B_LAST 2\n", rp),
+             fam("u", "#define B_X 1\n#define B_S 3\n#define B_LAST 3\n", rp),
+             want=fam("u", "#define B_X 1\n#define B_S 2\n#define B_LAST 3\n", rp),
+             grep=["u B_S 3 -> 2"])
+        case("a member past its marker with no free value below it refuses",
+             fam("u", "#define B_X 1\n#define B_LAST 2\n", rp),
+             fam("u", "#define B_X 1\n#define B_S 2\n#define B_T 2\n#define B_LAST 2\n", rp),
+             code=1, grep=["family u", "end marker"])
+        mv_in = [dict(fam="u", name="B_S", old=2, new=3, file="inc/Defines.h", line=1,
+                      shape="ordinal", sentinel=False)]
+        bf = {"u": dict(class_="x", sentinels=["B_LAST"], bounds=[],
+                        members=[("B_S", 2, "inc/Defines.h", 1), ("B_LAST", 3, "inc/Defines.h", 2)])}
+        bf["u"]["class"] = "stored"
+        try:
+            bound_guard(bf, mv_in, None)
+            raise AssertionError("bound_guard let a value reach its end marker")
+        except Refused as e:
+            assert "end marker B_LAST = 3" in str(e), e
+        print("  GREEN bound_guard refuses a moved value at its end marker")
         print("case: no-op on master")
         d, defs = mkrepo(b, fam("stati", "#define A_X 1\n#define A_Y 2\n#define A_Z 2\n"))
         g(d, "checkout", "-q", "master")
