@@ -929,6 +929,31 @@ static void SumSteady(Map *m) {
    for a 900 ms life; a flash's life L scales every stop time by L/900. */
 struct RampStop { float t; float r, g, b; float lv; };
 struct RampSet { RampStop s[6]; int n; };
+/* inc-znk1w: INCURSION_VIS_PROBE=1 appends to logs/vis.log, once per ShowMap, the turn, the player, every lit
+   (LightLitAt) cell on the player's row with its VI_VISIBLE flag, and every other creature's Perceives. */
+void LightVisProbe(Map *m, Player *p) {
+  static FILE *fp = NULL;
+  static bool on = getenv("INCURSION_VIS_PROBE") != NULL;
+  if (!on || !m || !p) return;
+  if (!fp) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%slogs/vis.log", (const char *)T1->IncursionDirectory);
+    fp = fopen(path, "a");
+    if (!fp) return;
+  }
+  fprintf(fp, "V turn=%u player=%d,%d\n", (unsigned)theGame->Turn, (int)p->x, (int)p->y);
+  for (int16 x = 0; x < lmW; x++) {
+    if (x == p->x || !LightLitAt(x, p->y)) continue;
+    fprintf(fp, "L %d %d %d\n", (int)x, (int)LightLevelAt(x, p->y),
+      (m->At(x, p->y).Visibility & VI_VISIBLE) ? 1 : 0);
+  }
+  for (Thing *t = m->FirstThing(); t; t = m->NextThing())
+    if (t->isCreature() && t != p)
+      fprintf(fp, "M %d %d %d %d\n", (int)t->x, (int)t->y, (int)p->Perceives(t),
+        LightLitAt(t->x, t->y) ? 1 : 0);
+  fflush(fp);
+}
+
 static inline float Hash01(uint32 h);
 static LightRGB HueSat(float h, float sat);
 
@@ -1083,8 +1108,26 @@ static void ComposeFrame() {
 
 static void ProbeDump(Map *m, Player *p);
 
-void LightRebuild(Map *m, Player *p) {
-  if (!m || !p) { lmMap = NULL; lmLegacy = true; nSrc = 0; nFoot = 0; return; }
+/* inc-znk1w: the cells where LightLitAt held after the previous rebuild.
+   LightRebuild reports a change in this set, so the caller recomputes sight. */
+static std::vector<uint8> PrevLit;
+static Map *PrevLitMap = NULL;
+
+static bool LitSetChanged(Map *m) {
+  bool changed = (PrevLitMap != m) || (PrevLit.size() != (size_t)lmCells);
+  if (changed) PrevLit.assign(lmCells, 0);
+  for (int16 y = 0; y < lmH; y++)
+    for (int16 x = 0; x < lmW; x++) {
+      int32 i = (int32)y * lmW + x;
+      uint8 lit = LightLevelAt(x, y) >= LIGHT_SEE_MIN;
+      if (lit != PrevLit[i]) { PrevLit[i] = lit; changed = true; }
+    }
+  PrevLitMap = m;
+  return changed;
+}
+
+bool LightRebuild(Map *m, Player *p) {
+  if (!m || !p) { lmMap = NULL; lmLegacy = true; nSrc = 0; nFoot = 0; PrevLitMap = NULL; return false; }
   EnsureCells(m);
   lmLegacy = LightMode(p) == LIGHT_LEGACY;
   lmMap = m; nSrc = 0; nFoot = 0; anyFlicker = false;
@@ -1120,9 +1163,15 @@ void LightRebuild(Map *m, Player *p) {
   FoldSrcLit(nPrimary, nSrc);
   SumSteady(m);
   ComposeFrame();
+  /* Invariant: the player's VI_VISIBLE flags track the set of cells LightLitAt calls lit, so a moving
+     light source cannot leave them stale. Traced; a port defect (the light map is a port feature, not upstream's); inc-znk1w; not sent. */
+  bool litChanged = false;
+  if (lmLegacy) PrevLitMap = NULL;       /* legacy stays the classic path: report no change */
+  else litChanged = LitSetChanged(m);
   /* INCURSION_LIGHT_PROBE: the dump tools/check_lightmap.sh reads. Bead inc-bjgh. */
   if (getenv("INCURSION_LIGHT_PROBE"))
     ProbeDump(m, p);
+  return litChanged;
 }
 
 static inline float Hash01(uint32 h) {
