@@ -183,3 +183,6 @@ answered "y". The rule went from three questions to four.
 
 ## unmeasured-numbers-stand-until-playtest
 New rule, 2026-11-23, bead inc-om4ks. In an inc-pu6v.17 session, after Baalzebul's swarm-kill weight was ruled, the session asked whether the proposed body weight (1) and infested-level weight (5) should stand as starting values until a playtest measured the 75 percent passive share. Brian, 2026-11-23: "Goddamnit why are you asking me this shit? How in the fuk am I going to know till we playtest it? I'm not relitigating every single fuckign number. WRITE TIHIS DOWN. IUf you reask about somethign I haver already ffuvckign settled, you need a goddamn solid reason"
+
+## open-question-restate-it-whole
+New rule, 2026-11-27, bead inc-ggitm. In an inc-pu6v.17 session the agent asked Brian whether Bael's Enlist gift should become a bonus on every Diplomacy ladder roll. Its next four messages each ended with a pointer, "The Bael question (C) is still open for you", and the last one asked a separate commit question while only pointing at the Bael one. Brian, 2026-11-27: "commit and you have got to stop doing this. Ask the whole question or nothign. Write this down"

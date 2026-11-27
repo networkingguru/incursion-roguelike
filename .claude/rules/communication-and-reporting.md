@@ -58,3 +58,8 @@ History: docs/rules-history/communication-and-reporting.md#check-plan-purpose-me
 When a design number already has a proposed value and only a playtest can show whether it is right, the number stands as a provisional starting value. Record it as provisional in the bead and the brief, and MUST NOT put it to Brian. MUST NOT re-ask any item Brian already settled or ruled. Re-ask one only with a solid reason stated in the question itself: new evidence, a contradiction with another ruling, or a defect the settled value causes.
 Why: Brian cannot judge an unmeasured number before playtest, and a question he has already answered costs him a round trip for no decision.
 History: docs/rules-history/communication-and-reporting.md#unmeasured-numbers-stand-until-playtest. Bead inc-om4ks.
+
+## open-question-restate-it-whole
+While a question to Brian is open, every later message MUST either restate the whole question or not mention it. The whole question is its grounding (what was found, in his frame) plus the one proposition he answers with y or n. MUST NOT point at an open question by a label or a summary ("the Bael question (C) still waits"), and MUST NOT ask a second question while only pointing at the first. When two questions are open, restate both in full.
+Why: Brian cannot answer a pointer without scrolling back to find what he is asked.
+History: docs/rules-history/communication-and-reporting.md#open-question-restate-it-whole. Bead inc-ggitm.
