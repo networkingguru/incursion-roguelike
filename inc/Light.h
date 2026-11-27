@@ -29,8 +29,12 @@ bool LightMissileOf(Item *missile, Item *launcher, int16 &col, LightRGB &rgb);
 
 /* Per turn. Scans the level for sources, casts each one's footprint through
    line of sight, and sums the steady light. Cheap enough to call from every
-   ShowMap. Pass the same map twice and it rebuilds anyway. */
-void LightRebuild(Map *m, Player *p);
+   ShowMap. Pass the same map twice and it rebuilds anyway. Returns true when the
+   set of cells LightLitAt calls lit changed since the last rebuild (always false
+   in legacy mode), so the caller knows sight is stale. inc-znk1w */
+bool LightRebuild(Map *m, Player *p);
+/* inc-znk1w: INCURSION_VIS_PROBE log of sight against the light map; see Light.cpp. */
+void LightVisProbe(Map *m, Player *p);
 
 /* Per frame. Advances each flickering source's noise to wall-clock time
    `ms` and recomputes the frame buffer LightAt reads. */
