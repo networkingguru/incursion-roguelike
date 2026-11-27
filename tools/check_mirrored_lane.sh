@@ -1,7 +1,7 @@
 #!/bin/bash
 # gate: cheap --selftest
 #
-# Does tools/sync_issues.sh keep a `mirrored` bead out of everything that
+# Does tools/sync_issues.sh (push set chosen in tools/sync_select.py) keep a `mirrored` bead out of everything that
 # WRITES to GitHub, while still reconciling its state?
 #
 # WHY THIS EXISTS. A `mirrored` bead points at an issue somebody outside this
@@ -17,6 +17,12 @@
 # somebody opens the reporter's issue and finds it gone. So this check drives
 # the REAL script with `bd` and `gh` stubbed on PATH, and reads the id list the
 # script actually handed to `bd github sync`.
+#
+# The selftest mutates tools/sync_select.py, where the mirrored filter lives.
+#
+# fact: the game, a seed, a character, the options file -- none read; the check never starts the game
+# fact: the beads and GitHub issues -- synthetic, written by the check to a temp dir; bd and gh are stubs on PATH
+# fact: the upstream label ledger -- read through the real bd for the one `--label upstream` query; a missing label stops the script before the push, reported as exit 2 (cannot measure), never a pass
 #
 # It asserts what a person cannot see:
 #   1. a mirrored bead never reaches `bd github sync`
@@ -194,10 +200,29 @@ if [ -n "$selftest" ]; then
     # early, and push nothing -- which would look exactly like the filter
     # working and make this selftest a lie. The trap removes it either way.
     broken="$repo_root/tools/.check_mirrored_lane_broken.sh"
-    trap 'rm -rf "$work"; rm -f "$broken"' EXIT
-    sed 's/^issues = \[x for x in issues if "mirrored" not in.*$//' \
+    broken_sel="$repo_root/tools/.check_mirrored_lane_broken_select.py"
+    trap 'rm -rf "$work"; rm -f "$broken" "$broken_sel"' EXIT
+    # The mirrored filter lives in tools/sync_select.py: drop its two lines.
+    python3 - "$repo_root/tools/sync_select.py" "$broken_sel" <<'PY2'
+import sys
+src = open(sys.argv[1]).read()
+test = '        if "mirrored" in set(b.get("labels") or []):\n            continue\n'
+open(sys.argv[2], "w").write(src.replace(test, ""))
+PY2
+    sed 's#tools/sync_select\.py#tools/.check_mirrored_lane_broken_select.py#g' \
         "$repo_root/tools/sync_issues.sh" > "$broken"
     chmod +x "$broken"
+    if grep -q '"mirrored" in set(b.get' "$broken_sel"; then
+        echo "SELFTEST FAIL: the mutation did not apply: the broken select" >&2
+        echo "copy still holds the mirrored test." >&2
+        fail=1
+    fi
+    if ! grep -q 'tools/\.check_mirrored_lane_broken_select\.py' "$broken" \
+       || grep -q 'tools/sync_select\.py' "$broken"; then
+        echo "SELFTEST FAIL: the mutation did not apply: the broken sync copy" >&2
+        echo "does not call the broken select copy." >&2
+        fail=1
+    fi
     cp "$work/rehearsal.json" "$work/beads.json"
     python3 - "$work/beads.json" <<'PY'
 import json, sys
