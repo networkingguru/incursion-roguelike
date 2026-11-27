@@ -66,9 +66,11 @@
 #   tools/sync_issues.sh --new-only   push only the `public` beads that have no
 #                                     issue yet, and say nothing when there are
 #                                     none. This is what the pre-push hook
-#                                     runs: a full run costs four minutes, a
-#                                     quiet --new-only run costs under a second.
-#                                     The flags combine.
+#                                     runs. The flags combine.
+#
+# A full run lists the published issues once and pushes only the beads whose
+# issue is missing or differs in title or body (tools/sync_select.py), because
+# bd sends a GitHub update for every id it is given, changed or not.
 #
 # ENVIRONMENT
 #   SYNC_REPO      owner/repo to push into. Default is the real fork. Point it
@@ -148,10 +150,10 @@ fi
 # which was 232 of the 240 seconds a full run took. `bd list --json` returns
 # `external_ref` and `status` for the whole database in 0.6 seconds, and those
 # are the only two fields either step wanted. So read once, into a file, and
-# let all three steps parse it. A full run is now about ten seconds, nearly all
-# of it GitHub's own issue listing.
+# let all three steps parse it.
 beads_json=$(mktemp -t sync_issues) || { echo "sync_issues: no temp file" >&2; exit 1; }
-trap 'rm -f "$beads_json"' EXIT
+issues_json=$(mktemp -t sync_issues_gh) || { echo "sync_issues: no temp file" >&2; exit 1; }
+trap 'rm -f "$beads_json" "$issues_json"' EXIT
 # BOTH OUTWARD LANES ARE READ, AND THEY ARE NOT TREATED ALIKE.
 #
 # `public` beads are written to GitHub: title, body and state. `mirrored` beads
@@ -171,16 +173,10 @@ bd list --label-any public,mirrored --all --limit 0 --flat --json \
 # `bd github sync`, which writes titles and descriptions; a mirrored bead in it
 # would overwrite a stranger's bug report. The reconciliation below reads the
 # file again and DOES include them, so their state still tracks the bead.
-export NEW_ONLY="$new_only"
-ids=$(python3 -c '
-import sys, json, os
-d = json.load(sys.stdin)
-issues = d if isinstance(d, list) else d.get("issues", [])
-issues = [x for x in issues if "mirrored" not in set(x.get("labels") or [])]
-if os.environ.get("NEW_ONLY"):
-    issues = [x for x in issues if not (x.get("external_ref") or "")]
-print(",".join(x["id"] for x in issues))
-' < "$beads_json")
+# tools/sync_select.py drops them.
+if [ -n "$new_only" ]; then
+    ids=$(python3 tools/sync_select.py "$beads_json" /dev/null "$SYNC_REPO" --new-only)
+fi
 
 # THE RECONCILIATION SET IS WIDER THAN THE PUSH SET.
 #
@@ -206,6 +202,20 @@ fi
 if [ -z "$recon_ids" ]; then
     echo "sync_issues: no bead is labelled public or mirrored; nothing to do."
     exit 0
+fi
+
+# One listing of the published issues serves the selection and, later, the
+# reconciliation. A truncated listing would hide issues, so it is an error.
+gh issue list -R "$SYNC_REPO" --state all --limit 5000 \
+    --json number,title,body,state,labels > "$issues_json" 2>/dev/null || {
+    echo "sync_issues: cannot list the issues. Nothing was pushed." >&2; exit 1; }
+rows=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$issues_json")
+if [ "$rows" -ge 5000 ]; then
+    echo "sync_issues: the issue listing hit its 5000 limit; it is incomplete. Nothing was pushed." >&2
+    exit 1
+fi
+if [ -z "$new_only" ]; then
+    ids=$(python3 tools/sync_select.py "$beads_json" "$issues_json" "$SYNC_REPO")
 fi
 
 count=$(printf '%s\n' "$ids" | tr ',' '\n' | grep -c . || true)
@@ -267,11 +277,15 @@ issues = d if isinstance(d, list) else d.get("issues", [])
 print(sum(1 for x in issues if "mirrored" in set(x.get("labels") or [])))
 ' < "$beads_json")
 
+total=$(python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+issues = d if isinstance(d, list) else d.get("issues", [])
+print(sum(1 for x in issues if "mirrored" not in set(x.get("labels") or [])))
+' < "$beads_json")
+echo "sync_issues: ${count} of ${total} public beads changed -> ${SYNC_REPO}"
 if [ "$count" -gt 0 ]; then
-    echo "sync_issues: ${count} public beads -> ${SYNC_REPO} (${length} bytes of ids)"
     bd github sync --push-only --issues "$ids" ${dry_run:+$dry_run}
-else
-    echo "sync_issues: no public bead to write."
 fi
 if [ "$mirrored_count" -gt 0 ]; then
     echo "sync_issues: ${mirrored_count} mirrored beads: state only, no title and no body."
@@ -299,11 +313,12 @@ bd list --label-any public,mirrored --all --limit 0 --flat --json \
 # Both lanes are reconciled. A mirrored bead's issue belongs to the person who
 # reported it, and closing it is the one write this project may make there:
 # state, never title and never body.
-python3 - "$SYNC_REPO" "$recon_ids" "${dry_run:-}" "$beads_json" <<'PY'
+python3 - "$SYNC_REPO" "$recon_ids" "${dry_run:-}" "$beads_json" "$issues_json" <<'PY'
 import json, subprocess, sys
 
-repo, ids, dry, beads_json = (
-    sys.argv[1], sys.argv[2].split(","), bool(sys.argv[3]), sys.argv[4])
+repo, ids, dry, beads_json, issues_json = (
+    sys.argv[1], sys.argv[2].split(","), bool(sys.argv[3]), sys.argv[4],
+    sys.argv[5])
 
 
 def sh(cmd):
@@ -318,11 +333,9 @@ rows = d if isinstance(d, list) else d.get("issues", [])
 wanted = set(ids)
 beads = [b for b in rows if b["id"] in wanted]
 
-out = sh(["gh", "issue", "list", "-R", repo, "--state", "all",
-          "--limit", "2000", "--json", "number,state"])
-if out is None:
-    sys.exit("sync_issues: cannot list the issues; state NOT reconciled")
-actual = {i["number"]: i["state"] for i in json.loads(out)}
+# The listing predates the push. A bead created by this run has no entry and is
+# skipped below; a newly created closed bead is reconciled on the next run.
+actual = {i["number"]: i["state"] for i in json.load(open(issues_json))}
 
 want_closed, want_open = [], []
 for b in beads:
