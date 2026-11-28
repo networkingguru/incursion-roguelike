@@ -415,14 +415,34 @@ is_bead_id "$BEAD" || die "REFUSED: '$BEAD' is not a bead id."
 # other. A directory is the lock (mkdir is atomic; macOS has no flock). The
 # holder is dead when its pid is gone, or reused, or it died between mkdir and
 # write and left the dir older than 60 s. inc-1npn.
+# Waiters queue first-come, first-served per base: a waiter takes a numbered
+# ticket dir in $LOCK_KEY.queue, and only the lowest live ticket may try the
+# lock. A landing already waiting under the pre-inc-7sx7t code holds no ticket
+# and may still grab a free lock, once, until it has finished. inc-7sx7t.
 LOCK_KEY="$(printf '%s' "$BASE_BRANCH" | tr '/' '_')"
 [ -d "$SHARED/.git" ] || cannot "$SHARED/.git is not a directory; cannot place the landing lock under it"
 LOCK_PARENT="$SHARED/.git/finish-bead-locks"
 LOCK_DIR="$LOCK_PARENT/$LOCK_KEY.lock"
+QUEUE_DIR="$LOCK_PARENT/$LOCK_KEY.queue"
+TICKET=""
 LOCK_HELD=0
 LOCK_SIG=""
 
+# Hung-landing guard (inc-7sx7t): a sidecar that alerts once, in this bead's
+# worktree, when the landing runs 2x past the gate's predicted time. It never
+# signals or waits on the landing and exits when this process is gone.
+WATCH_PID=""
+start_hung_watch() {
+    python3 "$ROOT/tools/slow_check_watch.py" --hung-landing "$BEAD" "$BASE_BRANCH" "$$" \
+        "$SHARED" "$WORKTREE_PARENT/$WORKTREE_PREFIX$BEAD" </dev/null >/dev/null 2>&1 &
+    WATCH_PID=$!
+}
+
 release_lock() {
+    [ -n "$WATCH_PID" ] && kill "$WATCH_PID" 2>/dev/null
+    # This process's own ticket never outlives it (kill -9 aside: the dead-ticket
+    # rule in acquire_lock removes that one).
+    [ -n "$TICKET" ] && rm -rf "$QUEUE_DIR/$TICKET"
     # Only the process that still owns the lock may remove it: a waiter that
     # judged this lock stale and recreated it must not have it deleted here.
     [ "$LOCK_HELD" -eq 1 ] || return 0
@@ -430,8 +450,9 @@ release_lock() {
     rm -rf "$LOCK_DIR"
 }
 
-lock_holder_dead() { # lock_holder_dead <pid> <started> -> 0 dead, 1 alive
-    local pid="$1" started="$2" now
+lock_holder_dead() { # lock_holder_dead <pid> <started> [dir] -> 0 dead, 1 alive
+    # dir is the lock or ticket dir whose mtime the age rule reads.
+    local pid="$1" started="$2" dir="${3:-$LOCK_DIR}" now
     if [ -n "$pid" ]; then
         # A pid that no longer exists is gone at once, started or not.
         kill -0 "$pid" 2>/dev/null || return 0
@@ -450,50 +471,117 @@ lock_holder_dead() { # lock_holder_dead <pid> <started> -> 0 dead, 1 alive
     # could still be writing. A younger one is treated as alive, so a waiter
     # never steals a fresh lock.
     now="$(date +%s)"
-    if [ $((now - $(stat -f %m "$LOCK_DIR" 2>/dev/null || echo "$now"))) -gt 60 ]; then
+    if [ $((now - $(stat -f %m "$dir" 2>/dev/null || echo "$now"))) -gt 60 ]; then
         return 0
     fi
     return 1
 }
 
-acquire_lock() {
-    local waited=0 holder_pid holder_bead holder_started
-    mkdir -p "$LOCK_PARENT" || cannot "could not create $LOCK_PARENT"
+queue_list() { # ticket names, lowest first
+    ls "$QUEUE_DIR" 2>/dev/null | sort # queue-order
+}
+
+# take_ticket: mkdir is atomic, so no two waiters share a number and no counter
+# lock is needed. INT/TERM are deferred across the claim, as for the lock. inc-7sx7t.
+take_ticket() {
+    local last n t
+    mkdir -p "$QUEUE_DIR" || cannot "could not create $QUEUE_DIR"
+    trap 'LOCK_SIG=130' INT
+    trap 'LOCK_SIG=143' TERM
+    last="$(ls "$QUEUE_DIR" 2>/dev/null | sort | tail -n 1)"
+    n=$((10#${last:-0}))
     while true; do
-        # Defer INT/TERM across the critical section: a signal landing between
-        # mkdir taking the dir and LOCK_HELD=1 used to exit with the dir left
-        # behind, since release_lock only removes a dir it knows it owns. Record
-        # the signal instead, finish claiming the lock, then act on it. inc-fdkz.
-        trap 'LOCK_SIG=130' INT
-        trap 'LOCK_SIG=143' TERM
-        if mkdir "$LOCK_DIR" 2>/dev/null; then
-            LOCK_HELD=1
-            printf '%s\n' "$$" > "$LOCK_DIR/pid"
-            printf '%s\n' "$BEAD" > "$LOCK_DIR/bead"
-            ps -o lstart= -p "$$" > "$LOCK_DIR/started"
-            trap 'exit 130' INT
-            trap 'exit 143' TERM
-            [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
-            [ "$waited" -eq 0 ] || echo "finish_bead: lock on $BASE_BRANCH acquired."
-            return 0
+        n=$((n + 1))
+        t="$(printf '%010d' "$n")"
+        if mkdir "$QUEUE_DIR/$t" 2>/dev/null; then
+            TICKET="$t"
+            break
         fi
-        trap 'exit 130' INT
-        trap 'exit 143' TERM
-        [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
+    done
+    printf '%s\n' "$$" > "$QUEUE_DIR/$TICKET/pid"
+    printf '%s\n' "$BEAD" > "$QUEUE_DIR/$TICKET/bead"
+    ps -o lstart= -p "$$" > "$QUEUE_DIR/$TICKET/started"
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
+    return 0
+}
+
+# queue_scan: remove every dead ticket (any waiter may), then set QPOS to the
+# number of live tickets ahead of this one and QBEHIND to the bead just ahead.
+queue_scan() {
+    local t tp tb ts
+    QPOS=0
+    QBEHIND=""
+    for t in $(queue_list); do
+        tp="$(cat "$QUEUE_DIR/$t/pid" 2>/dev/null)"
+        tb="$(cat "$QUEUE_DIR/$t/bead" 2>/dev/null)"
+        ts="$(cat "$QUEUE_DIR/$t/started" 2>/dev/null)"
+        if [ "$t" != "$TICKET" ] && lock_holder_dead "$tp" "$ts" "$QUEUE_DIR/$t"; then
+            rm -rf "$QUEUE_DIR/$t"
+            continue
+        fi
+        [ "$t" = "$TICKET" ] && return 0
+        QPOS=$((QPOS + 1))
+        QBEHIND="${tb:-?} (pid ${tp:-?})"
+    done
+    # Own ticket not found: a waiter's stale rm -rf raced a recreated number and
+    # deleted it. Take a new ticket and rescan, else later arrivals count as ahead.
+    if [ -n "$TICKET" ]; then
+        take_ticket
+        queue_scan
+    fi
+    return 0
+}
+
+acquire_lock() {
+    local waited=0 holder_pid holder_bead holder_started said=""
+    mkdir -p "$LOCK_PARENT" || cannot "could not create $LOCK_PARENT"
+    take_ticket
+    while true; do
+        queue_scan
         holder_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
         holder_bead="$(cat "$LOCK_DIR/bead" 2>/dev/null)"
         holder_started="$(cat "$LOCK_DIR/started" 2>/dev/null)"
-        if lock_holder_dead "$holder_pid" "$holder_started"; then
-            # ponytail: two waiters that judge the same dead lock stale in the
-            # same instant can race -- one may rm -rf the other's fresh lock.
-            # Ceiling accepted; upgrade path is an atomic rename of the stale dir
-            # with a pid re-check before removal.
-            echo "finish_bead: clearing a stale landing lock on $BASE_BRANCH left by ${holder_bead:-?} (pid ${holder_pid:-?})"
-            rm -rf "$LOCK_DIR"
-            continue
+        if [ "$QPOS" -eq 0 ]; then
+            # Defer INT/TERM across the critical section: a signal landing between
+            # mkdir taking the dir and LOCK_HELD=1 used to exit with the dir left
+            # behind, since release_lock only removes a dir it knows it owns. Record
+            # the signal instead, finish claiming the lock, then act on it. inc-fdkz.
+            trap 'LOCK_SIG=130' INT
+            trap 'LOCK_SIG=143' TERM
+            if mkdir "$LOCK_DIR" 2>/dev/null; then
+                LOCK_HELD=1
+                printf '%s\n' "$$" > "$LOCK_DIR/pid"
+                printf '%s\n' "$BEAD" > "$LOCK_DIR/bead"
+                ps -o lstart= -p "$$" > "$LOCK_DIR/started"
+                rm -rf "$QUEUE_DIR/$TICKET"
+                TICKET=""
+                start_hung_watch
+                trap 'exit 130' INT
+                trap 'exit 143' TERM
+                [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
+                [ "$waited" -eq 0 ] || echo "finish_bead: lock on $BASE_BRANCH acquired."
+                return 0
+            fi
+            trap 'exit 130' INT
+            trap 'exit 143' TERM
+            [ -n "$LOCK_SIG" ] && exit "$LOCK_SIG"
+            if lock_holder_dead "$holder_pid" "$holder_started"; then
+                # Only the head ticket clears a stale lock, and one head exists at
+                # a time, so two waiters cannot clear the same lock. inc-7sx7t.
+                echo "finish_bead: clearing a stale landing lock on $BASE_BRANCH left by ${holder_bead:-?} (pid ${holder_pid:-?})"
+                rm -rf "$LOCK_DIR"
+                continue
+            fi
+            QBEHIND="${holder_bead:-?} (pid ${holder_pid:-?})"
+            if [ "$waited" -eq 0 ]; then
+                echo "finish_bead: ${holder_bead:-?} is landing on $BASE_BRANCH (pid ${holder_pid:-?}); waiting for it to finish."
+            fi
         fi
-        if [ "$waited" -eq 0 ]; then
-            echo "finish_bead: ${holder_bead:-?} is landing on $BASE_BRANCH (pid ${holder_pid:-?}); waiting for it to finish."
+        if [ "$said" != "$QPOS $QBEHIND" ]; then
+            echo "finish_bead: waiting on $BASE_BRANCH: position $((QPOS + 1)), behind ${QBEHIND}."
+            said="$QPOS $QBEHIND"
         fi
         waited=1
         sleep "${INCURSION_FINISH_LOCK_POLL:-5}"
